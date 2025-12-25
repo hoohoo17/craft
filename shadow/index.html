@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 그림자크래프트 - 마인크래프트 그림자 퀴즈</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* ==================== */
+        /*     CSS Variables    */
+        /* ==================== */
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-darker: #0f0f1a;
+            --bg-card: #252542;
+            --primary: #4ade80;
+            --primary-dark: #22c55e;
+            --accent: #f472b6;
+            --warning: #fbbf24;
+            --danger: #ef4444;
+            --text: #ffffff;
+            --text-dim: #94a3b8;
+            --minecraft-green: #5d8c3e;
+            --minecraft-brown: #8b6914;
+            --minecraft-dirt: #6b5344;
+        }
+
+        /* ==================== */
+        /*      Base Styles     */
+        /* ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background: var(--bg-dark);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            color: var(--text);
+        }
+
+        /* 픽셀 배경 패턴 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #app {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ==================== */
+        /*       Buttons        */
+        /* ==================== */
+        .btn {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            padding: 16px 32px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            position: relative;
+            image-rendering: pixelated;
+        }
+
+        .btn-primary {
+            background: var(--minecraft-green);
+            color: white;
+            border: 4px solid #3d5c2e;
+            box-shadow: 
+                inset -4px -4px 0 #3d5c2e,
+                inset 4px 4px 0 #7dac5e;
+        }
+
+        .btn-primary:hover {
+            background: #6d9c4e;
+            transform: scale(1.02);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            box-shadow: 
+                inset 4px 4px 0 #3d5c2e,
+                inset -4px -4px 0 #7dac5e;
+        }
+
+        .btn-secondary {
+            background: var(--minecraft-dirt);
+            color: white;
+            border: 4px solid #4b3324;
+            box-shadow: 
+                inset -4px -4px 0 #4b3324,
+                inset 4px 4px 0 #8b7364;
+        }
+
+        .btn-secondary:hover {
+            background: #7b6354;
+        }
+
+        /* ==================== */
+        /*     Start Screen     */
+        /* ==================== */
+        #start-screen {
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .game-title {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: var(--primary);
+            text-shadow: 
+                4px 4px 0 #166534,
+                -2px -2px 0 #000;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .game-subtitle {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            background: var(--bg-card);
+            border: 4px solid #3d3d6b;
+            padding: 24px;
+            margin-bottom: 30px;
+            text-align: left;
+            box-shadow: 
+                inset -4px -4px 0 #1a1a30,
+                inset 4px 4px 0 #3d3d6b;
+        }
+
+        .info-box p {
+            font-size: 10px;
+            line-height: 2;
+            margin-bottom: 16px;
+            color: var(--text-dim);
+        }
+
+        .stage-list {
+            list-style: none;
+        }
+
+        .stage-list li {
+            font-size: 10px;
+            padding: 8px 0;
+            border-bottom: 2px dashed #3d3d6b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stage-list li:last-child {
+            border-bottom: none;
+        }
+
+        .stage-icon {
+            font-size: 16px;
+        }
+
+        .stage-animal { color: #4ade80; }
+        .stage-monster { color: #f472b6; }
+        .stage-boss { color: #fbbf24; }
+
+        /* ==================== */
+        /*     Game Screen      */
+        /* ==================== */
+        #game-screen {
+            animation: fadeIn 0.3s ease;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border: 4px solid #3d3d6b;
+        }
+
+        .round-info, .score-info {
+            font-size: 10px;
+        }
+
+        .score-info {
+            color: var(--warning);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: var(--bg-darker);
+            border: 2px solid #3d3d6b;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .category-badge {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 8px 16px;
+            font-size: 10px;
+            border: 3px solid;
+            animation: glow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px currentColor; }
+            50% { box-shadow: 0 0 20px currentColor; }
+        }
+
+        .badge-animal {
+            background: rgba(74, 222, 128, 0.2);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .badge-monster {
+            background: rgba(244, 114, 182, 0.2);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .badge-boss {
+            background: rgba(251, 191, 36, 0.2);
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .shadow-container {
+            background: linear-gradient(145deg, #1a1a30 0%, #0f0f1a 100%);
+            border: 4px solid #3d3d6b;
+            padding: 30px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 250px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shadow-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(74, 222, 128, 0.1) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            animation: shadowGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes shadowGlow {
+            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        .shadow-svg {
+            width: 180px;
+            height: 180px;
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .input-area {
+            margin-bottom: 16px;
+        }
+
+        .answer-input {
+            width: 100%;
+            padding: 16px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            background: var(--bg-darker);
+            border: 4px solid #3d3d6b;
+            color: var(--text);
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .answer-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
+        }
+
+        .answer-input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .btn-submit {
+            width: 100%;
+        }
+
+        /* ==================== */
+        /*    Feedback Modal    */
+        /* ==================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 4px solid #3d3d6b;
+            padding: 32px;
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .feedback-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .feedback-text {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .feedback-answer {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-bottom: 24px;
+        }
+
+        .correct .feedback-text { color: var(--primary); }
+        .wrong .feedback-text { color: var(--danger); }
+
+        /* ==================== */
+        /*    Result Screen     */
+        /* ==================== */
+        #result-screen {
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .result-title {
+            font-size: 18px;
+            margin-bottom: 24px;
+            color: var(--warning);
+            text-shadow: 3px 3px 0 #92400e;
+        }
+
+        .score-box {
+            background: var(--bg-card);
+            border: 4px solid #3d3d6b;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .final-score {
+            font-size: 32px;
+            color: var(--primary);
+            margin-bottom: 16px;
+            text-shadow: 3px 3px 0 #166534;
+        }
+
+        .stars {
+            font-size: 24px;
+            margin-bottom: 16px;
+            letter-spacing: 4px;
+        }
+
+        .grade-title {
+            font-size: 12px;
+            color: var(--accent);
+            padding: 8px 16px;
+            border: 2px dashed var(--accent);
+            display: inline-block;
+        }
+
+        .result-details {
+            background: var(--bg-darker);
+            border: 4px solid #3d3d6b;
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            padding: 8px 0;
+            border-bottom: 1px dashed #3d3d6b;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        /* ==================== */
+        /*   Difficulty Notice  */
+        /* ==================== */
+        .difficulty-notice {
+            background: linear-gradient(135deg, rgba(244, 114, 182, 0.2), rgba(251, 191, 36, 0.2));
+            border: 3px solid var(--accent);
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .difficulty-notice p {
+            font-size: 10px;
+            color: var(--accent);
+        }
+
+        .difficulty-notice .warning-icon {
+            font-size: 20px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* ==================== */
+        /*     Hint Display     */
+        /* ==================== */
+        .hint-area {
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .hint-text {
+            font-size: 8px;
+            color: var(--text-dim);
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- ==================== -->
+        <!--     시작 화면        -->
+        <!-- ==================== -->
+        <div id="start-screen">
+            <h1 class="game-title">그림자크래프트</h1>
+            <p class="game-subtitle">SHADOW CRAFT</p>
+            
+            <div class="info-box">
+                <p>그림자를 보고 마인크래프트 캐릭터를 맞춰보세요!</p>
+                <ul class="stage-list">
+                    <li>
+                        <span class="stage-icon">🐷</span>
+                        <span class="stage-animal">1~10 라운드: 동물</span>
+                    </li>
+                    <li>
+                        <span class="stage-icon">👾</span>
+                        <span class="stage-monster">11~20 라운드: 몬스터</span>
+                    </li>
+                    <li>
+                        <span class="stage-icon">🐉</span>
+                        <span class="stage-boss">21~25 라운드: 보스</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <button class="btn btn-primary" id="btn-start">게임 시작</button>
+        </div>
+
+        <!-- ==================== -->
+        <!--      게임 화면       -->
+        <!-- ==================== -->
+        <div id="game-screen" class="hidden">
+            <div class="game-header">
+                <span class="round-info" id="round-info">라운드 1/25</span>
+                <span class="score-info" id="score-info">⭐ 0점</span>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+
+            <div id="difficulty-notice" class="difficulty-notice hidden">
+                <span class="warning-icon">⚠️</span>
+                <p id="difficulty-text">난이도 상승!</p>
+            </div>
+            
+            <div class="category-badge">
+                <span class="badge" id="category-badge">🐷 동물</span>
+            </div>
+            
+            <div class="shadow-container">
+                <div class="shadow-svg" id="shadow-display"></div>
+            </div>
+            
+            <div class="input-area">
+                <input 
+                    type="text" 
+                    class="answer-input" 
+                    id="answer-input" 
+                    placeholder="정답 입력..."
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="hint-area">
+                <span class="hint-text" id="hint-text"></span>
+            </div>
+            
+            <button class="btn btn-primary btn-submit" id="btn-submit">제출하기</button>
+        </div>
+
+        <!-- ==================== -->
+        <!--      결과 화면       -->
+        <!-- ==================== -->
+        <div id="result-screen" class="hidden">
+            <h1 class="result-title">🏆 게임 종료! 🏆</h1>
+            
+            <div class="score-box">
+                <p class="final-score" id="final-score">0 / 25</p>
+                <p class="stars" id="stars">⭐</p>
+                <p class="grade-title" id="grade-title">그림자 초보</p>
+            </div>
+            
+            <div class="result-details">
+                <div class="result-row">
+                    <span>동물 정답</span>
+                    <span id="animal-score">0 / 10</span>
+                </div>
+                <div class="result-row">
+                    <span>몬스터 정답</span>
+                    <span id="monster-score">0 / 10</span>
+                </div>
+                <div class="result-row">
+                    <span>보스 정답</span>
+                    <span id="boss-score">0 / 5</span>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" id="btn-restart">다시 도전하기</button>
+        </div>
+
+        <!-- ==================== -->
+        <!--    피드백 모달       -->
+        <!-- ==================== -->
+        <div id="feedback-modal" class="modal-overlay hidden">
+            <div class="modal-content" id="modal-content">
+                <span class="feedback-icon" id="feedback-icon">✅</span>
+                <p class="feedback-text" id="feedback-text">정답!</p>
+                <p class="feedback-answer" id="feedback-answer">정답: 돼지</p>
+                <button class="btn btn-secondary" id="btn-next">다음</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        //              게임 데이터
+        // ==========================================
+        
+        // 25개 라운드 데이터
+        const ROUNDS = [
+            // 1~10: 동물 (쉬움)
+            { id: 1, answer: '돼지', category: 'animal', hint: '꿀꿀' },
+            { id: 2, answer: '소', category: 'animal', hint: '음메' },
+            { id: 3, answer: '양', category: 'animal', hint: '메에' },
+            { id: 4, answer: '닭', category: 'animal', hint: '꼬끼오' },
+            { id: 5, answer: '말', category: 'animal', hint: '히힝' },
+            { id: 6, answer: '늑대', category: 'animal', hint: '아우우' },
+            { id: 7, answer: '토끼', category: 'animal', hint: '깡충깡충' },
+            { id: 8, answer: '여우', category: 'animal', hint: '무슨 소리?' },
+            { id: 9, answer: '판다', category: 'animal', hint: '대나무' },
+            { id: 10, answer: '낙타', category: 'animal', hint: '사막' },
+            
+            // 11~20: 몬스터 (보통)
+            { id: 11, answer: '좀비', category: 'monster', hint: '으으으' },
+            { id: 12, answer: '크리퍼', category: 'monster', hint: 'SSS...' },
+            { id: 13, answer: '스켈레톤', category: 'monster', hint: '뼈다귀' },
+            { id: 14, answer: '거미', category: 'monster', hint: '8개 다리' },
+            { id: 15, answer: '엔더맨', category: 'monster', hint: '눈 마주치면...' },
+            { id: 16, answer: '마녀', category: 'monster', hint: '포션' },
+            { id: 17, answer: '슬라임', category: 'monster', hint: '통통' },
+            { id: 18, answer: '가스트', category: 'monster', hint: '네더' },
+            { id: 19, answer: '블레이즈', category: 'monster', hint: '불꽃 막대' },
+            { id: 20, answer: '위더', category: 'monster', hint: '세 머리' },
+            
+            // 21~25: 보스 (어려움)
+            { id: 21, answer: '워든', category: 'boss', hint: '딥다크' },
+            { id: 22, answer: '슬라임', category: 'boss', hint: '늪' },
+            { id: 23, answer: '치킨조키', category: 'boss', hint: '닭 + 좀비' },
+            { id: 24, answer: '엘더 가디언', category: 'boss', hint: '해저신전' },
+            { id: 25, answer: '엔더 드래곤', category: 'boss', hint: '최종 보스' },
+        ];
+
+        // 등급 시스템
+        const GRADES = [
+            { min: 0, max: 5, stars: 1, title: '그림자 초보' },
+            { min: 6, max: 10, stars: 2, title: '그림자 탐험가' },
+            { min: 11, max: 15, stars: 3, title: '그림자 사냥꾼' },
+            { min: 16, max: 20, stars: 4, title: '그림자 전문가' },
+            { min: 21, max: 25, stars: 5, title: '그림자 마스터' },
+        ];
+
+        // SVG 그림자 데이터 (마인크래프트 픽셀 스타일)
+        const SHADOWS = {
+            '돼지': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="12" y="20" width="40" height="24" rx="2"/>
+                <rect x="18" y="44" width="8" height="10"/>
+                <rect x="38" y="44" width="8" height="10"/>
+                <rect x="6" y="24" width="10" height="16" rx="1"/>
+                <rect x="24" y="10" width="16" height="14" rx="1"/>
+                <rect x="28" y="18" width="8" height="6" rx="1"/>
+            </svg>`,
+            
+            '소': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="10" y="22" width="44" height="26" rx="2"/>
+                <rect x="16" y="48" width="8" height="12"/>
+                <rect x="40" y="48" width="8" height="12"/>
+                <rect x="4" y="8" width="12" height="18" rx="1"/>
+                <rect x="48" y="8" width="12" height="18" rx="1"/>
+                <rect x="18" y="30" width="6" height="4"/>
+                <rect x="40" y="30" width="6" height="4"/>
+            </svg>`,
+            
+            '양': `<svg viewBox="0 0 64 64" fill="#000">
+                <ellipse cx="32" cy="32" rx="24" ry="18"/>
+                <ellipse cx="32" cy="20" rx="12" ry="10"/>
+                <rect x="14" y="44" width="8" height="14"/>
+                <rect x="42" y="44" width="8" height="14"/>
+                <circle cx="26" cy="18" r="3"/>
+                <circle cx="38" cy="18" r="3"/>
+            </svg>`,
+            
+            '닭': `<svg viewBox="0 0 64 64" fill="#000">
+                <ellipse cx="32" cy="36" rx="16" ry="14"/>
+                <rect x="24" y="14" width="16" height="16" rx="2"/>
+                <polygon points="22,22 16,26 22,30"/>
+                <rect x="28" y="6" width="8" height="10"/>
+                <rect x="26" y="50" width="5" height="10"/>
+                <rect x="33" y="50" width="5" height="10"/>
+                <rect x="44" y="32" width="12" height="8" rx="2"/>
+            </svg>`,
+            
+            '말': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="14" y="28" width="36" height="20" rx="2"/>
+                <rect x="16" y="48" width="6" height="14"/>
+                <rect x="26" y="48" width="6" height="14"/>
+                <rect x="32" y="48" width="6" height="14"/>
+                <rect x="42" y="48" width="6" height="14"/>
+                <rect x="38" y="8" width="14" height="24" rx="2"/>
+                <rect x="46" y="4" width="8" height="8"/>
+                <rect x="8" y="32" width="16" height="6" rx="1"/>
+            </svg>`,
+            
+            '늑대': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="16" y="26" width="32" height="22" rx="2"/>
+                <rect x="20" y="48" width="6" height="12"/>
+                <rect x="38" y="48" width="6" height="12"/>
+                <rect x="22" y="12" width="20" height="18" rx="2"/>
+                <polygon points="22,12 18,2 26,12"/>
+                <polygon points="42,12 46,2 38,12"/>
+                <rect x="44" y="30" width="14" height="6" rx="1"/>
+            </svg>`,
+            
+            '토끼': `<svg viewBox="0 0 64 64" fill="#000">
+                <ellipse cx="32" cy="40" rx="14" ry="16"/>
+                <ellipse cx="32" cy="26" rx="10" ry="10"/>
+                <rect x="22" y="2" width="6" height="22" rx="3"/>
+                <rect x="36" y="2" width="6" height="22" rx="3"/>
+                <rect x="22" y="52" width="6" height="10"/>
+                <rect x="36" y="52" width="6" height="10"/>
+            </svg>`,
+            
+            '여우': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="18" y="28" width="28" height="18" rx="2"/>
+                <polygon points="32,20 18,34 46,34"/>
+                <polygon points="20,20 12,8 24,24"/>
+                <polygon points="44,20 52,8 40,24"/>
+                <rect x="20" y="46" width="6" height="10"/>
+                <rect x="38" y="46" width="6" height="10"/>
+                <rect x="46" y="32" width="14" height="8" rx="2"/>
+            </svg>`,
+            
+            '판다': `<svg viewBox="0 0 64 64" fill="#000">
+                <ellipse cx="32" cy="36" rx="22" ry="18"/>
+                <circle cx="32" cy="20" r="14"/>
+                <circle cx="20" cy="10" r="6"/>
+                <circle cx="44" cy="10" r="6"/>
+                <ellipse cx="24" cy="18" rx="5" ry="6"/>
+                <ellipse cx="40" cy="18" rx="5" ry="6"/>
+                <rect x="18" y="48" width="8" height="12"/>
+                <rect x="38" y="48" width="8" height="12"/>
+            </svg>`,
+            
+            '낙타': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="14" y="30" width="36" height="18" rx="2"/>
+                <ellipse cx="24" cy="26" rx="8" ry="10"/>
+                <ellipse cx="40" cy="26" rx="8" ry="10"/>
+                <rect x="44" y="10" width="10" height="24" rx="2"/>
+                <rect x="48" y="4" width="8" height="10"/>
+                <rect x="16" y="48" width="6" height="14"/>
+                <rect x="26" y="48" width="6" height="14"/>
+                <rect x="32" y="48" width="6" height="14"/>
+                <rect x="42" y="48" width="6" height="14"/>
+            </svg>`,
+            
+            '좀비': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="20" y="4" width="24" height="24" rx="2"/>
+                <rect x="18" y="28" width="28" height="22" rx="2"/>
+                <rect x="22" y="50" width="8" height="12"/>
+                <rect x="34" y="50" width="8" height="12"/>
+                <rect x="2" y="28" width="18" height="8" rx="1"/>
+                <rect x="44" y="28" width="18" height="8" rx="1"/>
+            </svg>`,
+            
+            '크리퍼': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="16" y="4" width="32" height="32" rx="2"/>
+                <rect x="20" y="36" width="10" height="24"/>
+                <rect x="34" y="36" width="10" height="24"/>
+                <rect x="20" y="12" width="8" height="8"/>
+                <rect x="36" y="12" width="8" height="8"/>
+                <rect x="28" y="20" width="8" height="4"/>
+                <rect x="24" y="24" width="16" height="8"/>
+            </svg>`,
+            
+            '스켈레톤': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="22" y="4" width="20" height="20" rx="2"/>
+                <rect x="28" y="24" width="8" height="20"/>
+                <rect x="22" y="44" width="6" height="16"/>
+                <rect x="36" y="44" width="6" height="16"/>
+                <rect x="10" y="26" width="20" height="4"/>
+                <rect x="34" y="26" width="20" height="4"/>
+                <rect x="50" y="14" width="4" height="16"/>
+                <rect x="50" y="10" width="10" height="4"/>
+            </svg>`,
+            
+            '거미': `<svg viewBox="0 0 64 64" fill="#000">
+                <ellipse cx="22" cy="32" rx="12" ry="10"/>
+                <ellipse cx="42" cy="32" rx="14" ry="12"/>
+                <rect x="2" y="20" width="16" height="4" transform="rotate(-30 10 22)"/>
+                <rect x="2" y="40" width="16" height="4" transform="rotate(30 10 42)"/>
+                <rect x="46" y="20" width="16" height="4" transform="rotate(30 54 22)"/>
+                <rect x="46" y="40" width="16" height="4" transform="rotate(-30 54 42)"/>
+                <rect x="4" y="28" width="14" height="4"/>
+                <rect x="46" y="28" width="14" height="4"/>
+                <rect x="4" y="36" width="14" height="4"/>
+                <rect x="46" y="36" width="14" height="4"/>
+            </svg>`,
+            
+            '엔더맨': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="24" y="2" width="16" height="16" rx="1"/>
+                <rect x="26" y="18" width="12" height="28"/>
+                <rect x="22" y="46" width="6" height="16"/>
+                <rect x="36" y="46" width="6" height="16"/>
+                <rect x="8" y="20" width="20" height="4"/>
+                <rect x="36" y="20" width="20" height="4"/>
+                <rect x="4" y="20" width="4" height="20"/>
+                <rect x="56" y="20" width="4" height="20"/>
+            </svg>`,
+            
+            '마녀': `<svg viewBox="0 0 64 64" fill="#000">
+                <polygon points="32,0 20,24 44,24"/>
+                <rect x="18" y="24" width="28" height="18" rx="2"/>
+                <rect x="20" y="42" width="24" height="18" rx="2"/>
+                <rect x="24" y="56" width="6" height="8"/>
+                <rect x="34" y="56" width="6" height="8"/>
+                <rect x="8" y="44" width="14" height="6"/>
+                <circle cx="22" cy="50" r="6"/>
+            </svg>`,
+            
+            '슬라임': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="8" y="16" width="48" height="40" rx="4"/>
+                <rect x="16" y="24" width="8" height="8"/>
+                <rect x="40" y="24" width="8" height="8"/>
+                <rect x="24" y="40" width="16" height="8"/>
+            </svg>`,
+            
+            '가스트': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="8" y="4" width="48" height="36" rx="4"/>
+                <rect x="12" y="40" width="6" height="18"/>
+                <rect x="22" y="40" width="6" height="22"/>
+                <rect x="32" y="40" width="6" height="16"/>
+                <rect x="42" y="40" width="6" height="20"/>
+                <rect x="50" y="40" width="6" height="14"/>
+                <rect x="16" y="14" width="10" height="10"/>
+                <rect x="38" y="14" width="10" height="10"/>
+                <rect x="26" y="28" width="12" height="6"/>
+            </svg>`,
+            
+            '블레이즈': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="22" y="8" width="20" height="20" rx="2"/>
+                <rect x="18" y="32" width="28" height="6"/>
+                <rect x="20" y="42" width="24" height="6"/>
+                <rect x="22" y="52" width="20" height="6"/>
+                <rect x="8" y="14" width="12" height="4" transform="rotate(-20 14 16)"/>
+                <rect x="44" y="14" width="12" height="4" transform="rotate(20 50 16)"/>
+                <rect x="6" y="22" width="14" height="4" transform="rotate(15 13 24)"/>
+                <rect x="44" y="22" width="14" height="4" transform="rotate(-15 51 24)"/>
+            </svg>`,
+            
+            '위더': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="4" y="12" width="16" height="16" rx="2"/>
+                <rect x="24" y="8" width="16" height="20" rx="2"/>
+                <rect x="44" y="12" width="16" height="16" rx="2"/>
+                <rect x="8" y="28" width="48" height="12" rx="2"/>
+                <rect x="16" y="40" width="32" height="10" rx="2"/>
+                <polygon points="32,50 20,62 44,62"/>
+            </svg>`,
+            
+            '워든': `<svg viewBox="0 0 64 64" fill="#000">
+                <rect x="16" y="12" width="32" height="28" rx="4"/>
+                <rect x="12" y="2" width="10" height="14" rx="2"/>
+                <rect x="42" y="2" width="10" height="14" rx="2"/>
+                <rect x="18" y="40" width="28" height="16" rx="2"/>
+                <rect x="20" y="52" width="10" height="12"/>
+                <rect x="34" y="52" width="10" height="12"/>
+                <rect x="4" y="20" width="14" height="12" rx="2"/>
+                <rect x="46" y="20" width="14" height="12" rx="2"/>
+            </svg>`,
+            
+            '치킨조키': `<svg viewBox="0 0 64 64" fill="#000">
+                <ellipse cx="32" cy="48" rx="18" ry="12"/>
+                <rect x="24" y="32" width="16" height="12" rx="2"/>
+                <polygon points="22,38 14,42 22,46"/>
+                <rect x="22" y="56" width="6" height="8"/>
+                <rect x="36" y="56" width="6" height="8"/>
+                <rect x="24" y="8" width="16" height="16" rx="2"/>
+                <rect x="20" y="24" width="24" height="10" rx="1"/>
+                <rect x="12" y="28" width="10" height="4"/>
+                <rect x="42" y="28" width="10" height="4"/>
+            </svg>`,
+            
+            '엘더 가디언': `<svg viewBox="0 0 64 64" fill="#000">
+                <polygon points="32,4 56,32 32,60 8,32"/>
+                <rect x="24" y="24" width="16" height="16" rx="2"/>
+                <circle cx="32" cy="32" r="6"/>
+                <rect x="2" y="28" width="8" height="8" transform="rotate(45 6 32)"/>
+                <rect x="54" y="28" width="8" height="8" transform="rotate(45 58 32)"/>
+                <rect x="28" y="2" width="8" height="8" transform="rotate(45 32 6)"/>
+                <rect x="28" y="54" width="8" height="8" transform="rotate(45 32 58)"/>
+            </svg>`,
+            
+            '엔더 드래곤': `<svg viewBox="0 0 64 64" fill="#000">
+                <ellipse cx="32" cy="36" rx="20" ry="14"/>
+                <rect x="6" y="20" width="20" height="20" rx="3"/>
+                <polygon points="6,20 0,10 10,22"/>
+                <polygon points="2,40 0,50 10,38"/>
+                <polygon points="20,24 8,16 18,28"/>
+                <rect x="48" y="30" width="14" height="8" rx="2"/>
+                <polygon points="12,30 4,24 4,36"/>
+                <polygon points="32,22 22,10 28,24"/>
+                <polygon points="32,22 42,10 36,24"/>
+                <rect x="26" y="48" width="12" height="14" rx="2"/>
+            </svg>`,
+        };
+
+        // ==========================================
+        //              게임 상태
+        // ==========================================
+        let gameState = {
+            phase: 'start',
+            currentRound: 1,
+            score: 0,
+            answers: [],
+            categoryScores: {
+                animal: 0,
+                monster: 0,
+                boss: 0
+            }
+        };
+
+        // ==========================================
+        //              DOM 요소
+        // ==========================================
+        const $startScreen = document.getElementById('start-screen');
+        const $gameScreen = document.getElementById('game-screen');
+        const $resultScreen = document.getElementById('result-screen');
+        const $feedbackModal = document.getElementById('feedback-modal');
+        
+        const $btnStart = document.getElementById('btn-start');
+        const $btnSubmit = document.getElementById('btn-submit');
+        const $btnNext = document.getElementById('btn-next');
+        const $btnRestart = document.getElementById('btn-restart');
+        
+        const $roundInfo = document.getElementById('round-info');
+        const $scoreInfo = document.getElementById('score-info');
+        const $progressFill = document.getElementById('progress-fill');
+        const $categoryBadge = document.getElementById('category-badge');
+        const $shadowDisplay = document.getElementById('shadow-display');
+        const $answerInput = document.getElementById('answer-input');
+        const $hintText = document.getElementById('hint-text');
+        const $difficultyNotice = document.getElementById('difficulty-notice');
+        const $difficultyText = document.getElementById('difficulty-text');
+        
+        const $modalContent = document.getElementById('modal-content');
+        const $feedbackIcon = document.getElementById('feedback-icon');
+        const $feedbackText = document.getElementById('feedback-text');
+        const $feedbackAnswer = document.getElementById('feedback-answer');
+        
+        const $finalScore = document.getElementById('final-score');
+        const $stars = document.getElementById('stars');
+        const $gradeTitle = document.getElementById('grade-title');
+        const $animalScore = document.getElementById('animal-score');
+        const $monsterScore = document.getElementById('monster-score');
+        const $bossScore = document.getElementById('boss-score');
+
+        // ==========================================
+        //              화면 전환
+        // ==========================================
+        function showScreen(screenName) {
+            $startScreen.classList.add('hidden');
+            $gameScreen.classList.add('hidden');
+            $resultScreen.classList.add('hidden');
+            $feedbackModal.classList.add('hidden');
+            
+            switch(screenName) {
+                case 'start':
+                    $startScreen.classList.remove('hidden');
+                    break;
+                case 'game':
+                    $gameScreen.classList.remove('hidden');
+                    break;
+                case 'result':
+                    $resultScreen.classList.remove('hidden');
+                    break;
+            }
+        }
+
+        // ==========================================
+        //              게임 로직
+        // ==========================================
+        function startGame() {
+            gameState = {
+                phase: 'playing',
+                currentRound: 1,
+                score: 0,
+                answers: [],
+                categoryScores: {
+                    animal: 0,
+                    monster: 0,
+                    boss: 0
+                }
+            };
+            
+            showScreen('game');
+            renderGameScreen();
+        }
+
+        function getCurrentRound() {
+            return ROUNDS[gameState.currentRound - 1];
+        }
+
+        function checkAnswer(userInput) {
+            const currentAnswer = getCurrentRound().answer;
+            const normalized = userInput.trim().replace(/\s+/g, '').toLowerCase();
+            const correctNormalized = currentAnswer.replace(/\s+/g, '').toLowerCase();
+            
+            return normalized === correctNormalized;
+        }
+
+        function submitAnswer() {
+            const userInput = $answerInput.value.trim();
+            
+            if (!userInput) {
+                $answerInput.focus();
+                $answerInput.style.borderColor = '#ef4444';
+                setTimeout(() => {
+                    $answerInput.style.borderColor = '';
+                }, 500);
+                return;
+            }
+            
+            const isCorrect = checkAnswer(userInput);
+            const currentRound = getCurrentRound();
+            
+            // 점수 업데이트
+            if (isCorrect) {
+                gameState.score++;
+                gameState.categoryScores[currentRound.category]++;
+            }
+            
+            // 답안 기록
+            gameState.answers.push({
+                round: gameState.currentRound,
+                userAnswer: userInput,
+                correctAnswer: currentRound.answer,
+                isCorrect: isCorrect
+            });
+            
+            // 피드백 표시
+            showFeedback(isCorrect, currentRound.answer);
+        }
+
+        function showFeedback(isCorrect, correctAnswer) {
+            $feedbackModal.classList.remove('hidden');
+            $modalContent.classList.remove('correct', 'wrong');
+            
+            if (isCorrect) {
+                $modalContent.classList.add('correct');
+                $feedbackIcon.textContent = '✅';
+                $feedbackText.textContent = '정답!';
+            } else {
+                $modalContent.classList.add('wrong');
+                $feedbackIcon.textContent = '❌';
+                $feedbackText.textContent = '오답!';
+            }
+            
+            $feedbackAnswer.textContent = `정답: ${correctAnswer}`;
+        }
+
+        function nextRound() {
+            $feedbackModal.classList.add('hidden');
+            $answerInput.value = '';
+            
+            if (gameState.currentRound < 25) {
+                gameState.currentRound++;
+                renderGameScreen();
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            gameState.phase = 'result';
+            showScreen('result');
+            renderResultScreen();
+        }
+
+        function getGrade(score) {
+            return GRADES.find(g => score >= g.min && score <= g.max);
+        }
+
+        // ==========================================
+        //              렌더링
+        // ==========================================
+        function renderGameScreen() {
+            const round = getCurrentRound();
+            const roundNum = gameState.currentRound;
+            
+            // 라운드 정보
+            $roundInfo.textContent = `라운드 ${roundNum}/25`;
+            $scoreInfo.textContent = `⭐ ${gameState.score}점`;
+            
+            // 진행바
+            $progressFill.style.width = `${(roundNum / 25) * 100}%`;
+            
+            // 카테고리 배지
+            let badgeClass = 'badge-animal';
+            let badgeText = '🐷 동물';
+            
+            if (round.category === 'monster') {
+                badgeClass = 'badge-monster';
+                badgeText = '👾 몬스터';
+            } else if (round.category === 'boss') {
+                badgeClass = 'badge-boss';
+                badgeText = '🐉 보스';
+            }
+            
+            $categoryBadge.className = `badge ${badgeClass}`;
+            $categoryBadge.textContent = badgeText;
+            
+            // 난이도 상승 알림
+            if (roundNum === 11) {
+                $difficultyNotice.classList.remove('hidden');
+                $difficultyText.textContent = '⚡ 몬스터 등장!';
+            } else if (roundNum === 21) {
+                $difficultyNotice.classList.remove('hidden');
+                $difficultyText.textContent = '🔥 보스 등장!';
+            } else {
+                $difficultyNotice.classList.add('hidden');
+            }
+            
+            // 그림자 표시
+            $shadowDisplay.innerHTML = SHADOWS[round.answer] || '';
+            
+            // 힌트
+            $hintText.textContent = `힌트: ${round.hint}`;
+            
+            // 입력 필드 포커스
+            $answerInput.focus();
+        }
+
+        function renderResultScreen() {
+            const grade = getGrade(gameState.score);
+            
+            $finalScore.textContent = `${gameState.score} / 25`;
+            $stars.textContent = '⭐'.repeat(grade.stars);
+            $gradeTitle.textContent = grade.title;
+            
+            $animalScore.textContent = `${gameState.categoryScores.animal} / 10`;
+            $monsterScore.textContent = `${gameState.categoryScores.monster} / 10`;
+            $bossScore.textContent = `${gameState.categoryScores.boss} / 5`;
+        }
+
+        // ==========================================
+        //              이벤트 바인딩
+        // ==========================================
+        function bindEvents() {
+            $btnStart.addEventListener('click', startGame);
+            $btnSubmit.addEventListener('click', submitAnswer);
+            $btnNext.addEventListener('click', nextRound);
+            $btnRestart.addEventListener('click', startGame);
+            
+            // Enter 키로 제출
+            $answerInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitAnswer();
+                }
+            });
+        }
+
+        // ==========================================
+        //              초기화
+        // ==========================================
+        function init() {
+            bindEvents();
+            showScreen('start');
+        }
+
+        init();
+    </script>
+</body>
+</html>
