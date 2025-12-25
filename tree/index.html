@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나무크래프트</title>
+    <style>
+        :root {
+            --bg-color: #75b85b;
+            --panel-bg: #5a9646;
+            --text-color: #fff;
+            --coin-bronze: #cd7f32;
+            --coin-silver: #c0c0c0;
+            --coin-gold: #ffd700;
+        }
+        body {
+            font-family: 'Nanum Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* 인포그래픽 이미지를 배경으로 사용 (실제 파일 경로로 변경 필요) */
+            background-image: url('image_1.png'); 
+            background-size: cover;
+            background-position: center;
+            background-blend-mode: multiply;
+        }
+        #game-container {
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 800px;
+        }
+        .panel {
+            background-color: var(--panel-bg);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .currency {
+            font-weight: bold;
+        }
+        .coin {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border-radius: 50%;
+            margin-right: 5px;
+            text-align: center;
+            line-height: 1em;
+            font-size: 0.8em;
+        }
+        .bronze { background-color: var(--coin-bronze); color: #fff; }
+        .silver { background-color: var(--coin-silver); color: #000; }
+        .gold { background-color: var(--coin-gold); color: #000; }
+
+        .content {
+            display: flex;
+            gap: 15px;
+        }
+        .tree-farm {
+            flex: 2;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        .tree-btn {
+            background-color: #4a7c3a;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.1s, background-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .tree-btn:hover { background-color: #5e9b4e; transform: scale(1.05); }
+        .tree-btn:active { transform: scale(0.95); }
+        .tree-btn:disabled {
+            background-color: #3a5c2a;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .tree-icon { font-size: 2em; margin-bottom: 5px; }
+        .tree-name { font-size: 0.9em; margin-bottom: 3px; }
+        .tree-value { font-size: 0.8em; }
+
+        .sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .upgrade-btn, .repair-btn {
+            background-color: #e67e22;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        .upgrade-btn:hover, .repair-btn:hover { background-color: #d35400; }
+        .upgrade-btn:disabled, .repair-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .tab-active {
+            background-color: #27ae60 !important;
+        }
+        
+        .durability-bar-container {
+            background-color: #333;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+        #durability-bar {
+            background-color: #2ecc71;
+            height: 100%;
+            width: 100%;
+            transition: width 0.3s;
+        }
+
+        #message-area {
+            text-align: center;
+            margin-top: 10px;
+            min-height: 1.2em;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+
+        #congratulations-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #congratulations-message {
+            font-size: 4em;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="panel header">
+        <h1 id="game-title">나무크래프트</h1>
+        <div class="currency">
+            보유 자금: 
+            <span id="gold">0</span> <span class="coin gold">금</span>
+            <span id="silver">0</span> <span class="coin silver">은</span>
+            <span id="bronze">0</span> <span class="coin bronze">동</span>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="panel" style="margin-bottom: 10px; display: none;">
+            <div style="display: flex; gap: 10px;">
+                <button id="tab-trees" class="upgrade-btn" onclick="switchTab('trees')" style="flex: 1;">🌲 나무</button>
+                <button id="tab-ores" class="upgrade-btn" onclick="switchTab('ores')" style="flex: 1;">⛏️ 광물</button>
+            </div>
+        </div>
+        <div class="panel tree-farm" id="tree-list">
+            </div>
+        <div class="panel tree-farm" id="ore-list" style="display: none;">
+            </div>
+
+        <div class="sidebar">
+            <div class="panel">
+                <h3>🛠️ 도구 업그레이드</h3>
+                <div id="current-tool-info">현재: 기본 도끼</div>
+                <button id="upgrade-btn" class="upgrade-btn">
+                    은 도끼로 업그레이드<br>(비용: 100 동)
+                </button>
+            </div>
+
+            <div class="panel">
+                <h3>🔧 내구도 관리</h3>
+                <div>내구도: <span id="durability-text">100 / 100</span></div>
+                <div class="durability-bar-container">
+                    <div id="durability-bar"></div>
+                </div>
+                <button id="repair-btn" class="repair-btn" onclick="repairDurability()">
+                    수리하기 (비용: 10 동)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-area">게임을 시작합니다! 나무를 캐서 돈을 버세요.</div>
+</div>
+
+<div id="congratulations-overlay">
+    <div id="congratulations-message">🎉 축하합니다! 🎉</div>
+</div>
+
+<script>
+    // --- 게임 데이터 및 상태 ---
+    let money = { gold: 0, silver: 0, bronze: 0 };
+    let currentToolIndex = 0;
+    let currentPickaxeIndex = 0;
+    let currentTab = 'trees';
+    let durability = 100;
+    let pickaxeDurability = 100;
+    const maxDurability = 100;
+    const repairCost = 10; // 내구도 10 회복당 비용 (동)
+    const repairAmount = 10;
+
+    const trees = [
+        { name: '참나무', value: { gold: 0, silver: 0, bronze: 2 }, reqTool: 0, icon: '🌳' },
+        { name: '가문비나무', value: { gold: 0, silver: 0, bronze: 5 }, reqTool: 1, icon: '🌲' },
+        { name: '자작나무', value: { gold: 0, silver: 0, bronze: 10 }, reqTool: 2, icon: '🌳' },
+        { name: '정글나무', value: { gold: 0, silver: 1, bronze: 6 }, reqTool: 3, icon: '🌴' },
+        { name: '아카시아나무', value: { gold: 0, silver: 1, bronze: 10 }, reqTool: 4, icon: '🌳' },
+        { name: '짙은 참나무', value: { gold: 0, silver: 2, bronze: 7 }, reqTool: 5, icon: '🌳' },
+        { name: '맹그로브나무', value: { gold: 0, silver: 3, bronze: 10 }, reqTool: 5, icon: '🌳' },
+        { name: '벚나무', value: { gold: 0, silver: 5, bronze: 10 }, reqTool: 5, icon: '🌸' }
+    ];
+
+    const tools = [
+        { name: '기본 도끼', upgradeCost: { gold: 0, silver: 0, bronze: 30 }, durabilityCost: 2 },
+        
+        { name: '금 도끼', upgradeCost: { gold: 0, silver: 0, bronze: 50 }, durabilityCost: 4 },
+        { name: '에메랄드 도끼', upgradeCost: { gold: 0, silver: 0, bronze: 60 }, durabilityCost: 5 },
+        { name: '다이아몬드 도끼', upgradeCost: { gold: 0, silver: 2, bronze: 30 }, durabilityCost: 6 },
+        { name: '네더라이트 도끼', upgradeCost: { gold: 0, silver: 9, bronze: 40 }, durabilityCost: 7 },
+        { name: '구리 도끼', upgradeCost: { gold: 1, silver: 20, bronze: 30 }, durabilityCost: 8 },
+        { name: '루비 도끼', upgradeCost: null, durabilityCost: 9 }
+
+        
+
+     
+        
+
+    ];
+
+    const ores = [
+        { name: '석영', value: { gold: 0, silver: 0, bronze: 1 }, reqPickaxe: 0, icon: '💎' },
+        { name: '방해석', value: { gold: 0, silver: 0, bronze: 2 }, reqPickaxe: 0, icon: '💎' },
+        { name: '장석', value: { gold: 0, silver: 0, bronze: 3 }, reqPickaxe: 0, icon: '💎' },
+        { name: '백운석', value: { gold: 0, silver: 0, bronze: 4 }, reqPickaxe: 1, icon: '💎' },
+        { name: '형석', value: { gold: 0, silver: 0, bronze: 5 }, reqPickaxe: 1, icon: '💎' },
+        { name: '황철석', value: { gold: 0, silver: 0, bronze: 6 }, reqPickaxe: 1, icon: '💎' },
+        { name: '방연석', value: { gold: 0, silver: 0, bronze: 7 }, reqPickaxe: 2, icon: '💎' },
+        { name: '적철석', value: { gold: 0, silver: 0, bronze: 8 }, reqPickaxe: 2, icon: '💎' },
+        { name: '자철석', value: { gold: 0, silver: 0, bronze: 9 }, reqPickaxe: 2, icon: '💎' },
+        { name: '구리', value: { gold: 0, silver: 0, bronze: 10 }, reqPickaxe: 3, icon: '🟠' },
+        { name: '황', value: { gold: 0, silver: 0, bronze: 12 }, reqPickaxe: 3, icon: '🟡' },
+        { name: '흑연', value: { gold: 0, silver: 0, bronze: 15 }, reqPickaxe: 3, icon: '⚫' },
+        { name: '은', value: { gold: 0, silver: 1, bronze: 0 }, reqPickaxe: 4, icon: '🥈' },
+        { name: '금', value: { gold: 0, silver: 2, bronze: 0 }, reqPickaxe: 4, icon: '🥇' },
+        { name: '다이아몬드', value: { gold: 0, silver: 5, bronze: 0 }, reqPickaxe: 5, icon: '💠' },
+        { name: '코런덤', value: { gold: 0, silver: 3, bronze: 0 }, reqPickaxe: 5, icon: '💎' },
+        { name: '베릴', value: { gold: 0, silver: 4, bronze: 0 }, reqPickaxe: 5, icon: '💎' },
+        { name: '토파즈', value: { gold: 0, silver: 6, bronze: 0 }, reqPickaxe: 6, icon: '💎' },
+        { name: '가넷', value: { gold: 0, silver: 7, bronze: 0 }, reqPickaxe: 6, icon: '💎' },
+        { name: '스피넬', value: { gold: 0, silver: 8, bronze: 0 }, reqPickaxe: 6, icon: '💎' },
+        { name: '아파타이트', value: { gold: 0, silver: 9, bronze: 0 }, reqPickaxe: 7, icon: '💎' },
+        { name: '지르콘', value: { gold: 0, silver: 10, bronze: 0 }, reqPickaxe: 7, icon: '💎' },
+        { name: '크리소베릴', value: { gold: 0, silver: 12, bronze: 0 }, reqPickaxe: 7, icon: '💎' },
+        { name: '올리빈', value: { gold: 0, silver: 15, bronze: 0 }, reqPickaxe: 8, icon: '💎' },
+        { name: '페리도트', value: { gold: 0, silver: 18, bronze: 0 }, reqPickaxe: 8, icon: '💎' },
+        { name: '로도나이트', value: { gold: 0, silver: 20, bronze: 0 }, reqPickaxe: 8, icon: '💎' },
+        { name: '말라카이트', value: { gold: 0, silver: 25, bronze: 0 }, reqPickaxe: 9, icon: '💎' },
+        { name: '아주라이트', value: { gold: 0, silver: 30, bronze: 0 }, reqPickaxe: 9, icon: '💎' },
+        { name: '크리소콜라', value: { gold: 0, silver: 35, bronze: 0 }, reqPickaxe: 9, icon: '💎' },
+        { name: '터키석', value: { gold: 0, silver: 40, bronze: 0 }, reqPickaxe: 10, icon: '💎' },
+        { name: '루틸', value: { gold: 0, silver: 50, bronze: 0 }, reqPickaxe: 10, icon: '💎' },
+        { name: '일메나이트', value: { gold: 1, silver: 0, bronze: 0 }, reqPickaxe: 11, icon: '💎' },
+        { name: '스팔레라이트', value: { gold: 1, silver: 10, bronze: 0 }, reqPickaxe: 11, icon: '💎' },
+        { name: '칼코파이라이트', value: { gold: 1, silver: 20, bronze: 0 }, reqPickaxe: 11, icon: '💎' },
+        { name: '보르나이트', value: { gold: 1, silver: 30, bronze: 0 }, reqPickaxe: 12, icon: '💎' },
+        { name: '카시테라이트', value: { gold: 1, silver: 40, bronze: 0 }, reqPickaxe: 12, icon: '💎' },
+        { name: '울프라마이트', value: { gold: 1, silver: 50, bronze: 0 }, reqPickaxe: 12, icon: '💎' },
+        { name: '중정석', value: { gold: 2, silver: 0, bronze: 0 }, reqPickaxe: 13, icon: '💎' },
+        { name: '석고', value: { gold: 2, silver: 10, bronze: 0 }, reqPickaxe: 13, icon: '💎' },
+        { name: '탈크', value: { gold: 2, silver: 20, bronze: 0 }, reqPickaxe: 13, icon: '💎' },
+        { name: '백운모', value: { gold: 2, silver: 30, bronze: 0 }, reqPickaxe: 14, icon: '💎' },
+        { name: '흑운모', value: { gold: 2, silver: 40, bronze: 0 }, reqPickaxe: 14, icon: '💎' },
+        { name: '카올리나이트', value: { gold: 2, silver: 50, bronze: 0 }, reqPickaxe: 14, icon: '💎' },
+        { name: '크리소타일', value: { gold: 3, silver: 0, bronze: 0 }, reqPickaxe: 15, icon: '💎' },
+        { name: '아라고나이트', value: { gold: 3, silver: 10, bronze: 0 }, reqPickaxe: 15, icon: '💎' },
+        { name: '셀레스타이트', value: { gold: 3, silver: 20, bronze: 0 }, reqPickaxe: 15, icon: '💎' },
+        { name: '안달루사이트', value: { gold: 3, silver: 30, bronze: 0 }, reqPickaxe: 16, icon: '💎' },
+        { name: '카이아나이트', value: { gold: 3, silver: 40, bronze: 0 }, reqPickaxe: 16, icon: '💎' },
+        { name: '실리마나이트', value: { gold: 3, silver: 50, bronze: 0 }, reqPickaxe: 16, icon: '💎' },
+        { name: '브루사이트', value: { gold: 4, silver: 0, bronze: 0 }, reqPickaxe: 17, icon: '💎' },
+        { name: '할라이트', value: { gold: 4, silver: 10, bronze: 0 }, reqPickaxe: 17, icon: '💎' },
+        { name: '실바이트', value: { gold: 4, silver: 20, bronze: 0 }, reqPickaxe: 17, icon: '💎' },
+        { name: '앤하이드라이트', value: { gold: 4, silver: 30, bronze: 0 }, reqPickaxe: 18, icon: '💎' },
+        { name: '크리올라이트', value: { gold: 4, silver: 40, bronze: 0 }, reqPickaxe: 18, icon: '💎' },
+        { name: '스티비나이트', value: { gold: 4, silver: 50, bronze: 0 }, reqPickaxe: 18, icon: '💎' },
+        { name: '신나바', value: { gold: 5, silver: 0, bronze: 0 }, reqPickaxe: 19, icon: '💎' },
+        { name: '몰리브데나이트', value: { gold: 5, silver: 10, bronze: 0 }, reqPickaxe: 19, icon: '💎' },
+        { name: '코발타이트', value: { gold: 5, silver: 20, bronze: 0 }, reqPickaxe: 19, icon: '💎' },
+        { name: '니켈린', value: { gold: 5, silver: 30, bronze: 0 }, reqPickaxe: 20, icon: '💎' },
+        { name: '아르세노파이라이트', value: { gold: 5, silver: 40, bronze: 0 }, reqPickaxe: 20, icon: '💎' },
+        { name: '테트라헤드라이트', value: { gold: 5, silver: 50, bronze: 0 }, reqPickaxe: 20, icon: '💎' },
+        { name: '에나르자이트', value: { gold: 6, silver: 0, bronze: 0 }, reqPickaxe: 21, icon: '💎' },
+        { name: '스미소나이트', value: { gold: 6, silver: 10, bronze: 0 }, reqPickaxe: 21, icon: '💎' },
+        { name: '세루사이트', value: { gold: 6, silver: 20, bronze: 0 }, reqPickaxe: 21, icon: '💎' },
+        { name: '파이로모르파이트', value: { gold: 6, silver: 30, bronze: 0 }, reqPickaxe: 22, icon: '💎' },
+        { name: '모나자이트', value: { gold: 6, silver: 40, bronze: 0 }, reqPickaxe: 22, icon: '💎' },
+        { name: '바스나사이트', value: { gold: 6, silver: 50, bronze: 0 }, reqPickaxe: 22, icon: '💎' },
+        { name: '제노타임', value: { gold: 7, silver: 0, bronze: 0 }, reqPickaxe: 23, icon: '💎' },
+        { name: '가돌리나이트', value: { gold: 7, silver: 10, bronze: 0 }, reqPickaxe: 23, icon: '💎' },
+        { name: '에피도트', value: { gold: 7, silver: 20, bronze: 0 }, reqPickaxe: 23, icon: '💎' },
+        { name: '조이사이트', value: { gold: 7, silver: 30, bronze: 0 }, reqPickaxe: 24, icon: '💎' },
+        { name: '베수비아나이트', value: { gold: 7, silver: 40, bronze: 0 }, reqPickaxe: 24, icon: '💎' },
+        { name: '그로슐라', value: { gold: 7, silver: 50, bronze: 0 }, reqPickaxe: 24, icon: '💎' },
+        { name: '안데신', value: { gold: 8, silver: 0, bronze: 0 }, reqPickaxe: 25, icon: '💎' },
+        { name: '라브라도라이트', value: { gold: 8, silver: 10, bronze: 0 }, reqPickaxe: 25, icon: '💎' },
+        { name: '오르토클레이스', value: { gold: 8, silver: 20, bronze: 0 }, reqPickaxe: 25, icon: '💎' },
+        { name: '알바이트', value: { gold: 8, silver: 30, bronze: 0 }, reqPickaxe: 26, icon: '💎' },
+        { name: '애노사이트', value: { gold: 8, silver: 40, bronze: 0 }, reqPickaxe: 26, icon: '💎' },
+        { name: '헤덴버자이트', value: { gold: 8, silver: 50, bronze: 0 }, reqPickaxe: 26, icon: '💎' },
+        { name: '디옵사이드', value: { gold: 9, silver: 0, bronze: 0 }, reqPickaxe: 27, icon: '💎' },
+        { name: '아우자이트', value: { gold: 9, silver: 10, bronze: 0 }, reqPickaxe: 27, icon: '💎' },
+        { name: '호른블렌드', value: { gold: 9, silver: 20, bronze: 0 }, reqPickaxe: 27, icon: '💎' },
+        { name: '트레몰라이트', value: { gold: 9, silver: 30, bronze: 0 }, reqPickaxe: 28, icon: '💎' },
+        { name: '액티놀라이트', value: { gold: 9, silver: 40, bronze: 0 }, reqPickaxe: 28, icon: '💎' },
+        { name: '세르펜틴', value: { gold: 9, silver: 50, bronze: 0 }, reqPickaxe: 28, icon: '💎' },
+        { name: '프레나이트', value: { gold: 10, silver: 0, bronze: 0 }, reqPickaxe: 29, icon: '💎' },
+        { name: '레피돌라이트', value: { gold: 10, silver: 10, bronze: 0 }, reqPickaxe: 29, icon: '💎' },
+        { name: '스포듀민', value: { gold: 10, silver: 20, bronze: 0 }, reqPickaxe: 29, icon: '💎' },
+        { name: '페타라이트', value: { gold: 10, silver: 30, bronze: 0 }, reqPickaxe: 30, icon: '💎' }
+    ];
+
+    const pickaxes = [
+        { name: '기본 곡괭이', upgradeCost: { gold: 0, silver: 0, bronze: 30 }, durabilityCost: 2 },
+        { name: '구리 곡괭이', upgradeCost: { gold: 0, silver: 0, bronze: 50 }, durabilityCost: 3 },
+        { name: '금 곡괭이', upgradeCost: { gold: 0, silver: 1, bronze: 0 }, durabilityCost: 4 },
+        { name: '에메랄드 곡괭이', upgradeCost: { gold: 0, silver: 2, bronze: 0 }, durabilityCost: 5 },
+        { name: '다이아몬드 곡괭이', upgradeCost: { gold: 0, silver: 2, bronze: 0 }, durabilityCost: 6 },
+        { name: '네더라이트 곡괭이', upgradeCost: null, durabilityCost: 7 }
+    ];
+
+    // --- 유틸리티 함수 ---
+    function showMessage(msg) {
+        document.getElementById('message-area').innerText = msg;
+    }
+
+    function formatValue(value) {
+        let parts = [];
+        if (value.gold > 0) parts.push(`${value.gold}금`);
+        if (value.silver > 0) parts.push(`${value.silver}은`);
+        if (value.bronze > 0) parts.push(`${value.bronze}동`);
+        return parts.join(' ');
+    }
+
+    function canAfford(cost) {
+        // 모든 화폐를 동 단위로 변환해서 비교 (환전 가능한 금액 고려)
+        const totalMoney = money.gold * 10000 + money.silver * 100 + money.bronze;
+        const totalCost = cost.gold * 10000 + cost.silver * 100 + cost.bronze;
+        return totalMoney >= totalCost;
+    }
+
+    function pay(cost) {
+        // 필요한 금액 계산
+        let neededGold = cost.gold;
+        let neededSilver = cost.silver;
+        let neededBronze = cost.bronze;
+        
+        // 동이 부족하면 은에서 환전
+        if (money.bronze < neededBronze) {
+            let bronzeShortage = neededBronze - money.bronze;
+            let silverToConvert = Math.ceil(bronzeShortage / 100);
+            if (money.silver >= silverToConvert) {
+                money.silver -= silverToConvert;
+                money.bronze += silverToConvert * 100;
+            } else {
+                // 은도 부족하면 금에서 환전
+                let silverShortage = silverToConvert - money.silver;
+                let goldToConvert = Math.ceil(silverShortage / 100);
+                if (money.gold >= goldToConvert) {
+                    money.gold -= goldToConvert;
+                    money.silver += goldToConvert * 100;
+                    money.silver -= silverToConvert;
+                    money.bronze += silverToConvert * 100;
+                }
+            }
+        }
+        
+        // 은이 부족하면 금에서 환전
+        if (money.silver < neededSilver) {
+            let silverShortage = neededSilver - money.silver;
+            let goldToConvert = Math.ceil(silverShortage / 100);
+            if (money.gold >= goldToConvert) {
+                money.gold -= goldToConvert;
+                money.silver += goldToConvert * 100;
+            }
+        }
+        
+        // 최종 지불
+        money.gold -= neededGold;
+        money.silver -= neededSilver;
+        money.bronze -= neededBronze;
+        updateUI();
+    }
+
+    function earn(value) {
+        money.gold += value.gold;
+        money.silver += value.silver;
+        money.bronze += value.bronze;
+        convertCurrency();
+        updateUI();
+    }
+
+    function convertCurrency() {
+        if (money.bronze >= 100) {
+            let silverGain = Math.floor(money.bronze / 100);
+            money.silver += silverGain;
+            money.bronze %= 100;
+            showMessage(`${silverGain}은으로 자동 환전되었습니다!`);
+        }
+        if (money.silver >= 100) {
+            let goldGain = Math.floor(money.silver / 100);
+            money.gold += goldGain;
+            money.silver %= 100;
+            showMessage(`${goldGain}금으로 자동 환전되었습니다!`);
+        }
+    }
+
+    // --- 게임 로직 ---
+    function chopTree(index) {
+        const tree = trees[index];
+        const tool = tools[currentToolIndex];
+
+        if (durability < tool.durabilityCost) {
+            showMessage("내구도가 부족합니다! 도구를 수리하세요.");
+            return;
+        }
+
+        durability -= tool.durabilityCost;
+        earn(tree.value);
+        showMessage(`${tree.name}을(를) 캐서 ${formatValue(tree.value)}을(를) 획득했습니다!`);
+        updateUI();
+    }
+
+    function upgradeTool() {
+        const nextToolIndex = currentToolIndex + 1;
+        if (nextToolIndex >= tools.length) return;
+
+        const cost = tools[currentToolIndex].upgradeCost;
+        if (canAfford(cost)) {
+            pay(cost);
+            currentToolIndex++;
+            durability = maxDurability; // 업그레이드 시 내구도 최대치로 회복
+            showMessage(`${tools[currentToolIndex].name}(으)로 업그레이드 완료! 내구도가 최대치로 회복되었습니다.`);
+            
+            // 루비 도끼를 획득하면 게임 완료
+            if (tools[currentToolIndex].name === '루비 도끼') {
+                document.getElementById('game-title').innerText = '🎉 축하합니다! 🎉';
+                document.getElementById('congratulations-overlay').style.display = 'flex';
+            }
+            
+            updateUI();
+        } else {
+            showMessage("업그레이드 비용이 부족합니다.");
+        }
+    }
+
+    function repairDurability() {
+        const cost = { gold: 0, silver: 0, bronze: repairCost };
+        const currentDurability = currentTab === 'trees' ? durability : pickaxeDurability;
+        if (currentDurability >= maxDurability) {
+            showMessage("내구도가 이미 가득 찼습니다.");
+            return;
+        }
+        if (canAfford(cost)) {
+            pay(cost);
+            if (currentTab === 'trees') {
+            durability = Math.min(maxDurability, durability + repairAmount);
+            } else {
+                pickaxeDurability = Math.min(maxDurability, pickaxeDurability + repairAmount);
+            }
+            showMessage(`내구도를 수리했습니다. (-${repairCost}동)`);
+            updateUI();
+        } else {
+            showMessage("수리 비용이 부족합니다.");
+        }
+    }
+
+    // --- 탭 전환 ---
+    function switchTab(tab) {
+        currentTab = tab;
+        document.getElementById('tab-trees').classList.toggle('tab-active', tab === 'trees');
+        document.getElementById('tab-ores').classList.toggle('tab-active', tab === 'ores');
+        document.getElementById('tree-list').style.display = tab === 'trees' ? 'grid' : 'none';
+        document.getElementById('ore-list').style.display = tab === 'ores' ? 'grid' : 'none';
+        updateUI();
+    }
+
+    // --- 광물 채굴 ---
+    function mineOre(index) {
+        const ore = ores[index];
+        const pickaxe = pickaxes[currentPickaxeIndex];
+
+        if (pickaxeDurability < pickaxe.durabilityCost) {
+            showMessage("내구도가 부족합니다! 도구를 수리하세요.");
+            return;
+        }
+
+        pickaxeDurability -= pickaxe.durabilityCost;
+        earn(ore.value);
+        showMessage(`${ore.name}을(를) 채굴해서 ${formatValue(ore.value)}을(를) 획득했습니다!`);
+        updateUI();
+    }
+
+    // --- 곡괭이 업그레이드 ---
+    function upgradePickaxe() {
+        const nextPickaxeIndex = currentPickaxeIndex + 1;
+        if (nextPickaxeIndex >= pickaxes.length) return;
+
+        const cost = pickaxes[currentPickaxeIndex].upgradeCost;
+        if (canAfford(cost)) {
+            pay(cost);
+            currentPickaxeIndex++;
+            pickaxeDurability = maxDurability; // 업그레이드 시 내구도 최대치로 회복
+            showMessage(`${pickaxes[currentPickaxeIndex].name}(으)로 업그레이드 완료! 내구도가 최대치로 회복되었습니다.`);
+            updateUI();
+        } else {
+            showMessage("업그레이드 비용이 부족합니다.");
+        }
+    }
+
+    // --- UI 업데이트 ---
+    function updateUI() {
+        // 자금 업데이트
+        document.getElementById('gold').innerText = money.gold;
+        document.getElementById('silver').innerText = money.silver;
+        document.getElementById('bronze').innerText = money.bronze;
+
+        if (currentTab === 'trees') {
+        // 나무 버튼 상태 업데이트
+        const treeList = document.getElementById('tree-list');
+        treeList.innerHTML = ''; // 기존 버튼 초기화
+        trees.forEach((tree, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'tree-btn';
+            btn.onclick = () => chopTree(index);
+            btn.disabled = currentToolIndex < tree.reqTool;
+            btn.innerHTML = `
+                <span class="tree-icon">${tree.icon}</span>
+                <span class="tree-name">${tree.name}</span>
+                <span class="tree-value">${formatValue(tree.value)}</span>
+            `;
+            treeList.appendChild(btn);
+        });
+
+        // 도구 업그레이드 UI 업데이트
+        document.getElementById('current-tool-info').innerText = `현재: ${tools[currentToolIndex].name}`;
+        const upgradeBtn = document.getElementById('upgrade-btn');
+            upgradeBtn.onclick = upgradeTool;
+        const nextTool = tools[currentToolIndex + 1];
+        if (nextTool) {
+            upgradeBtn.innerHTML = `${nextTool.name}로 업그레이드<br>(비용: ${formatValue(tools[currentToolIndex].upgradeCost)})`;
+            upgradeBtn.disabled = !canAfford(tools[currentToolIndex].upgradeCost);
+        } else {
+            upgradeBtn.innerText = "최고 레벨 도구입니다";
+            upgradeBtn.disabled = true;
+        }
+
+        // 내구도 UI 업데이트
+        document.getElementById('durability-text').innerText = `${durability} / ${maxDurability}`;
+        document.getElementById('durability-bar').style.width = `${(durability / maxDurability) * 100}%`;
+        document.getElementById('repair-btn').disabled = !canAfford({ gold: 0, silver: 0, bronze: repairCost }) || durability >= maxDurability;
+        } else {
+            // 광물 버튼 상태 업데이트
+            const oreList = document.getElementById('ore-list');
+            oreList.innerHTML = ''; // 기존 버튼 초기화
+            ores.forEach((ore, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'tree-btn';
+                btn.onclick = () => mineOre(index);
+                btn.disabled = currentPickaxeIndex < ore.reqPickaxe;
+                btn.innerHTML = `
+                    <span class="tree-icon">${ore.icon}</span>
+                    <span class="tree-name">${ore.name}</span>
+                    <span class="tree-value">${formatValue(ore.value)}</span>
+                `;
+                oreList.appendChild(btn);
+            });
+
+            // 곡괭이 업그레이드 UI 업데이트
+            document.getElementById('current-tool-info').innerText = `현재: ${pickaxes[currentPickaxeIndex].name}`;
+            const upgradeBtn = document.getElementById('upgrade-btn');
+            upgradeBtn.onclick = upgradePickaxe;
+            const nextPickaxe = pickaxes[currentPickaxeIndex + 1];
+            if (nextPickaxe) {
+                upgradeBtn.innerHTML = `${nextPickaxe.name}로 업그레이드<br>(비용: ${formatValue(pickaxes[currentPickaxeIndex].upgradeCost)})`;
+                upgradeBtn.disabled = !canAfford(pickaxes[currentPickaxeIndex].upgradeCost);
+            } else {
+                upgradeBtn.innerText = "최고 레벨 도구입니다";
+                upgradeBtn.disabled = true;
+            }
+
+            // 내구도 UI 업데이트
+            document.getElementById('durability-text').innerText = `${pickaxeDurability} / ${maxDurability}`;
+            document.getElementById('durability-bar').style.width = `${(pickaxeDurability / maxDurability) * 100}%`;
+            document.getElementById('repair-btn').disabled = !canAfford({ gold: 0, silver: 0, bronze: repairCost }) || pickaxeDurability >= maxDurability;
+        }
+    }
+
+    // 게임 초기화
+    switchTab('trees');
+    updateUI();
+</script>
+
+</body>
+</html>
