@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🦷 이빨크래프트</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .game-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      padding: 30px;
+      width: 400px;
+      text-align: center;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    h1 {
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: #0097a7;
+    }
+    
+    .teeth-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+      padding: 20px;
+      background: #fafafa;
+      border-radius: 15px;
+    }
+    
+    .tooth {
+      font-size: 36px;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .tooth:hover { transform: scale(1.1); }
+    
+    .tooth.healthy { background: #e8f5e9; }
+    .tooth.dirty { background: #fff9c4; }
+    .tooth.danger { background: #ffccbc; }
+    .tooth.cavity { background: #d7ccc8; }
+    
+    .tooth-info {
+      font-size: 10px;
+      color: #666;
+      margin-top: 5px;
+    }
+    
+    .plaque-bar {
+      height: 4px;
+      background: #eee;
+      border-radius: 2px;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+    
+    .plaque-bar-fill {
+      height: 100%;
+      background: #ffc107;
+      transition: width 0.3s;
+    }
+    
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    
+    button {
+      flex: 1;
+      padding: 15px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: bold;
+    }
+    
+    button:hover { transform: translateY(-2px); }
+    button:active { transform: translateY(0); }
+    
+    .btn-brush {
+      background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+      color: white;
+    }
+    
+    .btn-hospital {
+      background: linear-gradient(135deg, #f48fb1, #ec407a);
+      color: white;
+    }
+    
+    .btn-next {
+      background: linear-gradient(135deg, #81c784, #66bb6a);
+      color: white;
+      width: 100%;
+    }
+    
+    .message {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 14px;
+      color: #555;
+      min-height: 50px;
+    }
+    
+    .tooltip {
+      position: fixed;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+    }
+    
+    .game-over {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+    }
+    
+    .game-over-box {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+    }
+    
+    .game-over h2 { color: #e53935; margin-bottom: 20px; }
+    
+    .restart-btn {
+      background: #4caf50;
+      color: white;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .brushing-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 150;
+    }
+    
+    .brushing-teeth {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin: 30px 0;
+    }
+    
+    .brushing-tooth {
+      font-size: 48px;
+      padding: 15px;
+      border-radius: 15px;
+      cursor: pointer;
+      background: #ffecb3;
+      transition: all 0.2s;
+    }
+    
+    .brushing-tooth.brushed {
+      background: #c8e6c9;
+      animation: sparkle 0.5s;
+    }
+    
+    .brushing-tooth:hover { transform: scale(1.1); }
+    
+    @keyframes sparkle {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+    
+    .timer {
+      font-size: 48px;
+      font-weight: bold;
+      color: #0097a7;
+    }
+    
+    .brushing-progress {
+      font-size: 20px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>🦷 이빨크래프트</h1>
+    
+    <div class="header">
+      <span>💰 <span id="money">1000</span>원</span>
+      <span>📅 Day <span id="day">1</span></span>
+    </div>
+    
+    <div class="teeth-container" id="teeth"></div>
+    
+    <div class="message" id="message">
+      안녕하세요! 치아를 건강하게 관리해보세요. 🪥
+    </div>
+    
+    <div class="buttons">
+      <button class="btn-brush" onclick="startBrushing()">🪥 양치하기</button>
+      <button class="btn-hospital" onclick="visitHospital()">🏥 치과가기</button>
+    </div>
+    
+    <button class="btn-next" onclick="nextDay()">⏩ 다음 날</button>
+  </div>
+  
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    // 게임 상태
+    const game = {
+      day: 1,
+      money: 1000,
+      brushedToday: false
+    };
+    
+    // 치아 8개 초기화
+    const teeth = Array.from({ length: 8 }, (_, i) => ({
+      id: i,
+      name: i < 4 ? `앞니 ${i + 1}` : `어금니 ${i - 3}`,
+      hp: 100,
+      plaque: 0,
+      hasCavity: false
+    }));
+    
+    // 치아 렌더링
+    function renderTeeth() {
+      const container = document.getElementById('teeth');
+      container.innerHTML = teeth.map(tooth => {
+        let stateClass = 'healthy';
+        let emoji = '🦷';
+        
+        if (tooth.hasCavity) {
+          stateClass = 'cavity';
+          emoji = '🦴';
+        } else if (tooth.plaque >= 80) {
+          stateClass = 'danger';
+        } else if (tooth.plaque >= 40) {
+          stateClass = 'dirty';
+        }
+        
+        return `
+          <div class="tooth ${stateClass}" 
+               onmouseenter="showTooltip(event, ${tooth.id})" 
+               onmouseleave="hideTooltip()">
+            ${emoji}
+            <div class="plaque-bar">
+              <div class="plaque-bar-fill" style="width: ${tooth.plaque}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // 툴팁 표시
+    function showTooltip(event, id) {
+      const tooth = teeth[id];
+      const tooltip = document.getElementById('tooltip');
+      tooltip.innerHTML = `
+        <strong>${tooth.name}</strong><br>
+        ❤️ HP: ${tooth.hp}<br>
+        🦠 플라크: ${tooth.plaque}%<br>
+        ${tooth.hasCavity ? '⚠️ 충치 있음!' : '✅ 건강함'}
+      `;
+      tooltip.style.display = 'block';
+      tooltip.style.left = event.pageX + 10 + 'px';
+      tooltip.style.top = event.pageY + 10 + 'px';
+    }
+    
+    function hideTooltip() {
+      document.getElementById('tooltip').style.display = 'none';
+    }
+    
+    // 양치 미니게임 시작
+    function startBrushing() {
+      if (game.brushedToday) {
+        showMessage('오늘은 이미 양치했어요! 내일 또 닦아요~ 😊');
+        return;
+      }
+      
+      const overlay = document.createElement('div');
+      overlay.className = 'brushing-overlay';
+      overlay.id = 'brushing-overlay';
+      
+      const brushedTeeth = new Set();
+      
+      overlay.innerHTML = `
+        <h2>🪥 양치 타임!</h2>
+        <p>모든 치아를 클릭해서 닦으세요!</p>
+        <div class="timer" id="brush-timer">10</div>
+        <div class="brushing-teeth" id="brushing-teeth">
+          ${teeth.map((t, i) => `
+            <div class="brushing-tooth" data-id="${i}">
+              ${t.hasCavity ? '🦴' : '🦷'}
+            </div>
+          `).join('')}
+        </div>
+        <div class="brushing-progress">
+          닦은 치아: <span id="brushed-count">0</span> / 8
+        </div>
+      `;
+      
+      document.body.appendChild(overlay);
+      
+      // 치아 클릭 이벤트
+      overlay.querySelectorAll('.brushing-tooth').forEach(el => {
+        el.onclick = () => {
+          const id = parseInt(el.dataset.id);
+          if (!brushedTeeth.has(id)) {
+            brushedTeeth.add(id);
+            el.classList.add('brushed');
+            document.getElementById('brushed-count').textContent = brushedTeeth.size;
+          }
+        };
+      });
+      
+      // 타이머
+      let timeLeft = 10;
+      const timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('brush-timer').textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          finishBrushing(brushedTeeth);
+        }
+      }, 1000);
+    }
+    
+    // 양치 완료
+    function finishBrushing(brushedTeeth) {
+      document.getElementById('brushing-overlay').remove();
+      game.brushedToday = true;
+      
+      // 닦은 치아만 플라크 감소
+      teeth.forEach((tooth, i) => {
+        if (!tooth.hasCavity && brushedTeeth.has(i)) {
+          tooth.plaque = Math.max(0, tooth.plaque - 50);
+        }
+      });
+      
+      const brushedCount = brushedTeeth.size;
+      const skippedTeeth = teeth.filter((t, i) => !brushedTeeth.has(i) && !t.hasCavity);
+      
+      if (brushedCount === 8) {
+        showMessage('완벽한 양치! 모든 치아가 반짝반짝! ✨');
+      } else if (brushedCount >= 5) {
+        showMessage(`${brushedCount}개 닦음! 안 닦은 ${8 - brushedCount}개는 플라크 그대로... 😅`);
+      } else {
+        showMessage(`${brushedCount}개만 닦았어요! 안 닦은 치아 조심! ⚠️`);
+      }
+      
+      renderTeeth();
+    }
+    
+    // 치과 방문
+    function visitHospital() {
+      const cavityTeeth = teeth.filter(t => t.hasCavity);
+      
+      if (cavityTeeth.length === 0) {
+        showMessage('충치가 없어요! 건강한 치아입니다! 👍');
+        return;
+      }
+      
+      const cost = cavityTeeth.length * 500;
+      
+      if (game.money < cost) {
+        showMessage(`돈이 부족해요! ${cost}원 필요 (보유: ${game.money}원) 😢`);
+        return;
+      }
+      
+      game.money -= cost;
+      cavityTeeth.forEach(tooth => {
+        tooth.hasCavity = false;
+        tooth.hp = 100;
+        tooth.plaque = 0;
+      });
+      
+      showMessage(`${cavityTeeth.length}개 치아 치료 완료! -${cost}원 💉`);
+      updateUI();
+    }
+    
+    // 다음 날
+    function nextDay() {
+      game.day++;
+      game.brushedToday = false;
+      
+      // 매일 플라크 증가
+      teeth.forEach(tooth => {
+        if (!tooth.hasCavity) {
+          tooth.plaque += 20;
+          
+          // 플라크 100% 이상이면 즉시 충치!
+          if (tooth.plaque >= 100) {
+            tooth.hasCavity = true;
+            tooth.hp = 0;
+            tooth.plaque = 100;
+          }
+        }
+      });
+      
+      // 용돈 지급
+      game.money += 100;
+      
+      // 게임 오버 체크
+      const allCavity = teeth.every(t => t.hasCavity);
+      if (allCavity) {
+        showGameOver();
+        return;
+      }
+      
+      // 상태 메시지
+      const cavityCount = teeth.filter(t => t.hasCavity).length;
+      const dangerCount = teeth.filter(t => !t.hasCavity && t.plaque >= 80).length;
+      
+      if (cavityCount > 0) {
+        showMessage(`⚠️ 충치 ${cavityCount}개! 치과 가세요! (+100원 용돈)`);
+      } else if (dangerCount > 0) {
+        showMessage(`😰 ${dangerCount}개 치아 위험! 양치하세요! (+100원 용돈)`);
+      } else {
+        showMessage(`좋은 아침! Day ${game.day} 🌅 (+100원 용돈)`);
+      }
+      
+      updateUI();
+    }
+    
+    // UI 업데이트
+    function updateUI() {
+      document.getElementById('money').textContent = game.money;
+      document.getElementById('day').textContent = game.day;
+      renderTeeth();
+    }
+    
+    // 메시지 표시
+    function showMessage(text) {
+      document.getElementById('message').textContent = text;
+    }
+    
+    // 게임 오버
+    function showGameOver() {
+      const overlay = document.createElement('div');
+      overlay.className = 'game-over';
+      overlay.innerHTML = `
+        <div class="game-over-box">
+          <h2>😱 게임 오버!</h2>
+          <p>모든 치아가 충치가 되었어요...</p>
+          <p>총 ${game.day}일 버텼습니다!</p>
+          <br>
+          <button class="restart-btn" onclick="location.reload()">
+            🔄 다시 시작
+          </button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
+    
+    // 게임 시작
+    renderTeeth();
+  </script>
+</body>
+</html>
