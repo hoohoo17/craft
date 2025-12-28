@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Splendor - 보석의 빛</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-card: #14141f;
+      --bg-elevated: #1a1a2e;
+      --bg-glass: rgba(255, 255, 255, 0.03);
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888a0;
+      --text-muted: #555568;
+      --accent-gold: #d4af37;
+      --accent-gold-light: #f4cf57;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --shadow-deep: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --shadow-glow: 0 0 20px rgba(212, 175, 55, 0.3);
+      
+      --gem-white: linear-gradient(135deg, #f5f5f5 0%, #d0d0d0 100%);
+      --gem-blue: linear-gradient(135deg, #4a90d9 0%, #2563eb 100%);
+      --gem-green: linear-gradient(135deg, #34d399 0%, #059669 100%);
+      --gem-red: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+      --gem-black: linear-gradient(135deg, #374151 0%, #111827 100%);
+      --gem-gold: linear-gradient(135deg, #fcd34d 0%, #d97706 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(ellipse at 20% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(74, 144, 217, 0.06) 0%, transparent 50%);
+    }
+
+    .game-header {
+      text-align: center;
+      padding: 24px 16px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, rgba(212, 175, 55, 0.05) 0%, transparent 100%);
+    }
+
+    .game-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-gold) 0%, var(--accent-gold-light) 50%, var(--accent-gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .game-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+
+    #game {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .turn-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 12px 24px;
+      background: var(--bg-elevated);
+      border-radius: 50px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-subtle);
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .turn-indicator.game-over {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%);
+      border-color: var(--accent-gold);
+    }
+
+    .turn-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-gold);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .turn-text {
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    .turn-text strong {
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    .section {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .section-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* 토큰 스타일 */
+    .tokens-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .token-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    .token-btn:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-deep);
+    }
+
+    .token-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .token-btn.selected {
+      border-color: var(--accent-gold);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .token-white { background: var(--gem-white); color: #222; }
+    .token-blue { background: var(--gem-blue); color: #fff; }
+    .token-green { background: var(--gem-green); color: #fff; }
+    .token-red { background: var(--gem-red); color: #fff; }
+    .token-black { background: var(--gem-black); color: #f5f5f5; }
+    .token-gold { background: var(--gem-gold); color: #1f2933; }
+
+    .token-count {
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+
+    .token-label {
+      font-size: 0.7rem;
+      opacity: 0.9;
+      margin-top: 2px;
+    }
+
+    .token-pending {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--accent-gold);
+      color: #000;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .token-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-gold) 0%, #b8960c 100%);
+      color: #000;
+    }
+
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .token-info {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-left: auto;
+    }
+
+    /* 귀족 타일 */
+    .nobles-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .noble-tile {
+      width: 100px;
+      height: 120px;
+      background: linear-gradient(135deg, #2d1f4e 0%, #1a1a2e 100%);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      border: 2px solid #6b21a8;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .noble-tile::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      background: linear-gradient(180deg, rgba(168, 85, 247, 0.2) 0%, transparent 100%);
+    }
+
+    .noble-points {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #a855f7;
+      margin-bottom: auto;
+    }
+
+    .noble-req {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .noble-req-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .noble-gem {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+
+    /* 카드 그리드 */
+    .cards-section {
+      margin-bottom: 12px;
+    }
+
+    .cards-level {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .level-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .level-1 { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .level-2 { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+    .level-3 { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+    .deck-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .cards-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .card {
+      width: 140px;
+      min-height: 160px;
+      background: var(--bg-elevated);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border-subtle);
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-deep);
+    }
+
+    .card-empty {
+      background: var(--bg-glass);
+      border: 2px dashed var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .card-bonus {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-bonus-gem {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+    }
+
+    .card-points {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .card-cost {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .cost-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+
+    .cost-gem {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .card-btn {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    .card-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-buy {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: #fff;
+    }
+
+    .btn-reserve {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* 플레이어 패널 */
+    .players-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .player-panel {
+      background: var(--bg-elevated);
+      border-radius: 12px;
+      padding: 16px;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .player-panel.current {
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 30px rgba(212, 175, 55, 0.15);
+    }
+
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .player-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .player-badge {
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--accent-gold);
+      color: #000;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .player-score {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .player-score-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .player-section {
+      margin-bottom: 12px;
+    }
+
+    .player-section-title {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .player-gems {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .player-gem {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--bg-card);
+      font-size: 0.8rem;
+    }
+
+    .player-gem-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .player-reserved {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .reserved-card {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .reserved-gem {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+
+    .reserved-buy {
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: none;
+      background: #22c55e;
+      color: #fff;
+      font-size: 0.7rem;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    .reserved-buy:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* 게임 로그 */
+    .log-container {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-time {
+      color: var(--text-muted);
+      margin-right: 8px;
+    }
+
+    /* 게임 컨트롤 */
+    .game-controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    /* 반응형 */
+    @media (max-width: 768px) {
+      .game-title {
+        font-size: 1.8rem;
+      }
+      
+      .token-btn {
+        width: 60px;
+        height: 60px;
+      }
+      
+      .token-count {
+        font-size: 1.1rem;
+      }
+      
+      .card {
+        width: 120px;
+        min-height: 140px;
+      }
+      
+      .noble-tile {
+        width: 85px;
+        height: 100px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="game-header">
+    <h1 class="game-title">Splendor</h1>
+    <p class="game-subtitle">보석의 빛</p>
+  </header>
+
+  <div id="game"></div>
+
+  <script>
+    // ===== 상수 =====
+    const COLORS = ["white", "blue", "green", "red", "black"];
+    
+    const COLOR_LABEL = {
+      white: "다이아",
+      blue: "사파이어",
+      green: "에메랄드",
+      red: "루비",
+      black: "오닉스",
+      gold: "황금"
+    };
+
+    const COLOR_SHORT = {
+      white: "◇",
+      blue: "◆",
+      green: "◆",
+      red: "◆",
+      black: "◆",
+      gold: "★"
+    };
+
+    // ===== 카드 데이터 (3단계) =====
+    const CARD_DECK_L1 = [
+      { id: "l1_01", level: 1, points: 0, bonus: "white", cost: { blue: 1, green: 1, red: 1, black: 1 } },
+      { id: "l1_02", level: 1, points: 0, bonus: "white", cost: { blue: 2, black: 1 } },
+      { id: "l1_03", level: 1, points: 0, bonus: "white", cost: { blue: 2, green: 2 } },
+      { id: "l1_04", level: 1, points: 0, bonus: "white", cost: { green: 3 } },
+      { id: "l1_05", level: 1, points: 1, bonus: "white", cost: { blue: 1, green: 2, red: 1, black: 1 } },
+      { id: "l1_06", level: 1, points: 0, bonus: "blue", cost: { white: 1, green: 1, red: 1, black: 1 } },
+      { id: "l1_07", level: 1, points: 0, bonus: "blue", cost: { white: 1, black: 2 } },
+      { id: "l1_08", level: 1, points: 0, bonus: "blue", cost: { green: 2, black: 2 } },
+      { id: "l1_09", level: 1, points: 0, bonus: "blue", cost: { black: 3 } },
+      { id: "l1_10", level: 1, points: 1, bonus: "blue", cost: { white: 1, green: 1, red: 2, black: 1 } },
+      { id: "l1_11", level: 1, points: 0, bonus: "green", cost: { white: 1, blue: 1, red: 1, black: 1 } },
+      { id: "l1_12", level: 1, points: 0, bonus: "green", cost: { white: 2, blue: 1 } },
+      { id: "l1_13", level: 1, points: 0, bonus: "green", cost: { blue: 2, red: 2 } },
+      { id: "l1_14", level: 1, points: 0, bonus: "green", cost: { red: 3 } },
+      { id: "l1_15", level: 1, points: 1, bonus: "green", cost: { white: 1, blue: 1, red: 1, black: 2 } },
+      { id: "l1_16", level: 1, points: 0, bonus: "red", cost: { white: 1, blue: 1, green: 1, black: 1 } },
+      { id: "l1_17", level: 1, points: 0, bonus: "red", cost: { white: 2, red: 2 } },
+      { id: "l1_18", level: 1, points: 0, bonus: "red", cost: { green: 2, red: 1 } },
+      { id: "l1_19", level: 1, points: 0, bonus: "red", cost: { white: 3 } },
+      { id: "l1_20", level: 1, points: 1, bonus: "red", cost: { white: 2, blue: 1, green: 1, black: 1 } },
+      { id: "l1_21", level: 1, points: 0, bonus: "black", cost: { white: 1, blue: 1, green: 1, red: 1 } },
+      { id: "l1_22", level: 1, points: 0, bonus: "black", cost: { green: 1, red: 2 } },
+      { id: "l1_23", level: 1, points: 0, bonus: "black", cost: { white: 2, red: 2 } },
+      { id: "l1_24", level: 1, points: 0, bonus: "black", cost: { blue: 3 } },
+      { id: "l1_25", level: 1, points: 1, bonus: "black", cost: { white: 1, blue: 2, green: 1, red: 1 } },
+    ];
+
+    const CARD_DECK_L2 = [
+      { id: "l2_01", level: 2, points: 1, bonus: "white", cost: { green: 3, red: 2, black: 2 } },
+      { id: "l2_02", level: 2, points: 2, bonus: "white", cost: { green: 1, red: 4, black: 2 } },
+      { id: "l2_03", level: 2, points: 2, bonus: "white", cost: { red: 5 } },
+      { id: "l2_04", level: 2, points: 3, bonus: "white", cost: { white: 6 } },
+      { id: "l2_05", level: 2, points: 1, bonus: "blue", cost: { white: 2, green: 2, black: 3 } },
+      { id: "l2_06", level: 2, points: 2, bonus: "blue", cost: { white: 2, red: 1, black: 4 } },
+      { id: "l2_07", level: 2, points: 2, bonus: "blue", cost: { white: 5 } },
+      { id: "l2_08", level: 2, points: 3, bonus: "blue", cost: { blue: 6 } },
+      { id: "l2_09", level: 2, points: 1, bonus: "green", cost: { white: 2, blue: 3, red: 2 } },
+      { id: "l2_10", level: 2, points: 2, bonus: "green", cost: { white: 4, blue: 2, black: 1 } },
+      { id: "l2_11", level: 2, points: 2, bonus: "green", cost: { blue: 5 } },
+      { id: "l2_12", level: 2, points: 3, bonus: "green", cost: { green: 6 } },
+      { id: "l2_13", level: 2, points: 1, bonus: "red", cost: { white: 2, blue: 2, green: 3 } },
+      { id: "l2_14", level: 2, points: 2, bonus: "red", cost: { blue: 1, green: 4, black: 2 } },
+      { id: "l2_15", level: 2, points: 2, bonus: "red", cost: { black: 5 } },
+      { id: "l2_16", level: 2, points: 3, bonus: "red", cost: { red: 6 } },
+      { id: "l2_17", level: 2, points: 1, bonus: "black", cost: { white: 3, blue: 2, green: 2 } },
+      { id: "l2_18", level: 2, points: 2, bonus: "black", cost: { white: 1, green: 2, red: 4 } },
+      { id: "l2_19", level: 2, points: 2, bonus: "black", cost: { green: 5 } },
+      { id: "l2_20", level: 2, points: 3, bonus: "black", cost: { black: 6 } },
+    ];
+
+    const CARD_DECK_L3 = [
+      { id: "l3_01", level: 3, points: 3, bonus: "white", cost: { blue: 3, green: 3, red: 5, black: 3 } },
+      { id: "l3_02", level: 3, points: 4, bonus: "white", cost: { white: 3, red: 3, black: 6 } },
+      { id: "l3_03", level: 3, points: 5, bonus: "white", cost: { white: 3, black: 7 } },
+      { id: "l3_04", level: 3, points: 3, bonus: "blue", cost: { white: 3, green: 5, red: 3, black: 3 } },
+      { id: "l3_05", level: 3, points: 4, bonus: "blue", cost: { white: 6, blue: 3, black: 3 } },
+      { id: "l3_06", level: 3, points: 5, bonus: "blue", cost: { blue: 3, white: 7 } },
+      { id: "l3_07", level: 3, points: 3, bonus: "green", cost: { white: 5, blue: 3, red: 3, black: 3 } },
+      { id: "l3_08", level: 3, points: 4, bonus: "green", cost: { blue: 6, green: 3, red: 3 } },
+      { id: "l3_09", level: 3, points: 5, bonus: "green", cost: { green: 3, blue: 7 } },
+      { id: "l3_10", level: 3, points: 3, bonus: "red", cost: { white: 3, blue: 3, green: 3, black: 5 } },
+      { id: "l3_11", level: 3, points: 4, bonus: "red", cost: { green: 3, red: 3, black: 6 } },
+      { id: "l3_12", level: 3, points: 5, bonus: "red", cost: { red: 3, green: 7 } },
+      { id: "l3_13", level: 3, points: 3, bonus: "black", cost: { white: 3, blue: 5, green: 3, red: 3 } },
+      { id: "l3_14", level: 3, points: 4, bonus: "black", cost: { white: 3, red: 6, black: 3 } },
+      { id: "l3_15", level: 3, points: 5, bonus: "black", cost: { black: 3, red: 7 } },
+    ];
+
+    // 귀족 타일
+    const NOBLE_TILES = [
+      { id: "n1", points: 3, requirement: { white: 4, blue: 4 } },
+      { id: "n2", points: 3, requirement: { blue: 4, green: 4 } },
+      { id: "n3", points: 3, requirement: { green: 4, red: 4 } },
+      { id: "n4", points: 3, requirement: { red: 4, black: 4 } },
+      { id: "n5", points: 3, requirement: { white: 4, black: 4 } },
+      { id: "n6", points: 3, requirement: { white: 3, blue: 3, green: 3 } },
+      { id: "n7", points: 3, requirement: { blue: 3, green: 3, red: 3 } },
+      { id: "n8", points: 3, requirement: { green: 3, red: 3, black: 3 } },
+      { id: "n9", points: 3, requirement: { white: 3, red: 3, black: 3 } },
+      { id: "n10", points: 3, requirement: { white: 3, blue: 3, black: 3 } },
+    ];
+
+    // ===== 유틸리티 함수 =====
+    function shuffle(array) {
+      const arr = array.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function createTokenSet() {
+      return { white: 0, blue: 0, green: 0, red: 0, black: 0, gold: 0 };
+    }
+
+    function createBonusSet() {
+      return { white: 0, blue: 0, green: 0, red: 0, black: 0 };
+    }
+
+    function totalTokens(tokens) {
+      return Object.values(tokens).reduce((a, b) => a + b, 0);
+    }
+
+    function getGemClass(color) {
+      return `background: var(--gem-${color})`;
+    }
+
+    // ===== 게임 상태 =====
+    const state = {
+      bankTokens: { white: 4, blue: 4, green: 4, red: 4, black: 4, gold: 5 },
+      deckL1: [],
+      deckL2: [],
+      deckL3: [],
+      boardCardsL1: [null, null, null, null],
+      boardCardsL2: [null, null, null, null],
+      boardCardsL3: [null, null, null, null],
+      nobles: [],
+      players: [
+        {
+          id: "p1",
+          name: "플레이어 1",
+          tokens: createTokenSet(),
+          bonuses: createBonusSet(),
+          reserved: [],
+          points: 0,
+          nobles: []
+        },
+        {
+          id: "p2",
+          name: "플레이어 2",
+          tokens: createTokenSet(),
+          bonuses: createBonusSet(),
+          reserved: [],
+          points: 0,
+          nobles: []
+        }
+      ],
+      currentPlayerIndex: 0,
+      pendingTake: createTokenSet(),
+      log: [],
+      gameOver: false,
+      turnCount: 0
+    };
+
+    function log(message) {
+      const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      state.log.unshift({ time, message });
+      if (state.log.length > 100) state.log.pop();
+    }
+
+    // ===== 초기화 =====
+    function initGame() {
+      state.deckL1 = shuffle(CARD_DECK_L1);
+      state.deckL2 = shuffle(CARD_DECK_L2);
+      state.deckL3 = shuffle(CARD_DECK_L3);
+      
+      for (let i = 0; i < 4; i++) {
+        state.boardCardsL1[i] = state.deckL1.pop() || null;
+        state.boardCardsL2[i] = state.deckL2.pop() || null;
+        state.boardCardsL3[i] = state.deckL3.pop() || null;
+      }
+      
+      // 2인용: 귀족 3장
+      state.nobles = shuffle(NOBLE_TILES).slice(0, 3);
+      
+      state.players.forEach(p => {
+        p.tokens = createTokenSet();
+        p.bonuses = createBonusSet();
+        p.reserved = [];
+        p.points = 0;
+        p.nobles = [];
+      });
+      
+      state.bankTokens = { white: 4, blue: 4, green: 4, red: 4, black: 4, gold: 5 };
+      state.currentPlayerIndex = 0;
+      state.pendingTake = createTokenSet();
+      state.log = [];
+      state.gameOver = false;
+      state.turnCount = 0;
+      
+      log("게임이 시작되었습니다!");
+      render();
+    }
+
+    function drawCard(level) {
+      const deck = level === 1 ? state.deckL1 : level === 2 ? state.deckL2 : state.deckL3;
+      return deck.pop() || null;
+    }
+
+    function getBoardCards(level) {
+      return level === 1 ? state.boardCardsL1 : level === 2 ? state.boardCardsL2 : state.boardCardsL3;
+    }
+
+    function getCurrentPlayer() {
+      return state.players[state.currentPlayerIndex];
+    }
+
+    // ===== 귀족 획득 체크 =====
+    function checkNobleVisit(player) {
+      for (let i = state.nobles.length - 1; i >= 0; i--) {
+        const noble = state.nobles[i];
+        let canVisit = true;
+        
+        for (const color of COLORS) {
+          const req = noble.requirement[color] || 0;
+          if (player.bonuses[color] < req) {
+            canVisit = false;
+            break;
+          }
+        }
+        
+        if (canVisit) {
+          state.nobles.splice(i, 1);
+          player.nobles.push(noble);
+          player.points += noble.points;
+          log(`${player.name}에게 귀족이 방문했습니다! (+${noble.points}점)`);
+          return; // 한 턴에 한 귀족만
+        }
+      }
+    }
+
+    function nextPlayer() {
+      state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+      state.pendingTake = createTokenSet();
+      state.turnCount++;
+      render();
+    }
+
+    function checkGameEnd() {
+      const target = 15;
+      for (const player of state.players) {
+        if (player.points >= target) {
+          state.gameOver = true;
+          const winner = state.players.reduce((a, b) => a.points > b.points ? a : b);
+          log(`🏆 게임 종료! ${winner.name} 승리! (${winner.points}점)`);
+          render();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // ===== 토큰 선택 =====
+    function selectToken(color) {
+      if (state.gameOver || color === "gold") return;
+      
+      const bank = state.bankTokens;
+      const pending = state.pendingTake;
+      const player = getCurrentPlayer();
+      
+      if (bank[color] <= pending[color]) return;
+      
+      const totalSelected = totalTokens(pending);
+      const hasDouble = COLORS.some(c => pending[c] === 2);
+      
+      if (pending[color] === 1) {
+        if (totalSelected !== 1) {
+          alert("같은 색 2개를 가져올 때는 그 색만 선택해야 합니다.");
+          return;
+        }
+        if (bank[color] < 4) {
+          alert("같은 색 2개는 은행에 4개 이상 있을 때만 가능합니다.");
+          return;
+        }
+        pending[color] = 2;
+      } else {
+        if (hasDouble) {
+          alert("이미 같은 색 2개를 선택했습니다.");
+          return;
+        }
+        if (totalSelected >= 3) {
+          alert("최대 3개까지 선택 가능합니다.");
+          return;
+        }
+        pending[color] = 1;
+      }
+      
+      if (totalTokens(player.tokens) + totalTokens(pending) > 10) {
+        pending[color] = Math.max(0, pending[color] - 1);
+        alert("토큰은 최대 10개까지 보유 가능합니다.");
+        return;
+      }
+      
+      render();
+    }
+
+    function resetPendingTake() {
+      state.pendingTake = createTokenSet();
+      render();
+    }
+
+    function confirmTakeTokens() {
+      if (state.gameOver) return;
+      
+      const pending = state.pendingTake;
+      const total = totalTokens(pending);
+      
+      if (total === 0) {
+        alert("토큰을 선택해주세요.");
+        return;
+      }
+      
+      const player = getCurrentPlayer();
+      const bank = state.bankTokens;
+      
+      for (const c of COLORS) {
+        bank[c] -= pending[c];
+        player.tokens[c] += pending[c];
+      }
+      
+      const takenStr = COLORS.filter(c => pending[c] > 0)
+        .map(c => `${COLOR_LABEL[c]} ×${pending[c]}`)
+        .join(", ");
+      log(`${player.name}: 토큰 획득 (${takenStr})`);
+      
+      checkNobleVisit(player);
+      if (!checkGameEnd()) {
+        nextPlayer();
+      }
+    }
+
+    // ===== 카드 구매 =====
+    function canAfford(player, card) {
+      let needGold = 0;
+      for (const c of COLORS) {
+        const cost = card.cost[c] || 0;
+        const afterBonus = Math.max(0, cost - player.bonuses[c]);
+        const deficit = Math.max(0, afterBonus - player.tokens[c]);
+        needGold += deficit;
+      }
+      return needGold <= player.tokens.gold;
+    }
+
+    function payForCard(player, card) {
+      let goldUsed = 0;
+      
+      for (const c of COLORS) {
+        const cost = card.cost[c] || 0;
+        const afterBonus = Math.max(0, cost - player.bonuses[c]);
+        const payWithColor = Math.min(player.tokens[c], afterBonus);
+        const deficit = afterBonus - payWithColor;
+        
+        player.tokens[c] -= payWithColor;
+        state.bankTokens[c] += payWithColor;
+        goldUsed += deficit;
+      }
+      
+      player.tokens.gold -= goldUsed;
+      state.bankTokens.gold += goldUsed;
+    }
+
+    function buyBoardCard(level, index) {
+      if (state.gameOver) return;
+      
+      const boardCards = getBoardCards(level);
+      const card = boardCards[index];
+      if (!card) return;
+      
+      const player = getCurrentPlayer();
+      if (!canAfford(player, card)) {
+        alert("토큰이 부족합니다.");
+        return;
+      }
+      
+      payForCard(player, card);
+      player.bonuses[card.bonus]++;
+      player.points += card.points;
+      
+      log(`${player.name}: ${COLOR_LABEL[card.bonus]} 카드 구매 (+${card.points}점)`);
+      
+      boardCards[index] = drawCard(level);
+      
+      checkNobleVisit(player);
+      if (!checkGameEnd()) {
+        nextPlayer();
+      }
+    }
+
+    function buyReservedCard(cardId) {
+      if (state.gameOver) return;
+      
+      const player = getCurrentPlayer();
+      const idx = player.reserved.findIndex(c => c.id === cardId);
+      if (idx === -1) return;
+      
+      const card = player.reserved[idx];
+      if (!canAfford(player, card)) {
+        alert("토큰이 부족합니다.");
+        return;
+      }
+      
+      payForCard(player, card);
+      player.reserved.splice(idx, 1);
+      player.bonuses[card.bonus]++;
+      player.points += card.points;
+      
+      log(`${player.name}: 예약 카드 구매 (${COLOR_LABEL[card.bonus]}, +${card.points}점)`);
+      
+      checkNobleVisit(player);
+      if (!checkGameEnd()) {
+        nextPlayer();
+      }
+    }
+
+    // ===== 카드 예약 =====
+    function reserveBoardCard(level, index) {
+      if (state.gameOver) return;
+      
+      const boardCards = getBoardCards(level);
+      const card = boardCards[index];
+      if (!card) return;
+      
+      const player = getCurrentPlayer();
+      if (player.reserved.length >= 3) {
+        alert("예약 카드는 최대 3장까지입니다.");
+        return;
+      }
+      
+      if (state.bankTokens.gold > 0) {
+        if (totalTokens(player.tokens) >= 10) {
+          alert("황금 토큰을 받으면 10개를 초과합니다.");
+          return;
+        }
+        state.bankTokens.gold--;
+        player.tokens.gold++;
+      }
+      
+      player.reserved.push(card);
+      boardCards[index] = drawCard(level);
+      
+      log(`${player.name}: 카드 예약 (Lv.${level}, 황금 +1)`);
+      
+      checkNobleVisit(player);
+      if (!checkGameEnd()) {
+        nextPlayer();
+      }
+    }
+
+    // ===== 렌더링 =====
+    function render() {
+      const root = document.getElementById("game");
+      const current = getCurrentPlayer();
+      
+      let html = "";
+      
+      // 턴 표시
+      if (state.gameOver) {
+        const winner = state.players.reduce((a, b) => a.points > b.points ? a : b);
+        html += `
+          <div class="turn-indicator game-over">
+            <span class="turn-text">🏆 <strong>${winner.name}</strong> 승리! (${winner.points}점)</span>
+          </div>`;
+      } else {
+        html += `
+          <div class="turn-indicator">
+            <div class="turn-dot"></div>
+            <span class="turn-text"><strong>${current.name}</strong>의 차례</span>
+          </div>`;
+      }
+      
+      // 토큰 뱅크
+      html += renderBankSection();
+      
+      // 귀족 + 카드
+      html += `<div class="section">`;
+      html += renderNoblesSection();
+      html += renderCardsSection();
+      html += `</div>`;
+      
+      // 플레이어
+      html += renderPlayersSection();
+      
+      // 로그
+      html += renderLogSection();
+      
+      // 게임 컨트롤
+      html += `
+        <div class="game-controls">
+          <button class="btn btn-secondary" onclick="initGame()">새 게임</button>
+        </div>`;
+      
+      root.innerHTML = html;
+    }
+
+    function renderBankSection() {
+      const pending = state.pendingTake;
+      const disabled = state.gameOver ? "disabled" : "";
+      
+      let tokensHtml = "";
+      for (const c of [...COLORS, "gold"]) {
+        const count = state.bankTokens[c];
+        const pend = pending[c] || 0;
+        const isSelected = pend > 0;
+        
+        tokensHtml += `
+          <button class="token-btn token-${c} ${isSelected ? 'selected' : ''}" 
+                  onclick="selectToken('${c}')" ${disabled}>
+            <span class="token-count">${count}</span>
+            <span class="token-label">${COLOR_LABEL[c]}</span>
+            ${pend > 0 ? `<span class="token-pending">+${pend}</span>` : ''}
+          </button>`;
+      }
+      
+      return `
+        <div class="section">
+          <div class="section-header">
+            <span class="section-icon">💎</span>
+            <span class="section-title">보석 은행</span>
+          </div>
+          <div class="tokens-grid">${tokensHtml}</div>
+          <div class="token-actions">
+            <button class="btn btn-primary" onclick="confirmTakeTokens()" ${disabled}>토큰 가져오기</button>
+            <button class="btn btn-secondary" onclick="resetPendingTake()" ${disabled}>초기화</button>
+            <span class="token-info">서로 다른 색 3개 또는 같은 색 2개(4개 이상일 때)</span>
+          </div>
+        </div>`;
+    }
+
+    function renderNoblesSection() {
+      if (state.nobles.length === 0) return "";
+      
+      let html = `
+        <div class="section-header">
+          <span class="section-icon">👑</span>
+          <span class="section-title">귀족</span>
+        </div>
+        <div class="nobles-grid">`;
+      
+      for (const noble of state.nobles) {
+        let reqHtml = "";
+        for (const c of COLORS) {
+          const req = noble.requirement[c];
+          if (req) {
+            reqHtml += `
+              <div class="noble-req-item">
+                <div class="noble-gem" style="${getGemClass(c)}"></div>
+                <span>×${req}</span>
+              </div>`;
+          }
+        }
+        
+        html += `
+          <div class="noble-tile">
+            <div class="noble-points">${noble.points}</div>
+            <div class="noble-req">${reqHtml}</div>
+          </div>`;
+      }
+      
+      html += `</div>`;
+      return html;
+    }
+
+    function renderCardsSection() {
+      let html = "";
+      
+      const levels = [
+        { level: 3, cards: state.boardCardsL3, deck: state.deckL3 },
+        { level: 2, cards: state.boardCardsL2, deck: state.deckL2 },
+        { level: 1, cards: state.boardCardsL1, deck: state.deckL1 }
+      ];
+      
+      for (const { level, cards, deck } of levels) {
+        html += `
+          <div class="cards-section">
+            <div class="cards-level">
+              <span class="level-badge level-${level}">Lv.${level}</span>
+              <span class="deck-count">덱: ${deck.length}장</span>
+            </div>
+            <div class="cards-grid">`;
+        
+        cards.forEach((card, idx) => {
+          if (!card) {
+            html += `<div class="card card-empty">빈 자리</div>`;
+          } else {
+            html += renderCard(card, level, idx);
+          }
+        });
+        
+        html += `</div></div>`;
+      }
+      
+      return html;
+    }
+
+    function renderCard(card, level, index) {
+      const player = getCurrentPlayer();
+      const affordable = canAfford(player, card);
+      const disabled = state.gameOver ? "disabled" : "";
+      const buyDisabled = !affordable || state.gameOver ? "disabled" : "";
+      
+      let costHtml = "";
+      for (const c of COLORS) {
+        const cost = card.cost[c];
+        if (cost) {
+          costHtml += `
+            <div class="cost-row">
+              <div class="cost-gem" style="${getGemClass(c)}"></div>
+              <span>${cost}</span>
+            </div>`;
+        }
+      }
+      
+      return `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-bonus">
+              <div class="card-bonus-gem" style="${getGemClass(card.bonus)}"></div>
+            </div>
+            <div class="card-points">${card.points || ''}</div>
+          </div>
+          <div class="card-cost">${costHtml || '<span style="color:var(--text-muted);font-size:0.75rem">비용 없음</span>'}</div>
+          <div class="card-actions">
+            <button class="card-btn btn-buy" ${buyDisabled} onclick="buyBoardCard(${level}, ${index})">구매</button>
+            <button class="card-btn btn-reserve" ${disabled} onclick="reserveBoardCard(${level}, ${index})">예약</button>
+          </div>
+        </div>`;
+    }
+
+    function renderPlayersSection() {
+      let html = `
+        <div class="section">
+          <div class="section-header">
+            <span class="section-icon">👤</span>
+            <span class="section-title">플레이어</span>
+          </div>
+          <div class="players-grid">`;
+      
+      state.players.forEach((player, idx) => {
+        const isCurrent = idx === state.currentPlayerIndex && !state.gameOver;
+        
+        // 토큰
+        let gemsHtml = "";
+        for (const c of [...COLORS, "gold"]) {
+          if (player.tokens[c] > 0) {
+            gemsHtml += `
+              <div class="player-gem">
+                <div class="player-gem-dot" style="${getGemClass(c)}"></div>
+                <span>${player.tokens[c]}</span>
+              </div>`;
+          }
+        }
+        if (!gemsHtml) gemsHtml = `<span style="color:var(--text-muted);font-size:0.75rem">없음</span>`;
+        
+        // 보너스
+        let bonusHtml = "";
+        for (const c of COLORS) {
+          if (player.bonuses[c] > 0) {
+            bonusHtml += `
+              <div class="player-gem">
+                <div class="player-gem-dot" style="${getGemClass(c)}"></div>
+                <span>${player.bonuses[c]}</span>
+              </div>`;
+          }
+        }
+        if (!bonusHtml) bonusHtml = `<span style="color:var(--text-muted);font-size:0.75rem">없음</span>`;
+        
+        // 예약 카드
+        let reservedHtml = "";
+        if (player.reserved.length > 0) {
+          for (const card of player.reserved) {
+            const canBuy = canAfford(player, card) && isCurrent && !state.gameOver;
+            reservedHtml += `
+              <div class="reserved-card">
+                <div class="reserved-gem" style="${getGemClass(card.bonus)}"></div>
+                <span>Lv.${card.level} / ${card.points}점</span>
+                <button class="reserved-buy" ${canBuy ? '' : 'disabled'} onclick="buyReservedCard('${card.id}')">구매</button>
+              </div>`;
+          }
+        } else {
+          reservedHtml = `<span style="color:var(--text-muted);font-size:0.75rem">없음</span>`;
+        }
+        
+        html += `
+          <div class="player-panel ${isCurrent ? 'current' : ''}">
+            <div class="player-header">
+              <div>
+                <span class="player-name">${player.name}</span>
+                ${isCurrent ? '<span class="player-badge">현재 턴</span>' : ''}
+              </div>
+              <div style="text-align:right">
+                <div class="player-score">${player.points}</div>
+                <div class="player-score-label">점수</div>
+              </div>
+            </div>
+            <div class="player-section">
+              <div class="player-section-title">보유 토큰</div>
+              <div class="player-gems">${gemsHtml}</div>
+            </div>
+            <div class="player-section">
+              <div class="player-section-title">카드 보너스</div>
+              <div class="player-gems">${bonusHtml}</div>
+            </div>
+            <div class="player-section">
+              <div class="player-section-title">예약 카드 (${player.reserved.length}/3)</div>
+              <div class="player-reserved">${reservedHtml}</div>
+            </div>
+          </div>`;
+      });
+      
+      html += `</div></div>`;
+      return html;
+    }
+
+    function renderLogSection() {
+      let entriesHtml = "";
+      for (const entry of state.log.slice(0, 20)) {
+        entriesHtml += `
+          <div class="log-entry">
+            <span class="log-time">${entry.time}</span>
+            ${entry.message}
+          </div>`;
+      }
+      
+      return `
+        <div class="section">
+          <div class="section-header">
+            <span class="section-icon">📜</span>
+            <span class="section-title">게임 로그</span>
+          </div>
+          <div class="log-container">${entriesHtml || '<div class="log-entry">아직 기록이 없습니다.</div>'}</div>
+        </div>`;
+    }
+
+    // ===== 전역 함수 =====
+    window.selectToken = selectToken;
+    window.resetPendingTake = resetPendingTake;
+    window.confirmTakeTokens = confirmTakeTokens;
+    window.buyBoardCard = buyBoardCard;
+    window.buyReservedCard = buyReservedCard;
+    window.reserveBoardCard = reserveBoardCard;
+    window.initGame = initGame;
+
+    // 시작
+    initGame();
+  </script>
+</body>
+</html>
