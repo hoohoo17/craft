@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마크콤보 - MineCombo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Noto+Sans+KR:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --emerald: #2ecc71;
+            --emerald-dark: #27ae60;
+            --pearl: #9b59b6;
+            --pearl-dark: #8e44ad;
+            --cave-bg: #2c3e50;
+            --surface-bg: #87ceeb;
+            --stone: #7f8c8d;
+            --dirt: #8B4513;
+            --grass: #228B22;
+            --diamond: #00d4ff;
+            --gold: #ffd700;
+            --iron: #c0c0c0;
+            --redstone: #ff4444;
+            --lapis: #2244ff;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(180deg, #87ceeb 0%, #87ceeb 50%, #3d2817 50%, #2c2c2c 100%);
+            min-height: 100vh;
+            padding: 20px;
+            background-attachment: fixed;
+        }
+        
+        h1 {
+            font-family: 'VT323', monospace;
+            text-align: center;
+            font-size: 3rem;
+            color: #fff;
+            text-shadow: 4px 4px 0 #000, -2px -2px 0 #000;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+        }
+        
+        .game-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+        
+        .main-area {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .market-section {
+            background: rgba(0,0,0,0.7);
+            border: 4px solid #555;
+            border-radius: 8px;
+            padding: 15px;
+            image-rendering: pixelated;
+        }
+        
+        .market-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #444;
+        }
+        
+        .market-title {
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .market-title.cave { color: var(--diamond); }
+        .market-title.surface { color: var(--grass); }
+        
+        .minecart {
+            background: #8B4513;
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            border: 3px solid #5d3a1a;
+            box-shadow: inset 0 -3px 0 #5d3a1a;
+        }
+        
+        .market-cards {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .card {
+            width: 140px;
+            height: 200px;
+            background: linear-gradient(145deg, #f5f5dc 0%, #ddd5c0 100%);
+            border: 3px solid #333;
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            font-size: 0.75rem;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        
+        .card.cave-card {
+            background: linear-gradient(145deg, #4a5568 0%, #2d3748 100%);
+            color: #fff;
+        }
+        
+        .card.surface-card {
+            background: linear-gradient(145deg, #68d391 0%, #48bb78 100%);
+            color: #1a202c;
+        }
+        
+        .card-cost {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: var(--emerald);
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            border: 2px solid var(--emerald-dark);
+        }
+        
+        .card-symbol {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 1.2rem;
+        }
+        
+        .card-image {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin-top: 25px;
+        }
+        
+        .card-name {
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin: 5px 0;
+            font-family: 'VT323', monospace;
+            letter-spacing: 1px;
+        }
+        
+        .card-effect {
+            font-size: 0.65rem;
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
+        }
+        
+        .card-effect .instant {
+            color: #f6e05e;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        .card-effect .endgame {
+            color: #90cdf4;
+        }
+        
+        .card-chest {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 0.7rem;
+            background: #8B4513;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #fff;
+        }
+        
+        .card.flipped {
+            background: linear-gradient(145deg, #718096 0%, #4a5568 100%) !important;
+        }
+        
+        .card.flipped .card-image {
+            font-size: 3rem;
+        }
+        
+        .card.flipped::after {
+            content: '조약돌';
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'VT323', monospace;
+            color: #a0aec0;
+        }
+        
+        .player-area {
+            background: rgba(139,69,19,0.9);
+            border: 4px solid #5d3a1a;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .player-name {
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+        
+        .player-resources {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 12px;
+            border-radius: 4px;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+        }
+        
+        .resource.emerald { border: 2px solid var(--emerald); }
+        .resource.pearl { border: 2px solid var(--pearl); }
+        
+        .tableau {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-width: 450px;
+        }
+        
+        .tableau-slot {
+            aspect-ratio: 7/10;
+            background: rgba(0,0,0,0.4);
+            border: 2px dashed #666;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 2rem;
+        }
+        
+        .tableau-slot.has-card {
+            border: none;
+            padding: 0;
+        }
+        
+        .tableau-slot .card {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .info-panel {
+            background: rgba(0,0,0,0.8);
+            border: 3px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            color: #fff;
+        }
+        
+        .info-panel h3 {
+            font-family: 'VT323', monospace;
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: var(--gold);
+            border-bottom: 2px solid #444;
+            padding-bottom: 5px;
+        }
+        
+        .turn-info {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+        
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            font-family: 'VT323', monospace;
+            font-size: 1.1rem;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .action-btn:hover:not(:disabled) {
+            transform: scale(1.02);
+        }
+        
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .action-btn.primary {
+            background: linear-gradient(180deg, var(--emerald) 0%, var(--emerald-dark) 100%);
+            color: #fff;
+            border: 3px solid var(--emerald-dark);
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.3);
+        }
+        
+        .action-btn.secondary {
+            background: linear-gradient(180deg, var(--pearl) 0%, var(--pearl-dark) 100%);
+            color: #fff;
+            border: 3px solid var(--pearl-dark);
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.3);
+        }
+        
+        .action-btn.danger {
+            background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%);
+            color: #fff;
+            border: 3px solid #c0392b;
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.3);
+        }
+        
+        .score-display {
+            font-size: 2rem;
+            text-align: center;
+            color: var(--gold);
+            font-family: 'VT323', monospace;
+        }
+        
+        .log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: linear-gradient(145deg, #2d3748 0%, #1a202c 100%);
+            border: 4px solid var(--gold);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            text-align: center;
+            color: #fff;
+        }
+        
+        .modal-content h2 {
+            font-family: 'VT323', monospace;
+            font-size: 2.5rem;
+            color: var(--gold);
+            margin-bottom: 20px;
+        }
+        
+        .final-score {
+            font-size: 4rem;
+            font-family: 'VT323', monospace;
+            color: var(--emerald);
+            margin: 20px 0;
+        }
+        
+        .score-breakdown {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #444;
+        }
+        
+        .placement-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            border: 2px solid var(--emerald);
+            z-index: 100;
+            display: none;
+        }
+        
+        .placement-hint.active {
+            display: block;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .tableau-slot.valid-placement {
+            border-color: var(--emerald);
+            background: rgba(46, 204, 113, 0.2);
+            cursor: pointer;
+        }
+        
+        .tableau-slot.valid-placement:hover {
+            background: rgba(46, 204, 113, 0.4);
+        }
+        
+        .selected-card-preview {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99;
+            display: none;
+        }
+        
+        .selected-card-preview.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>⛏️ 마크콤보 MINECOMBO ⛏️</h1>
+    
+    <div class="game-container">
+        <div class="main-area">
+            <!-- 동굴 마켓 -->
+            <div class="market-section">
+                <div class="market-header">
+                    <div class="market-title cave">⛏️ 동굴 CAVE</div>
+                    <div class="minecart" id="minecart-cave" style="display:none">🚃 광산수레</div>
+                </div>
+                <div class="market-cards" id="cave-market"></div>
+            </div>
+            
+            <!-- 지상 마켓 -->
+            <div class="market-section">
+                <div class="market-header">
+                    <div class="market-title surface">🌲 지상 SURFACE</div>
+                    <div class="minecart" id="minecart-surface">🚃 광산수레</div>
+                </div>
+                <div class="market-cards" id="surface-market"></div>
+            </div>
+            
+            <!-- 플레이어 영역 -->
+            <div class="player-area">
+                <div class="player-header">
+                    <div class="player-name">🎮 내 영역</div>
+                    <div class="player-resources">
+                        <div class="resource emerald">💎 <span id="emerald-count">15</span></div>
+                        <div class="resource pearl">🔮 <span id="pearl-count">2</span></div>
+                    </div>
+                </div>
+                <div class="tableau" id="player-tableau"></div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="info-panel">
+                <h3>📊 게임 정보</h3>
+                <div class="turn-info">턴: <span id="turn-count">1</span> / 9</div>
+                <div class="score-display" id="current-score">0점</div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>🎯 행동</h3>
+                <div class="actions">
+                    <button class="action-btn secondary" id="btn-move-minecart" onclick="moveMinecart()">
+                        🔮 광산수레 이동 (-1 진주)
+                    </button>
+                    <button class="action-btn secondary" id="btn-refresh" onclick="refreshMarket()">
+                        🔮 마켓 리프레시 (-1 진주)
+                    </button>
+                    <button class="action-btn danger" id="btn-flip" onclick="toggleFlipMode()">
+                        🪨 조약돌로 변환
+                    </button>
+                    <button class="action-btn primary" onclick="newGame()">
+                        🔄 새 게임
+                    </button>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>📜 기록</h3>
+                <div class="log" id="game-log"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="placement-hint" id="placement-hint">
+        카드를 놓을 위치를 클릭하세요
+    </div>
+    
+    <div class="selected-card-preview" id="selected-preview"></div>
+    
+    <div class="modal" id="game-over-modal">
+        <div class="modal-content">
+            <h2>🏆 게임 종료!</h2>
+            <div class="final-score" id="final-score">0</div>
+            <div class="score-breakdown" id="score-breakdown"></div>
+            <button class="action-btn primary" onclick="newGame()">다시 하기</button>
+        </div>
+    </div>
+
+    <script>
+        // 카드 데이터
+        const CAVE_CARDS = [
+            // 광석 (12장)
+            { id: 'diamond', name: '다이아몬드', emoji: '💎', cost: 5, symbol: '⛏️', instant: '+2 에메랄드', instantEffect: (g) => g.emeralds += 2, endgame: '인접 ⛏️당 +2점', score: (g, pos) => countAdjacent(g, pos, '⛏️') * 2, chest: 3 },
+            { id: 'diamond2', name: '다이아몬드', emoji: '💎', cost: 5, symbol: '⛏️', instant: '+2 에메랄드', instantEffect: (g) => g.emeralds += 2, endgame: '인접 ⛏️당 +2점', score: (g, pos) => countAdjacent(g, pos, '⛏️') * 2, chest: 3 },
+            { id: 'emerald_ore', name: '에메랄드 광석', emoji: '💚', cost: 4, symbol: '⛏️', instant: '+3 에메랄드', instantEffect: (g) => g.emeralds += 3, endgame: '기본 3점', score: () => 3, chest: 2 },
+            { id: 'emerald_ore2', name: '에메랄드 광석', emoji: '💚', cost: 4, symbol: '⛏️', instant: '+3 에메랄드', instantEffect: (g) => g.emeralds += 3, endgame: '기본 3점', score: () => 3, chest: 2 },
+            { id: 'redstone', name: '레드스톤', emoji: '🔴', cost: 3, symbol: '⛏️', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '🔧 1개당 +2점', score: (g) => countSymbol(g, '🔧') * 2, chest: 1 },
+            { id: 'redstone2', name: '레드스톤', emoji: '🔴', cost: 3, symbol: '⛏️', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '🔧 1개당 +2점', score: (g) => countSymbol(g, '🔧') * 2, chest: 1 },
+            { id: 'lapis', name: '청금석', emoji: '🔵', cost: 3, symbol: '⛏️', instant: '없음', instantEffect: () => {}, endgame: '⛏️ 3개+ 시 +5점', score: (g) => countSymbol(g, '⛏️') >= 3 ? 5 : 0, chest: 2 },
+            { id: 'lapis2', name: '청금석', emoji: '🔵', cost: 3, symbol: '⛏️', instant: '없음', instantEffect: () => {}, endgame: '⛏️ 3개+ 시 +5점', score: (g) => countSymbol(g, '⛏️') >= 3 ? 5 : 0, chest: 2 },
+            { id: 'gold_ore', name: '금 광석', emoji: '🟡', cost: 4, symbol: '⛏️', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '같은 열 ⛏️당 +2점', score: (g, pos) => countInColumn(g, pos, '⛏️') * 2, chest: 3 },
+            { id: 'gold_ore2', name: '금 광석', emoji: '🟡', cost: 4, symbol: '⛏️', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '같은 열 ⛏️당 +2점', score: (g, pos) => countInColumn(g, pos, '⛏️') * 2, chest: 3 },
+            { id: 'iron_ore', name: '철 광석', emoji: '⚪', cost: 2, symbol: '⛏️', instant: '없음', instantEffect: () => {}, endgame: '기본 2점', score: () => 2, chest: 1 },
+            { id: 'iron_ore2', name: '철 광석', emoji: '⚪', cost: 2, symbol: '⛏️', instant: '없음', instantEffect: () => {}, endgame: '기본 2점', score: () => 2, chest: 1 },
+            
+            // 동굴 몹 (10장)
+            { id: 'creeper', name: '크리퍼', emoji: '💀', cost: 3, symbol: '👹', instant: '없음', instantEffect: () => {}, endgame: '👹 3개+ 시 +5점', score: (g) => countSymbol(g, '👹') >= 3 ? 5 : 0, chest: 0 },
+            { id: 'creeper2', name: '크리퍼', emoji: '💀', cost: 3, symbol: '👹', instant: '없음', instantEffect: () => {}, endgame: '👹 3개+ 시 +5점', score: (g) => countSymbol(g, '👹') >= 3 ? 5 : 0, chest: 0 },
+            { id: 'zombie', name: '좀비', emoji: '🧟', cost: 2, symbol: '👹', instant: '없음', instantEffect: () => {}, endgame: '👹 쌍당 +2점', score: (g) => Math.floor(countSymbol(g, '👹') / 2) * 2, chest: 0 },
+            { id: 'zombie2', name: '좀비', emoji: '🧟', cost: 2, symbol: '👹', instant: '없음', instantEffect: () => {}, endgame: '👹 쌍당 +2점', score: (g) => Math.floor(countSymbol(g, '👹') / 2) * 2, chest: 0 },
+            { id: 'skeleton', name: '스켈레톤', emoji: '💀', cost: 2, symbol: '👹', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'skeleton2', name: '스켈레톤', emoji: '💀', cost: 2, symbol: '👹', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'spider', name: '거미', emoji: '🕷️', cost: 2, symbol: '👹', instant: '없음', instantEffect: () => {}, endgame: '인접 👹당 +1점', score: (g, pos) => countAdjacent(g, pos, '👹') * 1, chest: 0 },
+            { id: 'slime', name: '슬라임', emoji: '🟢', cost: 1, symbol: '👹', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'warden', name: '워든', emoji: '👾', cost: 7, symbol: '👹', instant: '없음', instantEffect: () => {}, endgame: '👹 최다 시 +10점', score: (g) => 10, chest: 0 },
+            { id: 'enderman', name: '엔더맨', emoji: '👤', cost: 5, symbol: '👹', instant: '+2 진주', instantEffect: (g) => g.pearls += 2, endgame: '기본 4점', score: () => 4, chest: 1 },
+            
+            // 구조물 (8장)
+            { id: 'mineshaft', name: '폐광', emoji: '🚃', cost: 4, symbol: '🏠', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '행/열 ⛏️ 3개 시 +6점', score: (g, pos) => (countInRow(g, pos, '⛏️') >= 3 || countInColumn(g, pos, '⛏️') >= 3) ? 6 : 0, chest: 2 },
+            { id: 'mineshaft2', name: '폐광', emoji: '🚃', cost: 4, symbol: '🏠', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '행/열 ⛏️ 3개 시 +6점', score: (g, pos) => (countInRow(g, pos, '⛏️') >= 3 || countInColumn(g, pos, '⛏️') >= 3) ? 6 : 0, chest: 2 },
+            { id: 'dungeon', name: '던전', emoji: '🏰', cost: 3, symbol: '🏠', instant: '없음', instantEffect: () => {}, endgame: '👹 1개당 +1점', score: (g) => countSymbol(g, '👹'), chest: 2 },
+            { id: 'dungeon2', name: '던전', emoji: '🏰', cost: 3, symbol: '🏠', instant: '없음', instantEffect: () => {}, endgame: '👹 1개당 +1점', score: (g) => countSymbol(g, '👹'), chest: 2 },
+            { id: 'ancient_city', name: '고대 도시', emoji: '🏛️', cost: 6, symbol: '🏠', instant: '+2 에메랄드', instantEffect: (g) => g.emeralds += 2, endgame: '🏠 1개당 +2점', score: (g) => countSymbol(g, '🏠') * 2, chest: 4 },
+            { id: 'lava_lake', name: '용암 호수', emoji: '🔥', cost: 2, symbol: '🏠', instant: '없음', instantEffect: () => {}, endgame: '인접 카드 없으면 +5점', score: (g, pos) => countAdjacent(g, pos, null) === 0 ? 5 : 0, chest: 0 },
+            { id: 'stronghold', name: '요새', emoji: '🏯', cost: 5, symbol: '🏠', instant: '없음', instantEffect: () => {}, endgame: '코너 배치 시 +6점', score: (g, pos) => [0,2,6,8].includes(pos) ? 6 : 0, chest: 3 },
+            { id: 'amethyst', name: '자수정 동굴', emoji: '💜', cost: 3, symbol: '🏠', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '기본 2점', score: () => 2, chest: 2 },
+            
+            // 도구/장비 (9장)
+            { id: 'diamond_pick', name: '다이아 곡괭이', emoji: '⛏️', cost: 6, symbol: '🔧', instant: '다음 구매 -2', instantEffect: (g) => g.discount = 2, endgame: '🔧 세트당 +3점', score: (g) => Math.floor(countSymbol(g, '🔧') / 3) * 3, chest: 2 },
+            { id: 'diamond_pick2', name: '다이아 곡괭이', emoji: '⛏️', cost: 6, symbol: '🔧', instant: '다음 구매 -2', instantEffect: (g) => g.discount = 2, endgame: '🔧 세트당 +3점', score: (g) => Math.floor(countSymbol(g, '🔧') / 3) * 3, chest: 2 },
+            { id: 'iron_sword', name: '철 검', emoji: '🗡️', cost: 3, symbol: '🔧', instant: '없음', instantEffect: () => {}, endgame: '👹 1개당 +1점', score: (g) => countSymbol(g, '👹'), chest: 1 },
+            { id: 'iron_sword2', name: '철 검', emoji: '🗡️', cost: 3, symbol: '🔧', instant: '없음', instantEffect: () => {}, endgame: '👹 1개당 +1점', score: (g) => countSymbol(g, '👹'), chest: 1 },
+            { id: 'torch', name: '횃불', emoji: '🔦', cost: 1, symbol: '🔧', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'torch2', name: '횃불', emoji: '🔦', cost: 1, symbol: '🔧', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'bucket', name: '양동이', emoji: '🪣', cost: 2, symbol: '🔧', instant: '+2 에메랄드', instantEffect: (g) => g.emeralds += 2, endgame: '기본 0점', score: () => 0, chest: 1 },
+            { id: 'shield', name: '방패', emoji: '🛡️', cost: 4, symbol: '🔧', instant: '없음', instantEffect: () => {}, endgame: '중앙 배치 시 +5점', score: (g, pos) => pos === 4 ? 5 : 0, chest: 2 },
+            { id: 'bow', name: '활', emoji: '🏹', cost: 3, symbol: '🔧', instant: '없음', instantEffect: () => {}, endgame: '대각선 👹당 +2점', score: (g, pos) => countDiagonal(g, pos, '👹') * 2, chest: 1 },
+        ];
+        
+        const SURFACE_CARDS = [
+            // 바이옴/나무 (12장)
+            { id: 'oak', name: '참나무', emoji: '🌳', cost: 2, symbol: '🌲', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '같은 행 🌲당 +1점', score: (g, pos) => countInRow(g, pos, '🌲'), chest: 1 },
+            { id: 'oak2', name: '참나무', emoji: '🌳', cost: 2, symbol: '🌲', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '같은 행 🌲당 +1점', score: (g, pos) => countInRow(g, pos, '🌲'), chest: 1 },
+            { id: 'birch', name: '자작나무', emoji: '🌴', cost: 2, symbol: '🌲', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '같은 열 🌲당 +1점', score: (g, pos) => countInColumn(g, pos, '🌲'), chest: 1 },
+            { id: 'birch2', name: '자작나무', emoji: '🌴', cost: 2, symbol: '🌲', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '같은 열 🌲당 +1점', score: (g, pos) => countInColumn(g, pos, '🌲'), chest: 1 },
+            { id: 'spruce', name: '가문비나무', emoji: '🌲', cost: 2, symbol: '🌲', instant: '없음', instantEffect: () => {}, endgame: '🌲 쌍당 +2점', score: (g) => Math.floor(countSymbol(g, '🌲') / 2) * 2, chest: 1 },
+            { id: 'spruce2', name: '가문비나무', emoji: '🌲', cost: 2, symbol: '🌲', instant: '없음', instantEffect: () => {}, endgame: '🌲 쌍당 +2점', score: (g) => Math.floor(countSymbol(g, '🌲') / 2) * 2, chest: 1 },
+            { id: 'cherry', name: '벚나무', emoji: '🌸', cost: 3, symbol: '🌲', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '기본 2점', score: () => 2, chest: 2 },
+            { id: 'cherry2', name: '벚나무', emoji: '🌸', cost: 3, symbol: '🌲', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '기본 2점', score: () => 2, chest: 2 },
+            { id: 'jungle', name: '정글나무', emoji: '🎋', cost: 3, symbol: '🌲', instant: '없음', instantEffect: () => {}, endgame: '🐄 1개당 +1점', score: (g) => countSymbol(g, '🐄'), chest: 1 },
+            { id: 'jungle2', name: '정글나무', emoji: '🎋', cost: 3, symbol: '🌲', instant: '없음', instantEffect: () => {}, endgame: '🐄 1개당 +1점', score: (g) => countSymbol(g, '🐄'), chest: 1 },
+            { id: 'desert', name: '사막', emoji: '🏜️', cost: 1, symbol: '🌲', instant: '+2 에메랄드', instantEffect: (g) => g.emeralds += 2, endgame: '기본 0점', score: () => 0, chest: 0 },
+            { id: 'mushroom', name: '버섯 섬', emoji: '🍄', cost: 4, symbol: '🌲', instant: '없음', instantEffect: () => {}, endgame: '🌲 4개+ 시 +6점', score: (g) => countSymbol(g, '🌲') >= 4 ? 6 : 0, chest: 2 },
+            
+            // 동물 (12장)
+            { id: 'pig', name: '돼지', emoji: '🐷', cost: 1, symbol: '🐄', instant: '없음', instantEffect: () => {}, endgame: '🐄 쌍당 +2점', score: (g) => Math.floor(countSymbol(g, '🐄') / 2) * 2, chest: 0 },
+            { id: 'pig2', name: '돼지', emoji: '🐷', cost: 1, symbol: '🐄', instant: '없음', instantEffect: () => {}, endgame: '🐄 쌍당 +2점', score: (g) => Math.floor(countSymbol(g, '🐄') / 2) * 2, chest: 0 },
+            { id: 'cow', name: '소', emoji: '🐄', cost: 1, symbol: '🐄', instant: '없음', instantEffect: () => {}, endgame: '🐄 쌍당 +2점', score: (g) => Math.floor(countSymbol(g, '🐄') / 2) * 2, chest: 0 },
+            { id: 'cow2', name: '소', emoji: '🐄', cost: 1, symbol: '🐄', instant: '없음', instantEffect: () => {}, endgame: '🐄 쌍당 +2점', score: (g) => Math.floor(countSymbol(g, '🐄') / 2) * 2, chest: 0 },
+            { id: 'sheep', name: '양', emoji: '🐑', cost: 1, symbol: '🐄', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'sheep2', name: '양', emoji: '🐑', cost: 1, symbol: '🐄', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'chicken', name: '닭', emoji: '🐔', cost: 1, symbol: '🐄', instant: '없음', instantEffect: () => {}, endgame: '🌾 1개당 +1점', score: (g) => countSymbol(g, '🌾'), chest: 0 },
+            { id: 'chicken2', name: '닭', emoji: '🐔', cost: 1, symbol: '🐄', instant: '없음', instantEffect: () => {}, endgame: '🌾 1개당 +1점', score: (g) => countSymbol(g, '🌾'), chest: 0 },
+            { id: 'wolf', name: '늑대', emoji: '🐺', cost: 3, symbol: '🐄', instant: '없음', instantEffect: () => {}, endgame: '인접 🐄당 +2점', score: (g, pos) => countAdjacent(g, pos, '🐄') * 2, chest: 1 },
+            { id: 'wolf2', name: '늑대', emoji: '🐺', cost: 3, symbol: '🐄', instant: '없음', instantEffect: () => {}, endgame: '인접 🐄당 +2점', score: (g, pos) => countAdjacent(g, pos, '🐄') * 2, chest: 1 },
+            { id: 'bee', name: '벌', emoji: '🐝', cost: 2, symbol: '🐄', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '인접 🌲당 +2점', score: (g, pos) => countAdjacent(g, pos, '🌲') * 2, chest: 0 },
+            { id: 'cat', name: '고양이', emoji: '🐱', cost: 2, symbol: '🐄', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            
+            // 마을 (10장)
+            { id: 'farmer', name: '농부 주민', emoji: '👨‍🌾', cost: 2, symbol: '👥', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '인접 🌾당 +2점', score: (g, pos) => countAdjacent(g, pos, '🌾') * 2, chest: 1 },
+            { id: 'farmer2', name: '농부 주민', emoji: '👨‍🌾', cost: 2, symbol: '👥', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '인접 🌾당 +2점', score: (g, pos) => countAdjacent(g, pos, '🌾') * 2, chest: 1 },
+            { id: 'librarian', name: '사서 주민', emoji: '📚', cost: 3, symbol: '👥', instant: '+1 진주', instantEffect: (g) => g.pearls += 1, endgame: '👥 1개당 +1점', score: (g) => countSymbol(g, '👥'), chest: 2 },
+            { id: 'blacksmith', name: '대장장이', emoji: '🔨', cost: 3, symbol: '👥', instant: '없음', instantEffect: () => {}, endgame: '🔧 1개당 +2점', score: (g) => countSymbol(g, '🔧') * 2, chest: 2 },
+            { id: 'cleric', name: '성직자', emoji: '⛪', cost: 4, symbol: '👥', instant: '+2 진주', instantEffect: (g) => g.pearls += 2, endgame: '기본 2점', score: () => 2, chest: 2 },
+            { id: 'golem', name: '철 골렘', emoji: '🤖', cost: 4, symbol: '👥', instant: '없음', instantEffect: () => {}, endgame: '🏠 2개+ 시 +4점', score: (g) => countSymbol(g, '🏠') >= 2 ? 4 : 0, chest: 2 },
+            { id: 'golem2', name: '철 골렘', emoji: '🤖', cost: 4, symbol: '👥', instant: '없음', instantEffect: () => {}, endgame: '🏠 2개+ 시 +4점', score: (g) => countSymbol(g, '🏠') >= 2 ? 4 : 0, chest: 2 },
+            { id: 'house', name: '마을 집', emoji: '🏠', cost: 3, symbol: '🏠', instant: '없음', instantEffect: () => {}, endgame: '👥 1개당 +1점', score: (g) => countSymbol(g, '👥'), chest: 3 },
+            { id: 'house2', name: '마을 집', emoji: '🏠', cost: 3, symbol: '🏠', instant: '없음', instantEffect: () => {}, endgame: '👥 1개당 +1점', score: (g) => countSymbol(g, '👥'), chest: 3 },
+            { id: 'well', name: '우물', emoji: '🪣', cost: 2, symbol: '🏠', instant: '+2 에메랄드', instantEffect: (g) => g.emeralds += 2, endgame: '기본 1점', score: () => 1, chest: 1 },
+            
+            // 농작물/자원 (15장)
+            { id: 'wheat', name: '밀', emoji: '🌾', cost: 1, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '🌾 4개+ 시 +5점', score: (g) => countSymbol(g, '🌾') >= 4 ? 5 : 0, chest: 0 },
+            { id: 'wheat2', name: '밀', emoji: '🌾', cost: 1, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '🌾 4개+ 시 +5점', score: (g) => countSymbol(g, '🌾') >= 4 ? 5 : 0, chest: 0 },
+            { id: 'wheat3', name: '밀', emoji: '🌾', cost: 1, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '🌾 4개+ 시 +5점', score: (g) => countSymbol(g, '🌾') >= 4 ? 5 : 0, chest: 0 },
+            { id: 'carrot', name: '당근', emoji: '🥕', cost: 1, symbol: '🌾', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'carrot2', name: '당근', emoji: '🥕', cost: 1, symbol: '🌾', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '기본 1점', score: () => 1, chest: 0 },
+            { id: 'potato', name: '감자', emoji: '🥔', cost: 1, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '🐄 1개당 +1점', score: (g) => countSymbol(g, '🐄'), chest: 0 },
+            { id: 'potato2', name: '감자', emoji: '🥔', cost: 1, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '🐄 1개당 +1점', score: (g) => countSymbol(g, '🐄'), chest: 0 },
+            { id: 'sugarcane', name: '사탕수수', emoji: '🎋', cost: 2, symbol: '🌾', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '같은 행 🌾당 +1점', score: (g, pos) => countInRow(g, pos, '🌾'), chest: 0 },
+            { id: 'sugarcane2', name: '사탕수수', emoji: '🎋', cost: 2, symbol: '🌾', instant: '+1 에메랄드', instantEffect: (g) => g.emeralds += 1, endgame: '같은 행 🌾당 +1점', score: (g, pos) => countInRow(g, pos, '🌾'), chest: 0 },
+            { id: 'log', name: '원목', emoji: '🪵', cost: 1, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '🌲 1개당 +1점', score: (g) => countSymbol(g, '🌲'), chest: 0 },
+            { id: 'log2', name: '원목', emoji: '🪵', cost: 1, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '🌲 1개당 +1점', score: (g) => countSymbol(g, '🌲'), chest: 0 },
+            { id: 'cobble', name: '조약돌', emoji: '🪨', cost: 0, symbol: '🌾', instant: '+3 에메랄드', instantEffect: (g) => g.emeralds += 3, endgame: '기본 0점', score: () => 0, chest: 0 },
+            { id: 'cobble2', name: '조약돌', emoji: '🪨', cost: 0, symbol: '🌾', instant: '+3 에메랄드', instantEffect: (g) => g.emeralds += 3, endgame: '기본 0점', score: () => 0, chest: 0 },
+            { id: 'melon', name: '수박', emoji: '🍉', cost: 2, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '인접 🌾당 +2점', score: (g, pos) => countAdjacent(g, pos, '🌾') * 2, chest: 1 },
+            { id: 'pumpkin', name: '호박', emoji: '🎃', cost: 2, symbol: '🌾', instant: '없음', instantEffect: () => {}, endgame: '기본 2점', score: () => 2, chest: 1 },
+        ];
+        
+        // 게임 상태
+        let gameState = {
+            emeralds: 15,
+            pearls: 2,
+            turn: 1,
+            minecartLocation: 'surface', // 'cave' or 'surface'
+            tableau: Array(9).fill(null),
+            caveDeck: [],
+            surfaceDeck: [],
+            caveMarket: [],
+            surfaceMarket: [],
+            selectedCard: null,
+            flipMode: false,
+            discount: 0
+        };
+        
+        // 유틸리티 함수들
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+        
+        function countSymbol(g, symbol) {
+            return g.tableau.filter(c => c && !c.flipped && c.symbol === symbol).length;
+        }
+        
+        function countAdjacent(g, pos, symbol) {
+            const adjacents = [
+                pos - 3, // 위
+                pos + 3, // 아래
+                pos % 3 !== 0 ? pos - 1 : -1, // 왼쪽
+                pos % 3 !== 2 ? pos + 1 : -1  // 오른쪽
+            ].filter(p => p >= 0 && p < 9);
+            
+            return adjacents.filter(p => {
+                const card = g.tableau[p];
+                if (!card || card.flipped) return false;
+                return symbol === null || card.symbol === symbol;
+            }).length;
+        }
+        
+        function countInRow(g, pos, symbol) {
+            const row = Math.floor(pos / 3);
+            let count = 0;
+            for (let i = row * 3; i < row * 3 + 3; i++) {
+                const card = g.tableau[i];
+                if (card && !card.flipped && card.symbol === symbol) count++;
+            }
+            return count;
+        }
+        
+        function countInColumn(g, pos, symbol) {
+            const col = pos % 3;
+            let count = 0;
+            for (let i = col; i < 9; i += 3) {
+                const card = g.tableau[i];
+                if (card && !card.flipped && card.symbol === symbol) count++;
+            }
+            return count;
+        }
+        
+        function countDiagonal(g, pos, symbol) {
+            const diagonals = [];
+            const row = Math.floor(pos / 3);
+            const col = pos % 3;
+            
+            if (row > 0 && col > 0) diagonals.push(pos - 4);
+            if (row > 0 && col < 2) diagonals.push(pos - 2);
+            if (row < 2 && col > 0) diagonals.push(pos + 2);
+            if (row < 2 && col < 2) diagonals.push(pos + 4);
+            
+            return diagonals.filter(p => {
+                const card = g.tableau[p];
+                return card && !card.flipped && card.symbol === symbol;
+            }).length;
+        }
+        
+        function getValidPlacements() {
+            const valid = [];
+            const hasCards = gameState.tableau.some(c => c !== null);
+            
+            if (!hasCards) {
+                return [0, 1, 2, 3, 4, 5, 6, 7, 8];
+            }
+            
+            for (let i = 0; i < 9; i++) {
+                if (gameState.tableau[i] !== null) continue;
+                
+                const adjacents = [
+                    i - 3,
+                    i + 3,
+                    i % 3 !== 0 ? i - 1 : -1,
+                    i % 3 !== 2 ? i + 1 : -1
+                ];
+                
+                const hasAdjacentCard = adjacents.some(p => p >= 0 && p < 9 && gameState.tableau[p] !== null);
+                if (hasAdjacentCard) valid.push(i);
+            }
+            
+            return valid;
+        }
+        
+        function calculateScore() {
+            let total = 0;
+            const breakdown = [];
+            
+            gameState.tableau.forEach((card, pos) => {
+                if (card && !card.flipped) {
+                    const cardScore = card.score(gameState, pos);
+                    total += cardScore;
+                    if (cardScore > 0) {
+                        breakdown.push({ name: card.name, score: cardScore });
+                    }
+                }
+            });
+            
+            // 남은 진주 점수
+            const pearlScore = gameState.pearls;
+            total += pearlScore;
+            if (pearlScore > 0) {
+                breakdown.push({ name: '남은 진주', score: pearlScore });
+            }
+            
+            // 상자에 저장된 에메랄드
+            let chestCapacity = 0;
+            gameState.tableau.forEach(card => {
+                if (card && !card.flipped) {
+                    chestCapacity += card.chest || 0;
+                }
+            });
+            const storedEmeralds = Math.min(gameState.emeralds, chestCapacity);
+            total += storedEmeralds;
+            if (storedEmeralds > 0) {
+                breakdown.push({ name: '상자 에메랄드', score: storedEmeralds });
+            }
+            
+            return { total, breakdown };
+        }
+        
+        function renderCard(card, market, index) {
+            const cardClass = market === 'cave' ? 'cave-card' : 'surface-card';
+            return `
+                <div class="card ${cardClass}" onclick="selectCard('${market}', ${index})">
+                    <div class="card-cost">${card.cost}</div>
+                    <div class="card-symbol">${card.symbol}</div>
+                    <div class="card-image">${card.emoji}</div>
+                    <div class="card-name">${card.name}</div>
+                    <div class="card-effect">
+                        <div class="instant">⚡ ${card.instant}</div>
+                        <div class="endgame">🏆 ${card.endgame}</div>
+                    </div>
+                    ${card.chest > 0 ? `<div class="card-chest">📦${card.chest}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        function renderTableauCard(card, pos) {
+            if (card.flipped) {
+                return `
+                    <div class="card flipped">
+                        <div class="card-image">🪨</div>
+                    </div>
+                `;
+            }
+            
+            const cardClass = gameState.caveDeck.some(c => c.id === card.id) ? 'cave-card' : 'surface-card';
+            return `
+                <div class="card ${cardClass}">
+                    <div class="card-cost">${card.cost}</div>
+                    <div class="card-symbol">${card.symbol}</div>
+                    <div class="card-image">${card.emoji}</div>
+                    <div class="card-name">${card.name}</div>
+                    <div class="card-effect">
+                        <div class="instant">⚡ ${card.instant}</div>
+                        <div class="endgame">🏆 ${card.endgame}</div>
+                    </div>
+                    ${card.chest > 0 ? `<div class="card-chest">📦${card.chest}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        function render() {
+            // 마켓 렌더링
+            document.getElementById('cave-market').innerHTML = 
+                gameState.caveMarket.map((card, i) => renderCard(card, 'cave', i)).join('');
+            document.getElementById('surface-market').innerHTML = 
+                gameState.surfaceMarket.map((card, i) => renderCard(card, 'surface', i)).join('');
+            
+            // 광산수레 위치
+            document.getElementById('minecart-cave').style.display = 
+                gameState.minecartLocation === 'cave' ? 'block' : 'none';
+            document.getElementById('minecart-surface').style.display = 
+                gameState.minecartLocation === 'surface' ? 'block' : 'none';
+            
+            // 플레이어 자원
+            document.getElementById('emerald-count').textContent = gameState.emeralds;
+            document.getElementById('pearl-count').textContent = gameState.pearls;
+            document.getElementById('turn-count').textContent = gameState.turn;
+            
+            // 현재 점수
+            const { total } = calculateScore();
+            document.getElementById('current-score').textContent = total + '점';
+            
+            // 타블로 렌더링
+            const validPlacements = gameState.selectedCard ? getValidPlacements() : [];
+            document.getElementById('player-tableau').innerHTML = gameState.tableau.map((card, i) => {
+                if (card) {
+                    return `<div class="tableau-slot has-card">${renderTableauCard(card, i)}</div>`;
+                } else {
+                    const isValid = validPlacements.includes(i);
+                    return `<div class="tableau-slot ${isValid ? 'valid-placement' : ''}" 
+                                onclick="${isValid ? `placeCard(${i})` : ''}">?</div>`;
+                }
+            }).join('');
+            
+            // 버튼 상태
+            document.getElementById('btn-move-minecart').disabled = gameState.pearls < 1;
+            document.getElementById('btn-refresh').disabled = gameState.pearls < 1;
+            document.getElementById('btn-flip').classList.toggle('active', gameState.flipMode);
+            
+            // 배치 힌트
+            document.getElementById('placement-hint').classList.toggle('active', gameState.selectedCard !== null);
+        }
+        
+        function addLog(message) {
+            const log = document.getElementById('game-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[턴 ${gameState.turn}] ${message}`;
+            log.insertBefore(entry, log.firstChild);
+        }
+        
+        function selectCard(market, index) {
+            const isCorrectMarket = gameState.minecartLocation === market;
+            if (!isCorrectMarket) {
+                addLog('광산수레가 있는 마켓에서만 구매 가능!');
+                return;
+            }
+            
+            const cards = market === 'cave' ? gameState.caveMarket : gameState.surfaceMarket;
+            const card = cards[index];
+            const cost = Math.max(0, card.cost - gameState.discount);
+            
+            if (gameState.flipMode) {
+                // 조약돌 변환
+                gameState.selectedCard = { ...card, flipped: true, market, index };
+                addLog(`${card.name} 선택 (조약돌로 변환)`);
+            } else {
+                if (gameState.emeralds < cost) {
+                    addLog(`에메랄드 부족! (필요: ${cost}, 보유: ${gameState.emeralds})`);
+                    return;
+                }
+                gameState.selectedCard = { ...card, market, index };
+                addLog(`${card.name} 선택 (비용: ${cost})`);
+            }
+            
+            render();
+        }
+        
+        function placeCard(position) {
+            if (!gameState.selectedCard) return;
+            
+            const card = gameState.selectedCard;
+            const cost = Math.max(0, card.cost - gameState.discount);
+            
+            if (card.flipped) {
+                // 조약돌 변환 보상
+                gameState.emeralds += 4;
+                gameState.pearls += 2;
+                addLog(`조약돌 변환: +4 에메랄드, +2 진주`);
+            } else {
+                // 일반 구매
+                gameState.emeralds -= cost;
+                gameState.discount = 0;
+                
+                // 즉시 효과 발동
+                card.instantEffect(gameState);
+                if (card.instant !== '없음') {
+                    addLog(`${card.name} 효과: ${card.instant}`);
+                }
+            }
+            
+            // 카드 배치
+            gameState.tableau[position] = card;
+            
+            // 마켓에서 제거 및 보충
+            if (card.market === 'cave') {
+                gameState.caveMarket.splice(card.index, 1);
+                if (gameState.caveDeck.length > 0) {
+                    gameState.caveMarket.push(gameState.caveDeck.pop());
+                }
+            } else {
+                gameState.surfaceMarket.splice(card.index, 1);
+                if (gameState.surfaceDeck.length > 0) {
+                    gameState.surfaceMarket.push(gameState.surfaceDeck.pop());
+                }
+            }
+            
+            gameState.selectedCard = null;
+            gameState.flipMode = false;
+            gameState.turn++;
+            
+            // 게임 종료 체크
+            if (gameState.turn > 9) {
+                endGame();
+            } else {
+                render();
+            }
+        }
+        
+        function moveMinecart() {
+            if (gameState.pearls < 1) return;
+            
+            gameState.pearls--;
+            gameState.minecartLocation = gameState.minecartLocation === 'cave' ? 'surface' : 'cave';
+            addLog(`광산수레 이동 → ${gameState.minecartLocation === 'cave' ? '동굴' : '지상'}`);
+            render();
+        }
+        
+        function refreshMarket() {
+            if (gameState.pearls < 1) return;
+            
+            gameState.pearls--;
+            
+            if (gameState.minecartLocation === 'cave') {
+                // 현재 마켓 카드를 덱 밑으로
+                gameState.caveDeck.unshift(...gameState.caveMarket);
+                gameState.caveMarket = [];
+                // 새 카드 3장
+                for (let i = 0; i < 3 && gameState.caveDeck.length > 0; i++) {
+                    gameState.caveMarket.push(gameState.caveDeck.pop());
+                }
+                addLog('동굴 마켓 리프레시');
+            } else {
+                gameState.surfaceDeck.unshift(...gameState.surfaceMarket);
+                gameState.surfaceMarket = [];
+                for (let i = 0; i < 3 && gameState.surfaceDeck.length > 0; i++) {
+                    gameState.surfaceMarket.push(gameState.surfaceDeck.pop());
+                }
+                addLog('지상 마켓 리프레시');
+            }
+            
+            render();
+        }
+        
+        function toggleFlipMode() {
+            gameState.flipMode = !gameState.flipMode;
+            gameState.selectedCard = null;
+            addLog(gameState.flipMode ? '조약돌 변환 모드 ON' : '조약돌 변환 모드 OFF');
+            render();
+        }
+        
+        function endGame() {
+            const { total, breakdown } = calculateScore();
+            
+            document.getElementById('final-score').textContent = total + '점';
+            document.getElementById('score-breakdown').innerHTML = breakdown.map(b => `
+                <div class="score-row">
+                    <span>${b.name}</span>
+                    <span>+${b.score}점</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('game-over-modal').classList.add('active');
+        }
+        
+        function newGame() {
+            // 덱 초기화 및 셔플
+            gameState = {
+                emeralds: 15,
+                pearls: 2,
+                turn: 1,
+                minecartLocation: 'surface',
+                tableau: Array(9).fill(null),
+                caveDeck: shuffle([...CAVE_CARDS]),
+                surfaceDeck: shuffle([...SURFACE_CARDS]),
+                caveMarket: [],
+                surfaceMarket: [],
+                selectedCard: null,
+                flipMode: false,
+                discount: 0
+            };
+            
+            // 마켓 채우기
+            for (let i = 0; i < 3; i++) {
+                gameState.caveMarket.push(gameState.caveDeck.pop());
+                gameState.surfaceMarket.push(gameState.surfaceDeck.pop());
+            }
+            
+            document.getElementById('game-over-modal').classList.remove('active');
+            document.getElementById('game-log').innerHTML = '';
+            addLog('새 게임 시작!');
+            render();
+        }
+        
+        // 게임 시작
+        newGame();
+    </script>
+</body>
+</html>
