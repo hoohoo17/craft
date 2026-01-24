@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>❄️ Snow Craft - 스노우 크래프트</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a1628;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      height: 100vh;
+      max-height: 700px;
+      overflow: hidden;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    #ui > * { pointer-events: auto; }
+    
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #0a1628 0%, #1e3a5f 50%, #2a5080 100%);
+      transition: opacity 0.5s;
+    }
+    .hidden { opacity: 0; pointer-events: none !important; }
+    
+    #titleScreen h1 {
+      font-size: 42px;
+      color: #fff;
+      text-shadow: 0 0 20px #5eb8ff;
+      margin-bottom: 10px;
+    }
+    #titleScreen h2 {
+      font-size: 24px;
+      color: #5eb8ff;
+      margin-bottom: 40px;
+    }
+    .btn {
+      background: linear-gradient(135deg, #5eb8ff, #2a8cd4);
+      border: none;
+      color: #fff;
+      padding: 15px 50px;
+      font-size: 20px;
+      border-radius: 30px;
+      cursor: pointer;
+      margin: 10px;
+      box-shadow: 0 5px 20px rgba(94, 184, 255, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover { transform: scale(1.05); box-shadow: 0 8px 30px rgba(94, 184, 255, 0.6); }
+    .btn:active { transform: scale(0.95); }
+    
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 14px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+    #hud > div {
+      background: rgba(0,0,0,0.3);
+      padding: 8px 15px;
+      border-radius: 20px;
+    }
+    
+    #phaseIndicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      color: #fff;
+      text-shadow: 0 0 20px #5eb8ff;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #phaseIndicator.show { opacity: 1; }
+    
+    #growthControls {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+    }
+    .growBtn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(94, 184, 255, 0.3);
+      border: 2px solid #5eb8ff;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .growBtn:active {
+      background: rgba(94, 184, 255, 0.8);
+      transform: scale(0.9);
+    }
+    
+    #tapZone {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      color: #fff;
+    }
+    #tapZone .tap-text {
+      font-size: 18px;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    #skipBtn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    #resultScreen {
+      background: linear-gradient(180deg, #1a365d 0%, #2c5282 100%);
+      padding: 20px;
+      text-align: center;
+    }
+    #resultScreen h2 {
+      font-size: 32px;
+      color: #fff;
+      margin-bottom: 20px;
+    }
+    .result-snowflake {
+      font-size: 80px;
+      margin: 20px 0;
+    }
+    .result-stats {
+      background: rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 20px;
+      margin: 20px 0;
+      text-align: left;
+      color: #fff;
+    }
+    .result-stats div {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      font-size: 16px;
+    }
+    .result-total {
+      font-size: 28px;
+      color: #5eb8ff;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    #progressBar {
+      position: absolute;
+      bottom: 10px;
+      left: 20px;
+      right: 20px;
+      height: 8px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+    }
+    #progressFill {
+      height: 100%;
+      background: linear-gradient(90deg, #5eb8ff, #00d4aa);
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+      <!-- 타이틀 화면 -->
+      <div id="titleScreen" class="screen">
+        <div style="font-size: 60px; margin-bottom: 20px;">❄️</div>
+        <h1>SNOW CRAFT</h1>
+        <h2>스노우 크래프트</h2>
+        <button class="btn" id="startBtn">▶ 시작하기</button>
+        <p style="color: #8eb8dc; margin-top: 30px; font-size: 14px;">물이의 여정을 함께해요!</p>
+      </div>
+      
+      <!-- 에피소드 화면 -->
+      <div id="episodeScreen" class="screen hidden">
+        <div id="episodeContent" style="text-align: center; padding: 40px;">
+          <div id="episodeEmoji" style="font-size: 80px; margin-bottom: 20px;"></div>
+          <p id="episodeText" style="color: #fff; font-size: 20px; line-height: 1.6;"></p>
+        </div>
+        <button id="skipBtn">SKIP →</button>
+      </div>
+      
+      <!-- 게임 HUD -->
+      <div id="hud" class="hidden">
+        <div id="altitudeDisplay">🌡️ <span id="altitude">0</span>m</div>
+        <div id="phaseDisplay">💧 상승</div>
+        <div id="scoreDisplay">⭐ <span id="score">0</span></div>
+      </div>
+      
+      <div id="phaseIndicator"></div>
+      
+      <!-- 성장 컨트롤 -->
+      <div id="growthControls" class="hidden">
+        <button class="growBtn" data-dir="left">↖️</button>
+        <button class="growBtn" data-dir="up">⬆️</button>
+        <button class="growBtn" data-dir="right">↗️</button>
+      </div>
+      
+      <!-- 탭 존 -->
+      <div id="tapZone" class="hidden">
+        <div class="tap-text">👆 탭하여 결합!</div>
+      </div>
+      
+      <div id="progressBar" class="hidden">
+        <div id="progressFill" style="width: 0%"></div>
+      </div>
+      
+      <!-- 결과 화면 -->
+      <div id="resultScreen" class="screen hidden">
+        <h2>❄️ 여정 완료! ❄️</h2>
+        <div class="result-snowflake" id="resultSnowflake">❄️</div>
+        <p id="resultType" style="color: #5eb8ff; font-size: 18px;"></p>
+        <div class="result-stats">
+          <div><span>에너지 수집</span><span id="resultEnergy">+0</span></div>
+          <div><span>결합 보너스</span><span id="resultBond">+0</span></div>
+          <div><span>눈송이 성장</span><span id="resultGrowth">+0</span></div>
+          <div><span>착지 보너스</span><span id="resultLanding">x1.0</span></div>
+          <div class="result-total"><span>총점</span><span id="resultTotal">0</span></div>
+        </div>
+        <button class="btn" id="retryBtn">🔄 다시 하기</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ============== 게임 설정 ==============
+const CONFIG = {
+  PHASE_RISING: { duration: 30000, maxAltitude: 5000 },
+  PHASE_BOND: { duration: 5000 },
+  PHASE_GROWTH: { duration: 10000 },
+  PHASE_FALLING: { duration: 15000 },
+};
+
+// ============== 게임 상태 ==============
+const game = {
+  canvas: null,
+  ctx: null,
+  width: 400,
+  height: 700,
+  phase: 'title', // title, episode, rising, bond, growth, falling, result
+  time: 0,
+  altitude: 0,
+  score: 0,
+  energy: 0,
+  bondBonus: 0,
+  growthScore: 0,
+  landingZone: null,
+  snowflake: { branches: [], size: 0, type: 'basic' },
+  player: { x: 200, y: 500, vy: 0, form: 'drop' }, // drop, vapor, crystal, snowflake
+  particles: [],
+  obstacles: [],
+  dustParticles: [],
+  windForce: 0,
+  keys: { left: false, right: false, up: false, down: false },
+  touch: { startX: 0, currentX: 0, active: false },
+  phaseStartTime: 0,
+  animationId: null,
+};
+
+// ============== 에피소드 데이터 ==============
+const episodes = [
+  { emoji: '☀️💧', text: '와아~ 따뜻해!\n몸이 둥둥 떠오른다!' },
+  { emoji: '⚫💨', text: '우와! 먼지가 있네?\n어... 붙는다! 철썩!' },
+  { emoji: '❄️💨', text: '오! 겨울이네? 언다!\n떨어진다... 꽝!\n바람 때문에 슈웅~' },
+  { emoji: '🌊💧', text: '바다에 풍덩!\n다시 시작이네~ 헤헤' },
+];
+let episodeIndex = 0;
+
+// ============== 초기화 ==============
+function init() {
+  game.canvas = document.getElementById('gameCanvas');
+  game.ctx = game.canvas.getContext('2d');
+  
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  
+  // 이벤트 리스너
+  document.getElementById('startBtn').addEventListener('click', startEpisode);
+  document.getElementById('skipBtn').addEventListener('click', skipEpisode);
+  document.getElementById('retryBtn').addEventListener('click', restartGame);
+  
+  // 키보드
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') game.keys.left = true;
+    if (e.key === 'ArrowRight') game.keys.right = true;
+    if (e.key === 'ArrowUp') game.keys.up = true;
+    if (e.key === 'ArrowDown') game.keys.down = true;
+    if (e.key === ' ' && game.phase === 'bond') handleTap();
+    // 성장 Phase에서 방향키로 조작
+    if (game.phase === 'growth') {
+      if (e.key === 'ArrowLeft') handleGrowth('left');
+      if (e.key === 'ArrowUp') handleGrowth('up');
+      if (e.key === 'ArrowRight') handleGrowth('right');
+    }
+    e.preventDefault();
+  });
+  document.addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft') game.keys.left = false;
+    if (e.key === 'ArrowRight') game.keys.right = false;
+    if (e.key === 'ArrowUp') game.keys.up = false;
+    if (e.key === 'ArrowDown') game.keys.down = false;
+  });
+  
+  // 터치/마우스
+  game.canvas.addEventListener('touchstart', handleTouchStart);
+  game.canvas.addEventListener('touchmove', handleTouchMove);
+  game.canvas.addEventListener('touchend', handleTouchEnd);
+  game.canvas.addEventListener('mousedown', handleMouseDown);
+  game.canvas.addEventListener('mousemove', handleMouseMove);
+  game.canvas.addEventListener('mouseup', handleMouseUp);
+  game.canvas.addEventListener('click', () => {
+    if (game.phase === 'bond') handleTap();
+  });
+  
+  // 성장 버튼
+  document.querySelectorAll('.growBtn').forEach(btn => {
+    btn.addEventListener('click', () => handleGrowth(btn.dataset.dir));
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleGrowth(btn.dataset.dir);
+    });
+  });
+  
+  gameLoop();
+}
+
+function resizeCanvas() {
+  const container = document.getElementById('gameContainer');
+  game.width = container.clientWidth;
+  game.height = container.clientHeight;
+  game.canvas.width = game.width;
+  game.canvas.height = game.height;
+  game.player.x = game.width / 2;
+}
+
+// ============== 에피소드 ==============
+function startEpisode() {
+  document.getElementById('titleScreen').classList.add('hidden');
+  document.getElementById('episodeScreen').classList.remove('hidden');
+  episodeIndex = 0;
+  showEpisode();
+}
+
+function showEpisode() {
+  if (episodeIndex >= episodes.length) {
+    skipEpisode();
+    return;
+  }
+  const ep = episodes[episodeIndex];
+  document.getElementById('episodeEmoji').textContent = ep.emoji;
+  document.getElementById('episodeText').textContent = ep.text;
+  
+  setTimeout(() => {
+    episodeIndex++;
+    showEpisode();
+  }, 2500);
+}
+
+function skipEpisode() {
+  document.getElementById('episodeScreen').classList.add('hidden');
+  startGame();
+}
+
+// ============== 게임 시작 ==============
+function startGame() {
+  game.phase = 'rising';
+  game.time = 0;
+  game.altitude = 0;
+  game.score = 0;
+  game.energy = 0;
+  game.bondBonus = 0;
+  game.growthScore = 0;
+  game.snowflake = { branches: [], size: 0, type: 'basic' };
+  game.player = { x: game.width / 2, y: game.height * 0.7, vy: 0, form: 'vapor' };
+  game.particles = [];
+  game.obstacles = [];
+  game.dustParticles = [];
+  game.phaseStartTime = Date.now();
+  
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('progressBar').classList.remove('hidden');
+  
+  showPhaseIndicator('💨 상승!');
+  spawnInitialObjects();
+}
+
+function restartGame() {
+  document.getElementById('resultScreen').classList.add('hidden');
+  document.getElementById('titleScreen').classList.remove('hidden');
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('progressBar').classList.add('hidden');
+  game.phase = 'title';
+}
+
+// ============== 터치/마우스 핸들러 ==============
+function handleTouchStart(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  game.touch.startX = touch.clientX;
+  game.touch.currentX = touch.clientX;
+  game.touch.active = true;
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (game.touch.active) {
+    game.touch.currentX = e.touches[0].clientX;
+  }
+}
+
+function handleTouchEnd(e) {
+  e.preventDefault();
+  game.touch.active = false;
+}
+
+function handleMouseDown(e) {
+  game.touch.startX = e.clientX;
+  game.touch.currentX = e.clientX;
+  game.touch.active = true;
+}
+
+function handleMouseMove(e) {
+  if (game.touch.active) {
+    game.touch.currentX = e.clientX;
+  }
+}
+
+function handleMouseUp() {
+  game.touch.active = false;
+}
+
+// ============== 게임 핸들러 ==============
+function handleTap() {
+  if (game.phase !== 'bond') return;
+  
+  // 가장 가까운 먼지 찾기
+  let closest = null;
+  let minDist = Infinity;
+  
+  game.dustParticles.forEach(d => {
+    const dist = Math.abs(d.x - game.player.x);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = d;
+    }
+  });
+  
+  if (closest && minDist < 80) {
+    // Perfect or Good
+    if (minDist < 30) {
+      game.bondBonus = 500;
+      showPhaseIndicator('⭐ PERFECT!');
+    } else {
+      game.bondBonus = 200;
+      showPhaseIndicator('👍 GOOD!');
+    }
+    game.player.form = 'crystal';
+    startGrowthPhase();
+  }
+}
+
+function handleGrowth(dir) {
+  if (game.phase !== 'growth') return;
+  
+  const angle = dir === 'left' ? -30 : dir === 'right' ? 30 : 0;
+  game.snowflake.branches.push({
+    angle: angle + (Math.random() - 0.5) * 20,
+    length: 5 + Math.random() * 10,
+  });
+  game.snowflake.size += 2;
+  game.growthScore += 30;
+  
+  // 파티클 효과
+  for (let i = 0; i < 3; i++) {
+    game.particles.push({
+      x: game.player.x + (Math.random() - 0.5) * 40,
+      y: game.player.y + (Math.random() - 0.5) * 40,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 0.5) * 2,
+      life: 30,
+      type: 'sparkle',
+    });
+  }
+}
+
+// ============== Phase 전환 ==============
+function showPhaseIndicator(text) {
+  const indicator = document.getElementById('phaseIndicator');
+  indicator.textContent = text;
+  indicator.classList.add('show');
+  setTimeout(() => indicator.classList.remove('show'), 1500);
+}
+
+function startBondPhase() {
+  game.phase = 'bond';
+  game.phaseStartTime = Date.now();
+  document.getElementById('phaseDisplay').textContent = '⚫ 응결';
+  document.getElementById('tapZone').classList.remove('hidden');
+  showPhaseIndicator('⚫ 먼지와 결합!');
+  
+  // 먼지 생성
+  game.dustParticles = [];
+  for (let i = 0; i < 5; i++) {
+    game.dustParticles.push({
+      x: 50 + i * 80,
+      y: game.height * 0.3 + Math.random() * 100,
+      quality: i === 2 ? 'perfect' : 'normal',
+      vx: (Math.random() - 0.5) * 2,
+    });
+  }
+}
+
+function startGrowthPhase() {
+  game.phase = 'growth';
+  game.phaseStartTime = Date.now();
+  document.getElementById('phaseDisplay').textContent = '❄️ 성장';
+  document.getElementById('tapZone').classList.add('hidden');
+  document.getElementById('growthControls').classList.remove('hidden');
+  showPhaseIndicator('❄️ 눈송이 성장!');
+  game.player.form = 'snowflake';
+}
+
+function startFallingPhase() {
+  game.phase = 'falling';
+  game.phaseStartTime = Date.now();
+  document.getElementById('phaseDisplay').textContent = '⬇️ 낙하';
+  document.getElementById('growthControls').classList.add('hidden');
+  showPhaseIndicator('⬇️ 낙하 시작!');
+  game.player.y = 100;
+  game.altitude = 5000;
+  
+  // 눈송이 타입 결정
+  const branchCount = game.snowflake.branches.length;
+  if (branchCount > 20) game.snowflake.type = 'stellar';
+  else if (branchCount > 10) game.snowflake.type = 'dendrite';
+  else game.snowflake.type = 'plate';
+}
+
+function endGame(zone) {
+  game.phase = 'result';
+  game.landingZone = zone;
+  
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('progressBar').classList.add('hidden');
+  
+  // 점수 계산
+  const multipliers = { mountain: 1.0, lake: 1.5, forest: 1.2, village: 2.0 };
+  const multiplier = multipliers[zone] || 1.0;
+  const total = Math.floor((1000 + game.energy * 10 + game.bondBonus + game.growthScore) * multiplier);
+  
+  // 결과 표시
+  document.getElementById('resultSnowflake').textContent = '❄️';
+  document.getElementById('resultType').textContent = `타입: ${game.snowflake.type} | 크기: ${game.snowflake.size > 30 ? '대형' : '중형'}`;
+  document.getElementById('resultEnergy').textContent = `+${game.energy * 10}`;
+  document.getElementById('resultBond').textContent = `+${game.bondBonus}${game.bondBonus === 500 ? ' (PERFECT!)' : ''}`;
+  document.getElementById('resultGrowth').textContent = `+${game.growthScore}`;
+  document.getElementById('resultLanding').textContent = `x${multiplier} (${zone})`;
+  document.getElementById('resultTotal').textContent = total;
+  
+  setTimeout(() => {
+    document.getElementById('resultScreen').classList.remove('hidden');
+  }, 500);
+}
+
+// ============== 오브젝트 생성 ==============
+function spawnInitialObjects() {
+  // 에너지 파티클
+  for (let i = 0; i < 20; i++) {
+    game.particles.push(createEnergyParticle());
+  }
+  // 장애물
+  for (let i = 0; i < 5; i++) {
+    game.obstacles.push(createObstacle());
+  }
+}
+
+function createEnergyParticle() {
+  return {
+    x: Math.random() * game.width,
+    y: Math.random() * game.height * 0.6,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5,
+    life: 999,
+    type: 'energy',
+  };
+}
+
+function createObstacle() {
+  const types = ['bird', 'plane', 'downdraft'];
+  return {
+    x: Math.random() * game.width,
+    y: Math.random() * game.height * 0.5,
+    vx: (Math.random() - 0.5) * 3,
+    type: types[Math.floor(Math.random() * types.length)],
+  };
+}
+
+// ============== 업데이트 ==============
+function update() {
+  if (game.phase === 'title' || game.phase === 'episode' || game.phase === 'result') return;
+  
+  const elapsed = Date.now() - game.phaseStartTime;
+  
+  // 플레이어 이동
+  let moveX = 0;
+  let moveY = 0;
+  if (game.keys.left) moveX = -5;
+  if (game.keys.right) moveX = 5;
+  if (game.keys.up) moveY = -5;
+  if (game.keys.down) moveY = 5;
+  if (game.touch.active) {
+    moveX = (game.touch.currentX - game.touch.startX) * 0.1;
+  }
+  
+  game.player.x += moveX + game.windForce;
+  game.player.x = Math.max(30, Math.min(game.width - 30, game.player.x));
+  
+  // 위아래 이동 (상승/낙하 Phase)
+  if (game.phase === 'rising' || game.phase === 'falling') {
+    game.player.y += moveY;
+    game.player.y = Math.max(50, Math.min(game.height - 50, game.player.y));
+  }
+  
+  // Phase별 업데이트
+  switch (game.phase) {
+    case 'rising':
+      updateRising(elapsed);
+      break;
+    case 'bond':
+      updateBond(elapsed);
+      break;
+    case 'growth':
+      updateGrowth(elapsed);
+      break;
+    case 'falling':
+      updateFalling(elapsed);
+      break;
+  }
+  
+  // 파티클 업데이트
+  game.particles.forEach((p, i) => {
+    p.x += p.vx || 0;
+    p.y += p.vy || 0;
+    p.life--;
+    
+    // 에너지 수집
+    if (p.type === 'energy' && game.phase === 'rising') {
+      const dist = Math.hypot(p.x - game.player.x, p.y - game.player.y);
+      if (dist < 40) {
+        game.energy++;
+        game.score += 10;
+        p.life = 0;
+        game.particles.push(createEnergyParticle());
+      }
+    }
+  });
+  game.particles = game.particles.filter(p => p.life > 0);
+  
+  // UI 업데이트
+  document.getElementById('altitude').textContent = Math.floor(game.altitude);
+  document.getElementById('score').textContent = game.score;
+}
+
+function updateRising(elapsed) {
+  const progress = Math.min(elapsed / CONFIG.PHASE_RISING.duration, 1);
+  game.altitude = progress * CONFIG.PHASE_RISING.maxAltitude;
+  document.getElementById('progressFill').style.width = `${progress * 100}%`;
+  
+  // 장애물 이동 및 충돌
+  game.obstacles.forEach(obs => {
+    obs.x += obs.vx;
+    if (obs.x < 0 || obs.x > game.width) obs.vx *= -1;
+    
+    const dist = Math.hypot(obs.x - game.player.x, obs.y - game.player.y);
+    if (dist < 40) {
+      game.score = Math.max(0, game.score - 50);
+      obs.y = -100; // 제거
+    }
+  });
+  
+  // Phase 전환
+  if (progress >= 1) {
+    startBondPhase();
+  }
+}
+
+function updateBond(elapsed) {
+  const progress = Math.min(elapsed / CONFIG.PHASE_BOND.duration, 1);
+  document.getElementById('progressFill').style.width = `${progress * 100}%`;
+  
+  // 먼지 이동
+  game.dustParticles.forEach(d => {
+    d.x += d.vx;
+    if (d.x < 30 || d.x > game.width - 30) d.vx *= -1;
+  });
+  
+  // 시간 초과시 자동 결합
+  if (progress >= 1 && game.phase === 'bond') {
+    game.bondBonus = 100;
+    showPhaseIndicator('결합 완료');
+    game.player.form = 'crystal';
+    startGrowthPhase();
+  }
+}
+
+function updateGrowth(elapsed) {
+  const progress = Math.min(elapsed / CONFIG.PHASE_GROWTH.duration, 1);
+  document.getElementById('progressFill').style.width = `${progress * 100}%`;
+  
+  // 주변 수증기 흡수 효과
+  if (Math.random() < 0.1) {
+    game.particles.push({
+      x: game.player.x + (Math.random() - 0.5) * 200,
+      y: game.player.y + (Math.random() - 0.5) * 200,
+      vx: (game.player.x - (game.player.x + (Math.random() - 0.5) * 200)) * 0.02,
+      vy: (game.player.y - (game.player.y + (Math.random() - 0.5) * 200)) * 0.02,
+      life: 60,
+      type: 'vapor',
+    });
+  }
+  
+  if (progress >= 1) {
+    startFallingPhase();
+  }
+}
+
+function updateFalling(elapsed) {
+  const progress = Math.min(elapsed / CONFIG.PHASE_FALLING.duration, 1);
+  document.getElementById('progressFill').style.width = `${progress * 100}%`;
+  
+  // 낙하
+  game.player.y += 3;
+  game.altitude = 5000 * (1 - progress);
+  
+  // 바람
+  game.windForce = Math.sin(elapsed * 0.002) * 2;
+  
+  // 착지 확인
+  if (game.player.y > game.height - 100) {
+    const zones = ['mountain', 'lake', 'forest', 'village'];
+    const zoneWidth = game.width / 4;
+    const zoneIndex = Math.floor(game.player.x / zoneWidth);
+    endGame(zones[Math.min(zoneIndex, 3)]);
+  }
+}
+
+// ============== 렌더링 ==============
+function render() {
+  const ctx = game.ctx;
+  
+  // 배경
+  renderBackground(ctx);
+  
+  if (game.phase === 'title' || game.phase === 'episode' || game.phase === 'result') return;
+  
+  // 파티클
+  game.particles.forEach(p => renderParticle(ctx, p));
+  
+  // 장애물
+  if (game.phase === 'rising') {
+    game.obstacles.forEach(obs => renderObstacle(ctx, obs));
+  }
+  
+  // 먼지
+  if (game.phase === 'bond') {
+    game.dustParticles.forEach(d => renderDust(ctx, d));
+  }
+  
+  // 착지 존
+  if (game.phase === 'falling') {
+    renderLandingZones(ctx);
+  }
+  
+  // 플레이어
+  renderPlayer(ctx);
+}
+
+function renderBackground(ctx) {
+  let gradient;
+  
+  if (game.phase === 'title' || game.phase === 'episode' || game.phase === 'result') {
+    return;
+  }
+  
+  // 고도에 따른 배경 변화
+  if (game.altitude < 2000) {
+    gradient = ctx.createLinearGradient(0, 0, 0, game.height);
+    gradient.addColorStop(0, '#87CEEB');
+    gradient.addColorStop(0.7, '#E0F4FF');
+    gradient.addColorStop(1, '#1e90ff');
+  } else if (game.altitude < 4000) {
+    gradient = ctx.createLinearGradient(0, 0, 0, game.height);
+    gradient.addColorStop(0, '#4a90d9');
+    gradient.addColorStop(1, '#87CEEB');
+  } else {
+    gradient = ctx.createLinearGradient(0, 0, 0, game.height);
+    gradient.addColorStop(0, '#1a365d');
+    gradient.addColorStop(0.5, '#2c5282');
+    gradient.addColorStop(1, '#4a90d9');
+  }
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, game.width, game.height);
+  
+  // 구름
+  if (game.altitude > 3000 || game.phase === 'growth') {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    for (let i = 0; i < 5; i++) {
+      const x = (Date.now() * 0.01 + i * 100) % (game.width + 100) - 50;
+      ctx.beginPath();
+      ctx.arc(x, 80 + i * 30, 40, 0, Math.PI * 2);
+      ctx.arc(x + 30, 80 + i * 30, 30, 0, Math.PI * 2);
+      ctx.arc(x - 30, 80 + i * 30, 30, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function renderParticle(ctx, p) {
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, p.life / 30);
+  
+  if (p.type === 'energy') {
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (p.type === 'vapor') {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (p.type === 'sparkle') {
+    ctx.fillStyle = '#5eb8ff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  ctx.restore();
+}
+
+function renderObstacle(ctx, obs) {
+  ctx.font = '30px Arial';
+  ctx.textAlign = 'center';
+  
+  if (obs.type === 'bird') ctx.fillText('🐦', obs.x, obs.y);
+  else if (obs.type === 'plane') ctx.fillText('✈️', obs.x, obs.y);
+  else ctx.fillText('💨', obs.x, obs.y);
+}
+
+function renderDust(ctx, d) {
+  ctx.beginPath();
+  ctx.arc(d.x, d.y, d.quality === 'perfect' ? 20 : 15, 0, Math.PI * 2);
+  ctx.fillStyle = d.quality === 'perfect' ? '#FFD700' : '#666';
+  ctx.fill();
+  
+  if (d.quality === 'perfect') {
+    ctx.strokeStyle = '#FFF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = '12px Arial';
+    ctx.fillStyle = '#FFF';
+    ctx.textAlign = 'center';
+    ctx.fillText('★', d.x, d.y + 4);
+  }
+}
+
+function renderLandingZones(ctx) {
+  const zones = [
+    { emoji: '🏔️', name: '산', color: '#666' },
+    { emoji: '🌊', name: '호수', color: '#1e90ff' },
+    { emoji: '🌲', name: '숲', color: '#228B22' },
+    { emoji: '🏠', name: '마을', color: '#8B4513' },
+  ];
+  
+  const zoneWidth = game.width / 4;
+  zones.forEach((zone, i) => {
+    ctx.fillStyle = zone.color;
+    ctx.fillRect(i * zoneWidth, game.height - 60, zoneWidth, 60);
+    
+    ctx.font = '30px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(zone.emoji, i * zoneWidth + zoneWidth / 2, game.height - 25);
+  });
+}
+
+function renderPlayer(ctx) {
+  ctx.save();
+  ctx.translate(game.player.x, game.player.y);
+  
+  if (game.player.form === 'drop') {
+    // 물방울
+    ctx.fillStyle = '#4FC3F7';
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.fill();
+    // 눈
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(-6, -3, 3, 0, Math.PI * 2);
+    ctx.arc(6, -3, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // 입
+    ctx.beginPath();
+    ctx.arc(0, 5, 5, 0, Math.PI);
+    ctx.stroke();
+  } else if (game.player.form === 'vapor') {
+    // 수증기
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.arc(-10, 5, 10, 0, Math.PI * 2);
+    ctx.arc(10, 5, 10, 0, Math.PI * 2);
+    ctx.fill();
+    // 눈
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(-5, -2, 2, 0, Math.PI * 2);
+    ctx.arc(5, -2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (game.player.form === 'crystal' || game.player.form === 'snowflake') {
+    // 눈송이
+    ctx.strokeStyle = '#FFF';
+    ctx.lineWidth = 2;
+    
+    // 기본 6각 구조
+    for (let i = 0; i < 6; i++) {
+      ctx.save();
+      ctx.rotate((i * 60 * Math.PI) / 180);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -25 - game.snowflake.size * 0.5);
+      ctx.stroke();
+      
+      // 가지
+      if (game.snowflake.size > 10) {
+        ctx.beginPath();
+        ctx.moveTo(0, -15);
+        ctx.lineTo(-8, -22);
+        ctx.moveTo(0, -15);
+        ctx.lineTo(8, -22);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    
+    // 추가 가지들
+    game.snowflake.branches.forEach((b, idx) => {
+      ctx.save();
+      ctx.rotate((b.angle * Math.PI) / 180);
+      ctx.beginPath();
+      ctx.moveTo(0, -10 - idx * 2);
+      ctx.lineTo(0, -10 - idx * 2 - b.length);
+      ctx.stroke();
+      ctx.restore();
+    });
+    
+    // 중심 빛
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  ctx.restore();
+}
+
+// ============== 게임 루프 ==============
+function gameLoop() {
+  update();
+  render();
+  game.animationId = requestAnimationFrame(gameLoop);
+}
+
+// 시작
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
