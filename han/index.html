@@ -365,18 +365,14 @@
     // 자모 획 데이터 (100x100 기준)
     const JAMO = {
       'ㄱ': [
-        { t: 'L', p: [[10, 18], [90, 18]] },
-        { t: 'L', p: [[90, 18], [90, 88]] }
+        { t: 'L', p: [[10, 18], [90, 18], [90, 88]] }
       ],
       'ㄲ': [
-        { t: 'L', p: [[5, 18], [45, 18]] },
-        { t: 'L', p: [[45, 18], [45, 88]] },
-        { t: 'L', p: [[55, 18], [95, 18]] },
-        { t: 'L', p: [[95, 18], [95, 88]] }
+        { t: 'L', p: [[5, 18], [45, 18], [45, 88]] },
+        { t: 'L', p: [[55, 18], [95, 18], [95, 88]] }
       ],
       'ㄴ': [
-        { t: 'L', p: [[12, 12], [12, 88]] },
-        { t: 'L', p: [[12, 88], [88, 88]] }
+        { t: 'L', p: [[12, 12], [12, 88], [88, 88]] }
       ],
       'ㄷ': [
         { t: 'L', p: [[12, 18], [88, 18]] },
@@ -705,9 +701,9 @@
       if (currentStrokeIdx >= charStrokes.length) return false;
       const guide = charStrokes[currentStrokeIdx];
       if (!guide || drawnStroke.length < 3) return false;
-      
+
       const tolerance = 55;
-      
+
       if (guide.type === 'circle') {
         const cx = guide.cx, cy = guide.cy;
         const avgR = (guide.rx + guide.ry) / 2;
@@ -720,20 +716,23 @@
         }
         return match / total >= 0.3;
       } else {
-        const start = guide.points[0], end = guide.points[guide.points.length - 1];
+        const points = guide.points;
+        const start = points[0], end = points[points.length - 1];
         const ds = drawnStroke[0], de = drawnStroke[drawnStroke.length - 1];
-        
+
         if (Math.sqrt((ds.x - start.x) ** 2 + (ds.y - start.y) ** 2) > tolerance * 2) return false;
         if (Math.sqrt((de.x - end.x) ** 2 + (de.y - end.y) ** 2) > tolerance * 2) return false;
-        
-        const gDir = { x: end.x - start.x, y: end.y - start.y };
-        const dDir = { x: de.x - ds.x, y: de.y - ds.y };
-        if (gDir.x * dDir.x + gDir.y * dDir.y < 0) return false;
-        
+
+        // 다중 포인트 경로: 각 세그먼트까지의 최소 거리로 검증
         let match = 0, total = Math.min(drawnStroke.length, 15);
         const step = Math.max(1, Math.floor(drawnStroke.length / total));
         for (let i = 0; i < drawnStroke.length; i += step) {
-          if (ptToLineDist(drawnStroke[i], start, end) < tolerance) match++;
+          let minDist = Infinity;
+          for (let j = 0; j < points.length - 1; j++) {
+            const dist = ptToLineDist(drawnStroke[i], points[j], points[j + 1]);
+            minDist = Math.min(minDist, dist);
+          }
+          if (minDist < tolerance) match++;
         }
         return match / total >= 0.4;
       }
