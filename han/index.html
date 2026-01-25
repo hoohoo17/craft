@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>한글 쓰기 연습</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Jua&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fff9e6 0%, #ffe4b8 50%, #ffd699 100%);
+      font-family: 'Noto Sans KR', sans-serif;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    
+    .title {
+      font-family: 'Jua', sans-serif;
+      font-size: 1.8rem;
+      color: #e67e22;
+      text-shadow: 2px 2px 0 #fff, 3px 3px 0 #d35400;
+    }
+    
+    .subtitle {
+      font-size: 0.85rem;
+      color: #8b7355;
+      margin-top: 5px;
+    }
+    
+    .start-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 30px;
+      padding-top: 50px;
+    }
+    
+    .mascot {
+      font-size: 5rem;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+    
+    .start-btn {
+      font-family: 'Jua', sans-serif;
+      font-size: 1.6rem;
+      padding: 18px 50px;
+      background: linear-gradient(180deg, #ff9f43 0%, #e67e22 100%);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #c0392b, 0 10px 20px rgba(0,0,0,0.2);
+      transition: all 0.1s ease;
+    }
+    
+    .start-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 3px 0 #c0392b, 0 5px 10px rgba(0,0,0,0.2);
+    }
+    
+    .game-area {
+      width: 100%;
+      max-width: 380px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .game-area.active {
+      display: flex;
+    }
+    
+    .name-display {
+      background: white;
+      padding: 12px 25px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .char-box {
+      width: 45px;
+      height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+    
+    .char-box.completed {
+      background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+      color: white;
+    }
+    
+    .char-box.current {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    .char-box.pending {
+      background: #f0f0f0;
+      color: #ccc;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
+      50% { box-shadow: 0 0 0 12px rgba(102, 126, 234, 0); }
+    }
+    
+    .message-box {
+      padding: 12px 25px;
+      border-radius: 25px;
+      font-family: 'Jua', sans-serif;
+      font-size: 1.2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      min-width: 200px;
+    }
+    
+    .message-box.info {
+      background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+      color: white;
+    }
+    
+    .message-box.success {
+      background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+      color: white;
+      animation: celebrate 0.5s ease;
+    }
+    
+    .message-box.retry {
+      background: linear-gradient(135deg, #fdcb6e 0%, #f39c12 100%);
+      color: white;
+      animation: shake 0.5s ease;
+    }
+    
+    .message-box.complete {
+      background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+      color: white;
+      animation: celebrate 0.5s ease;
+    }
+    
+    @keyframes celebrate {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    
+    .canvas-container {
+      background: white;
+      padding: 15px;
+      border-radius: 20px;
+      box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    #canvas {
+      border: 3px solid #e8e4d9;
+      border-radius: 15px;
+      cursor: crosshair;
+      touch-action: none;
+      background: #fffef8;
+    }
+    
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .clear-btn, .next-btn {
+      font-family: 'Jua', sans-serif;
+      font-size: 1rem;
+      padding: 10px 22px;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+    
+    .clear-btn {
+      background: linear-gradient(180deg, #b2bec3 0%, #95a5a6 100%);
+      box-shadow: 0 3px 0 #7f8c8d;
+    }
+    
+    .clear-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #7f8c8d;
+    }
+    
+    .next-btn {
+      background: linear-gradient(180deg, #a29bfe 0%, #6c5ce7 100%);
+      box-shadow: 0 3px 0 #5f27cd;
+    }
+    
+    .next-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #5f27cd;
+    }
+    
+    .guide-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 15px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      font-size: 0.85rem;
+      color: #2d3436;
+    }
+    
+    .toggle-track {
+      width: 44px;
+      height: 24px;
+      background: #b2bec3;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .toggle-track.on {
+      background: #56ab2f;
+    }
+    
+    .toggle-thumb {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .toggle-track.on .toggle-thumb {
+      left: 22px;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1 class="title">🖐️ 한글 쓰기 연습 ✏️</h1>
+    <p class="subtitle">손가락으로 글씨를 따라 써보세요!</p>
+  </header>
+  
+  <div class="start-screen" id="startScreen">
+    <div class="mascot">📝</div>
+    <button class="start-btn" onclick="startGame()">시작하기!</button>
+  </div>
+  
+  <div class="game-area" id="gameArea">
+    <div class="name-display" id="nameDisplay"></div>
+    <div class="message-box info" id="messageBox">글씨를 쓰세요! ✏️</div>
+    
+    <div class="canvas-container">
+      <canvas id="canvas" width="280" height="280"></canvas>
+      <div class="btn-row">
+        <button class="clear-btn" onclick="clearCanvas()">다시 쓰기</button>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <div class="guide-toggle">
+        <span>가이드</span>
+        <div class="toggle-track on" id="guideToggle" onclick="toggleGuide()">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
+      <button class="next-btn" onclick="nextName()">다른 이름 🔄</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const PAD = 20;
+
+    const NAMES = ["곽두환", "박진경", "곽재후", "곽재은", "곽동화", "백춘자"];
+    let currentName = '';
+    let currentCharIndex = 0;
+    let completedChars = [];
+    let showGuide = true;
+    let isDrawing = false;
+    let strokes = [];
+    let currentStroke = [];
+    let currentStrokeIdx = 0;
+    let charStrokes = [];
+
+    function decomposeHangul(char) {
+      const code = char.charCodeAt(0);
+      if (code < 0xAC00 || code > 0xD7A3) return null;
+      
+      const INITIAL = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+      const MEDIAL = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
+      const FINAL = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+      
+      const idx = code - 0xAC00;
+      return {
+        cho: INITIAL[Math.floor(idx / 588)],
+        jung: MEDIAL[Math.floor((idx % 588) / 28)],
+        jong: FINAL[idx % 28] || null
+      };
+    }
+
+    function getVowelType(v) {
+      if (['ㅏ','ㅑ','ㅓ','ㅕ','ㅣ','ㅐ','ㅔ','ㅒ','ㅖ'].includes(v)) return 'V';
+      if (['ㅗ','ㅛ','ㅜ','ㅠ','ㅡ'].includes(v)) return 'H';
+      if (['ㅘ','ㅙ','ㅚ','ㅝ','ㅞ','ㅟ','ㅢ'].includes(v)) return 'C';
+      return 'V';
+    }
+
+    // 자모 획 데이터 (100x100 기준)
+    const JAMO = {
+      'ㄱ': [
+        { t: 'L', p: [[10, 18], [90, 18]] },
+        { t: 'L', p: [[90, 18], [90, 88]] }
+      ],
+      'ㄲ': [
+        { t: 'L', p: [[5, 18], [45, 18]] },
+        { t: 'L', p: [[45, 18], [45, 88]] },
+        { t: 'L', p: [[55, 18], [95, 18]] },
+        { t: 'L', p: [[95, 18], [95, 88]] }
+      ],
+      'ㄴ': [
+        { t: 'L', p: [[12, 12], [12, 88]] },
+        { t: 'L', p: [[12, 88], [88, 88]] }
+      ],
+      'ㄷ': [
+        { t: 'L', p: [[12, 18], [88, 18]] },
+        { t: 'L', p: [[12, 18], [12, 88]] },
+        { t: 'L', p: [[12, 88], [88, 88]] }
+      ],
+      'ㄸ': [
+        { t: 'L', p: [[5, 18], [45, 18]] },
+        { t: 'L', p: [[5, 18], [5, 88]] },
+        { t: 'L', p: [[5, 88], [45, 88]] },
+        { t: 'L', p: [[55, 18], [95, 18]] },
+        { t: 'L', p: [[55, 18], [55, 88]] },
+        { t: 'L', p: [[55, 88], [95, 88]] }
+      ],
+      'ㄹ': [
+        { t: 'L', p: [[10, 8], [90, 8]] },
+        { t: 'L', p: [[90, 8], [90, 28]] },
+        { t: 'L', p: [[90, 28], [10, 28]] },
+        { t: 'L', p: [[10, 28], [10, 48]] },
+        { t: 'L', p: [[10, 48], [90, 48]] },
+        { t: 'L', p: [[90, 48], [90, 92]] }
+      ],
+      'ㅁ': [
+        { t: 'L', p: [[15, 12], [15, 88]] },
+        { t: 'L', p: [[15, 12], [85, 12]] },
+        { t: 'L', p: [[85, 12], [85, 88]] },
+        { t: 'L', p: [[15, 88], [85, 88]] }
+      ],
+      'ㅂ': [
+        { t: 'L', p: [[18, 8], [18, 92]] },
+        { t: 'L', p: [[82, 8], [82, 92]] },
+        { t: 'L', p: [[18, 50], [82, 50]] },
+        { t: 'L', p: [[18, 92], [82, 92]] }
+      ],
+      'ㅃ': [
+        { t: 'L', p: [[8, 8], [8, 92]] },
+        { t: 'L', p: [[40, 8], [40, 92]] },
+        { t: 'L', p: [[8, 50], [40, 50]] },
+        { t: 'L', p: [[8, 92], [40, 92]] },
+        { t: 'L', p: [[60, 8], [60, 92]] },
+        { t: 'L', p: [[92, 8], [92, 92]] },
+        { t: 'L', p: [[60, 50], [92, 50]] },
+        { t: 'L', p: [[60, 92], [92, 92]] }
+      ],
+      'ㅅ': [
+        { t: 'L', p: [[50, 8], [15, 92]] },
+        { t: 'L', p: [[50, 8], [85, 92]] }
+      ],
+      'ㅆ': [
+        { t: 'L', p: [[28, 8], [5, 92]] },
+        { t: 'L', p: [[28, 8], [50, 92]] },
+        { t: 'L', p: [[72, 8], [50, 92]] },
+        { t: 'L', p: [[72, 8], [95, 92]] }
+      ],
+      'ㅇ': [
+        { t: 'C', cx: 50, cy: 50, r: 38 }
+      ],
+      'ㅈ': [
+        { t: 'L', p: [[10, 22], [90, 22]] },
+        { t: 'L', p: [[50, 22], [15, 92]] },
+        { t: 'L', p: [[50, 22], [85, 92]] }
+      ],
+      'ㅉ': [
+        { t: 'L', p: [[5, 22], [95, 22]] },
+        { t: 'L', p: [[30, 22], [5, 92]] },
+        { t: 'L', p: [[30, 22], [50, 92]] },
+        { t: 'L', p: [[70, 22], [50, 92]] },
+        { t: 'L', p: [[70, 22], [95, 92]] }
+      ],
+      'ㅊ': [
+        { t: 'L', p: [[38, 5], [62, 5]] },
+        { t: 'L', p: [[10, 32], [90, 32]] },
+        { t: 'L', p: [[50, 32], [15, 95]] },
+        { t: 'L', p: [[50, 32], [85, 95]] }
+      ],
+      'ㅋ': [
+        { t: 'L', p: [[10, 22], [90, 22]] },
+        { t: 'L', p: [[10, 55], [90, 55]] },
+        { t: 'L', p: [[90, 22], [90, 88]] }
+      ],
+      'ㅌ': [
+        { t: 'L', p: [[10, 15], [90, 15]] },
+        { t: 'L', p: [[10, 48], [90, 48]] },
+        { t: 'L', p: [[10, 15], [10, 88]] },
+        { t: 'L', p: [[10, 88], [90, 88]] }
+      ],
+      'ㅍ': [
+        { t: 'L', p: [[10, 15], [90, 15]] },
+        { t: 'L', p: [[32, 15], [32, 88]] },
+        { t: 'L', p: [[68, 15], [68, 88]] },
+        { t: 'L', p: [[10, 88], [90, 88]] }
+      ],
+      'ㅎ': [
+        { t: 'L', p: [[38, 5], [62, 5]] },
+        { t: 'L', p: [[10, 32], [90, 32]] },
+        { t: 'C', cx: 50, cy: 68, r: 26 }
+      ],
+      // 모음
+      'ㅏ': [
+        { t: 'L', p: [[30, 5], [30, 95]] },
+        { t: 'L', p: [[30, 50], [90, 50]] }
+      ],
+      'ㅐ': [
+        { t: 'L', p: [[18, 5], [18, 95]] },
+        { t: 'L', p: [[18, 50], [52, 50]] },
+        { t: 'L', p: [[82, 5], [82, 95]] }
+      ],
+      'ㅑ': [
+        { t: 'L', p: [[25, 5], [25, 95]] },
+        { t: 'L', p: [[25, 35], [90, 35]] },
+        { t: 'L', p: [[25, 65], [90, 65]] }
+      ],
+      'ㅒ': [
+        { t: 'L', p: [[15, 5], [15, 95]] },
+        { t: 'L', p: [[15, 35], [52, 35]] },
+        { t: 'L', p: [[15, 65], [52, 65]] },
+        { t: 'L', p: [[82, 5], [82, 95]] }
+      ],
+      'ㅓ': [
+        { t: 'L', p: [[70, 5], [70, 95]] },
+        { t: 'L', p: [[10, 50], [70, 50]] }
+      ],
+      'ㅔ': [
+        { t: 'L', p: [[18, 5], [18, 95]] },
+        { t: 'L', p: [[48, 50], [82, 50]] },
+        { t: 'L', p: [[82, 5], [82, 95]] }
+      ],
+      'ㅕ': [
+        
+        { t: 'L', p: [[10, 35], [75, 35]] },
+        { t: 'L', p: [[10, 65], [75, 65]] },
+        { t: 'L', p: [[75, 5], [75, 95]] }
+      ],
+      'ㅖ': [
+        { t: 'L', p: [[18, 5], [18, 95]] },
+        { t: 'L', p: [[48, 35], [82, 35]] },
+        { t: 'L', p: [[48, 65], [82, 65]] },
+        { t: 'L', p: [[82, 5], [82, 95]] }
+      ],
+      'ㅗ': [
+        { t: 'L', p: [[50, 25], [50, 75]] },
+        { t: 'L', p: [[8, 75], [92, 75]] }
+      ],
+      'ㅛ': [
+        { t: 'L', p: [[35, 25], [35, 75]] },
+        { t: 'L', p: [[65, 25], [65, 75]] },
+        { t: 'L', p: [[8, 75], [92, 75]] }
+      ],
+      'ㅜ': [
+        { t: 'L', p: [[8, 25], [92, 25]] },
+        { t: 'L', p: [[50, 25], [50, 75]] }
+      ],
+      'ㅠ': [
+        { t: 'L', p: [[8, 25], [92, 25]] },
+        { t: 'L', p: [[35, 25], [35, 75]] },
+        { t: 'L', p: [[65, 25], [65, 75]] }
+      ],
+      'ㅡ': [
+        { t: 'L', p: [[8, 50], [92, 50]] }
+      ],
+      'ㅣ': [
+        { t: 'L', p: [[50, 5], [50, 95]] }
+      ]
+    };
+
+    function generateCharStrokes(char) {
+      const d = decomposeHangul(char);
+      if (!d) return [];
+      
+      const result = [];
+      const vType = getVowelType(d.jung);
+      const hasJong = !!d.jong;
+      
+      const aW = W - PAD * 2;
+      const aH = H - PAD * 2;
+      
+      let choBox, jungBox, jongBox;
+      
+      if (vType === 'V') {
+        // 세로 모음 (ㅏ, ㅓ, ㅣ 등)
+        if (hasJong) {
+          choBox = { x: PAD, y: PAD, w: aW * 0.58, h: aH * 0.55 };
+          jungBox = { x: PAD + aW * 0.58, y: PAD, w: aW * 0.42, h: aH * 0.55 };
+          jongBox = { x: PAD + aW * 0.05, y: PAD + aH * 0.58, w: aW * 0.9, h: aH * 0.42 };
+        } else {
+          choBox = { x: PAD, y: PAD + aH * 0.05, w: aW * 0.58, h: aH * 0.9 };
+          jungBox = { x: PAD + aW * 0.58, y: PAD + aH * 0.05, w: aW * 0.42, h: aH * 0.9 };
+        }
+        addJamo(result, d.cho, choBox);
+        addJamo(result, d.jung, jungBox);
+        if (hasJong) addJamo(result, d.jong, jongBox);
+        
+      } else if (vType === 'H') {
+        // 가로 모음 (ㅗ, ㅜ, ㅡ 등)
+        if (hasJong) {
+          choBox = { x: PAD + aW * 0.1, y: PAD, w: aW * 0.8, h: aH * 0.38 };
+          jungBox = { x: PAD + aW * 0.05, y: PAD + aH * 0.40, w: aW * 0.9, h: aH * 0.22 };
+          jongBox = { x: PAD + aW * 0.1, y: PAD + aH * 0.64, w: aW * 0.8, h: aH * 0.36 };
+        } else {
+          choBox = { x: PAD + aW * 0.1, y: PAD, w: aW * 0.8, h: aH * 0.52 };
+          jungBox = { x: PAD + aW * 0.05, y: PAD + aH * 0.55, w: aW * 0.9, h: aH * 0.42 };
+        }
+        addJamo(result, d.cho, choBox);
+        addJamo(result, d.jung, jungBox);
+        if (hasJong) addJamo(result, d.jong, jongBox);
+        
+      } else if (vType === 'C') {
+        // 복합 모음 (ㅘ, ㅙ, ㅚ 등)
+        addComplexChar(result, d, aW, aH, hasJong);
+      }
+      
+      return result;
+    }
+
+    function addComplexChar(result, d, aW, aH, hasJong) {
+      // 복합 모음 글자 전체 레이아웃
+      // 곽 = ㄱ(왼쪽위) + ㅗ(왼쪽아래, 초성 밑) + ㅏ(오른쪽) + ㄱ(하단)
+      
+      const jung = d.jung;
+      
+      // 상단 영역 높이
+      const topH = hasJong ? aH * 0.58 : aH;
+      const botH = hasJong ? aH * 0.42 : 0;
+      
+      // 초성 박스 (왼쪽 상단)
+      const choBox = { 
+        x: PAD, 
+        y: PAD, 
+        w: aW * 0.42, 
+        h: topH * 0.55 
+      };
+      
+      // 복합모음 구성에 따른 배치
+      if (jung === 'ㅘ') {
+        // ㅗ: 초성 아래
+        const oBox = { x: PAD, y: PAD + topH * 0.58, w: aW * 0.42, h: topH * 0.42 };
+        // ㅏ: 오른쪽 전체
+        const aBox = { x: PAD + aW * 0.48, y: PAD, w: aW * 0.52, h: topH };
+        
+        addJamo(result, d.cho, choBox);
+        addJamo(result, 'ㅗ', oBox);
+        addJamo(result, 'ㅏ', aBox);
+        
+      } else if (jung === 'ㅙ') {
+        const oBox = { x: PAD, y: PAD + topH * 0.58, w: aW * 0.38, h: topH * 0.42 };
+        const aeBox = { x: PAD + aW * 0.42, y: PAD, w: aW * 0.58, h: topH };
+        
+        addJamo(result, d.cho, choBox);
+        addJamo(result, 'ㅗ', oBox);
+        addJamo(result, 'ㅐ', aeBox);
+        
+      } else if (jung === 'ㅚ') {
+        const oBox = { x: PAD, y: PAD + topH * 0.58, w: aW * 0.5, h: topH * 0.42 };
+        const iBox = { x: PAD + aW * 0.6, y: PAD, w: aW * 0.4, h: topH };
+        
+        addJamo(result, d.cho, choBox);
+        addJamo(result, 'ㅗ', oBox);
+        addJamo(result, 'ㅣ', iBox);
+        
+      } else if (jung === 'ㅝ') {
+        const uBox = { x: PAD, y: PAD + topH * 0.05, w: aW * 0.42, h: topH * 0.42 };
+        const eoBox = { x: PAD + aW * 0.48, y: PAD, w: aW * 0.52, h: topH };
+        
+        addJamo(result, d.cho, { x: PAD, y: PAD + topH * 0.5, w: aW * 0.42, h: topH * 0.5 });
+        addJamo(result, 'ㅜ', uBox);
+        addJamo(result, 'ㅓ', eoBox);
+        
+      } else if (jung === 'ㅞ') {
+        const uBox = { x: PAD, y: PAD + topH * 0.05, w: aW * 0.38, h: topH * 0.42 };
+        const eBox = { x: PAD + aW * 0.42, y: PAD, w: aW * 0.58, h: topH };
+        
+        addJamo(result, d.cho, { x: PAD, y: PAD + topH * 0.5, w: aW * 0.38, h: topH * 0.5 });
+        addJamo(result, 'ㅜ', uBox);
+        addJamo(result, 'ㅔ', eBox);
+        
+      } else if (jung === 'ㅟ') {
+        const uBox = { x: PAD, y: PAD + topH * 0.05, w: aW * 0.5, h: topH * 0.42 };
+        const iBox = { x: PAD + aW * 0.6, y: PAD, w: aW * 0.4, h: topH };
+        
+        addJamo(result, d.cho, { x: PAD, y: PAD + topH * 0.5, w: aW * 0.5, h: topH * 0.5 });
+        addJamo(result, 'ㅜ', uBox);
+        addJamo(result, 'ㅣ', iBox);
+        
+      } else if (jung === 'ㅢ') {
+        const euBox = { x: PAD, y: PAD + topH * 0.35, w: aW * 0.5, h: topH * 0.3 };
+        const iBox = { x: PAD + aW * 0.6, y: PAD, w: aW * 0.4, h: topH };
+        
+        addJamo(result, d.cho, { x: PAD, y: PAD, w: aW * 0.5, h: topH * 0.32 });
+        addJamo(result, 'ㅡ', euBox);
+        addJamo(result, 'ㅣ', iBox);
+      }
+      
+      // 종성
+      if (hasJong) {
+        const jongBox = { x: PAD + aW * 0.1, y: PAD + aH * 0.6, w: aW * 0.8, h: aH * 0.4 };
+        addJamo(result, d.jong, jongBox);
+      }
+    }
+
+    function addJamo(result, jamo, box) {
+      const data = JAMO[jamo];
+      if (!data) return;
+      
+      data.forEach(s => {
+        if (s.t === 'L') {
+          result.push({
+            type: 'line',
+            points: s.p.map(pt => ({
+              x: box.x + (pt[0] / 100) * box.w,
+              y: box.y + (pt[1] / 100) * box.h
+            }))
+          });
+        } else if (s.t === 'C') {
+          result.push({
+            type: 'circle',
+            cx: box.x + (s.cx / 100) * box.w,
+            cy: box.y + (s.cy / 100) * box.h,
+            rx: (s.r / 100) * box.w,
+            ry: (s.r / 100) * box.h
+          });
+        }
+      });
+    }
+
+    function validateStroke(drawnStroke) {
+      if (currentStrokeIdx >= charStrokes.length) return false;
+      const guide = charStrokes[currentStrokeIdx];
+      if (!guide || drawnStroke.length < 3) return false;
+      
+      const tolerance = 55;
+      
+      if (guide.type === 'circle') {
+        const cx = guide.cx, cy = guide.cy;
+        const avgR = (guide.rx + guide.ry) / 2;
+        let match = 0, total = Math.min(drawnStroke.length, 20);
+        const step = Math.max(1, Math.floor(drawnStroke.length / total));
+        for (let i = 0; i < drawnStroke.length; i += step) {
+          const pt = drawnStroke[i];
+          const dist = Math.sqrt((pt.x - cx) ** 2 + (pt.y - cy) ** 2);
+          if (Math.abs(dist - avgR) < tolerance) match++;
+        }
+        return match / total >= 0.3;
+      } else {
+        const start = guide.points[0], end = guide.points[guide.points.length - 1];
+        const ds = drawnStroke[0], de = drawnStroke[drawnStroke.length - 1];
+        
+        if (Math.sqrt((ds.x - start.x) ** 2 + (ds.y - start.y) ** 2) > tolerance * 2) return false;
+        if (Math.sqrt((de.x - end.x) ** 2 + (de.y - end.y) ** 2) > tolerance * 2) return false;
+        
+        const gDir = { x: end.x - start.x, y: end.y - start.y };
+        const dDir = { x: de.x - ds.x, y: de.y - ds.y };
+        if (gDir.x * dDir.x + gDir.y * dDir.y < 0) return false;
+        
+        let match = 0, total = Math.min(drawnStroke.length, 15);
+        const step = Math.max(1, Math.floor(drawnStroke.length / total));
+        for (let i = 0; i < drawnStroke.length; i += step) {
+          if (ptToLineDist(drawnStroke[i], start, end) < tolerance) match++;
+        }
+        return match / total >= 0.4;
+      }
+    }
+
+    function ptToLineDist(pt, a, b) {
+      const A = pt.x - a.x, B = pt.y - a.y, C = b.x - a.x, D = b.y - a.y;
+      const dot = A * C + B * D, lenSq = C * C + D * D;
+      let t = lenSq ? dot / lenSq : -1;
+      t = Math.max(0, Math.min(1, t));
+      return Math.sqrt((pt.x - (a.x + t * C)) ** 2 + (pt.y - (a.y + t * D)) ** 2);
+    }
+
+    function drawCanvas() {
+      ctx.fillStyle = '#fffef8';
+      ctx.fillRect(0, 0, W, H);
+      
+      ctx.strokeStyle = '#e0dcd0';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H);
+      ctx.moveTo(0, H/2); ctx.lineTo(W, H/2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      if (showGuide && charStrokes.length > 0) {
+        charStrokes.forEach((s, i) => {
+          ctx.strokeStyle = i < currentStrokeIdx ? '#c8c8c8' : i === currentStrokeIdx ? '#e74c3c' : '#888888';
+          ctx.lineWidth = i === currentStrokeIdx ? 5 : 3;
+          ctx.setLineDash([10, 6]);
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          if (s.type === 'circle') {
+            ctx.ellipse(s.cx, s.cy, s.rx, s.ry, 0, 0, Math.PI * 2);
+          } else {
+            s.points.forEach((p, j) => j === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+          }
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      }
+      
+      ctx.strokeStyle = '#2d2d2d';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      strokes.forEach(st => {
+        if (st.length < 2) return;
+        ctx.beginPath();
+        st.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+      });
+      
+      if (currentStroke.length > 1) {
+        ctx.strokeStyle = '#4a90d9';
+        ctx.beginPath();
+        currentStroke.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+      }
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const sx = W / rect.width, sy = H / rect.height;
+      if (e.touches) return { x: (e.touches[0].clientX - rect.left) * sx, y: (e.touches[0].clientY - rect.top) * sy };
+      return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+    }
+
+    function startDraw(e) { e.preventDefault(); isDrawing = true; currentStroke = [getPos(e)]; }
+    function draw(e) { if (!isDrawing) return; e.preventDefault(); currentStroke.push(getPos(e)); drawCanvas(); }
+    function endDraw() {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (currentStroke.length > 2) {
+        if (validateStroke(currentStroke)) {
+          strokes.push([...currentStroke]);
+          currentStrokeIdx++;
+          if (currentStrokeIdx >= charStrokes.length) setTimeout(charComplete, 300);
+        } else {
+          showMessage('다시 시도해보세요 💪', 'retry');
+        }
+      }
+      currentStroke = [];
+      drawCanvas();
+    }
+
+    function charComplete() {
+      completedChars.push(currentCharIndex);
+      showMessage('잘했어요! 🎉', 'success');
+      updateNameDisplay();
+      setTimeout(() => {
+        if (currentCharIndex + 1 < currentName.length) {
+          currentCharIndex++;
+          resetCanvasState();
+          showMessage('다음 글자를 쓰세요! ✏️', 'info');
+          updateNameDisplay();
+          loadChar();
+        } else {
+          showMessage('축하해요! 모두 완성! 🌟', 'complete');
+        }
+      }, 1200);
+    }
+
+    function showMessage(text, type) {
+      const box = document.getElementById('messageBox');
+      box.textContent = text;
+      box.className = 'message-box ' + type;
+    }
+
+    function updateNameDisplay() {
+      const c = document.getElementById('nameDisplay');
+      c.innerHTML = '';
+      currentName.split('').forEach((ch, i) => {
+        const div = document.createElement('div');
+        div.className = 'char-box ' + (completedChars.includes(i) ? 'completed' : i === currentCharIndex ? 'current' : 'pending');
+        div.textContent = ch;
+        c.appendChild(div);
+      });
+    }
+
+    function resetCanvasState() { strokes = []; currentStroke = []; currentStrokeIdx = 0; }
+    function loadChar() { charStrokes = generateCharStrokes(currentName[currentCharIndex]); drawCanvas(); }
+    function clearCanvas() { resetCanvasState(); showMessage('글씨를 쓰세요! ✏️', 'info'); drawCanvas(); }
+    function toggleGuide() { showGuide = !showGuide; document.getElementById('guideToggle').classList.toggle('on', showGuide); drawCanvas(); }
+
+    function startGame() {
+      currentName = NAMES[Math.floor(Math.random() * NAMES.length)];
+      currentCharIndex = 0;
+      completedChars = [];
+      resetCanvasState();
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('gameArea').classList.add('active');
+      showMessage('글씨를 쓰세요! ✏️', 'info');
+      updateNameDisplay();
+      loadChar();
+    }
+
+    function nextName() {
+      const others = NAMES.filter(n => n !== currentName);
+      currentName = others[Math.floor(Math.random() * others.length)];
+      currentCharIndex = 0;
+      completedChars = [];
+      resetCanvasState();
+      showMessage('글씨를 쓰세요! ✏️', 'info');
+      updateNameDisplay();
+      loadChar();
+    }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', endDraw);
+
+    drawCanvas();
+  </script>
+</body>
+</html>
