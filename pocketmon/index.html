@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포켓몬볼 덧셈 게임</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:1.5rem 1rem}
+#app{width:100%;max-width:480px}
+#header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:.75rem 1rem;background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.hdr-block{display:flex;flex-direction:column;gap:2px}
+.hdr-label{font-size:12px;color:#888}
+.hdr-val{font-size:20px;font-weight:500;color:#1a1a1a}
+#score-bar-wrap{height:6px;background:#e0e0e0;border-radius:3px;margin-top:4px;width:130px}
+#score-bar{height:6px;border-radius:3px;background:#378ADD;transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+#balls-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:1rem}
+.ball-btn{width:100%;aspect-ratio:1;border:none;cursor:pointer;padding:0;background:transparent;transition:transform .12s}
+.ball-btn:hover:not(.used){transform:scale(1.1)}
+.ball-btn.used{opacity:.22;cursor:default;pointer-events:none}
+#question-area{background:#fff;border:.5px solid rgba(0,0,0,.12);border-radius:12px;padding:1.25rem;margin-bottom:1rem;display:none;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+#q-badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 10px;border-radius:999px;margin-bottom:.75rem}
+.badge-hard{background:#FAEEDA;color:#633806}
+.badge-easy{background:#E1F5EE;color:#085041}
+#question-text{font-size:32px;font-weight:500;text-align:center;margin-bottom:1rem;color:#1a1a1a;letter-spacing:.02em}
+#answer-row{display:flex;gap:8px}
+#answer-input{flex:1;font-size:22px;padding:10px 14px;border:.5px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;text-align:center;outline:none}
+#answer-input:focus{border-color:#378ADD;box-shadow:0 0 0 3px rgba(55,138,221,.15)}
+#submit-btn{padding:10px 22px;border:.5px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;font-size:15px;font-weight:500;transition:background .15s}
+#submit-btn:hover{background:#f0f0f0}
+#feedback{text-align:center;font-size:15px;font-weight:500;min-height:22px;margin-top:.75rem}
+#fx-wrap{display:none;min-height:480px;border-radius:12px;margin-bottom:1rem;position:relative;overflow:hidden;cursor:pointer;background:#08081a}
+#fx-wrap.active{display:block}
+#fx-bg-canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+#fx-ui{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;padding-top:30px}
+#fx-title{font-size:12px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:#FAC775;opacity:0;transition:opacity .4s,transform .4s;transform:translateY(-16px);margin-bottom:12px}
+#fx-pokemon{width:180px;height:180px;object-fit:contain;image-rendering:pixelated;opacity:0;transition:opacity .4s .2s;filter:drop-shadow(0 0 24px rgba(255,255,255,.5));margin-bottom:12px}
+#fx-pokemon.show{opacity:1;animation:pkFloat 2s ease-in-out infinite,pkEntry .6s cubic-bezier(.175,.885,.32,1.275) .2s both}
+@keyframes pkFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-14px) scale(1.04)}}
+@keyframes pkEntry{from{transform:scale(0) rotate(-20deg);opacity:0}to{transform:scale(1) rotate(0deg);opacity:1}}
+#fx-name{font-size:24px;font-weight:500;color:#fff;opacity:0;transition:opacity .4s .5s,transform .4s .5s;transform:translateY(10px);margin-bottom:4px}
+#fx-pts{font-size:58px;font-weight:500;color:#EF9F27;opacity:0;transition:opacity .35s .72s,transform .5s cubic-bezier(.175,.885,.32,1.275) .72s;transform:scale(.3)}
+#fx-continue{font-size:12px;color:rgba(255,255,255,.4);opacity:0;transition:opacity .4s 1.5s;margin-top:12px}
+#normal-fx{display:none;border-radius:12px;margin-bottom:1rem;overflow:hidden}
+#normal-fx.active{display:block}
+#nfx-canvas{width:100%;height:72px;display:block}
+#end-screen{display:none;text-align:center;padding:2rem;background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+#end-title{font-size:24px;font-weight:500;color:#1a1a1a;margin-bottom:8px}
+#end-score{font-size:52px;font-weight:500;color:#185FA5;margin:12px 0}
+#end-stats{font-size:13px;color:#888;margin-bottom:1.25rem;line-height:2}
+#restart-btn{padding:10px 28px;border:.5px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;font-size:15px;transition:border-color .15s,color .15s}
+#restart-btn:hover{border-color:#378ADD;color:#185FA5}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="hdr-block">
+      <span class="hdr-label">점수</span>
+      <span class="hdr-val" id="score-display">0</span>
+      <div id="score-bar-wrap"><div id="score-bar"></div></div>
+    </div>
+    <div class="hdr-block" style="align-items:center">
+      <span class="hdr-label">목표</span>
+      <span class="hdr-val" style="color:#BA7517">60</span>
+    </div>
+    <div class="hdr-block" style="align-items:flex-end">
+      <span class="hdr-label">남은 볼</span>
+      <span class="hdr-val" id="balls-left">25</span>
+    </div>
+  </div>
+
+  <div id="balls-grid"></div>
+
+  <div id="question-area">
+    <span id="q-badge"></span>
+    <div id="question-text"></div>
+    <div id="answer-row">
+      <input type="number" id="answer-input" placeholder="정답 입력" />
+      <button id="submit-btn">확인</button>
+    </div>
+    <div id="feedback"></div>
+  </div>
+
+  <div id="fx-wrap">
+    <canvas id="fx-bg-canvas"></canvas>
+    <div id="fx-ui">
+      <div id="fx-title">포켓몬 등장!</div>
+      <img id="fx-pokemon" src="" alt="">
+      <div id="fx-name"></div>
+      <div id="fx-pts"></div>
+      <div id="fx-continue">탭하여 계속</div>
+    </div>
+  </div>
+
+  <div id="normal-fx"><canvas id="nfx-canvas"></canvas></div>
+
+  <div id="end-screen">
+    <div id="end-title"></div>
+    <div id="end-score"></div>
+    <div id="end-stats"></div>
+    <button id="restart-btn">다시 하기</button>
+  </div>
+</div>
+
+<script>
+const SPRITE_BASE='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/';
+const POKEMON=[
+  {name:'피카츄',id:25,color:'#F5C518',accent:'#E24B4A'},
+  {name:'이브이',id:133,color:'#C8A060',accent:'#9FE1CB'},
+  {name:'잠만보',id:143,color:'#F0D8A0',accent:'#7F77DD'},
+  {name:'꼬부기',id:7,color:'#78C8E0',accent:'#1D9E75'},
+  {name:'파이리',id:4,color:'#FF8040',accent:'#E24B4A'},
+  {name:'이상해씨',id:1,color:'#60B858',accent:'#9FE1CB'},
+  {name:'고라파덕',id:54,color:'#F0D040',accent:'#EF9F27'},
+  {name:'꼬마돌',id:74,color:'#B0B0C8',accent:'#888780'},
+  {name:'리자몽',id:6,color:'#FF6820',accent:'#F5C518'},
+  {name:'뮤츠',id:150,color:'#B8A0D8',accent:'#9F6FD0'},
+  {name:'뮤',id:151,color:'#F0A0C0',accent:'#E86090'},
+  {name:'갸라도스',id:130,color:'#5888C0',accent:'#E24B4A'},
+  {name:'잠만보',id:143,color:'#F0D8A0',accent:'#7F77DD'},
+  {name:'라프라스',id:131,color:'#68A8D0',accent:'#F0D8A0'},
+  {name:'망나뇽',id:149,color:'#F0A858',accent:'#60B858'}
+];
+
+const BALL_COLORS=Array(25).fill('#E24B4A');
+
+let state={};
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+function drawBall(canvas,color,num,used){
+  const ctx=canvas.getContext('2d');
+  const s=canvas.width,cx=s/2,cy=s/2,R=s/2-2;
+  ctx.clearRect(0,0,s,s);
+  ctx.save();
+  if(used)ctx.globalAlpha=0.28;
+  ctx.beginPath();ctx.arc(cx,cy,R,Math.PI,0);ctx.fillStyle=color;ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI);ctx.fillStyle='#f2f2f2';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.strokeStyle='#111';ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx+R,cy);ctx.strokeStyle='#111';ctx.lineWidth=s*.045;ctx.stroke();
+  const br=R*.24;
+  ctx.beginPath();ctx.arc(cx,cy,br+2,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,br,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+  const ring=R*.35;
+  ctx.beginPath();ctx.arc(cx,cy,ring,0,Math.PI*2);ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=s*.03;ctx.stroke();
+  ctx.fillStyle='#1a1a1a';ctx.font=`500 ${Math.floor(s*.26)}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(num,cx,cy+R*.44);
+  ctx.restore();
+}
+
+function initGame(){
+  const levels=[1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,5,5,5,5,5];
+  for(let i=levels.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[levels[i],levels[j]]=[levels[j],levels[i]];}
+  state={score:0,ballsLeft:25,used:new Array(25).fill(false),levels,currentBall:null,currentAnswer:null,currentPoints:null,isHigh:false,correct:0,wrong:0,active:true};
+  document.getElementById('score-display').textContent='0';
+  document.getElementById('balls-left').textContent='25';
+  document.getElementById('score-bar').style.width='0%';
+  document.getElementById('question-area').style.display='none';
+  document.getElementById('end-screen').style.display='none';
+  document.getElementById('fx-wrap').classList.remove('active');
+  document.getElementById('normal-fx').classList.remove('active');
+  document.getElementById('feedback').textContent='';
+  document.getElementById('balls-grid').style.display='grid';
+  renderBalls();
+}
+
+function renderBalls(){
+  const grid=document.getElementById('balls-grid');
+  grid.innerHTML='';
+  for(let i=0;i<25;i++){
+    const btn=document.createElement('button');
+    btn.className='ball-btn'+(state.used[i]?' used':'');
+    const cvs=document.createElement('canvas');
+    cvs.width=80;cvs.height=80;cvs.style.width='100%';cvs.style.height='100%';
+    drawBall(cvs,BALL_COLORS[i],i+1,state.used[i]);
+    btn.appendChild(cvs);
+    if(!state.used[i])btn.addEventListener('click',()=>selectBall(i));
+    grid.appendChild(btn);
+  }
+}
+
+function genQuestion(ballIdx){
+  const lv=state.levels[ballIdx];
+  let a,b;
+  if(lv===1){a=rnd(1,9);b=rnd(1,9);}
+  else if(lv===2){a=rnd(10,30);b=rnd(1,15);}
+  else if(lv===3){a=rnd(15,50);b=rnd(10,30);}
+  else if(lv===4){a=rnd(30,70);b=rnd(20,40);}
+  else{a=rnd(40,99);b=rnd(30,60);}
+  return{text:`${a} + ${b} = ?`,answer:a+b,hard:lv>=3};
+}
+
+function selectBall(i){
+  if(!state.active||state.used[i])return;
+  state.currentBall=i;
+  const q=genQuestion(i);
+  state.currentAnswer=q.answer;
+  state.isHigh=q.hard;
+  state.currentPoints=state.isHigh?rnd(6,12):rnd(1,5);
+  const badge=document.getElementById('q-badge');
+  badge.textContent=q.hard?'어려운 문제':'기본 문제';
+  badge.className=q.hard?'badge-hard':'badge-easy';
+  document.getElementById('question-text').textContent=q.text;
+  document.getElementById('answer-input').value='';
+  document.getElementById('feedback').textContent='';
+  document.getElementById('question-area').style.display='block';
+  document.getElementById('answer-input').focus();
+}
+
+function submitAnswer(){
+  const val=parseInt(document.getElementById('answer-input').value);
+  if(isNaN(val))return;
+  state.used[state.currentBall]=true;
+  state.ballsLeft--;
+  document.getElementById('balls-left').textContent=state.ballsLeft;
+  if(val===state.currentAnswer){
+    state.score+=state.currentPoints;
+    state.correct++;
+    document.getElementById('score-display').textContent=state.score;
+    document.getElementById('score-bar').style.width=Math.min(100,Math.round(state.score/60*100))+'%';
+    document.getElementById('question-area').style.display='none';
+    renderBalls();
+    if(state.isHigh)showHighEffect(state.currentPoints);
+    else showNormalEffect(state.currentPoints);
+  }else{
+    state.wrong++;
+    document.getElementById('feedback').textContent=`오답 — 정답: ${state.currentAnswer}`;
+    document.getElementById('feedback').style.color='#E24B4A';
+    setTimeout(()=>{document.getElementById('question-area').style.display='none';renderBalls();checkEnd();},1100);
+  }
+}
+
+function showNormalEffect(pts){
+  const wrap=document.getElementById('normal-fx');
+  const cvs=document.getElementById('nfx-canvas');
+  wrap.classList.add('active');
+  cvs.height=72;
+  const particles=[];
+  const t0=performance.now();
+  function af(t){
+    const el=t-t0;
+    cvs.width=cvs.offsetWidth||360;
+    const ctx=cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,72);
+    ctx.fillStyle='rgba(29,158,117,0.07)';ctx.fillRect(0,0,cvs.width,72);
+    if(particles.length<30&&el<300){
+      for(let i=0;i<3;i++)particles.push({x:rnd(40,cvs.width-40),y:rnd(8,60),vx:(Math.random()-.5)*2.5,vy:(Math.random()-.5)*1.8,size:rnd(3,8),alpha:1,color:['#1D9E75','#9FE1CB','#EF9F27','#FAC775','#378ADD','#fff'][Math.floor(Math.random()*6)]});
+    }
+    const sc=1+Math.sin(el/100)*.07;
+    ctx.save();ctx.translate(cvs.width/2,36);ctx.scale(sc,sc);
+    ctx.fillStyle='#1D9E75';ctx.font='500 26px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(`+${pts}점!`,0,0);ctx.restore();
+    for(const p of particles){p.x+=p.vx;p.y+=p.vy;p.alpha-=.02;if(p.alpha<=0)continue;ctx.globalAlpha=p.alpha;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+    if(el<1300)requestAnimationFrame(af);
+    else{wrap.classList.remove('active');checkEnd();}
+  }
+  requestAnimationFrame(af);
+}
+
+function showHighEffect(pts){
+  const pk=POKEMON[Math.floor(Math.random()*POKEMON.length)];
+  const wrap=document.getElementById('fx-wrap');
+  const bgCvs=document.getElementById('fx-bg-canvas');
+  const pkImg=document.getElementById('fx-pokemon');
+  pkImg.src=SPRITE_BASE+pk.id+'.gif';
+  pkImg.className='';
+  pkImg.style.opacity='0';
+  document.getElementById('fx-name').textContent=pk.name;
+  document.getElementById('fx-pts').textContent=`+${pts}점`;
+  ['fx-title','fx-name','fx-pts','fx-continue'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.style.opacity='0';
+    el.style.transform=id==='fx-pts'?'scale(.3)':'translateY('+(id==='fx-title'?'-16':'10')+'px)';
+  });
+  wrap.classList.add('active');
+  const W=wrap.offsetWidth||480,H=480;
+  bgCvs.width=W;bgCvs.height=H;
+  const bgCtx=bgCvs.getContext('2d');
+  const stars=Array.from({length:60},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+.5,a:Math.random(),da:(.004+Math.random()*.008)*(Math.random()>.5?1:-1),vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25}));
+  const particles=[];
+  let rings=[];
+  function burst(){
+    const cols=['#EF9F27','#FAC775','#9FE1CB','#378ADD','#D4537E','#fff','#E24B4A',pk.color,pk.accent];
+    for(let i=0;i<90;i++){const ang=Math.random()*Math.PI*2,spd=rnd(3,11);particles.push({x:W/2,y:H*.38,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-4,size:rnd(3,10),alpha:1,color:cols[Math.floor(Math.random()*cols.length)],rot:Math.random()*Math.PI*2,rotV:(Math.random()-.5)*.2,shape:Math.random()>.4?'circle':'rect'});}
+  }
+  let done=false,canContinue=false;
+  const t0=performance.now();
+  setTimeout(()=>{const e=document.getElementById('fx-title');e.style.opacity='1';e.style.transform='translateY(0)';burst();},80);
+  setTimeout(()=>{pkImg.className='show';pkImg.style.opacity='1';},200);
+  setTimeout(()=>{const e=document.getElementById('fx-name');e.style.opacity='1';e.style.transform='translateY(0)';},500);
+  setTimeout(()=>{const e=document.getElementById('fx-pts');e.style.opacity='1';e.style.transform='scale(1)';},720);
+  setTimeout(()=>{document.getElementById('fx-continue').style.opacity='1';canContinue=true;},1500);
+  rings.push({r:8,alpha:.7});
+  const ri=setInterval(()=>{if(!done)rings.push({r:8,alpha:.7});},650);
+  function anim(now){
+    if(done)return;
+    const el=now-t0;
+    bgCtx.clearRect(0,0,W,H);bgCtx.fillStyle='#08081a';bgCtx.fillRect(0,0,W,H);
+    for(const s of stars){s.a+=s.da;if(s.a>1||s.a<0)s.da*=-1;s.x+=s.vx;s.y+=s.vy;if(s.x<0)s.x=W;if(s.x>W)s.x=0;if(s.y<0)s.y=H;if(s.y>H)s.y=0;bgCtx.globalAlpha=Math.max(0,s.a);bgCtx.fillStyle='#fff';bgCtx.beginPath();bgCtx.arc(s.x,s.y,s.r,0,Math.PI*2);bgCtx.fill();}
+    bgCtx.globalAlpha=1;
+    const ringCy=H*.35;
+    for(const ring of rings){ring.r+=4.5;ring.alpha-=.011;if(ring.alpha<=0)continue;bgCtx.globalAlpha=ring.alpha;bgCtx.beginPath();bgCtx.arc(W/2,ringCy,ring.r,0,Math.PI*2);bgCtx.strokeStyle=pk.accent;bgCtx.lineWidth=2.5;bgCtx.stroke();}
+    rings=rings.filter(r=>r.alpha>0);bgCtx.globalAlpha=1;
+    for(const p of particles){p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.alpha-=.012;p.rot+=p.rotV;if(p.alpha<=0)continue;bgCtx.globalAlpha=p.alpha;bgCtx.fillStyle=p.color;bgCtx.save();bgCtx.translate(p.x,p.y);bgCtx.rotate(p.rot);if(p.shape==='circle'){bgCtx.beginPath();bgCtx.arc(0,0,p.size,0,Math.PI*2);bgCtx.fill();}else bgCtx.fillRect(-p.size/2,-p.size/2,p.size,p.size);bgCtx.restore();}
+    bgCtx.globalAlpha=1;
+    requestAnimationFrame(anim);
+  }
+  requestAnimationFrame(anim);
+  function close(){if(!canContinue)return;done=true;clearInterval(ri);wrap.classList.remove('active');pkImg.className='';pkImg.style.opacity='0';wrap.onclick=null;checkEnd();}
+  wrap.onclick=close;
+  setTimeout(close,6500);
+}
+
+function checkEnd(){
+  if(state.score>=60)endGame(true);
+  else if(state.ballsLeft===0)endGame(false);
+}
+
+function endGame(win){
+  state.active=false;
+  document.getElementById('balls-grid').style.display='none';
+  document.getElementById('end-screen').style.display='block';
+  document.getElementById('end-title').textContent=win?'클리어!':'게임 오버';
+  document.getElementById('end-score').textContent=state.score+'점';
+  const used=25-state.ballsLeft;
+  document.getElementById('end-stats').innerHTML=`사용한 볼: ${used}개<br>정답: ${state.correct}개 &nbsp; 오답: ${state.wrong}개<br>`+(win?`${used}개 만에 60점 달성!`:`60점까지 ${60-state.score}점 부족`);
+}
+
+POKEMON.forEach(pk=>{const img=new Image();img.src=SPRITE_BASE+pk.id+'.gif';});
+document.getElementById('submit-btn').addEventListener('click',submitAnswer);
+document.getElementById('answer-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitAnswer();});
+document.getElementById('restart-btn').addEventListener('click',initGame);
+initGame();
+</script>
+</body>
+</html>
