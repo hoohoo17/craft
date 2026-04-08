@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>원소크래프트</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <h1>원소크래프트</h1>
+            <div class="game-info">
+                <div class="score">점수: <span id="score">0</span></div>
+                <div class="turn">턴: <span id="turn">1</span></div>
+            </div>
+        </header>
+
+        <main>
+            <div class="game-board" id="game-board">
+                <!-- 게임 보드는 JavaScript로 동적 생성 -->
+            </div>
+
+            <div class="element-panel">
+                <h2>사용 가능한 원소</h2>
+                <div class="elements" id="available-elements">
+                    <!-- 사용 가능한 원소들은 JavaScript로 동적 생성 -->
+                </div>
+            </div>
+        </main>
+
+        <div class="game-controls">
+            <button id="end-turn" class="control-button">턴 종료</button>
+            <button id="reset-game" class="control-button">게임 초기화</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
