@@ -123,20 +123,6 @@
 
     <div class="panel">
         <div class="controls">
-            <label for="pageSelect">페이지</label>
-            <select id="pageSelect">
-                <option value="index">index (메인)</option>
-                <option value="pocketmon">pocketmon</option>
-                <option value="craft">craft</option>
-                <option value="caslecombo">caslecombo</option>
-                <option value="shadow">shadow</option>
-                <option value="tooth">tooth</option>
-                <option value="doobuy">doobuy</option>
-                <option value="snow">snow</option>
-                <option value="splendor">splendor</option>
-                <option value="han">han</option>
-                <option value="tree">tree</option>
-            </select>
             <label for="keyInput">관리자 키</label>
             <input type="password" id="keyInput" placeholder="ADMIN_KEY" autocomplete="off">
             <label><input type="checkbox" id="rememberKey"> 기억</label>
@@ -165,11 +151,10 @@
 
     <script>
         const API_URL = 'https://craft-comments.jaehoo.workers.dev';
+        const PAGE = 'index';
         const LS_KEY = 'craft_admin_key';
         const LS_REMEMBER = 'craft_admin_remember';
-        const LS_PAGE = 'craft_admin_page';
 
-        const pageSelect = document.getElementById('pageSelect');
         const keyInput = document.getElementById('keyInput');
         const rememberKey = document.getElementById('rememberKey');
         const statusEl = document.getElementById('status');
@@ -178,7 +163,6 @@
             rememberKey.checked = true;
             keyInput.value = localStorage.getItem(LS_KEY) || '';
         }
-        pageSelect.value = localStorage.getItem(LS_PAGE) || 'index';
 
         function persistKey() {
             if (rememberKey.checked) {
@@ -192,10 +176,6 @@
 
         rememberKey.addEventListener('change', persistKey);
         keyInput.addEventListener('change', persistKey);
-        pageSelect.addEventListener('change', () => {
-            localStorage.setItem(LS_PAGE, pageSelect.value);
-            load();
-        });
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -218,7 +198,7 @@
         }
 
         async function load() {
-            const page = pageSelect.value;
+            const page = PAGE;
             if (!keyInput.value) {
                 setStatus('관리자 키를 입력하세요', true);
                 return;
@@ -288,7 +268,7 @@
             if (!btn) return;
             const id = btn.dataset.id;
             const act = btn.dataset.act;
-            const page = pageSelect.value;
+            const page = PAGE;
 
             if (act === 'delete' && !confirm('삭제하시겠습니까?')) return;
 
