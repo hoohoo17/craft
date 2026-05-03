@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>댓글 관리</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { font-size: 20px; margin: 0 0 16px 0; }
+        h2 { font-size: 15px; margin: 24px 0 8px 0; color: #444; }
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            padding: 16px 20px;
+            margin-bottom: 16px;
+        }
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .controls label {
+            font-size: 13px;
+            color: #555;
+        }
+        select, input[type="password"], input[type="text"], button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+        }
+        input[type="password"] { min-width: 220px; }
+        button {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background: #3a8eef; }
+        button.secondary { background: #888; }
+        button.secondary:hover { background: #666; }
+        button.danger { background: #e54848; }
+        button.danger:hover { background: #c93838; }
+        button.success { background: #2da34a; }
+        button.success:hover { background: #228537; }
+        button:disabled { background: #c0c0c0; cursor: not-allowed; }
+        .status {
+            font-size: 13px;
+            color: #888;
+            margin-top: 8px;
+        }
+        .comment {
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .comment:last-child { border-bottom: none; }
+        .comment-content { flex: 1; min-width: 0; }
+        .comment-meta {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .comment-meta strong { color: #333; }
+        .comment-body {
+            font-size: 14px;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+        .badge.pending { background: #fff3cd; color: #856404; }
+        .badge.approved { background: #d4edda; color: #155724; }
+        .actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .actions button { padding: 6px 10px; font-size: 12px; }
+        .empty {
+            text-align: center;
+            color: #aaa;
+            padding: 16px 0;
+            font-size: 13px;
+        }
+        .log-line {
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 12px;
+            padding: 4px 0;
+            border-bottom: 1px solid #f5f5f5;
+            color: #444;
+        }
+        details > summary {
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+            padding: 4px 0;
+        }
+        .hint {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <h1>댓글 관리</h1>
+
+    <div class="panel">
+        <div class="controls">
+            <label for="pageSelect">페이지</label>
+            <select id="pageSelect">
+                <option value="index">index (메인)</option>
+                <option value="pocketmon">pocketmon</option>
+                <option value="craft">craft</option>
+                <option value="caslecombo">caslecombo</option>
+                <option value="shadow">shadow</option>
+                <option value="tooth">tooth</option>
+                <option value="doobuy">doobuy</option>
+                <option value="snow">snow</option>
+                <option value="splendor">splendor</option>
+                <option value="han">han</option>
+                <option value="tree">tree</option>
+            </select>
+            <label for="keyInput">관리자 키</label>
+            <input type="password" id="keyInput" placeholder="ADMIN_KEY" autocomplete="off">
+            <label><input type="checkbox" id="rememberKey"> 기억</label>
+            <button id="reloadBtn">불러오기</button>
+        </div>
+        <div class="status" id="status"></div>
+        <div class="hint">키는 체크 시 이 브라우저(localStorage)에만 저장됩니다. 공용 PC에선 끄세요.</div>
+    </div>
+
+    <div class="panel">
+        <h2>대기중 <span id="pendingCount" class="badge pending">0</span></h2>
+        <div id="pendingList"><div class="empty">불러오기를 눌러주세요</div></div>
+    </div>
+
+    <div class="panel">
+        <h2>공개중 <span id="approvedCount" class="badge approved">0</span></h2>
+        <div id="approvedList"><div class="empty">-</div></div>
+    </div>
+
+    <div class="panel">
+        <details>
+            <summary>최근 로그</summary>
+            <div id="logList" style="margin-top: 8px;"><div class="empty">-</div></div>
+        </details>
+    </div>
+
+    <script>
+        const API_URL = 'https://craft-comments.jaehoo.workers.dev';
+        const LS_KEY = 'craft_admin_key';
+        const LS_REMEMBER = 'craft_admin_remember';
+        const LS_PAGE = 'craft_admin_page';
+
+        const pageSelect = document.getElementById('pageSelect');
+        const keyInput = document.getElementById('keyInput');
+        const rememberKey = document.getElementById('rememberKey');
+        const statusEl = document.getElementById('status');
+
+        if (localStorage.getItem(LS_REMEMBER) === '1') {
+            rememberKey.checked = true;
+            keyInput.value = localStorage.getItem(LS_KEY) || '';
+        }
+        pageSelect.value = localStorage.getItem(LS_PAGE) || 'index';
+
+        function persistKey() {
+            if (rememberKey.checked) {
+                localStorage.setItem(LS_KEY, keyInput.value);
+                localStorage.setItem(LS_REMEMBER, '1');
+            } else {
+                localStorage.removeItem(LS_KEY);
+                localStorage.removeItem(LS_REMEMBER);
+            }
+        }
+
+        rememberKey.addEventListener('change', persistKey);
+        keyInput.addEventListener('change', persistKey);
+        pageSelect.addEventListener('change', () => {
+            localStorage.setItem(LS_PAGE, pageSelect.value);
+            load();
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function fmtDate(iso) {
+            const d = new Date(iso);
+            return d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function headers() {
+            return { 'X-Admin-Key': keyInput.value, 'Content-Type': 'application/json' };
+        }
+
+        function setStatus(msg, isError) {
+            statusEl.textContent = msg || '';
+            statusEl.style.color = isError ? '#c93838' : '#888';
+        }
+
+        async function load() {
+            const page = pageSelect.value;
+            if (!keyInput.value) {
+                setStatus('관리자 키를 입력하세요', true);
+                return;
+            }
+            setStatus('불러오는 중...');
+            try {
+                const [commentsRes, logsRes] = await Promise.all([
+                    fetch(`${API_URL}?page=${page}`, { headers: headers() }),
+                    fetch(`${API_URL}/logs?page=${page}`, { headers: headers() }),
+                ]);
+                if (commentsRes.status === 403) {
+                    setStatus('관리자 키가 올바르지 않습니다', true);
+                    return;
+                }
+                const comments = await commentsRes.json();
+                const logs = logsRes.ok ? await logsRes.json() : [];
+                render(comments, logs);
+                setStatus(`${comments.length}개 댓글 / ${logs.length}개 로그`);
+            } catch (err) {
+                setStatus('불러오기 실패: ' + err.message, true);
+            }
+        }
+
+        function render(comments, logs) {
+            const pending = comments.filter(c => !c.approved);
+            const approved = comments.filter(c => c.approved);
+
+            document.getElementById('pendingCount').textContent = pending.length;
+            document.getElementById('approvedCount').textContent = approved.length;
+
+            const newest = (a, b) => new Date(b.date) - new Date(a.date);
+            document.getElementById('pendingList').innerHTML =
+                pending.length === 0
+                    ? '<div class="empty">대기중인 댓글이 없습니다</div>'
+                    : pending.sort(newest).map(c => commentRow(c, true)).join('');
+            document.getElementById('approvedList').innerHTML =
+                approved.length === 0
+                    ? '<div class="empty">공개된 댓글이 없습니다</div>'
+                    : approved.sort(newest).map(c => commentRow(c, false)).join('');
+
+            document.getElementById('logList').innerHTML =
+                logs.length === 0
+                    ? '<div class="empty">로그 없음</div>'
+                    : logs.slice().reverse().slice(0, 100).map(l =>
+                        `<div class="log-line">[${fmtDate(l.date)}] ${l.action} — ${escapeHtml(l.detail?.name || '')}: ${escapeHtml((l.detail?.message || '').slice(0, 80))}</div>`
+                    ).join('');
+        }
+
+        function commentRow(c, isPending) {
+            const actions = isPending
+                ? `<button class="success" data-act="approve" data-id="${c.id}">승인</button>
+                   <button class="danger" data-act="delete" data-id="${c.id}">삭제</button>`
+                : `<button class="danger" data-act="delete" data-id="${c.id}">삭제</button>`;
+            return `
+                <div class="comment">
+                    <div class="comment-content">
+                        <div class="comment-meta"><strong>${escapeHtml(c.name)}</strong> &middot; ${fmtDate(c.date)}</div>
+                        <div class="comment-body">${escapeHtml(c.message)}</div>
+                    </div>
+                    <div class="actions">${actions}</div>
+                </div>
+            `;
+        }
+
+        document.body.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-act]');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            const act = btn.dataset.act;
+            const page = pageSelect.value;
+
+            if (act === 'delete' && !confirm('삭제하시겠습니까?')) return;
+
+            btn.disabled = true;
+            try {
+                const url = act === 'approve'
+                    ? `${API_URL}/approve?page=${page}&id=${id}`
+                    : `${API_URL}?page=${page}&id=${id}`;
+                const method = act === 'approve' ? 'PUT' : 'DELETE';
+                const res = await fetch(url, { method, headers: headers() });
+                if (!res.ok) throw new Error(`${res.status}`);
+                await load();
+            } catch (err) {
+                setStatus(`${act} 실패: ${err.message}`, true);
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('reloadBtn').addEventListener('click', load);
+
+        if (keyInput.value) load();
+    </script>
+</body>
+</html>
