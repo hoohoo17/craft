@@ -1,0 +1,7 @@
+name = "craft-comments"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "COMMENTS"
+id = "05d3354c70704e2eb3ac115ecc5cba87"
