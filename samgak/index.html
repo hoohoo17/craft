@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>삼각김밥</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#8FD8F7; --sky-deep:#5FC2EE;
+  --cream:#FFFDF5; --yellow:#FFD84D; --yellow-deep:#F0B90B;
+  --ink:#101010; --nori:#1D3B57;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--sky);font-family:var(--body);color:var(--ink);
+  -webkit-font-smoothing:antialiased;touch-action:none;user-select:none}
+#sky{position:fixed;inset:0}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+#ui{position:fixed;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:24px}
+#ui.hide{display:none}
+
+.mark{font-family:var(--disp);font-size:clamp(60px,18vw,132px);line-height:.9;
+  color:var(--cream);
+  text-shadow:5px 5px 0 var(--yellow-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),
+    0 -2px 0 var(--ink),0 2px 0 var(--ink);
+  animation:wob 3.4s ease-in-out infinite}
+@keyframes wob{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.6deg) translateY(-8px)}}
+.tag{margin-top:12px;font-size:clamp(13px,3.6vw,16px);letter-spacing:.24em;opacity:.72}
+
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(19px,5vw,25px);letter-spacing:.06em;
+  color:var(--ink);background:var(--yellow);padding:15px 42px;border-radius:999px;
+  border:3px solid var(--ink);box-shadow:0 7px 0 var(--yellow-deep),0 7px 0 3px var(--ink);
+  transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--yellow-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--yellow-deep),0 0 0 3px var(--ink)}
+.btn:focus-visible{outline:3px dashed var(--ink);outline-offset:5px}
+.btn.small{font-size:17px;padding:12px 30px;background:var(--cream);
+  box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:12px;margin-top:40px;flex-wrap:wrap;justify-content:center}
+
+/* 점수판 */
+#hud{position:fixed;top:0;left:0;right:0;padding:16px 18px;display:none;
+  justify-content:space-between;align-items:flex-start;pointer-events:none}
+#hud.on{display:flex}
+.score{font-family:var(--disp);font-size:clamp(38px,11vw,62px);line-height:.9;color:var(--cream);
+  text-shadow:3px 3px 0 var(--yellow-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),
+    0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.score small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.2em;
+  color:var(--ink);text-shadow:none;opacity:.6;margin-top:4px}
+.lives{display:flex;gap:6px;align-items:center}
+.heart{width:22px;height:22px}
+
+/* 결과 */
+.big{font-family:var(--disp);font-size:clamp(40px,11vw,64px);line-height:1;color:var(--cream);
+  text-shadow:4px 4px 0 var(--yellow-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),
+    0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.num{font-family:var(--disp);font-size:clamp(70px,20vw,120px);line-height:1;margin:6px 0}
+.line{font-size:15px;letter-spacing:.06em;opacity:.78;margin-top:6px}
+.best{margin-top:10px;font-size:13px;letter-spacing:.16em;opacity:.6}
+@media (prefers-reduced-motion:reduce){.mark{animation:none}}
+</style>
+</head>
+<body>
+
+<div id="sky"></div>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div class="score" id="scoreEl">0<small>이어치기</small></div>
+  <div class="lives" id="livesEl"></div>
+</div>
+<div id="ui"></div>
+
+<script>
+/* ================= 구름 ================= */
+const skyEl = document.getElementById('sky');
+function makeClouds(){
+  skyEl.innerHTML = '';
+  [[6,12,150,44],[68,20,110,34],[30,70,180,50],[82,60,120,36],[46,34,90,28]].forEach(([x,y,w,h])=>{
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute;left:${x}vw;top:${y}vh;width:${w}px;height:${h}px;
+      background:var(--cream);border-radius:100px;opacity:.8`;
+    [[w*.28,h*.9,-h*.45,w*.1],[w*.36,h*1.1,-h*.62,w*.42]].forEach(([bw,bh,bt,bl])=>{
+      const s = document.createElement('div');
+      s.style.cssText = `position:absolute;background:var(--cream);border-radius:50%;
+        width:${bw}px;height:${bh}px;top:${bt}px;left:${bl}px`;
+      d.appendChild(s);
+    });
+    skyEl.appendChild(d);
+  });
+}
+makeClouds();
+
+/* ================= 캔버스 ================= */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let W, H, DPR;
+function resize(){
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+addEventListener('resize', resize); resize();
+
+const rand = (a, b) => a + Math.random() * (b - a);
+const FLAVORS = ['참치마요','전주비빔','불닭','스팸마요','김치볶음','매운제육','명란마요'];
+
+/* ================= 삼각김밥 ================= */
+class Rice {
+  constructor(o = {}){
+    this.r   = o.r   ?? rand(34, 52);
+    this.x   = o.x   ?? rand(80, W - 80);
+    this.y   = o.y   ?? -60;
+    this.vx  = o.vx  ?? rand(-2.6, 2.6);
+    this.vy  = o.vy  ?? rand(0, 2);
+    this.rot = rand(0, 7);
+    this.vr  = rand(-.05, .05);
+    this.sq  = 1;
+    this.floor = o.floor ?? true;   // 오프닝은 바닥에서 튐, 게임은 떨어지면 아웃
+    this.flavor = FLAVORS[(Math.random() * FLAVORS.length) | 0];
+    this.hue = ['#FFFDF5','#FFF8DC','#FFFCEF'][(Math.random()*3)|0];
+    this.msg = null; this.msgT = 0;
+    this.dead = false;
+    this.golden = !!o.golden;
+    this.face = 0;                  // 눈 감빡임
+  }
+  say(t){ this.msg = t; this.msgT = 1; }
+  step(g){
+    this.vy += g;
+    this.x += this.vx; this.y += this.vy; this.rot += this.vr;
+
+    if (this.x < this.r*.8){ this.x = this.r*.8; this.vx = Math.abs(this.vx)*.86; this.sq = .82; }
+    if (this.x > W - this.r*.8){ this.x = W - this.r*.8; this.vx = -Math.abs(this.vx)*.86; this.sq = .82; }
+
+    if (this.floor){
+      const b = H - this.r*.86;
+      if (this.y > b){
+        this.y = b;
+        if (Math.abs(this.vy) > 1.2){ this.vy *= -.74; this.sq = .62; this.vr += rand(-.05,.05); }
+        else this.vy = 0;
+        this.vx *= .985;
+      }
+    } else if (this.y - this.r > H + 40){ this.dead = true; }
+
+    this.sq += (1 - this.sq) * .16;
+    this.vr *= .99;
+    if (this.msgT > 0) this.msgT -= .0062;
+    this.face -= 1;
+  }
+  hit(mx, my){
+    const d = Math.hypot(mx - this.x, my - this.y);
+    if (d > this.r * 1.25) return false;
+    this.vy = -rand(13, 17);
+    this.vx += (this.x - mx) * .13 + rand(-1.5, 1.5);
+    this.vx = Math.max(-9, Math.min(9, this.vx));
+    this.vr = rand(-.22, .22);
+    this.sq = 1.32;
+    this.face = 26;
+    return true;
+  }
+  draw(){
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot * .25);
+    ctx.scale(1/this.sq, this.sq);
+
+    const r = this.r, k = r * .34;
+    ctx.beginPath();
+    const P = [[0,-r],[r*.94,r*.72],[-r*.94,r*.72]];
+    for (let i = 0; i < 3; i++){
+      const a=P[i], b=P[(i+1)%3], c=P[(i+2)%3];
+      const ab=Math.hypot(b[0]-a[0],b[1]-a[1]), bc=Math.hypot(c[0]-b[0],c[1]-b[1]);
+      const p1=[b[0]+(a[0]-b[0])*k/ab, b[1]+(a[1]-b[1])*k/ab];
+      const p2=[b[0]+(c[0]-b[0])*k/bc, b[1]+(c[1]-b[1])*k/bc];
+      i===0 ? ctx.moveTo(p1[0],p1[1]) : ctx.lineTo(p1[0],p1[1]);
+      ctx.quadraticCurveTo(b[0],b[1],p2[0],p2[1]);
+    }
+    ctx.closePath();
+    ctx.fillStyle = this.golden ? '#FFD84D' : this.hue;
+    ctx.fill();
+
+    ctx.save(); ctx.clip();
+    ctx.fillStyle = this.golden ? '#B8860B' : '#1D3B57';
+    ctx.fillRect(-r, r*.16, r*2, r*.7);
+    ctx.fillStyle = 'rgba(255,255,255,.16)';
+    ctx.fillRect(-r, r*.16, r*2, r*.07);
+    ctx.restore();
+
+    ctx.lineWidth = Math.max(2.4, r*.075); ctx.strokeStyle = '#101010'; ctx.stroke();
+
+    // 얼굴
+    const ey = -r*.16, ex = r*.3;
+    ctx.fillStyle = '#101010';
+    if (this.face > 0){                       // 맞았을 때 > <
+      ctx.lineWidth = Math.max(2, r*.055); ctx.strokeStyle = '#101010';
+      ctx.beginPath();
+      ctx.moveTo(-ex-r*.08, ey-r*.07); ctx.lineTo(-ex+r*.05, ey); ctx.lineTo(-ex-r*.08, ey+r*.07);
+      ctx.moveTo( ex+r*.08, ey-r*.07); ctx.lineTo( ex-r*.05, ey); ctx.lineTo( ex+r*.08, ey+r*.07);
+      ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, ey+r*.16, r*.1, r*.12, 0, 0, 7); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.ellipse(-ex, ey, r*.07, r*.095, 0, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.ellipse( ex, ey, r*.07, r*.095, 0, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, ey+r*.06, r*.13, .15*Math.PI, .85*Math.PI);
+      ctx.lineWidth = Math.max(1.8, r*.05); ctx.strokeStyle = '#101010'; ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255,150,140,.45)';
+    ctx.beginPath(); ctx.ellipse(-ex*1.5, ey+r*.12, r*.11, r*.07, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( ex*1.5, ey+r*.12, r*.11, r*.07, 0, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  bubble(){
+    if (!this.msg || this.msgT <= 0) return;
+    const pp = Math.min(1, (1 - this.msgT) * 9);
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, this.msgT * 3.2);
+    ctx.font = "600 15px 'Gowun Dodum','Apple SD Gothic Neo',sans-serif";
+    const w = ctx.measureText(this.msg).width + 26, h = 34;
+    let by = this.y - this.r*1.35 - h/2;
+    const clamped = by < h/2 + 74;
+    if (clamped) by = h/2 + 74;
+    const bx = Math.max(w/2+8, Math.min(W-w/2-8, this.x));
+    ctx.translate(bx, by); ctx.scale(pp, pp*(.6+.4*pp));
+    const r2 = 12;
+    ctx.beginPath();
+    ctx.moveTo(-w/2+r2,-h/2);
+    ctx.arcTo(w/2,-h/2,w/2,h/2,r2); ctx.arcTo(w/2,h/2,-w/2,h/2,r2);
+    ctx.arcTo(-w/2,h/2,-w/2,-h/2,r2); ctx.arcTo(-w/2,-h/2,w/2,-h/2,r2);
+    ctx.closePath();
+    ctx.fillStyle = '#FFFDF5'; ctx.fill();
+    ctx.lineWidth = 2.6; ctx.strokeStyle = '#101010'; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-7,h/2-1); ctx.lineTo(7,h/2-1); ctx.lineTo(1,h/2+11);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-6,h/2-1.5); ctx.lineTo(6,h/2-1.5);
+    ctx.strokeStyle = '#FFFDF5'; ctx.lineWidth = 3.6; ctx.stroke();
+    ctx.fillStyle = '#101010'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(this.msg, 0, 1);
+    ctx.restore();
+  }
+}
+
+/* ================= 이펙트 ================= */
+const fx = [];
+function sparkle(x, y, color = '#FFD84D', n = 8){
+  for (let i = 0; i < n; i++)
+    fx.push({t:'s', x, y, a:rand(0,7), s:rand(3,7), life:1, color,
+      vx:rand(-4.5,4.5), vy:rand(-6,-1.5)});
+}
+function floater(x, y, text, color = '#101010'){
+  fx.push({t:'f', x, y, text, color, life:1, vy:-1.5});
+}
+function drawFx(){
+  for (let i = fx.length - 1; i >= 0; i--){
+    const p = fx[i];
+    p.life -= p.t === 'f' ? .018 : .03;
+    if (p.life <= 0){ fx.splice(i,1); continue; }
+    ctx.save(); ctx.globalAlpha = Math.min(1, p.life * 1.6);
+    if (p.t === 's'){
+      p.x += p.vx; p.y += p.vy; p.vy += .28;
+      ctx.translate(p.x, p.y); ctx.rotate(p.a += .12);
+      ctx.fillStyle = p.color; ctx.strokeStyle = '#101010'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      for (let k = 0; k < 4; k++){
+        const a = k*Math.PI/2;
+        ctx.lineTo(Math.cos(a)*p.s*2.2, Math.sin(a)*p.s*2.2);
+        ctx.lineTo(Math.cos(a+Math.PI/4)*p.s*.7, Math.sin(a+Math.PI/4)*p.s*.7);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      p.y += p.vy; p.vy *= .97;
+      ctx.font = "700 26px 'Black Han Sans','Apple SD Gothic Neo',sans-serif";
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 5; ctx.strokeStyle = '#FFFDF5';
+      ctx.strokeText(p.text, p.x, p.y);
+      ctx.fillStyle = p.color; ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.restore();
+  }
+}
+
+/* ================= 상태 ================= */
+const ui = document.getElementById('ui');
+const hud = document.getElementById('hud');
+const scoreEl = document.getElementById('scoreEl');
+const livesEl = document.getElementById('livesEl');
+
+let mode = 'title';          // title | play | over
+let rices = [];
+let score = 0, lives = 3, spawnT = 0, level = 1;
+let runBest = 0, hits = 0;
+let best = 0;
+try { best = +(localStorage.getItem('samgak_best') || 0); } catch(e){}
+
+const CHORUS = ['간다!','히융','우와아','높다!','…안 보여','여기 어디야','나 아직 있어','내려간다!','야호'];
+const POKED  = ['앗','뭐야','간지러워','왜 눌러','뿅','히익','한 번 더?','아야'];
+const HIGH   = ['좋아!','더 세게','나이스','신난다','한 번 더!','최고'];
+const FELL   = ['아…','떨어졌다','미안','바닥이야'];
+
+function heartSVG(on){
+  return `<svg class="heart" viewBox="0 0 24 22" aria-hidden="true">
+    <path d="M12 21 C4 15 1 11 1 7.2 A5.6 5.6 0 0 1 12 5 A5.6 5.6 0 0 1 23 7.2 C23 11 20 15 12 21 Z"
+      fill="${on ? '#FFD84D' : 'rgba(255,255,255,.45)'}" stroke="#101010" stroke-width="2"
+      stroke-linejoin="round"/></svg>`;
+}
+function drawHud(){
+  scoreEl.innerHTML = `${score}<small>이어치기</small>`;
+  livesEl.innerHTML = [0,1,2].map(i => heartSVG(i < lives)).join('');
+}
+
+/* ---------- 화면 ---------- */
+function showTitle(){
+  mode = 'title';
+  hud.classList.remove('on'); ui.classList.remove('hide');
+  rices = Array.from({length: 9}, () => new Rice({ floor:true, y: rand(-H, -60) }));
+  ui.innerHTML = `
+    <div class="mark">삼각김밥</div>
+    <div class="tag">통 통 통</div>
+    <div class="row">
+      <button class="btn" id="go">시작하기</button>
+    </div>`;
+  document.getElementById('go').onclick = e => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    btn.disabled = true; btn.style.opacity = '.45';
+    const order = [...rices].sort((a,b) => a.x - b.x);
+    order.forEach((r,i) => {
+      setTimeout(() => {
+        if (mode !== 'title') return;
+        r.vy = -rand(21, 32); r.vr = rand(-.18,.18); r.sq = 1.45;
+        r.say(CHORUS[i % CHORUS.length]);
+        sparkle(r.x, r.y - r.r*.5, '#FFD84D', 6);
+      }, i * 180);
+    });
+    // 마지막 삼각김밥이 올라간 뒤, 다 사라지면 시작
+    const wait = order.length * 180 + 1700;
+    setTimeout(() => {
+      if (mode !== 'title') return;
+      ui.style.transition = 'opacity .35s'; ui.style.opacity = '0';
+      setTimeout(() => { ui.style.opacity = ''; ui.style.transition = ''; startGame(); }, 350);
+    }, wait);
+  };
+}
+
+function startGame(){
+  mode = 'play';
+  score = 0; lives = 3; level = 1; spawnT = 0;
+  runBest = 0; hits = 0;
+  rices = [ new Rice({ floor:false, x:W/2, y:-60, vx:rand(-2,2), vy:2 }) ];
+  fx.length = 0;
+  ui.classList.add('hide'); hud.classList.add('on');
+  drawHud();
+  floater(W/2, H*.4, '떨어뜨리지 마!', '#101010');
+}
+
+function gameOver(){
+  mode = 'over';
+  if (score > runBest) runBest = score;
+  const isBest = runBest > best;
+  if (isBest){ best = runBest; try{ localStorage.setItem('samgak_best', best); }catch(e){} }
+  hud.classList.remove('on'); ui.classList.remove('hide');
+  ui.innerHTML = `
+    <div class="big">${isBest ? '신기록!' : '끝!'}</div>
+    <div class="num">${runBest}</div>
+    <div class="line">최고 ${runBest}연속 · 총 ${hits}번 쳤어</div>
+    <div class="line">${
+      hits === 0    ? '한 번도 못 쳤네' :
+      runBest < 5   ? '몸 좀 풀었고' :
+      runBest < 12  ? '꽤 하는데?' :
+      runBest < 25  ? '삼각김밥이 감탄한다' :
+      runBest < 45  ? '이 정도면 편의점 사장' : '삼각김밥의 왕'
+    }</div>
+    <div class="best">최고 기록 ${best}연속</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e => { e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick  = e => { e.stopPropagation(); showTitle(); };
+}
+
+/* ---------- 난이도 ---------- */
+function spawnRate(){ return Math.max(150, 460 - score * 5); }  // 프레임
+function gravity(){ return mode === 'play' ? 0.42 + Math.min(.2, score * .003) : .55; }
+
+/* ================= 루프 ================= */
+function loop(){
+  ctx.clearRect(0, 0, W, H);
+  const g = gravity();
+
+  if (mode === 'play'){
+    spawnT++;
+    const want = 1 + Math.floor(score / 14);              // 동시에 떠 있을 개수
+    if (spawnT > spawnRate() && rices.length < Math.min(5, want)){
+      spawnT = 0;
+      rices.push(new Rice({
+        floor:false, x:rand(70, W-70), y:-70, vx:rand(-2.4,2.4), vy:1.5,
+        r:rand(30,46), golden: Math.random() < .12
+      }));
+    }
+    for (const r of rices){
+      if (!r.dead && r.y - r.r > H + 40){}
+    }
+  }
+
+  for (const r of rices) r.step(g);
+
+  if (mode === 'play'){
+    for (let i = rices.length - 1; i >= 0; i--){
+      if (rices[i].dead){
+        const r = rices[i];
+        rices.splice(i, 1);
+        if (score > runBest) runBest = score;
+        lives--; score = 0;
+        drawHud();
+        floater(r.x, H - 90, '앗!', '#E4572E');
+        if (lives <= 0){ gameOver(); break; }
+      }
+    }
+    if (mode === 'play' && rices.length === 0){
+      rices.push(new Rice({ floor:false, x:W/2, y:-70, vx:rand(-2,2), vy:1.5 }));
+      spawnT = 0;
+    }
+  }
+
+  for (const r of rices) r.draw();
+  drawFx();
+  for (const r of rices) r.bubble();
+
+  requestAnimationFrame(loop);
+}
+loop();
+
+/* ================= 입력 ================= */
+function pt(e){
+  const t = e.touches ? e.touches[0] : e;
+  return [t.clientX, t.clientY];
+}
+addEventListener('pointerdown', e => {
+  const [x, y] = pt(e);
+  let hit = null;
+  for (const r of rices) if (r.hit(x, y)) hit = r;
+  if (!hit) return;
+  sparkle(x, y, hit.golden ? '#FFD84D' : '#FFFDF5');
+  if (mode === 'play'){
+    const gain = hit.golden ? 3 : 1;
+    score += gain; hits++;
+    if (score > runBest) runBest = score;
+    drawHud();
+    if (hit.golden){
+      floater(hit.x, hit.y - hit.r - 20, '+3', '#F0B90B');
+      sparkle(hit.x, hit.y, '#FFD84D', 14);
+    }
+    if (score % 10 === 0 && score > 0){
+      hit.say(HIGH[(Math.random()*HIGH.length)|0]);
+      floater(W/2, H*.35, `${score} 연속!`, '#101010');
+      sparkle(hit.x, hit.y, '#FFD84D', 12);
+    } else if (Math.random() < .18){
+      hit.say(POKED[(Math.random()*POKED.length)|0]);
+    }
+  } else {
+    hit.say(POKED[(Math.random()*POKED.length)|0]);
+  }
+}, { passive:true });
+
+showTitle();
+</script>
+</body>
+</html>
