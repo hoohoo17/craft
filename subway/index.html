@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지하철 노선도 게임</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.1.0/tabler-icons.min.css">
+<style>
+  :root{
+    --bg:#F7F6F4; --surface-1:#EFEDE9; --surface-2:#FFFFFF;
+    --border:#DBD8D2; --text:#1F1E1C; --text-2:#6B6864; --accent:#DDE4F5;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:20px; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 14px;text-align:center}
+  .panel{background:var(--surface-1);border-radius:12px;padding:12px;margin-bottom:10px}
+  .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+  .row:last-child{margin-bottom:0}
+  button{
+    height:34px;padding:0 12px;border:1px solid var(--border);border-radius:8px;
+    background:transparent;color:var(--text);font-size:14px;cursor:pointer;
+    font-family:inherit;
+  }
+  button:hover{background:var(--surface-2)}
+  .stats{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
+  #canvasWrap{
+    position:relative;background:var(--surface-1);border:1px solid var(--border);
+    border-radius:12px;height:400px;overflow:hidden;cursor:crosshair;
+  }
+  #msg{font-size:13px;color:var(--text-2);text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>지하철 노선도 게임</h1>
+
+  <div class="panel">
+    <div class="row">
+      <button class="colBtn" data-k="l1">1호선</button>
+      <button class="colBtn" data-k="ex">직통</button>
+      <button class="colBtn" data-k="l2">2호선</button>
+      <button class="colBtn" data-k="l3">3호선</button>
+    </div>
+    <div class="row">
+      <button id="modeStation">역 놓기</button>
+      <button id="modeLink">선 잇기</button>
+      <button id="modeErase">지우기</button>
+      <button id="clearAll">전체 지우기</button>
+    </div>
+    <div class="row">
+      <button id="runBtn">운행 시작</button>
+      <button id="addTrain">이 노선에 열차</button>
+      <button id="addCar">칸 추가</button>
+      <button id="clearTrains">열차 비우기</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <span>도착시킨 손님 <strong id="carried">0</strong>명</span>
+    <span style="color:var(--text-2)">기다리는 손님 <strong id="waiting">0</strong>명</span>
+    <span style="color:var(--text-2)">열차 정원 <strong id="cap">200</strong>명</span>
+  </div>
+
+  <div id="canvasWrap">
+    <svg id="svg" width="100%" height="100%" style="position:absolute;inset:0"></svg>
+    <div id="nodes" style="position:absolute;inset:0"></div>
+    <div id="trains" style="position:absolute;inset:0;pointer-events:none"></div>
+  </div>
+
+  <p id="msg">역 놓기 → 선 잇기 → 운행 시작 순서로 해봐!</p>
+</div>
+
+<script>
+(function(){
+  /* ===== 여기 숫자들을 바꾸면 게임이 달라져! ===== */
+  var PER_CAR = 200;   // 한 칸에 탈 수 있는 사람 수
+  var RATE    = 100;   // 1초에 역마다 늘어나는 손님 수
+  var SPEED   = 85;    // 열차 속도 (숫자가 크면 빨라짐)
+  var STOPSEC = 0.5;   // 역에 멈춰 있는 시간(초)
+  var MAXCARS = 10;    // 열차에 붙일 수 있는 최대 칸 수
+  /* ============================================ */
+
+  // 노선 종류. fam이 같으면 "같은 노선"이라서 환승역(태극)이 안 생겨.
+  // 그래서 1호선(l1)과 직통(ex)은 fam이 둘 다 '1'이야.
+  var KIND = {
+    l1:{c:'#534AB7', fam:'1', name:'1호선', naming:'숫자'},
+    ex:{c:'#D85A30', fam:'1', name:'직통',  naming:'숫자'},
+    l2:{c:'#1D9E75', fam:'2', name:'2호선', naming:'한글'},
+    l3:{c:'#185FA5', fam:'3', name:'3호선', naming:'숫자'}
+  };
+  var HANGUL = '가나다라마바사아자차카타파하'.split('');
+
+  var wrap=document.getElementById('canvasWrap'), svg=document.getElementById('svg'),
+      nodes=document.getElementById('nodes'), trainLayer=document.getElementById('trains'),
+      msg=document.getElementById('msg'), runBtn=document.getElementById('runBtn'),
+      addTrain=document.getElementById('addTrain'), addCar=document.getElementById('addCar'),
+      clearTrains=document.getElementById('clearTrains'),
+      carriedEl=document.getElementById('carried'), waitingEl=document.getElementById('waiting'),
+      capEl=document.getElementById('cap');
+  var colBtns=[].slice.call(document.querySelectorAll('.colBtn'));
+  var mStation=document.getElementById('modeStation'), mLink=document.getElementById('modeLink'),
+      mErase=document.getElementById('modeErase'), clearAll=document.getElementById('clearAll');
+  var modeBtns=[mStation,mLink,mErase];
+
+  // 게임에서 기억하는 것들
+  var stations=[], links=[], trains=[];
+  var idc=0, kind='l1', mode='station', pick=null;
+  var numCount=0, hanCount=0, running=false, raf=null, lastT=0, spawnAcc=0, carried=0;
+
+  function K(){ return KIND[kind]; }
+  function findS(id){ return stations.find(function(s){return s.id===id;}); }
+
+  // 새 역 이름 짓기 (1역, 2역... 또는 가역, 나역...)
+  function nextName(){
+    if(K().naming==='한글'){ hanCount++; return (HANGUL[hanCount-1]||('한'+hanCount))+'역'; }
+    numCount++; return numCount+'역';
+  }
+  function mark(btns,el){
+    btns.forEach(function(b){ b.style.background='transparent'; b.style.fontWeight='400'; });
+    el.style.background='var(--accent)'; el.style.fontWeight='600';
+  }
+
+  // 손님 오는 곳(도착지) 만들기
+  function makeHub(){ idc++; stations.push({id:idc,x:80,y:200,k:'l1',name:'손님 오는 곳',p:0,hub:true}); }
+  makeHub();
+
+  // 이 역에 어떤 노선들이 연결돼 있나? (2개 이상이면 환승역)
+  function famsAt(id){
+    var out=[];
+    links.forEach(function(l){
+      if(l.a===id||l.b===id){
+        var f=KIND[l.k].fam;
+        if(!out.some(function(o){return o.fam===f;})) out.push({fam:f,c:KIND[l.k].c});
+      }
+    });
+    return out;
+  }
+
+  // 한 노선의 역 순서를 찾아냄. 동그랗게 이어져 있으면 loop:true (순환선!)
+  function routeFor(k){
+    var ls=links.filter(function(l){return l.k===k&&findS(l.a)&&findS(l.b);});
+    if(!ls.length) return null;
+    var adj={};
+    ls.forEach(function(l){
+      (adj[l.a]=adj[l.a]||[]).push(l.b);
+      (adj[l.b]=adj[l.b]||[]).push(l.a);
+    });
+    var ids=Object.keys(adj).map(Number);
+    var start=ids.find(function(id){return adj[id].length===1;});
+    var isLoop=(start===undefined);
+    if(isLoop) start=ids[0];
+    var path=[start], seen={}, cur=start; seen[start]=true;
+    while(true){
+      var nx=(adj[cur]||[]).filter(function(n){return !seen[n];})[0];
+      if(nx===undefined) break;
+      seen[nx]=true; path.push(nx); cur=nx;
+    }
+    if(path.length<2) return null;
+    var closed=isLoop&&(adj[path[path.length-1]]||[]).indexOf(path[0])>=0&&path.length>=3;
+    return {path:path, loop:closed};
+  }
+
+  // 직통 선은 1호선이랑 겹치니까 살짝 옆으로 비켜서 그림
+  function kindOffset(k){ return k==='ex'?8:0; }
+  function perp(k,a,b){
+    var o=kindOffset(k); if(!o) return {dx:0,dy:0};
+    var dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+    return {dx:-dy/len*o, dy:dx/len*o};
+  }
+
+  function draw(){
+    svg.innerHTML='';
+    links.forEach(function(l){
+      var a=findS(l.a), b=findS(l.b); if(!a||!b) return;
+      var o=perp(l.k,a,b);
+      var ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',a.x+o.dx); ln.setAttribute('y1',a.y+o.dy);
+      ln.setAttribute('x2',b.x+o.dx); ln.setAttribute('y2',b.y+o.dy);
+      ln.setAttribute('stroke',KIND[l.k].c); ln.setAttribute('stroke-width','6');
+      ln.setAttribute('stroke-linecap','round');
+      svg.appendChild(ln);
+    });
+  }
+
+  // 환승역 태극 무늬 그리기
+  function taegeuk(c1,c2){
+    var ns='http://www.w3.org/2000/svg';
+    var s=document.createElementNS(ns,'svg');
+    s.setAttribute('viewBox','0 0 100 100'); s.setAttribute('width','30'); s.setAttribute('height','30');
+    var bg=document.createElementNS(ns,'circle');
+    bg.setAttribute('cx','50'); bg.setAttribute('cy','50'); bg.setAttribute('r','48'); bg.setAttribute('fill',c2);
+    s.appendChild(bg);
+    var w=document.createElementNS(ns,'path');
+    w.setAttribute('d','M50 2 A48 48 0 0 1 50 98 A24 24 0 0 1 50 50 A24 24 0 0 0 50 2 Z');
+    w.setAttribute('fill',c1); s.appendChild(w);
+    var r=document.createElementNS(ns,'circle');
+    r.setAttribute('cx','50'); r.setAttribute('cy','50'); r.setAttribute('r','46');
+    r.setAttribute('fill','none'); r.setAttribute('stroke','#FFFFFF'); r.setAttribute('stroke-width','7');
+    s.appendChild(r); return s;
+  }
+
+  function updateCounts(){
+    waitingEl.textContent=stations.reduce(function(a,s){return a+(s.p||0);},0);
+    carriedEl.textContent=carried;
+    var mine=trains.filter(function(t){return t.k===kind;});
+    capEl.textContent=(mine.length?mine[0].cars:1)*PER_CAR;
+  }
+
+  function paintTrain(tr){
+    var cars='';
+    for(var i=0;i<tr.cars;i++){
+      cars+='<i class="ti ti-'+(i===0?'train':'box')+'" style="font-size:'+(i===0?18:12)+'px"></i>';
+    }
+    tr.el.innerHTML='<div style="display:flex;align-items:center;gap:1px;justify-content:center">'+cars+'</div>'+
+      '<div style="font-size:10px;line-height:1">'+tr.load+'</div>';
+  }
+
+  function render(){
+    nodes.innerHTML='';
+    stations.forEach(function(s){
+      var fs=famsAt(s.id), isT=fs.length>=2;
+      var base=fs.length?fs[0].c:KIND[s.k].c;
+      var d=document.createElement('div');
+      if(s.hub){
+        d.style.cssText='position:absolute;left:'+(s.x-17)+'px;top:'+(s.y-17)+'px;width:34px;height:34px;border-radius:10px;background:#BA7517;display:flex;align-items:center;justify-content:center;color:#FFF;cursor:pointer;'+(pick===s.id?'box-shadow:0 0 0 4px var(--accent);':'');
+        d.innerHTML='<i class="ti ti-flag" style="font-size:19px"></i>';
+      } else if(isT){
+        d.style.cssText='position:absolute;left:'+(s.x-15)+'px;top:'+(s.y-15)+'px;width:30px;height:30px;border-radius:50%;cursor:pointer;'+(pick===s.id?'box-shadow:0 0 0 4px var(--accent);':'');
+        d.appendChild(taegeuk(fs[0].c,fs[1].c));
+      } else {
+        d.style.cssText='position:absolute;left:'+(s.x-9)+'px;top:'+(s.y-9)+'px;width:18px;height:18px;border-radius:50%;background:var(--surface-2);border:3px solid '+base+';cursor:pointer;'+(pick===s.id?'box-shadow:0 0 0 4px var(--accent);':'');
+      }
+      d.addEventListener('click',function(e){ e.stopPropagation(); tapStation(s); });
+      nodes.appendChild(d);
+
+      if(s.p>0){
+        var crowded=s.p>=1000;
+        var pw=document.createElement('div');
+        pw.style.cssText='position:absolute;left:'+(s.x-34)+'px;top:'+(s.y-34)+'px;width:68px;text-align:center;font-size:12px;color:'+(crowded?'#A32D2D':'#BA7517')+';pointer-events:none';
+        pw.innerHTML='<i class="ti ti-user"></i> '+s.p;
+        nodes.appendChild(pw);
+      }
+
+      var t=document.createElement('div');
+      t.textContent=s.name; t.contentEditable=s.hub?'false':'true';
+      t.style.cssText='position:absolute;left:'+(s.x-56)+'px;top:'+(s.y+(s.hub?20:isT?17:13))+'px;width:112px;text-align:center;font-size:11px;color:var(--text);outline:none;cursor:text';
+      t.addEventListener('click',function(e){ e.stopPropagation(); });
+      t.addEventListener('input',function(){ s.name=t.textContent; });
+      nodes.appendChild(t);
+    });
+    draw(); updateCounts();
+  }
+
+  function tapStation(s){
+    if(mode==='erase'){
+      if(s.hub){ msg.textContent='손님 오는 곳은 지울 수 없어!'; return; }
+      stations=stations.filter(function(x){return x.id!==s.id;});
+      links=links.filter(function(l){return l.a!==s.id&&l.b!==s.id;});
+      refreshTrains(); pick=null; msg.textContent=s.name+' 지웠어.'; render(); return;
+    }
+    if(mode==='link'){
+      if(pick===null){ pick=s.id; msg.textContent=s.name+' 선택! 이을 역을 하나 더 눌러.'; render(); return; }
+      if(pick===s.id){ pick=null; msg.textContent='선택 취소.'; render(); return; }
+      var dup=links.some(function(l){
+        return l.k===kind&&((l.a===pick&&l.b===s.id)||(l.a===s.id&&l.b===pick));
+      });
+      if(dup){ msg.textContent='이미 그 노선으로 이어져 있어!'; pick=null; render(); return; }
+      links.push({a:pick,b:s.id,k:kind});
+      var nm=findS(pick).name; pick=null; refreshTrains(); render();
+      var r=routeFor(kind);
+      if(r&&r.loop) msg.textContent='순환선 완성! 열차가 계속 돌아.';
+      else msg.textContent=(famsAt(s.id).length>=2&&!s.hub)?s.name+'이 환승역이 됐어!':nm+' ↔ '+s.name+' 연결 완료!';
+      return;
+    }
+    msg.textContent='"선 잇기"를 눌러야 역을 연결할 수 있어.';
+  }
+
+  // 빈 곳을 누르면 역이 생김
+  wrap.addEventListener('click',function(e){
+    if(mode!=='station') return;
+    var r=wrap.getBoundingClientRect();
+    var x=e.clientX-r.left, y=e.clientY-r.top;
+    if(x<18||y<40||x>r.width-18||y>r.height-32) return;
+    idc++;
+    var nm=nextName();
+    stations.push({id:idc,x:x,y:y,k:kind,name:nm,p:0});
+    msg.textContent=nm+' 만들었어! 이름은 눌러서 바꿀 수 있어.';
+    render();
+  });
+
+  function refreshTrains(){
+    trains.forEach(function(tr){
+      var r=routeFor(tr.k);
+      if(!r){ tr.el.style.opacity='0'; tr.path=null; return; }
+      tr.path=r.path; tr.loop=r.loop; tr.el.style.opacity='1';
+      if(tr.i>tr.path.length-1||tr.i<0){ tr.i=0; tr.dir=1; tr.t=0; }
+    });
+  }
+
+  function spawn(){
+    var r=routeFor(kind);
+    if(!r){ msg.textContent=K().name+' 선이 아직 없어! 그 색으로 역 두 개를 이어봐.'; return; }
+    var el=document.createElement('div');
+    el.style.cssText='position:absolute;transform:translate(-50%,-50%);text-align:center;color:'+K().c;
+    trainLayer.appendChild(el);
+    var tr={k:kind,path:r.path,loop:r.loop,i:0,dir:1,t:0,el:el,wait:0,load:0,cars:1};
+    trains.push(tr); paintTrain(tr);
+    msg.textContent=K().name+(r.loop?' 순환선에':'에')+' 열차 추가! 총 '+trains.length+'대.';
+    updateCounts();
+  }
+
+  // 열차가 역에 도착했을 때
+  function arrive(tr,stId){
+    var s=findS(stId); if(!s) return;
+    var cap=tr.cars*PER_CAR;
+    if(s.hub){                       // 도착지면 손님 전부 내림
+      if(tr.load>0){ carried+=tr.load; msg.textContent='손님 '+tr.load+'명 도착 완료!'; tr.load=0; }
+    } else if(s.p>0){                // 보통 역이면 손님 태움
+      var take=Math.min(s.p, cap-tr.load);
+      if(take>0){ s.p-=take; tr.load+=take; }
+      else msg.textContent='열차 만석! 칸 추가를 눌러봐.';
+    }
+    paintTrain(tr); render();
+  }
+
+  function step(dt){
+    spawnAcc+=dt;
+    if(spawnAcc>=1){                 // 1초마다 손님 늘리기
+      spawnAcc=0;
+      var pool=stations.filter(function(s){return !s.hub&&famsAt(s.id).length>0;});
+      pool.forEach(function(s){ s.p=(s.p||0)+RATE; });
+      if(pool.length) render();
+    }
+    trains.forEach(function(tr){
+      if(!tr.path||tr.path.length<2){ tr.el.style.opacity='0'; return; }
+      var n=tr.path.length;
+      var nextI=tr.loop?((tr.i+tr.dir)%n+n)%n:(tr.i+tr.dir);
+      var a=findS(tr.path[tr.i]), b=findS(tr.path[nextI]);
+      if(!a||!b){ tr.el.style.opacity='0'; return; }
+      tr.el.style.opacity='1';
+      if(tr.wait>0){ tr.wait-=dt; }
+      else {
+        var len=Math.hypot(b.x-a.x,b.y-a.y)||1;
+        tr.t+=(SPEED*dt)/len;
+        if(tr.t>=1){                 // 다음 역 도착!
+          tr.t=0; tr.wait=STOPSEC; tr.i=nextI;
+          arrive(tr,tr.path[tr.i]);
+          // 순환선이 아니면 끝에서 방향을 바꿈
+          if(!tr.loop&&(tr.i+tr.dir>n-1||tr.i+tr.dir<0)) tr.dir=-tr.dir;
+          return;
+        }
+      }
+      var o=perp(tr.k,a,b);
+      tr.el.style.left=(a.x+(b.x-a.x)*tr.t+o.dx)+'px';
+      tr.el.style.top=(a.y+(b.y-a.y)*tr.t+o.dy)+'px';
+    });
+  }
+
+  function loop(t){
+    if(!lastT) lastT=t;
+    var dt=Math.min((t-lastT)/1000,0.05); lastT=t;
+    step(dt); raf=requestAnimationFrame(loop);
+  }
+
+  addCar.addEventListener('click',function(){
+    var mine=trains.filter(function(t){return t.k===kind;});
+    if(!mine.length){ msg.textContent=K().name+'에 열차가 없어! 먼저 열차를 추가해.'; return; }
+    mine.forEach(function(tr){ if(tr.cars<MAXCARS) tr.cars++; paintTrain(tr); });
+    msg.textContent=K().name+' 열차가 '+mine[0].cars+'칸! 정원 '+(mine[0].cars*PER_CAR)+'명.';
+    updateCounts();
+  });
+
+  colBtns.forEach(function(b){
+    b.style.borderLeft='4px solid '+KIND[b.dataset.k].c;
+    b.addEventListener('click',function(){
+      kind=b.dataset.k; mark(colBtns,b); updateCounts();
+      msg.textContent=K().name+' 선택!'+(kind==='ex'?' 직통은 1호선이랑 같은 노선이야.':'');
+    });
+  });
+  mStation.addEventListener('click',function(){ mode='station'; pick=null; mark(modeBtns,mStation); msg.textContent='빈 곳을 눌러 역을 놓아봐!'; render(); });
+  mLink.addEventListener('click',function(){ mode='link'; pick=null; mark(modeBtns,mLink); msg.textContent='역 두 개를 차례로 누르면 이어져!'; render(); });
+  mErase.addEventListener('click',function(){ mode='erase'; pick=null; mark(modeBtns,mErase); msg.textContent='지울 역을 눌러.'; render(); });
+
+  clearAll.addEventListener('click',function(){
+    stations=[]; links=[]; pick=null; numCount=0; hanCount=0; idc=0; carried=0;
+    trains.forEach(function(tr){ tr.el.remove(); }); trains=[];
+    running=false; cancelAnimationFrame(raf); lastT=0; runBtn.textContent='운행 시작';
+    makeHub(); msg.textContent='전부 지웠어! 손님 오는 곳만 남았어.'; render();
+  });
+  clearTrains.addEventListener('click',function(){
+    trains.forEach(function(tr){ tr.el.remove(); }); trains=[];
+    running=false; cancelAnimationFrame(raf); lastT=0; runBtn.textContent='운행 시작';
+    msg.textContent='열차 전부 차고지로 보냈어.'; updateCounts();
+  });
+
+  runBtn.addEventListener('click',function(){
+    if(running){ running=false; cancelAnimationFrame(raf); lastT=0; runBtn.textContent='운행 시작'; msg.textContent='운행을 멈췄어.'; return; }
+    if(!trains.length) spawn();
+    if(!trains.length) return;
+    refreshTrains();
+    running=true; lastT=0; runBtn.textContent='운행 정지';
+    msg.textContent='운행 시작!'; raf=requestAnimationFrame(loop);
+  });
+  addTrain.addEventListener('click',function(){
+    spawn();
+    if(!running&&trains.length){ running=true; lastT=0; runBtn.textContent='운행 정지'; raf=requestAnimationFrame(loop); }
+  });
+
+  mark(colBtns,colBtns[0]); mark(modeBtns,mStation); render();
+})();
+</script>
+</body>
+</html>
