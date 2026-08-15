@@ -201,7 +201,9 @@
 
   /* ---------- 별 순위 ---------- */
   const RKEY = 'nakseorun:ranking';
-  const API = 'https://craft-comments.jaehoo.workers.dev/rank?game=nakseo-run';
+  // 이미 떠 있는 댓글 API를 순위판으로 그대로 쓴다(서버 배포 불필요).
+  // 미승인 댓글은 message가 가려지고 name만 돌아오므로, 점수를 name에 '이름|별|거리'로 담는다.
+  const API = 'https://craft-comments.jaehoo.workers.dev?page=rank-nakseo-run';
   const rankList = document.getElementById('rankList');
   const rankNote = document.getElementById('rankNote');
   const refreshBtn = document.getElementById('refreshBtn');
@@ -234,13 +236,21 @@
   function writeLocal(){
     try { localStorage.setItem(RKEY, JSON.stringify(ranking)); } catch (e) {}
   }
-  async function callApi(opts){
-    const res = await fetch(API, opts);
+  // '이름|별|거리' 문자열 <-> 기록
+  const encode = (e) => `${e.n.replace(/[|]/g, '')}|${e.s}|${e.d}`.slice(0, 20);
+  function decode(name){
+    const m = /^(.*)\|(\d+)\|(\d+)$/.exec(String(name || ''));
+    return m && m[1] ? { n: m[1], s: +m[2], d: +m[3] } : null;
+  }
+  const top8 = (list) => list.sort((a, b) => b.s - a.s || b.d - a.d).slice(0, 8);
+
+  async function fetchBoard(){
+    const res = await fetch(API, { cache: 'no-store' });
     if (!res.ok) throw new Error('http ' + res.status);
     const data = await res.json();
-    // 순위 응답만 받아들인다 (구버전 워커는 아무 경로에나 댓글 목록을 돌려준다)
-    if (!Array.isArray(data) || data.length !== sane(data).length) throw new Error('bad payload');
-    return sane(data);
+    if (!Array.isArray(data)) throw new Error('bad payload');
+    // 순위 형식이 아닌 항목(사람이 남긴 댓글 등)은 조용히 무시한다
+    return top8(data.map(c => decode(c && c.name)).filter(Boolean));
   }
   async function loadRank(){
     if (busy) return;
@@ -249,7 +259,7 @@
     // 서버 응답 전에는 로컬 사본을 먼저 보여준다
     if (!ranking.length){ ranking = readLocal(); renderRank(); }
     try {
-      ranking = await callApi({ cache: 'no-store' });
+      ranking = await fetchBoard();
       writeLocal();
       note('');
     } catch (e) {
@@ -270,16 +280,18 @@
     saveRow.style.display = 'none';
 
     // 낙관적 반영: 서버 응답을 기다리지 않고 먼저 보여준다
-    ranking = ranking.concat([entry]).sort((a, b) => b.s - a.s || b.d - a.d).slice(0, 8);
+    ranking = top8(ranking.concat([entry]));
     writeLocal();
     renderRank(ranking.indexOf(entry));
 
     try {
-      ranking = await callApi({
+      const res = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry),
+        body: JSON.stringify({ name: encode(entry), message: `별 ${entry.s} · ${entry.d}m` }),
       });
+      if (!res.ok) throw new Error('http ' + res.status);
+      ranking = await fetchBoard();
       writeLocal();
       note('');
       renderRank(ranking.findIndex(r => r.n === entry.n && r.s === entry.s && r.d === entry.d));

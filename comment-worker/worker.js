@@ -31,48 +31,6 @@ export default {
     const key = `comments:${page}`;
     const json = (h) => ({ 'Content-Type': 'application/json', ...CORS_HEADERS, ...h });
 
-    // 게임 순위 (누구나 조회/등록, 게임별로 분리)
-    if (url.pathname === '/rank') {
-      const game = (url.searchParams.get('game') || '').slice(0, 40);
-      if (!/^[a-z0-9-]+$/.test(game)) {
-        return new Response(JSON.stringify({ error: 'game이 필요합니다' }), { status: 400, headers: json() });
-      }
-      const rankKey = `rank:${game}`;
-
-      if (request.method === 'GET') {
-        const board = (await env.COMMENTS.get(rankKey, 'json')) || [];
-        return new Response(JSON.stringify(board), { headers: json() });
-      }
-
-      if (request.method === 'POST') {
-        const body = await request.json().catch(() => null);
-        const num = (v) => (Number.isFinite(+v) ? Math.max(0, Math.min(99999, Math.floor(+v))) : null);
-        const s = body && num(body.s), d = body && num(body.d);
-        if (s === null || d === null) {
-          return new Response(JSON.stringify({ error: '점수가 올바르지 않습니다' }), { status: 400, headers: json() });
-        }
-        const n = String((body.n || '').trim() || '이름없음').replace(/[<>&]/g, '').slice(0, 6);
-
-        const board = (await env.COMMENTS.get(rankKey, 'json')) || [];
-        board.push({ n, s, d, t: new Date().toISOString() });
-        board.sort((a, b) => b.s - a.s || b.d - a.d);
-        const top = board.slice(0, 8);
-        await env.COMMENTS.put(rankKey, JSON.stringify(top));
-        return new Response(JSON.stringify(top), { headers: json() });
-      }
-
-      // 순위 삭제 (관리자만)
-      if (request.method === 'DELETE') {
-        if (!isAdmin(request, env)) {
-          return new Response(JSON.stringify({ error: '권한 없음' }), { status: 403, headers: json() });
-        }
-        await env.COMMENTS.put(rankKey, JSON.stringify([]));
-        return new Response(JSON.stringify({ ok: true }), { headers: json() });
-      }
-
-      return new Response('Not Found', { status: 404, headers: CORS_HEADERS });
-    }
-
     // 로그 조회 (관리자만)
     if (request.method === 'GET' && url.pathname === '/logs') {
       if (!isAdmin(request, env)) {
