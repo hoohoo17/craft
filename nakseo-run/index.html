@@ -44,7 +44,17 @@
   .book{display:flex;align-items:stretch}
   .stage{position:relative;flex:1 1 auto;min-width:0;aspect-ratio:9/5;touch-action:none}
   .rank{flex:0 0 178px;border-left:1px dashed var(--ink);padding:14px 12px 10px;display:flex;flex-direction:column}
-  .rank h2{font-size:20px;font-weight:700;color:var(--red);margin-bottom:8px;letter-spacing:.04em}
+  .rank h2{font-size:20px;font-weight:700;color:var(--red);margin-bottom:8px;letter-spacing:.04em;
+    display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .rank h2 button{font-family:inherit;font-size:18px;line-height:1;color:var(--pen);background:transparent;
+    border:0;padding:2px 6px;cursor:pointer;border-radius:3px}
+  .rank h2 button:hover{color:var(--red)}
+  .rank h2 button:active{transform:translateY(1px)}
+  .rank h2 button.spin{animation:spin .6s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.rank h2 button.spin{animation:none;opacity:.5}}
+  .rank-note{margin-top:8px;font-size:14px;color:var(--pencil);min-height:1.2em}
+  .rank-note.warn{color:var(--red)}
   .rank ol{list-style:none;font-size:18px;color:var(--pen);line-height:1.55}
   .rank li{display:flex;gap:6px;align-items:baseline;border-bottom:1px dotted var(--grid-strong);padding:2px 0}
   .rank li .no{width:16px;color:var(--pencil);font-size:15px}
@@ -112,8 +122,9 @@
   </div>
 
   <aside class="rank">
-    <h2>별 순위</h2>
+    <h2>별 순위 <button id="refreshBtn" title="순위 새로고침" aria-label="순위 새로고침">↻</button></h2>
     <ol id="rankList"><li class="empty">아직 기록 없음</li></ol>
+    <div class="rank-note" id="rankNote"></div>
     <div class="save" id="saveRow" style="display:none">
       <input id="nameInput" maxlength="6" placeholder="이름" autocomplete="off">
       <button id="saveBtn">등록</button>
@@ -190,44 +201,94 @@
 
   /* ---------- 별 순위 ---------- */
   const RKEY = 'nakseorun:ranking';
+  const API = 'https://craft-comments.jaehoo.workers.dev/rank?game=nakseo-run';
   const rankList = document.getElementById('rankList');
+  const rankNote = document.getElementById('rankNote');
+  const refreshBtn = document.getElementById('refreshBtn');
   const saveRow = document.getElementById('saveRow');
   const nameInput = document.getElementById('nameInput');
   const saveBtn = document.getElementById('saveBtn');
-  let ranking = [], lastRun = null, lastName = '';
+  let ranking = [], lastRun = null, lastName = '', busy = false;
 
   function renderRank(freshIdx = -1){
     if (!ranking.length){ rankList.innerHTML = '<li class="empty">아직 기록 없음</li>'; return; }
     rankList.innerHTML = ranking.map((r, i) =>
       `<li class="${i === freshIdx ? 'fresh' : ''}"><span class="no">${i + 1}</span>` +
-      `<span class="nm">${r.n.replace(/[<>&]/g, '')}</span>` +
+      `<span class="nm">${String(r.n).replace(/[<>&]/g, '')}</span>` +
       `<span class="st">★${r.s}</span><span class="dm">${r.d}m</span></li>`).join('');
   }
+  function note(msg, warn){
+    rankNote.textContent = msg || '';
+    rankNote.classList.toggle('warn', !!warn);
+  }
+  // 로컬 사본: 서버가 안 될 때를 위한 폴백
+  function sane(list){
+    return Array.isArray(list)
+      ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.s) && Number.isFinite(+r.d))
+            .map(r => ({ n: r.n, s: +r.s, d: +r.d })).slice(0, 8)
+      : [];
+  }
+  function readLocal(){
+    try { return sane(JSON.parse(localStorage.getItem(RKEY))); } catch (e) { return []; }
+  }
+  function writeLocal(){
+    try { localStorage.setItem(RKEY, JSON.stringify(ranking)); } catch (e) {}
+  }
+  async function callApi(opts){
+    const res = await fetch(API, opts);
+    if (!res.ok) throw new Error('http ' + res.status);
+    const data = await res.json();
+    // 순위 응답만 받아들인다 (구버전 워커는 아무 경로에나 댓글 목록을 돌려준다)
+    if (!Array.isArray(data) || data.length !== sane(data).length) throw new Error('bad payload');
+    return sane(data);
+  }
   async function loadRank(){
+    if (busy) return;
+    busy = true;
+    refreshBtn.classList.add('spin');
+    // 서버 응답 전에는 로컬 사본을 먼저 보여준다
+    if (!ranking.length){ ranking = readLocal(); renderRank(); }
     try {
-      if (window.storage){
-        const r = await window.storage.get(RKEY, false);
-        if (r && r.value) ranking = JSON.parse(r.value) || [];
-      }
-    } catch (e) { ranking = []; }
+      ranking = await callApi({ cache: 'no-store' });
+      writeLocal();
+      note('');
+    } catch (e) {
+      ranking = readLocal();
+      note('오프라인 · 이 기기 기록만 표시', true);
+    }
     renderRank();
+    busy = false;
+    refreshBtn.classList.remove('spin');
   }
-  async function persistRank(){
-    try { if (window.storage) await window.storage.set(RKEY, JSON.stringify(ranking), false); } catch (e) {}
-  }
-  function submitScore(){
-    if (!lastRun) return;
+  async function submitScore(){
+    if (!lastRun || busy) return;
+    busy = true;
     const n = (nameInput.value || '').trim().slice(0, 6) || '이름없음';
     lastName = n;
     const entry = { n, s: lastRun.s, d: lastRun.d };
-    ranking.push(entry);
-    ranking.sort((a, b) => b.s - a.s || b.d - a.d);
-    ranking = ranking.slice(0, 8);
-    persistRank();
-    renderRank(ranking.indexOf(entry));
-    saveRow.style.display = 'none';
     lastRun = null;
+    saveRow.style.display = 'none';
+
+    // 낙관적 반영: 서버 응답을 기다리지 않고 먼저 보여준다
+    ranking = ranking.concat([entry]).sort((a, b) => b.s - a.s || b.d - a.d).slice(0, 8);
+    writeLocal();
+    renderRank(ranking.indexOf(entry));
+
+    try {
+      ranking = await callApi({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+      });
+      writeLocal();
+      note('');
+      renderRank(ranking.findIndex(r => r.n === entry.n && r.s === entry.s && r.d === entry.d));
+    } catch (e) {
+      note('저장 실패 · 이 기기에만 기록됨', true);
+    }
+    busy = false;
   }
+  refreshBtn.addEventListener('click', e => { e.stopPropagation(); loadRank(); });
   saveBtn.addEventListener('click', e => { e.stopPropagation(); submitScore(); });
   saveRow.addEventListener('pointerdown', e => e.stopPropagation());
   nameInput.addEventListener('keydown', e => {
@@ -297,7 +358,8 @@
   }
   stage.addEventListener('pointerdown', e => { e.preventDefault(); press(); });
   addEventListener('keydown', e => {
-    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'BUTTON')) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter'){ e.preventDefault(); press(); }
   });
 
