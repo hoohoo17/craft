@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>행성 합치기</title>
+<style>
+  html,body{height:100%;margin:0;background:#0A0B1E}
+  body{display:flex}
+  .pl{flex:1}
+</style>
+<style>
+  .pl{--void:#0A0B1E;--deep:#141336;--edge:#2A2A5C;--cream:#EDE9F5;--gold:#FFC978;--rose:#FF6B9D;--dim:#8B88B8;
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    background:radial-gradient(120% 80% at 50% 0%,#1E1A4A 0%,var(--void) 62%);
+    color:var(--cream);min-height:100%;box-sizing:border-box;padding:16px 12px 24px;
+    display:flex;flex-direction:column;align-items:center;gap:12px}
+  .pl *{box-sizing:border-box}
+  .mono{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+  .bar{width:min(94vw,400px);display:flex;align-items:flex-end;gap:14px}
+  .stat{display:flex;flex-direction:column;gap:2px}
+  .stat b{font-size:26px;font-weight:900;letter-spacing:.02em;line-height:1;color:var(--gold)}
+  .stat span{font-size:10px;letter-spacing:.22em;color:var(--dim)}
+  .stat.sm b{font-size:16px;color:var(--cream)}
+  .next{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .next span{font-size:10px;letter-spacing:.22em;color:var(--dim)}
+  .well{position:relative;width:min(94vw,400px)}
+  canvas{display:block;width:100%;border-radius:0 0 18px 18px;border:2px solid var(--edge);border-top:none;
+    background:linear-gradient(180deg,rgba(20,19,54,.2),rgba(10,11,30,.75));touch-action:none;cursor:crosshair}
+  .ladder{width:min(94vw,400px);display:flex;align-items:center;gap:0;flex-wrap:nowrap;justify-content:space-between}
+  .rung{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0}
+  .dot{border-radius:50%}
+  .rung small{font-size:8px;color:var(--dim);white-space:nowrap;transform:scale(.92)}
+  .over{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    background:rgba(10,11,30,.88);border-radius:0 0 18px 18px}
+  .over h2{font-size:28px;font-weight:900;margin:0;letter-spacing:.04em}
+  .over p{margin:0;font-size:13px;color:var(--dim)}
+  .btn{border:2px solid var(--gold);background:var(--gold);color:#141336;border-radius:11px;padding:12px 22px;
+    font-size:15px;font-family:inherit;font-weight:800;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:3px solid var(--rose);outline-offset:3px}
+  .hint{font-size:12px;color:var(--dim);margin:0;text-align:center}
+</style>
+
+</head>
+<body>
+<div class="pl">
+  <div class="bar">
+    <div class="stat"><b id="score" class="mono">0</b><span>점수</span></div>
+    <div class="stat sm"><b id="best" class="mono">0</b><span>최고 점수</span></div>
+    <div class="stat sm"><b id="tier">먼지</b><span>최고 단계</span></div>
+    <div class="next"><span>다음</span><canvas id="prev" width="120" height="120" style="width:44px;height:44px;border:none;background:none;border-radius:50%"></canvas></div>
+  </div>
+  <div class="well"><canvas id="c"></canvas><div id="over"></div></div>
+  <div class="ladder" id="ladder"></div>
+  <p class="hint">좌우로 움직여 놓을 자리를 정하고, 눌러서 떨어뜨리세요</p>
+</div>
+
+<script>
+window.addEventListener('error', e => {
+  const h = document.querySelector('.hint');
+  if(h){ h.style.color = '#FF6B9D'; h.textContent = '에러: ' + (e.message || e) + ' @' + (e.lineno || '?'); }
+});
+window.addEventListener('unhandledrejection', e => {
+  const h = document.querySelector('.hint');
+  if(h){ h.style.color = '#FF6B9D'; h.textContent = '에러(비동기): ' + (e.reason && e.reason.message || e.reason); }
+});
+(function(){
+const TIERS = [
+  {n:'먼지',   f:0.033, c:'#C9C3B8', c2:'#8E897F'},
+  {n:'소행성', f:0.043, c:'#9C8E7E', c2:'#5E5449'},
+  {n:'달',     f:0.056, c:'#DCD8C9', c2:'#9A9687'},
+  {n:'화성',   f:0.070, c:'#D2603A', c2:'#7E3319'},
+  {n:'금성',   f:0.086, c:'#E7B274', c2:'#A06B33'},
+  {n:'지구',   f:0.104, c:'#4B92BE', c2:'#22557A'},
+  {n:'해왕성', f:0.124, c:'#4A6BC4', c2:'#22357A', ring:'neptune'},
+  {n:'천왕성', f:0.147, c:'#8FDCE8', c2:'#3E8FA4', ring:'uranus'},
+  {n:'토성',   f:0.172, c:'#E6C489', c2:'#9E7B3C', ring:'saturn'},
+  {n:'목성',   f:0.200, c:'#CE8F5C', c2:'#7E4C28'},
+  {n:'태양',   f:0.232, c:'#FFD861', c2:'#FF7E22', glow:true}
+];
+const SUN = TIERS.length - 1;
+const DROPPABLE = 5, G = 0.62, DAMP = 0.995, REST = 0.12, ITER = 7;
+let R = [], LINE = 85;
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const pv = document.getElementById('prev'), pctx = pv.getContext('2d');
+const elScore = document.getElementById('score'), elBest = document.getElementById('best');
+const elOver = document.getElementById('over');
+const elTier = document.getElementById('tier');
+let W = 400, H = 540, DPR = 1;
+
+function fit(){
+  const wrap = cv.parentElement;
+  W = wrap.clientWidth || 400;
+  H = Math.round(Math.min(W * 1.25, (window.innerHeight || 760) * 0.64));
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  R = TIERS.map(tt => tt.f * W);
+  LINE = Math.round(H * 0.17);
+  for(const b of bodies) b.r = R[b.t];
+}
+
+let bodies = [], sparks = [], score = 0, best = 0, aimX = 200, nextT = 0, holdT = 0;
+let cooling = 0, dead = false, uid = 0, bestTier = 0, shake = 0, flash = 0;
+
+const rnd = () => Math.floor(Math.random() * DROPPABLE);
+
+function reset(){
+  bodies = []; sparks = []; score = 0; dead = false; cooling = 0; shake = 0; flash = 0;
+  holdT = rnd(); nextT = rnd();
+  aimX = W / 2;
+  elScore.textContent = '0';
+  elOver.innerHTML = '';
+  drawPreview();
+}
+
+function drop(){
+  if(dead || cooling > 0) return;
+  const t = holdT, r = R[t];
+  const x = Math.max(r + 3, Math.min(W - r - 3, aimX));
+  bodies.push({id:++uid, t, x, y: LINE - 30, vx:0, vy:0, r, rest:0, born:performance.now()});
+  holdT = nextT; nextT = rnd();
+  cooling = 22;
+  drawPreview();
+}
+
+function merge(a, b){
+  const t = a.t + 1;
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  bodies = bodies.filter(o => o !== a && o !== b);
+  let col;
+  if(a.t === SUN){
+    score += 800; col = '#FFE9A8'; shake = 30; flash = 1;
+    for(let i = 0; i < 34; i++){
+      const ang = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 6;
+      sparks.push({x:mx, y:my, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, life:1, c:'#FFD861'});
+    }
+    sparks.push({ring:1, x:mx, y:my, r:R[SUN], life:1, c:'#FFE9A8'});
+    sparks.push({ring:1, x:mx, y:my, r:R[SUN]*1.4, life:1, c:'#FF9A3C'});
+  } else {
+    score += (t + 1) * 12;
+    bodies.push({id:++uid, t, x:mx, y:my, vx:(a.vx+b.vx)/2, vy:(a.vy+b.vy)/2 - 1.2,
+                 r:R[t], rest:0, born:performance.now(), pop:1});
+    col = TIERS[t].c;
+    for(let i = 0; i < 16; i++){
+      const ang = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 3.5;
+      sparks.push({x:mx, y:my, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, life:1, c:col});
+    }
+    sparks.push({ring:1, x:mx, y:my, r:R[t], life:1, c:col});
+    if(t > bestTier) markTier(t);
+  }
+  elScore.textContent = score;
+}
+
+function markTier(t){
+  bestTier = t;
+  elTier.textContent = TIERS[t].n;
+  try{ localStorage.setItem('planets:tier', String(t)); }catch(e){}
+}
+
+function step(){
+  if(cooling > 0) cooling--;
+
+  for(const b of bodies){
+    b.vy += G;
+    b.vx *= DAMP; b.vy *= DAMP;
+    b.x += b.vx; b.y += b.vy;
+    if(b.pop) b.pop = Math.max(0, b.pop - 0.08);
+  }
+
+  for(let k = 0; k < ITER; k++){
+    for(const b of bodies){
+      if(b.x - b.r < 0){ b.x = b.r; b.vx = Math.abs(b.vx) * REST; }
+      if(b.x + b.r > W){ b.x = W - b.r; b.vx = -Math.abs(b.vx) * REST; }
+      if(b.y + b.r > H){ b.y = H - b.r; b.vy = -Math.abs(b.vy) * REST; b.vx *= 0.86; }
+      if(b.y - b.r < 0){ b.y = b.r; if(b.vy < 0) b.vy = 0; }
+    }
+    for(let i = 0; i < bodies.length; i++){
+      for(let j = i + 1; j < bodies.length; j++){
+        const a = bodies[i], b = bodies[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d2 = dx*dx + dy*dy;
+        const rr = a.r + b.r;
+        if(d2 >= rr*rr || d2 === 0) continue;
+        let d = Math.sqrt(d2);
+        if(d < 0.0001){ dx = 0.01; dy = 0.01; d = 0.0142; }
+        if(a.t === b.t && k === 0){ merge(a, b); return; }
+        const nx = dx/d, ny = dy/d;
+        const push = (rr - d) * 0.5;
+        const ma = b.r*b.r, mb = a.r*a.r, sum = ma + mb;
+        a.x -= nx * push * (ma/sum) * 1.02; a.y -= ny * push * (ma/sum) * 1.02;
+        b.x += nx * push * (mb/sum) * 1.02; b.y += ny * push * (mb/sum) * 1.02;
+        const rel = (b.vx - a.vx)*nx + (b.vy - a.vy)*ny;
+        if(rel < 0){
+          const imp = -(1 + REST) * rel * 0.5;
+          a.vx -= nx*imp; a.vy -= ny*imp;
+          b.vx += nx*imp; b.vy += ny*imp;
+        }
+      }
+    }
+  }
+
+  const now = performance.now();
+  for(const b of bodies){
+    if(b.y - b.r < LINE && now - b.born > 1000) b.rest++;
+    else b.rest = 0;
+    if(b.rest > 85 && !dead){ gameOver(); break; }
+  }
+
+  for(const s of sparks){
+    if(s.ring){ s.life -= 0.045; }
+    else { s.x += s.vx; s.y += s.vy; s.vy += 0.18; s.vx *= 0.96; s.life -= 0.035; }
+  }
+  sparks = sparks.filter(s => s.life > 0);
+  if(shake > 0) shake--;
+  if(flash > 0) flash = Math.max(0, flash - 0.055);
+}
+
+const RINGS = {
+  saturn: { tilt:-0.30,
+    a:{rx:1.58, ry:0.42, w:0.17, front:'rgba(243,222,171,.97)', back:'rgba(176,150,101,.85)'},
+    b:{rx:1.86, ry:0.50, w:0.05, front:'rgba(255,244,214,.75)', back:'rgba(200,175,125,.6)'} },
+  neptune: { tilt:-0.22,
+    a:{rx:1.42, ry:0.30, w:0.028, front:'rgba(150,180,255,.5)',  back:'rgba(80,110,200,.35)'},
+    b:{rx:1.62, ry:0.34, w:0.014, front:'rgba(190,210,255,.34)', back:'rgba(80,110,200,.24)'} },
+  uranus: { tilt:-1.47,
+    a:{rx:1.38, ry:0.16, w:0.055, front:'rgba(222,248,255,.92)', back:'rgba(112,168,190,.6)'},
+    b:{rx:1.56, ry:0.18, w:0.025, front:'rgba(240,253,255,.65)', back:'rgba(112,168,190,.42)'} }
+};
+
+function ringPass(g, x, y, r, front, kind){
+  const cfg = RINGS[kind];
+  if(!cfg) return;
+  const a0 = front ? 0 : Math.PI, a1 = front ? Math.PI : Math.PI * 2;
+  g.save();
+  g.translate(x, y); g.rotate(cfg.tilt);
+  for(const band of [cfg.a, cfg.b]){
+    g.lineWidth = Math.max(0.6, r * band.w);
+    g.strokeStyle = front ? band.front : band.back;
+    g.beginPath(); g.ellipse(0, 0, r * band.rx, r * band.ry, 0, a0, a1); g.stroke();
+  }
+  g.restore();
+}
+
+function planet(g, x, y, r, t, alpha){
+  const T = TIERS[t];
+  g.save();
+  if(alpha !== undefined) g.globalAlpha = alpha;
+  if(T.glow){
+    const glow = g.createRadialGradient(x, y, r * 0.6, x, y, r * 1.6);
+    glow.addColorStop(0, 'rgba(255,180,60,.45)'); glow.addColorStop(1, 'rgba(255,140,40,0)');
+    g.fillStyle = glow; g.beginPath(); g.arc(x, y, r * 1.6, 0, 7); g.fill();
+  }
+  if(T.ring) ringPass(g, x, y, r, false, T.ring);
+  const grd = g.createRadialGradient(x - r * 0.34, y - r * 0.36, r * 0.1, x, y, r);
+  grd.addColorStop(0, T.c); grd.addColorStop(1, T.c2);
+  g.fillStyle = grd;
+  g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.16)'; g.lineWidth = 1.5;
+  g.beginPath(); g.arc(x, y, r - 0.7, 0, 7); g.stroke();
+  if(T.ring) ringPass(g, x, y, r, true, T.ring);
+  g.restore();
+}
+
+function draw(){
+  ctx.clearRect(0, 0, W, H);
+  const quake = shake > 0;
+  if(quake){
+    const amp = (shake / 30) * 7;
+    ctx.save();
+    ctx.translate((Math.random() - .5) * amp, (Math.random() - .5) * amp);
+  }
+  ctx.save();
+  ctx.setLineDash([5, 7]);
+  ctx.strokeStyle = dead ? 'rgba(255,107,157,.8)' : 'rgba(139,136,184,.42)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, LINE); ctx.lineTo(W, LINE); ctx.stroke();
+  ctx.restore();
+
+  if(!dead){
+    const r = R[holdT];
+    const x = Math.max(r + 3, Math.min(W - r - 3, aimX));
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,201,120,.28)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 6]);
+    ctx.beginPath(); ctx.moveTo(x, LINE - 30 + r); ctx.lineTo(x, H); ctx.stroke();
+    ctx.restore();
+    planet(ctx, x, LINE - 30, r, holdT, cooling > 0 ? 0.35 : 1);
+  }
+
+  for(const b of bodies){
+    const sc = b.pop ? 1 + b.pop * 0.22 : 1;
+    planet(ctx, b.x, b.y, b.r * sc, b.t);
+  }
+
+  for(const s of sparks){
+    ctx.save();
+    if(s.ring){
+      ctx.globalAlpha = s.life * 0.55; ctx.strokeStyle = s.c; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r * (1 + (1 - s.life) * 1.4), 0, 7); ctx.stroke();
+    } else {
+      ctx.globalAlpha = s.life; ctx.fillStyle = s.c;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 2.6 * s.life, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  if(quake) ctx.restore();
+  if(flash > 0){
+    ctx.save();
+    ctx.globalAlpha = flash * 0.5;
+    ctx.fillStyle = '#FFE9A8';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+}
+
+function drawPreview(){
+  pctx.setTransform(1, 0, 0, 1, 0, 0);
+  pctx.clearRect(0, 0, 120, 120);
+  planet(pctx, 60, 62, Math.min(R[nextT] * 1.6, 44), nextT);
+}
+
+function gameOver(){
+  dead = true;
+  if(score > best){
+    best = score; elBest.textContent = best;
+    try{ localStorage.setItem('planets:best', String(best)); }catch(e){}
+  }
+  elOver.className = 'over';
+  elOver.innerHTML = `<h2>꽉 찼습니다</h2><p class="mono">${score}점 · 최고 ${best}점</p>
+                      <button class="btn" id="rs">다시 시작</button>`;
+  document.getElementById('rs').addEventListener('click', () => { elOver.className = ''; reset(); });
+}
+
+function ladder(){
+  const el = document.getElementById('ladder');
+  el.innerHTML = TIERS.map((t, i) => {
+    const d = 7 + i * 2.2;
+    return `<div class="rung"><span class="dot" style="width:${d}px;height:${d}px;background:${t.c}"></span><small>${t.n}</small></div>`;
+  }).join('');
+}
+
+function aim(e){
+  const rect = cv.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  aimX = Math.max(0, Math.min(W, cx));
+}
+cv.addEventListener('pointermove', aim);
+cv.addEventListener('pointerdown', e => { aim(e); });
+cv.addEventListener('pointerup', e => { aim(e); drop(); });
+window.addEventListener('keydown', e => {
+  if(e.key === 'ArrowLeft'){ aimX -= 16; e.preventDefault(); }
+  if(e.key === 'ArrowRight'){ aimX += 16; e.preventDefault(); }
+  if(e.key === ' ' || e.key === 'Enter'){ drop(); e.preventDefault(); }
+});
+window.addEventListener('resize', () => { const old = W; fit(); aimX *= W / old; });
+
+(async function boot(){
+  fit(); ladder(); reset();
+  try{ const v = localStorage.getItem('planets:best');
+       if(v){ best = +v || 0; elBest.textContent = best; } }catch(e){}
+  try{ const v = localStorage.getItem('planets:tier');
+       if(v){ bestTier = +v || 0; elTier.textContent = TIERS[bestTier].n; } }catch(e){}
+  (function frame(){ if(!dead) step(); draw(); requestAnimationFrame(frame); })();
+})();
+})();
+</script>
+</body>
+</html>
