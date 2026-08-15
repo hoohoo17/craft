@@ -55,12 +55,15 @@
   @media (prefers-reduced-motion:reduce){.rank h2 button.spin{animation:none;opacity:.5}}
   .rank-note{margin-top:8px;font-size:14px;color:var(--pencil);min-height:1.2em}
   .rank-note.warn{color:var(--red)}
-  .rank ol{list-style:none;font-size:18px;color:var(--pen);line-height:1.55}
+  .rank h2 .count{flex:1;font-size:14px;font-weight:400;color:var(--pencil);letter-spacing:0}
+  .rank ol{list-style:none;font-size:18px;color:var(--pen);line-height:1.55;
+    max-height:260px;overflow-y:auto;overscroll-behavior:contain}
   .rank li{display:flex;gap:6px;align-items:baseline;border-bottom:1px dotted var(--grid-strong);padding:2px 0}
   .rank li .no{width:16px;color:var(--pencil);font-size:15px}
-  .rank li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
-  .rank li .st{color:var(--red);font-weight:700}
-  .rank li .dm{font-size:14px;color:var(--pencil)}
+  /* 이름은 6자까지 들어간다. 자리가 모자라면 이름 대신 거리부터 줄인다. */
+  .rank li .nm{flex:1 1 auto;min-width:4.2em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+  .rank li .st{flex:0 0 auto;color:var(--red);font-weight:700}
+  .rank li .dm{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;color:var(--pencil)}
   .rank li.empty{color:var(--pencil);border:0}
   .rank li.fresh .nm{color:var(--red)}
   .save{display:flex;gap:6px;margin-top:12px}
@@ -74,8 +77,7 @@
   @media (max-width:620px){
     .book{flex-direction:column}
     .rank{flex:0 0 auto;border-left:0;border-top:1px dashed var(--ink)}
-    .rank ol{columns:2;column-gap:14px}
-    .rank li{break-inside:avoid}
+    .rank ol{max-height:200px}
   }
   canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 
@@ -122,7 +124,8 @@
   </div>
 
   <aside class="rank">
-    <h2>별 순위 <button id="refreshBtn" title="순위 새로고침" aria-label="순위 새로고침">↻</button></h2>
+    <h2>별 순위 <span class="count" id="rankCount"></span>
+      <button id="refreshBtn" title="순위 새로고침" aria-label="순위 새로고침">↻</button></h2>
     <ol id="rankList"><li class="empty">아직 기록 없음</li></ol>
     <div class="rank-note" id="rankNote"></div>
     <div class="save" id="saveRow" style="display:none">
@@ -206,6 +209,7 @@
   const API = 'https://craft-comments.jaehoo.workers.dev?page=rank-nakseo-run';
   const rankList = document.getElementById('rankList');
   const rankNote = document.getElementById('rankNote');
+  const rankCount = document.getElementById('rankCount');
   const refreshBtn = document.getElementById('refreshBtn');
   const saveRow = document.getElementById('saveRow');
   const nameInput = document.getElementById('nameInput');
@@ -213,6 +217,7 @@
   let ranking = [], lastRun = null, lastName = '', busy = false;
 
   function renderRank(freshIdx = -1){
+    rankCount.textContent = ranking.length ? `${ranking.length}명` : '';
     if (!ranking.length){ rankList.innerHTML = '<li class="empty">아직 기록 없음</li>'; return; }
     rankList.innerHTML = ranking.map((r, i) =>
       `<li class="${i === freshIdx ? 'fresh' : ''}"><span class="no">${i + 1}</span>` +
@@ -227,7 +232,7 @@
   function sane(list){
     return Array.isArray(list)
       ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.s) && Number.isFinite(+r.d))
-            .map(r => ({ n: r.n, s: +r.s, d: +r.d })).slice(0, 8)
+            .map(r => ({ n: r.n, s: +r.s, d: +r.d })).slice(0, 100)
       : [];
   }
   function readLocal(){
@@ -242,7 +247,8 @@
     const m = /^(.*)\|(\d+)\|(\d+)$/.exec(String(name || ''));
     return m && m[1] ? { n: m[1], s: +m[2], d: +m[3] } : null;
   }
-  const top8 = (list) => list.sort((a, b) => b.s - a.s || b.d - a.d).slice(0, 8);
+  // 지금까지 이 게임을 한 사람 전부를 보여준다(별 많은 순 → 멀리 간 순)
+  const sortRank = (list) => list.sort((a, b) => b.s - a.s || b.d - a.d).slice(0, 100);
 
   async function fetchBoard(){
     const res = await fetch(API, { cache: 'no-store' });
@@ -250,7 +256,7 @@
     const data = await res.json();
     if (!Array.isArray(data)) throw new Error('bad payload');
     // 순위 형식이 아닌 항목(사람이 남긴 댓글 등)은 조용히 무시한다
-    return top8(data.map(c => decode(c && c.name)).filter(Boolean));
+    return sortRank(data.map(c => decode(c && c.name)).filter(Boolean));
   }
   async function loadRank(){
     if (busy) return;
@@ -280,7 +286,7 @@
     saveRow.style.display = 'none';
 
     // 낙관적 반영: 서버 응답을 기다리지 않고 먼저 보여준다
-    ranking = top8(ranking.concat([entry]));
+    ranking = sortRank(ranking.concat([entry]));
     writeLocal();
     renderRank(ranking.indexOf(entry));
 
