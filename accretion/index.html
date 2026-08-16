@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>행성 만들기</title>
+<style>
+  :root{
+    --paper:#f4f6fd; --ink:#2a3154; --soft:#69719a; --line:#d3d9ef;
+    --rock:#8a7f74; --heat:#f0862c; --ice:#4bb8e8; --gas:#a98cf0; --life:#2fae6a; --accent:#3f6fd8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:linear-gradient(180deg,#f8f9fe 0%,#e2e8f7 100%);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px 12px 32px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{width:100%;max-width:960px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  h1{font-size:15px;font-weight:800;letter-spacing:.3em;color:var(--accent)}
+  .sub{font-size:11.5px;color:var(--soft);letter-spacing:.12em}
+
+  .bars{width:100%;max-width:960px;display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:10px}
+  @media(max-width:620px){.bars{grid-template-columns:repeat(2,1fr)}}
+  .bar{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 11px}
+  .bar .t{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;margin-bottom:6px}
+  .bar .t i{font-style:normal;font-weight:600;color:var(--soft);font-size:10.5px}
+  .track{height:7px;background:#e8ebf6;border-radius:99px;overflow:hidden}
+  .fill{height:100%;width:0;border-radius:99px;transition:width .1s linear}
+  #fMass{background:var(--rock)} #fTemp{background:linear-gradient(90deg,#4bb8e8,#f0b23c,#8a5320)}
+  #fGas{background:var(--gas)} #fWater{background:var(--ice)}
+  .bar.warn{border-color:#ecd9a6;background:#fffbf0}
+  .bar.ok{border-color:#a9dcc0;background:#f4fdf8}
+  .bar .note{font-size:10.3px;color:#7a6420;margin-top:5px;min-height:13px;line-height:1.25}
+
+  .stage{position:relative;width:100%;max-width:960px}
+  canvas{display:block;width:100%;height:auto;border-radius:16px;background:#f4f6fd;
+    border:1px solid var(--line);box-shadow:0 10px 30px rgba(70,85,150,.10);touch-action:none;cursor:none}
+
+  .intro{position:absolute;inset:0;border-radius:16px;background:rgba(244,246,253,.95);
+    display:flex;flex-direction:column;justify-content:center;padding:5% 7%;gap:11px;overflow:auto}
+  .intro.hide{display:none}
+  .intro h2{font-size:clamp(16px,2.5vw,24px)}
+  .intro ol{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .intro li{display:flex;gap:10px;font-size:clamp(11.5px,1.45vw,14px);line-height:1.45;color:#3b4368}
+  .intro li b{flex:none;width:10px;height:10px;border-radius:50%;margin-top:5px}
+  .intro em{font-style:normal;font-weight:700;color:var(--ink)}
+  .intro button{align-self:flex-start;margin-top:3px;background:var(--accent);color:#fff;border:0;
+    border-radius:10px;padding:10px 26px;font-size:14px;font-weight:700;cursor:pointer;
+    box-shadow:0 4px 14px rgba(63,111,216,.35)}
+  .tools{display:flex;gap:6px;margin-top:12px;width:100%;max-width:960px;justify-content:flex-end}
+  .tools button{font:600 12px/1 ui-monospace,Menlo,monospace;color:var(--ink);background:#fff;
+    border:1px solid var(--line);padding:8px 12px;border-radius:9px;cursor:pointer}
+  #freezeBtn{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  .result{position:absolute;inset:0;border-radius:16px;background:rgba(244,246,253,.96);
+    display:none;flex-direction:column;padding:4% 6%;gap:12px;overflow:auto}
+  .result.show{display:flex}
+  .result .big{display:flex;align-items:center;gap:16px}
+  .result .orb{flex:none;width:76px;height:76px;border-radius:50%;box-shadow:inset -10px -12px 22px rgba(0,0,0,.28)}
+  .result h2{font-size:clamp(19px,3vw,30px);line-height:1.15}
+  .result .desc{font-size:clamp(12px,1.5vw,14.5px);color:#3b4368;line-height:1.55;max-width:62ch}
+  .result .stats{display:flex;gap:16px;flex-wrap:wrap;font:600 11.5px ui-monospace,Menlo,monospace;color:var(--soft)}
+  .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px;margin-top:2px}
+  .dex div{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:6px 8px;
+    border:1px solid var(--line);border-radius:8px;background:#fff;color:#b6bdd6}
+  .dex div.got{color:var(--ink);font-weight:700}
+  .dex i{flex:none;width:11px;height:11px;border-radius:50%;background:#dfe4f2}
+  .dex div.got i{background:var(--c)}
+  .result .row{display:flex;gap:8px;margin-top:4px}
+  .result button{background:var(--accent);color:#fff;border:0;border-radius:10px;
+    padding:11px 24px;font-size:14px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>행성 만들기</h1>
+  <div class="sub">먼지에서 생명까지</div>
+</header>
+
+<div class="bars">
+  <div class="bar" id="bMass"><div class="t"><span>질량</span><i id="vMass">0</i></div>
+    <div class="track"><div class="fill" id="fMass"></div></div><div class="note" id="nMass"></div></div>
+  <div class="bar" id="bTemp"><div class="t"><span>온도</span><i id="vTemp">0</i></div>
+    <div class="track"><div class="fill" id="fTemp"></div></div><div class="note" id="nTemp"></div></div>
+  <div class="bar" id="bGas"><div class="t"><span>대기</span><i id="vGas">0%</i></div>
+    <div class="track"><div class="fill" id="fGas"></div></div><div class="note" id="nGas"></div></div>
+  <div class="bar" id="bWater"><div class="t"><span>바다</span><i id="vWater">0%</i></div>
+    <div class="track"><div class="fill" id="fWater"></div></div><div class="note" id="nWater"></div></div>
+</div>
+
+<div class="stage">
+  <canvas id="c" width="960" height="640"></canvas>
+  <div class="intro" id="intro">
+    <h2>먼지 덩어리를 생명 행성까지 키우는 게임</h2>
+    <ol>
+      <li><b style="background:#3f6fd8"></b><div><em>이동</em> — 화면을 누른 채 끌면 그쪽으로 간다. 커지면 화면이 저절로 줌아웃되고, 오른쪽 아래 지도로 위치를 볼 수 있다.</div></li>
+      <li><b style="background:#8a7f74"></b><div><em>갈색 암석</em>은 부딪히면 전부 흡수된다. 질량이 오른다.</div></li>
+      <li><b style="background:#f0862c"></b><div><em>온도</em> — 암석을 먹을 때마다, 그리고 한가운데 태양에 가까울수록 오른다. 바깥으로 나가면 식는다.</div></li>
+      <li><b style="background:#a98cf0"></b><div><em>보라 가스</em>는 대기. 질량이 작으면 중력이 약해 새어나가고, 80도가 넘으면 타 버린다.</div></li>
+      <li><b style="background:#4bb8e8"></b><div><em>파란 얼음</em>은 바다. 58도가 넘으면 끓고 대기가 얇아도 증발한다. 얼음·가스는 <em>파란 점선(설선) 바깥</em>에 많다.</div></li>
+      <li><b style="background:#2fae6a"></b><div><em>150초 뒤 원반이 흩어진다.</em> 그 순간의 질량·온도·대기·바다로 어떤 행성이 됐는지 결정된다. 결말은 아홉 가지 — 생명 행성은 그중 하나일 뿐이다.</div></li>
+    </ol>
+    <button id="startBtn">시작</button>
+  </div>
+  <div class="result" id="result">
+    <div class="big"><div class="orb" id="rOrb"></div>
+      <div><h2 id="rTitle"></h2><div class="stats" id="rStats"></div></div></div>
+    <div class="desc" id="rDesc"></div>
+    <div style="font:700 11px ui-monospace,Menlo,monospace;color:#69719a;letter-spacing:.1em;margin-top:4px">발견한 행성</div>
+    <div class="dex" id="rDex"></div>
+    <div class="row"><button id="againBtn">다시 만들기</button></div>
+  </div>
+</div>
+
+<div class="tools">
+  <button id="freezeBtn">지금 굳히기</button>
+  <button id="resetBtn">처음부터</button>
+</div>
+
+<script>
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const W=960,H=640, DT=1/60;
+// 태양은 원점. 벽 없음 — 원반 바깥으로 나가면 중력이 서서히 끌어당긴다.
+const SUN_REACH=1400, FROST=1250, DISK=2600;
+const MASS_GOAL=3800, HOLD_MASS=1400, START=45;
+const NBITS=52, TOTAL=150;
+const R=m=>Math.sqrt(m)*1.7;
+
+const ENDINGS={
+  life:{n:'생명 행성',c:'#2fae6a',s:['#7fd6a0','#1c7f52'],
+    d:'질량, 온도, 대기, 바다가 전부 맞아떨어졌다. 두꺼운 대기가 열을 붙잡고 바다가 그 열을 고르게 퍼뜨린다. 얕은 물가에서 무언가가 스스로 복제하기 시작했다.'},
+  ocean:{n:'해양 행성',c:'#2f7fd6',s:['#6ec3f0','#12507f'],
+    d:'육지가 남지 않을 만큼 물이 많다. 대기도 두껍고 바다도 깊지만 온도가 생명이 자리 잡을 범위를 벗어나 있다. 수심 몇 킬로미터 아래는 여전히 캄캄하다.'},
+  venus:{n:'온실 행성',c:'#d9a441',s:['#f0d089','#8a5320'],
+    d:'대기는 두껍게 붙잡았는데 너무 뜨거운 채로 굳었다. 두꺼운 대기가 열을 가둬 온도가 더 오르고, 물은 전부 증발해 다시는 내려오지 않는다. 금성이 이렇게 됐다.'},
+  mercury:{n:'헐벗은 암석',c:'#8a7f74',s:['#b8ab9e','#4d453c'],
+    d:'질량은 충분했지만 태양 가까이에서만 굴러다녀 대기를 거의 붙잡지 못했다. 낮과 밤의 온도 차가 수백 도씩 벌어지는 맨얼굴의 돌덩이다.'},
+  mars:{n:'메마른 소형 행성',c:'#b08060',s:['#d6a887','#6d4a35'],
+    d:'중력이 모자라 대기가 계속 우주로 새어나갔다. 한때 물이 흘렀을지도 모르지만 지금은 마른 협곡만 남았다. 화성이 이 경로를 걸었다.'},
+  ice:{n:'얼음 행성',c:'#7fd0e8',s:['#c5edf8','#3d8fad'],
+    d:'설선 바깥에서만 머물러 너무 차갑게 굳었다. 표면은 수 킬로미터 두께의 얼음이고, 그 아래 바다가 있다면 아무도 본 적이 없다.'},
+  gas:{n:'가스 행성',c:'#a98cf0',s:['#d3c2ff','#6b4bb8'],
+    d:'너무 무거워졌다. 강해진 중력이 주변의 가벼운 기체까지 통째로 끌어모아 단단한 표면이 사라졌다. 발을 디딜 땅이 없는 세계다.'},
+  barren:{n:'민둥 암석 행성',c:'#9a9282',s:['#c2b9a8','#5c5648'],
+    d:'덩치는 갖췄지만 그뿐이다. 대기도 바다도 없이 운석 자국만 남은 회색 표면. 우주에서 가장 흔한 결말이다.'},
+  rock:{n:'소행성',c:'#7d7568',s:['#a49b8d','#4a453c'],
+    d:'행성이라 부르기엔 너무 작다. 스스로 둥글어질 만큼의 중력도 못 모은 채 원반이 흩어졌다. 앞으로도 계속 이 모양으로 떠다닐 것이다.'}
+};
+const DEX=['life','ocean','venus','mercury','mars','ice','gas','barren','rock'];
+const found=new Set();
+
+function evaluate(){
+  const m=P.m,g=P.gas,w=P.water,t=P.temp;
+  if(m<650) return 'rock';
+  if(m>=MASS_GOAL*1.45 && g>=80) return 'gas';
+  if(m>=MASS_GOAL && g>=90 && w>=90 && t>=15 && t<=52) return 'life';
+  if(g>=65 && t>72 && w<45) return 'venus';
+  if(w>=70 && t<16) return 'ice';
+  if(w>=85 && g>=60) return 'ocean';
+  if(m<HOLD_MASS) return 'mars';
+  if(g<25) return 'mercury';
+  return 'barren';
+}
+
+let P,bits,parts,t0,shake,won,ptr,ptrOn,scale,cam,outside,tLeft,ending;
+
+function reset(){
+  P={x:-780,y:520,m:START,vx:0,vy:0,gas:0,water:0,temp:18,spin:0};
+  bits=[];parts=[];shake=0;won=false;outside=0;t0=performance.now();
+  tLeft=TOTAL; ending=null;
+  document.getElementById('result').classList.remove('show');
+  scale=targetScale(); cam={x:P.x,y:P.y};
+  for(let i=0;i<NBITS;i++) bits.push(spawn(true));
+  ptr={x:P.x,y:P.y};ptrOn=false;
+}
+const sunD=(x,y)=>Math.hypot(x,y);
+const targetScale=()=>Math.max(0.30, Math.min(1.30, 46/R(P.m)));
+const viewR=()=>Math.hypot(W,H)/2/scale;
+
+function spawn(anywhere){
+  let x,y,tries=0;
+  do{
+    const a=Math.random()*6.283;
+    const d = anywhere ? Math.random()*viewR()*1.3 : viewR()*(1.06+Math.random()*0.3);
+    x=P.x+Math.cos(a)*d; y=P.y+Math.sin(a)*d;
+  }while((sunD(x,y)>DISK || (anywhere&&Math.hypot(x-P.x,y-P.y)<R(P.m)+90)) && ++tries<50);
+
+  // 설선: 태양에서 멀수록 얼음·가스가 많다
+  const far=Math.min(1, sunD(x,y)/(FROST*1.6));
+  const vol=Math.random()<(0.18+far*0.68);
+  const type = vol ? (Math.random()<0.68?'ice':'gas') : 'rock';
+  const m = type==='rock' ? Math.max(6,Math.min(P.m*(0.05+Math.random()*0.55),16000)) : 14+Math.random()*24;
+  const a=Math.random()*6.283, sp=8+Math.random()*28;
+  return {x,y,m,type,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,rot:Math.random()*6.283,seed:Math.random()*99};
+}
+
+function update(){
+  if(won){ decay(); camera(); return; }
+  tLeft-=DT;
+  if(tLeft<=0){ tLeft=0; finish(); return; }
+  const pr=R(P.m);
+
+  if(ptrOn){
+    const dx=ptr.x-P.x, dy=ptr.y-P.y, d=Math.hypot(dx,dy);
+    if(d>4){ const acc=1150/(1+P.m/5200); P.vx+=dx/d*acc*DT; P.vy+=dy/d*acc*DT; }
+  }
+  // 원반 바깥 — 벽 대신 태양 중력이 부드럽게 끌어당긴다
+  const sd=sunD(P.x,P.y);
+  outside = Math.max(0, sd-DISK);
+  if(outside>0){
+    const a=Math.min(900, 120+outside*1.4);
+    P.vx-=P.x/sd*a*DT; P.vy-=P.y/sd*a*DT;
+  }
+  P.vx*=0.987; P.vy*=0.987;
+  P.x+=P.vx*DT; P.y+=P.vy*DT;
+  P.spin+=0.004+P.m/900000;
+
+  const solar=Math.max(0, 1-sd/SUN_REACH);
+  P.temp += (solar*30 - (4.5+P.temp*0.075))*DT;
+  P.temp = Math.max(0,Math.min(100,P.temp));
+
+  const pull=pr*6.2, cull=viewR()*1.75;
+  const want=Math.round(NBITS*(0.30+0.70*(tLeft/TOTAL)));
+  const rebirth=i=>{ if(bits.length>want) bits.splice(i,1); else bits[i]=spawn(false); };
+  for(let i=bits.length-1;i>=0;i--){
+    const b=bits[i], br=R(b.m);
+    const dx=P.x-b.x, dy=P.y-b.y, d=Math.hypot(dx,dy)||1;
+    if(d<pull){ const a=2400*(P.m/1400+0.4)/Math.max(d*d,900); b.vx+=dx/d*a*DT*60; b.vy+=dy/d*a*DT*60; }
+    b.x+=b.vx*DT; b.y+=b.vy*DT; b.rot+=0.01;
+    if(d>cull){ rebirth(i); continue; }
+
+    if(d<pr+br*0.75){
+      if(b.type==='gas'){
+        P.gas=Math.min(100,P.gas+4.2); P.m+=1.5; burst(b.x,b.y,'#a98cf0',7);
+      } else if(b.type==='ice'){
+        if(P.temp<58){ P.water=Math.min(100,P.water+4.8); burst(b.x,b.y,'#4bb8e8',7); }
+        else burst(b.x,b.y,'#f0b23c',9);
+        P.m+=2;
+      } else {
+        P.m+=b.m; P.temp=Math.min(100,P.temp+8+Math.min(34,b.m/P.m*46));
+        burst(b.x,b.y,'#8a7f74',9); shake=Math.min(9,2+br*0.22*scale);
+      }
+      rebirth(i);
+    }
+  }
+  decay(); camera();
+}
+function finish(){
+  if(won) return;
+  won=true; ending=evaluate(); found.add(ending);
+  const E=ENDINGS[ending];
+  burst(P.x,P.y,E.c,80); shake=12;
+  showResult(E);
+}
+function showResult(E){
+  const q=id=>document.getElementById(id);
+  q('rOrb').style.background=`radial-gradient(circle at 32% 28%, ${E.s[0]}, ${E.s[1]})`;
+  q('rTitle').textContent=E.n;
+  q('rDesc').textContent=E.d;
+  q('rStats').textContent=`질량 ${Math.round(P.m)}  ·  온도 ${Math.round(P.temp)}  ·  대기 ${Math.round(P.gas)}%  ·  바다 ${Math.round(P.water)}%`;
+  const dex=q('rDex'); dex.innerHTML='';
+  for(const k of DEX){
+    const e=ENDINGS[k], div=document.createElement('div');
+    div.style.setProperty('--c',e.c);
+    if(found.has(k)) div.className='got';
+    div.innerHTML=`<i></i><span>${found.has(k)?e.n:'???'}</span>`;
+    dex.appendChild(div);
+  }
+  q('result').classList.add('show');
+}
+function camera(){
+  scale += (targetScale()-scale)*0.05;
+  cam.x += (P.x-cam.x)*0.12; cam.y += (P.y-cam.y)*0.12;
+}
+function decay(){
+  if(P.m<HOLD_MASS) P.gas=Math.max(0,P.gas-6.5*DT);
+  if(P.temp>80)     P.gas=Math.max(0,P.gas-8*DT);
+  if(P.temp>58)     P.water=Math.max(0,P.water-11*DT);
+  else if(P.gas<45) P.water=Math.max(0,P.water-7*DT);
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i]; p.x+=p.vx*DT;p.y+=p.vy*DT;p.vx*=.96;p.vy*=.96;p.life-=DT;
+    if(p.life<=0) parts.splice(i,1);
+  }
+  if(shake>.4) shake*=.87;
+}
+function burst(x,y,col,n){
+  for(let i=0;i<n;i++){const a=Math.random()*6.283,s=50+Math.random()*220;
+    parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.35+Math.random()*.5,col});}
+}
+
+const craters=Array.from({length:14},()=>({a:Math.random()*6.283,d:.25+Math.random()*.62,s:.07+Math.random()*.11}));
+const conts=Array.from({length:7},()=>({a:Math.random()*6.283,d:.2+Math.random()*.55,s:.16+Math.random()*.2}));
+
+function stageName(){
+  if(won) return '생명 행성';
+  if(P.water>=100) return '해양 행성';
+  if(P.gas>=70) return '대기 행성';
+  if(P.m>=MASS_GOAL) return '암석 행성';
+  if(P.m>=HOLD_MASS) return '원시 행성';
+  if(P.m>=300) return '미행성';
+  return '먼지 덩어리';
+}
+function drawBit(b){
+  const r=R(b.m);
+  ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.rot);
+  if(b.type==='gas'){
+    const g=ctx.createRadialGradient(0,0,1,0,0,r*1.9);
+    g.addColorStop(0,'rgba(169,140,240,.72)'); g.addColorStop(1,'rgba(169,140,240,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r*1.9,0,7); ctx.fill();
+  }else if(b.type==='ice'){
+    ctx.fillStyle='#4bb8e8'; ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.5/scale;
+    ctx.beginPath();
+    for(let i=0;i<5;i++){const a=i/5*6.283,rr=r*(i%2?.7:1.15);
+      i?ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);}
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }else{
+    ctx.fillStyle='#8a7f74';
+    ctx.beginPath();
+    for(let i=0;i<7;i++){const a=i/7*6.283, rr=r*(0.82+((Math.sin(b.seed+i*2.3)+1)/2)*0.36);
+      i?ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);}
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.24)';
+    ctx.beginPath(); ctx.arc(-r*.3,-r*.3,r*.28,0,7); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawPlanet(){
+  const r=R(P.m);
+  ctx.save(); ctx.translate(P.x,P.y);
+  if(P.gas>2){
+    const th=r*(0.10+P.gas/100*0.30);
+    const g=ctx.createRadialGradient(0,0,r,0,0,r+th);
+    g.addColorStop(0,`rgba(150,190,255,${.28+P.gas/100*.35})`);
+    g.addColorStop(1,'rgba(150,190,255,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r+th,0,7); ctx.fill();
+  }
+  if(P.temp>55){
+    const g=ctx.createRadialGradient(0,0,r*.9,0,0,r*1.5);
+    g.addColorStop(0,`rgba(245,178,70,${(P.temp-55)/45*.5})`); g.addColorStop(1,'rgba(245,178,70,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r*1.5,0,7); ctx.fill();
+  }
+  ctx.strokeStyle='rgba(42,49,84,.10)'; ctx.lineWidth=1/scale; ctx.setLineDash([3/scale,7/scale]);
+  ctx.beginPath(); ctx.arc(0,0,r*6.2,0,7); ctx.stroke(); ctx.setLineDash([]);
+
+  ctx.rotate(P.spin);
+  const hot=Math.max(0,(P.temp-45)/55);
+  const surf=ctx.createRadialGradient(-r*.35,-r*.4,r*.1,0,0,r);
+  if(P.water>=60){ surf.addColorStop(0,'#4aa8e0'); surf.addColorStop(1,'#1c5f96'); }
+  else { surf.addColorStop(0,`rgb(${155+hot*78|0},${139+hot*32|0},${124-hot*52|0})`);
+         surf.addColorStop(1,`rgb(${84+hot*96|0},${74+hot*48|0},${65-hot*22|0})`); }
+  ctx.fillStyle=surf; ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.fill();
+
+  ctx.save(); ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.clip();
+  if(P.water<60){
+    ctx.fillStyle=hot>0.35?`rgba(255,196,90,${hot*.6})`:'rgba(60,50,42,.25)';
+    for(const c of craters){ ctx.beginPath(); ctx.arc(Math.cos(c.a)*r*c.d,Math.sin(c.a)*r*c.d,r*c.s,0,7); ctx.fill(); }
+  }else{
+    ctx.fillStyle=won?'#2fae6a':'#7d7256';
+    for(const c of conts){ ctx.beginPath(); ctx.ellipse(Math.cos(c.a)*r*c.d,Math.sin(c.a)*r*c.d,r*c.s,r*c.s*.72,c.a,0,7); ctx.fill(); }
+  }
+  if(P.gas>50){
+    ctx.fillStyle='rgba(255,255,255,.32)';
+    for(let i=0;i<3;i++){ ctx.beginPath();
+      ctx.ellipse(Math.cos(P.spin*2+i*2.1)*r*.4, -r*.5+i*r*.45, r*.55, r*.13,0,0,7); ctx.fill(); }
+  }
+  ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5/scale;
+  ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.stroke();
+  ctx.restore();
+}
+function minimap(){
+  const s=132, mx=W-s-16, my=H-s-16, cx=mx+s/2, cy=my+s/2, k=(s/2-7)/DISK;
+  ctx.fillStyle='rgba(255,255,255,.8)'; ctx.strokeStyle='rgba(42,49,84,.18)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(cx,cy,s/2-2,0,7); ctx.fill(); ctx.stroke();
+  const g=ctx.createRadialGradient(cx,cy,1,cx,cy,SUN_REACH*k);
+  g.addColorStop(0,'rgba(255,170,60,.7)'); g.addColorStop(1,'rgba(255,200,120,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,SUN_REACH*k,0,7); ctx.fill();
+  ctx.strokeStyle='rgba(75,184,232,.6)'; ctx.setLineDash([3,4]);
+  ctx.beginPath(); ctx.arc(cx,cy,FROST*k,0,7); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#f0862c'; ctx.beginPath(); ctx.arc(cx,cy,3.5,0,7); ctx.fill();
+  ctx.fillStyle='#2a3154';
+  ctx.beginPath(); ctx.arc(cx+P.x*k, cy+P.y*k, Math.max(3,R(P.m)*k), 0,7); ctx.fill();
+}
+function render(){
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
+  const bgs=ctx.createLinearGradient(0,H,W,0);
+  bgs.addColorStop(0,'#e9f0fb'); bgs.addColorStop(1,'#fdf1e2');
+  ctx.fillStyle=bgs; ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  if(shake>.4) ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+  ctx.translate(W/2,H/2); ctx.scale(scale,scale); ctx.translate(-cam.x,-cam.y);
+
+  // 원반
+  const disk=ctx.createRadialGradient(0,0,10,0,0,DISK);
+  disk.addColorStop(0,'rgba(255,178,70,.85)');
+  disk.addColorStop(.14,'rgba(255,196,120,.30)');
+  disk.addColorStop(.5,'rgba(210,220,245,.20)');
+  disk.addColorStop(1,'rgba(190,205,240,.05)');
+  ctx.fillStyle=disk; ctx.beginPath(); ctx.arc(0,0,DISK,0,7); ctx.fill();
+  ctx.fillStyle='#ffcf7a'; ctx.beginPath(); ctx.arc(0,0,64,0,7); ctx.fill();
+
+  ctx.strokeStyle='rgba(75,184,232,.5)'; ctx.lineWidth=2/scale; ctx.setLineDash([9/scale,11/scale]);
+  ctx.beginPath(); ctx.arc(0,0,FROST,0,7); ctx.stroke();
+  ctx.strokeStyle='rgba(42,49,84,.16)';
+  ctx.beginPath(); ctx.arc(0,0,DISK,0,7); ctx.stroke(); ctx.setLineDash([]);
+
+  for(const b of bits) drawBit(b);
+  drawPlanet();
+  for(const p of parts){ ctx.globalAlpha=Math.max(0,p.life*1.6); ctx.fillStyle=p.col;
+    ctx.fillRect(p.x-2/scale,p.y-2/scale,4/scale,4/scale); }
+  ctx.globalAlpha=1;
+  if(ptrOn){
+    ctx.strokeStyle='rgba(63,111,216,.5)'; ctx.lineWidth=1.5/scale;
+    ctx.beginPath(); ctx.arc(ptr.x,ptr.y,8/scale,0,7); ctx.stroke();
+    ctx.strokeStyle='rgba(63,111,216,.16)';
+    ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(ptr.x,ptr.y); ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.textAlign='left'; ctx.fillStyle='#3f6fd8'; ctx.font='800 13px ui-monospace,monospace';
+  ctx.fillText(stageName(), 22, 32);
+  ctx.fillStyle='#69719a'; ctx.font='400 12px -apple-system,sans-serif';
+  ctx.fillText(`배율 ${(scale*100).toFixed(0)}%`, 22, 52);
+
+  // 원반 수명
+  if(!won){
+    const bw=250, bx=W/2-bw/2, by=20, f=tLeft/TOTAL;
+    ctx.fillStyle='rgba(255,255,255,.72)'; ctx.strokeStyle='rgba(42,49,84,.16)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,20,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=f<0.22?'#c08a1e':'#8a93b8';
+    ctx.beginPath(); ctx.roundRect(bx+2,by+2,Math.max(0,(bw-4)*f),16,8); ctx.fill();
+    ctx.textAlign='center'; ctx.fillStyle='#2a3154'; ctx.font='700 11px ui-monospace,monospace';
+    ctx.fillText(`원반이 흩어지기까지 ${Math.ceil(tLeft)}초`, W/2, by+14);
+  }
+
+  if(outside>40 && !won){
+    ctx.textAlign='center'; ctx.fillStyle='#69719a'; ctx.font='700 13px -apple-system,sans-serif';
+    ctx.fillText('원반 바깥 — 물질이 없다. 태양 중력이 끌어당기는 중', W/2, 62);
+  }
+  minimap();
+
+  if(!ptrOn && !won){
+    ctx.textAlign='center'; ctx.fillStyle='#69719a'; ctx.font='600 13px -apple-system,sans-serif';
+    ctx.fillText('화면을 누른 채로 끌어서 이동', W/2, H-24);
+  }
+}
+
+const $=id=>document.getElementById(id);
+function setBar(box,fill,val,txt,pct,note,warn,ok){
+  $(fill).style.width=pct+'%'; $(val).textContent=txt; $(note).textContent=warn||'';
+  $(box).classList.toggle('warn',!!warn); $(box).classList.toggle('ok',!!ok);
+}
+function ui(){
+  setBar('bMass','fMass','vMass',Math.round(P.m),Math.min(100,P.m/MASS_GOAL*100),'nMass',
+    P.m<MASS_GOAL?`목표 ${MASS_GOAL}`:'', P.m>=MASS_GOAL);
+  setBar('bTemp','fTemp','vTemp',Math.round(P.temp),P.temp,'nTemp',
+    P.temp>80?'너무 뜨겁다 — 대기가 탄다':P.temp>58?'뜨겁다 — 물이 끓는다':'', P.temp<=58);
+  setBar('bGas','fGas','vGas',Math.round(P.gas)+'%',P.gas,'nGas',
+    (P.m<HOLD_MASS&&P.gas>0)?`중력 부족 — 질량 ${HOLD_MASS} 필요`:(P.temp>80&&P.gas>0?'열로 날아간다':''),
+    P.gas>=100);
+  setBar('bWater','fWater','vWater',Math.round(P.water)+'%',P.water,'nWater',
+    P.temp>58?'끓어서 증발한다':(P.gas<45&&P.water>0?'대기가 얇다':''), P.water>=100);
+}
+function loop(){ update(); render(); ui(); requestAnimationFrame(loop); }
+
+function pos(e){
+  const r=cv.getBoundingClientRect(), t=e.touches?e.touches[0]:e;
+  const sx=(t.clientX-r.left)*W/r.width, sy=(t.clientY-r.top)*H/r.height;
+  return { x:(sx-W/2)/scale+cam.x, y:(sy-H/2)/scale+cam.y };
+}
+function down(e){e.preventDefault();ptr=pos(e);ptrOn=true;}
+function move(e){if(ptrOn){e.preventDefault();ptr=pos(e);}}
+function up(){ptrOn=false;}
+cv.addEventListener('mousedown',down); cv.addEventListener('mousemove',move);
+window.addEventListener('mouseup',up);
+cv.addEventListener('touchstart',down,{passive:false});
+cv.addEventListener('touchmove',move,{passive:false});
+window.addEventListener('touchend',up);
+
+$('startBtn').onclick=()=>{$('intro').classList.add('hide');reset();};
+$('resetBtn').onclick=reset;
+$('againBtn').onclick=reset;
+$('freezeBtn').onclick=()=>{ if(!won) finish(); };
+reset(); loop();
+</script>
+</body>
+</html>
