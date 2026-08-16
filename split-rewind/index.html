@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>생각을 해야 할걸</title>
+<style>
+  :root{
+    --paper:#f3f5fc; --ink:#252b47; --soft:#6b7398; --line:#d3d9ee;
+    --wall:#39406a; --floor:#ffffff; --me:#3f6fd8; --split:#c58ae0;
+    --goal:#20b08c; --spike:#c0873a; --btn:#e0a83c; --door:#8a6a3c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:linear-gradient(180deg,#f9fafe,#e4e9f8);color:var(--ink);min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding:14px 12px 26px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{width:100%;max-width:760px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:9px}
+  h1{font-size:15px;font-weight:800;letter-spacing:.12em;color:var(--me)}
+  .sub{font-size:11.5px;color:var(--soft);letter-spacing:.12em}
+
+  .stage{position:relative;width:100%;max-width:760px}
+  canvas{display:block;width:100%;height:auto;border-radius:16px;background:#eef1fa;
+    border:1px solid var(--line);box-shadow:0 10px 28px rgba(70,85,150,.10);touch-action:none}
+
+  .intro{position:absolute;inset:0;border-radius:16px;background:rgba(243,245,252,.96);
+    display:flex;flex-direction:column;justify-content:center;padding:5% 7%;gap:11px;overflow:auto}
+  .intro.hide{display:none}
+  .intro h2{font-size:clamp(16px,2.6vw,23px)}
+  .intro ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .intro li{display:flex;gap:11px;font-size:clamp(11.5px,1.6vw,14px);line-height:1.5;color:#3a4166}
+  .intro li b{flex:none;width:15px;height:15px;border-radius:4px;margin-top:2px}
+  .intro em{font-style:normal;font-weight:700;color:var(--ink)}
+  .intro button{align-self:flex-start;margin-top:4px;background:var(--me);color:#fff;border:0;
+    border-radius:10px;padding:11px 26px;font-size:14px;font-weight:700;cursor:pointer}
+
+  .pad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
+    gap:7px;justify-content:center;margin-top:12px}
+  .pad button{background:#fff;border:1px solid var(--line);border-radius:11px;cursor:pointer;
+    font-size:19px;color:var(--ink);display:grid;place-items:center}
+  .pad button:active{background:#e6ebfa}
+  .pad .u{grid-area:1/2} .pad .l{grid-area:2/1} .pad .d{grid-area:2/2} .pad .r{grid-area:2/3}
+
+  .bar{width:100%;max-width:760px;display:flex;gap:7px;margin-top:11px;flex-wrap:wrap;align-items:center}
+  .bar button{font:700 12.5px/1 -apple-system,sans-serif;color:var(--ink);background:#fff;
+    border:1px solid var(--line);padding:10px 14px;border-radius:10px;cursor:pointer}
+  #undoBtn{background:var(--split);border-color:var(--split);color:#fff}
+  .spacer{flex:1}
+  .levels{display:flex;gap:5px;flex-wrap:wrap;width:100%;max-width:760px;margin-top:9px}
+  .levels button{font:700 11.5px/1 ui-monospace,Menlo,monospace;color:var(--soft);background:#fff;
+    border:1px solid var(--line);padding:7px 10px;border-radius:8px;cursor:pointer}
+  .levels button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .levels button.clear{color:var(--goal);border-color:#a6ddcc}
+  .levels button.clear.on{background:var(--goal);border-color:var(--goal);color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>생각을 해야 할걸</h1>
+  <div class="sub">되감기 · 분열</div>
+</header>
+
+<div class="stage">
+  <canvas id="c" width="760" height="470"></canvas>
+  <div class="intro" id="intro">
+    <h2>하나가 둘이 되고, 둘은 똑같이 움직인다</h2>
+    <ul>
+      <li><b style="background:#3f6fd8"></b><div><em>나</em> — 방향키나 화면 아래 버튼, 또는 화면을 밀어서 이동. 몸이 여럿이면 <em>전부 같은 방향으로 동시에</em> 움직인다.</div></li>
+      <li><b style="background:#c58ae0"></b><div><em>분열 타일</em> — 밟으면 몸이 둘로 갈라진다. 한 번 쓰면 사라진다. 벽에 막힌 몸은 제자리에 남으니, 벽을 이용해 둘을 떼어놓아라.</div></li>
+      <li><b style="background:#20b08c"></b><div><em>목표</em> — 모든 목표 위에 몸이 하나씩 올라가야 한다. <em>몸의 수와 목표의 수가 정확히 같아야</em> 열린다.</div></li>
+      <li><b style="background:#39406a"></b><div><em>합쳐짐</em> — 두 몸이 같은 칸에 겹치면 하나로 합쳐진다. 몸을 줄여야 하는 판도 있다.</div></li>
+      <li><b style="background:#c0873a"></b><div><em>가시</em>는 밟은 몸을 없앤다. <em>버튼</em>은 몸이 올라가 있는 동안만 <em>문</em>을 연다. 몸 하나를 버튼에 두고 나머지가 지나가야 할 때가 있다.</div></li>
+      <li><b style="background:#c58ae0"></b><div><em>되감기</em> — 몇 수든 되돌릴 수 있다. 죽어도 잃는 건 없으니 마음껏 시도해라.</div></li>
+    </ul>
+    <button id="startBtn">시작</button>
+  </div>
+</div>
+
+<div class="pad">
+  <button class="u" data-d="0">↑</button>
+  <button class="l" data-d="2">←</button>
+  <button class="d" data-d="1">↓</button>
+  <button class="r" data-d="3">→</button>
+</div>
+
+<div class="bar">
+  <button id="undoBtn">되감기</button>
+  <button id="resetBtn">이 판 처음부터</button>
+  <span class="spacer"></span>
+  <button id="helpBtn">규칙</button>
+</div>
+<div class="levels" id="levels"></div>
+
+<script>
+const LEVELS=[
+{n:'분열',par:6,rows:[
+"########",
+"#...S..#",
+"#..@#G.#",
+"#..G...#",
+"########"]},
+{n:'병합',par:8,rows:[
+"########",
+"##G#..@#",
+"##S#.###",
+"##.....#",
+"########"]},
+{n:'벽',par:14,rows:[
+"##########",
+"#@...S...#",
+"#.###.##.#",
+"#G..#...G#",
+"##########"]},
+{n:'가시',par:11,rows:[
+"##########",
+"#@..S...G#",
+"#.##X###.#",
+"#......G.#",
+"##########"]},
+{n:'우회',par:12,rows:[
+"##########",
+"#@..S....#",
+"#.##.##X##",
+"#G.....G.#",
+"##########"]},
+{n:'셋',par:14,rows:[
+"###########",
+"#@..S.S...#",
+"#.###.###.#",
+"#G..G...G.#",
+"###########"]},
+{n:'버튼',par:16,rows:[
+"##########",
+"#@..S..B.#",
+"#.######.#",
+"#..G.D..G#",
+"##########"]},
+{n:'미로',par:16,rows:[
+"###########",
+"#@...S....#",
+"#.###.###.#",
+"#...X...#.#",
+"#G#####..G#",
+"###########"]},
+];
+
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const CW=760, CH=470;
+const DIRS=[[0,-1],[0,1],[-1,0],[1,0]];
+const cleared=new Set();
+
+let L, grid, W, H, goals, clones, used, hist, li=0, cell, ox, oy;
+let anim=null, dead=false, cleared_=false, msg='', msgT=0;
+
+function load(n){
+  li=n; L=LEVELS[n];
+  H=L.rows.length; W=L.rows[0].length;
+  grid=[]; goals=[]; clones=[];
+  for(let y=0;y<H;y++){
+    const row=[];
+    for(let x=0;x<W;x++){
+      let c=L.rows[y][x]||'#';
+      if(c==='@'){ clones.push({x,y}); c='.'; }
+      if(c==='G') goals.push({x,y});
+      row.push(c);
+    }
+    grid.push(row);
+  }
+  used=new Set(); hist=[]; anim=null; dead=false; cleared_=false; msg=''; msgT=0;
+  cell=Math.min(Math.floor((CW-70)/W), Math.floor((CH-120)/H), 76);
+  ox=(CW-W*cell)/2; oy=76+(CH-76-24-H*cell)/2;
+  drawBar();
+}
+const at=(x,y)=> (x<0||y<0||x>=W||y>=H)?'#':grid[y][x];
+const snapshot=()=>({c:clones.map(p=>({x:p.x,y:p.y})), u:[...used]});
+const restore=s=>{ clones=s.c.map(p=>({x:p.x,y:p.y})); used=new Set(s.u); };
+
+function buttonOn(list){ return list.some(p=>at(p.x,p.y)==='B'); }
+
+function move(di){
+  if(anim||cleared_) return;
+  const [dx,dy]=DIRS[di];
+  const open=buttonOn(clones);
+  const pass=(x,y)=>{ const t=at(x,y); return t!=='#' && !(t==='D'&&!open); };
+
+  const from=clones.map(p=>({x:p.x,y:p.y}));
+  let next=[], moved=false;
+  for(const p of clones){
+    const nx=p.x+dx, ny=p.y+dy;
+    if(pass(nx,ny)){ next.push({x:nx,y:ny,m:true}); moved=true; }
+    else next.push({x:p.x,y:p.y,m:false});
+  }
+  if(!moved){ flash('막혔다'); return; }
+
+  hist.push(snapshot());
+
+  // 분열
+  const born=[];
+  for(const p of next){
+    if(!p.m) continue;
+    if(at(p.x,p.y)==='S' && !used.has(p.x+','+p.y)){
+      const sx=p.x+dx, sy=p.y+dy;
+      if(pass(sx,sy)){ born.push({x:sx,y:sy,m:true,new:true}); used.add(p.x+','+p.y); }
+    }
+  }
+  next=next.concat(born);
+
+  // 병합
+  const seen=new Set(), merged=[];
+  let didMerge=false;
+  for(const p of next){ const k=p.x+','+p.y;
+    if(seen.has(k)){ didMerge=true; continue; }
+    seen.add(k); merged.push(p); }
+  next=merged;
+
+  // 가시
+  const killed=[];
+  next=next.filter(p=>{ if(at(p.x,p.y)==='X'){ killed.push(p); return false; } return true; });
+
+  // 문 압사
+  const openAfter=buttonOn(next);
+  next=next.filter(p=>{ if(at(p.x,p.y)==='D'&&!openAfter){ killed.push(p); return false; } return true; });
+
+  anim={t:0, from, to:next.map(p=>({x:p.x,y:p.y})), born, killed, dir:di};
+  clones=next.map(p=>({x:p.x,y:p.y}));
+
+  if(born.length) flash('분열');
+  else if(didMerge) flash('합쳐짐');
+  else if(killed.length) flash('몸을 잃었다');
+
+  if(clones.length===0){ dead=true; flash('전부 사라졌다 — 되감기'); }
+  else if(win()){ cleared_=true; cleared.add(li); flash(''); drawBar(); }
+}
+function win(){
+  if(clones.length!==goals.length) return false;
+  return goals.every(g=>clones.some(c=>c.x===g.x&&c.y===g.y));
+}
+function undo(){
+  if(!hist.length||anim) return;
+  restore(hist.pop());
+  dead=false; cleared_=false; flash('되감기');
+}
+function flash(t){ msg=t; msgT=t?1.6:0; }
+
+/* 렌더 */
+function rr(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
+function draw(){
+  ctx.clearRect(0,0,CW,CH);
+  const bg=ctx.createLinearGradient(0,0,0,CH);
+  bg.addColorStop(0,'#f4f6fd'); bg.addColorStop(1,'#e8edfa');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,CW,CH);
+
+  const open=buttonOn(clones);
+
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const t=grid[y][x], px=ox+x*cell, py=oy+y*cell, p=2;
+    if(t==='#'){
+      ctx.fillStyle='#39406a'; rr(px+1,py+1,cell-2,cell-2,5); ctx.fill();
+      continue;
+    }
+    ctx.fillStyle='#ffffff'; rr(px+p,py+p,cell-p*2,cell-p*2,6); ctx.fill();
+    ctx.strokeStyle='rgba(57,64,106,.10)'; ctx.lineWidth=1; ctx.stroke();
+
+    const cx=px+cell/2, cy=py+cell/2, u=cell*0.5;
+    if(t==='S' && !used.has(x+','+y)){
+      ctx.strokeStyle='#c58ae0'; ctx.lineWidth=2.6; ctx.setLineDash([4,4]);
+      rr(px+5,py+5,cell-10,cell-10,7); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle='#c58ae0'; ctx.lineWidth=2.4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(cx,cy-u*.34); ctx.lineTo(cx,cy+u*.02);
+      ctx.moveTo(cx,cy+u*.02); ctx.lineTo(cx-u*.3,cy+u*.36);
+      ctx.moveTo(cx,cy+u*.02); ctx.lineTo(cx+u*.3,cy+u*.36); ctx.stroke(); ctx.lineCap='butt';
+    }
+    if(t==='G'){
+      ctx.strokeStyle='#20b08c'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(cx,cy,u*.56,0,7); ctx.stroke();
+      ctx.fillStyle='rgba(32,176,140,.14)'; ctx.fill();
+    }
+    if(t==='X'){
+      ctx.fillStyle='#c0873a';
+      for(let i=0;i<3;i++){ const bx=cx-u*.5+i*u*.5;
+        ctx.beginPath(); ctx.moveTo(bx,cy+u*.42); ctx.lineTo(bx+u*.25,cy-u*.4);
+        ctx.lineTo(bx+u*.5,cy+u*.42); ctx.closePath(); ctx.fill(); }
+    }
+    if(t==='B'){
+      ctx.fillStyle=open?'#e0a83c':'rgba(224,168,60,.35)';
+      ctx.beginPath(); ctx.arc(cx,cy,u*.5,0,7); ctx.fill();
+      ctx.strokeStyle='#e0a83c'; ctx.lineWidth=2.4; ctx.stroke();
+    }
+    if(t==='D'){
+      if(open){ ctx.strokeStyle='rgba(138,106,60,.55)'; ctx.lineWidth=2.4; ctx.setLineDash([5,5]);
+        rr(px+5,py+5,cell-10,cell-10,6); ctx.stroke(); ctx.setLineDash([]); }
+      else { ctx.fillStyle='#8a6a3c'; rr(px+3,py+3,cell-6,cell-6,5); ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1.5;
+        for(let i=1;i<3;i++){ ctx.beginPath(); ctx.moveTo(px+3,py+3+i*(cell-6)/3);
+          ctx.lineTo(px+cell-3,py+3+i*(cell-6)/3); ctx.stroke(); } }
+    }
+  }
+
+  // 몸
+  const e = anim ? Math.min(1, anim.t/0.13) : 1;
+  const ease = e<.5 ? 2*e*e : 1-Math.pow(-2*e+2,2)/2;
+  const list = anim ? anim.to : clones;
+  const from = anim ? anim.from : null;
+  list.forEach((p,i)=>{
+    let gx=p.x, gy=p.y;
+    if(anim){
+      const f = from[i] || from[from.length-1] || p;
+      gx = f.x + (p.x-f.x)*ease; gy = f.y + (p.y-f.y)*ease;
+    }
+    const cx=ox+gx*cell+cell/2, cy=oy+gy*cell+cell/2, r=cell*0.31;
+    ctx.fillStyle='rgba(63,111,216,.18)';
+    ctx.beginPath(); ctx.arc(cx,cy+r*.5,r*1.05,0,7); ctx.fill();
+    const g=ctx.createRadialGradient(cx-r*.3,cy-r*.35,r*.1,cx,cy,r);
+    g.addColorStop(0,'#7fa4ee'); g.addColorStop(1,'#2f57b0');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(cx-r*.28,cy-r*.12,r*.16,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+r*.28,cy-r*.12,r*.16,0,7); ctx.fill();
+  });
+  if(anim) for(const k of anim.killed){
+    const cx=ox+k.x*cell+cell/2, cy=oy+k.y*cell+cell/2;
+    ctx.globalAlpha=Math.max(0,1-anim.t*3.5);
+    ctx.strokeStyle='#c0873a'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(cx,cy,cell*0.31*(1+anim.t*2),0,7); ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+
+  // HUD
+  ctx.textAlign='left';
+  ctx.fillStyle='#3f6fd8'; ctx.font='800 13px ui-monospace,monospace';
+  ctx.fillText(`${String(li+1).padStart(2,'0')}  ${L.n}`, 22, 30);
+  ctx.fillStyle='#6b7398'; ctx.font='600 12px -apple-system,sans-serif';
+  ctx.fillText(`${hist.length}수  ·  최소 ${L.par}수`, 22, 50);
+
+  ctx.textAlign='right'; ctx.font='700 12px -apple-system,sans-serif';
+  ctx.fillStyle=clones.length===goals.length?'#20b08c':'#6b7398';
+  ctx.fillText(`몸 ${clones.length} / 목표 ${goals.length}`, CW-22, 30);
+  ctx.fillStyle='#6b7398'; ctx.font='500 11.5px -apple-system,sans-serif';
+  ctx.fillText(hist.length?'되감기 가능':'', CW-22, 50);
+
+  if(msgT>0){
+    ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,msgT);
+    ctx.fillStyle='#6b7398'; ctx.font='700 13px -apple-system,sans-serif';
+    ctx.fillText(msg, CW/2, 40); ctx.globalAlpha=1;
+  }
+  if(cleared_){
+    ctx.fillStyle='rgba(243,245,252,.9)'; ctx.fillRect(0,CH/2-56,CW,112);
+    ctx.textAlign='center'; ctx.fillStyle='#20b08c'; ctx.font='800 27px -apple-system,sans-serif';
+    ctx.fillText('맞췄다', CW/2, CH/2-4);
+    ctx.fillStyle='#6b7398'; ctx.font='600 13px -apple-system,sans-serif';
+    ctx.fillText(hist.length<=L.par?`${hist.length}수 — 최선`:`${hist.length}수 (최소 ${L.par}수)`, CW/2, CH/2+24);
+    ctx.fillStyle='#3f6fd8'; ctx.font='700 13px -apple-system,sans-serif';
+    ctx.fillText(li<LEVELS.length-1?'아래에서 다음 판 선택':'전부 클리어', CW/2, CH/2+46);
+  }
+}
+function loop(){
+  if(anim){ anim.t+=1/60; if(anim.t>0.16) anim=null; }
+  if(msgT>0) msgT-=1/60;
+  draw(); requestAnimationFrame(loop);
+}
+
+/* 입력 */
+window.addEventListener('keydown',e=>{
+  const k=e.key;
+  const m={ArrowUp:0,ArrowDown:1,ArrowLeft:2,ArrowRight:3,w:0,s:1,a:2,d:3};
+  if(k in m){ e.preventDefault(); move(m[k]); }
+  if(k==='z'||k==='Z') undo();
+  if(k==='r'||k==='R') load(li);
+});
+document.querySelectorAll('.pad button').forEach(b=>{
+  b.onclick=()=>move(+b.dataset.d);
+});
+let sx=0,sy=0,sw=false;
+cv.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;sw=true;},{passive:true});
+cv.addEventListener('touchend',e=>{
+  if(!sw) return; sw=false;
+  const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+  if(Math.hypot(dx,dy)<26) return;
+  move(Math.abs(dx)>Math.abs(dy) ? (dx>0?3:2) : (dy>0?1:0));
+},{passive:true});
+
+const bar=document.getElementById('levels');
+function drawBar(){
+  bar.innerHTML='';
+  LEVELS.forEach((lv,i)=>{
+    const b=document.createElement('button');
+    b.textContent=`${i+1} ${lv.n}`;
+    b.className=(cleared.has(i)?'clear ':'')+(i===li?'on':'');
+    b.onclick=()=>load(i);
+    bar.appendChild(b);
+  });
+}
+document.getElementById('undoBtn').onclick=undo;
+document.getElementById('resetBtn').onclick=()=>load(li);
+document.getElementById('helpBtn').onclick=()=>document.getElementById('intro').classList.remove('hide');
+document.getElementById('startBtn').onclick=()=>document.getElementById('intro').classList.add('hide');
+
+load(0); loop();
+</script>
+</body>
+</html>
