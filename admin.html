@@ -123,11 +123,6 @@
 
     <div class="panel">
         <div class="controls">
-            <label for="pageSelect">게시판</label>
-            <select id="pageSelect">
-                <option value="index">사이트 댓글</option>
-                <option value="idea-room-v1">게임 아이디어 방</option>
-            </select>
             <label for="keyInput">관리자 키</label>
             <input type="password" id="keyInput" placeholder="ADMIN_KEY" autocomplete="off">
             <label><input type="checkbox" id="rememberKey"> 기억</label>
@@ -156,13 +151,7 @@
 
     <script>
         const API_URL = 'https://craft-comments.jaehoo.workers.dev';
-        const pageSelect = document.getElementById('pageSelect');
-        const PAGE_LS = 'craft_admin_page';
-        pageSelect.value = localStorage.getItem(PAGE_LS) || 'index';
-        pageSelect.addEventListener('change', () => {
-            localStorage.setItem(PAGE_LS, pageSelect.value);
-            load();
-        });
+        const PAGE = 'index';
         const LS_KEY = 'craft_admin_key';
         const LS_REMEMBER = 'craft_admin_remember';
 
@@ -209,7 +198,7 @@
         }
 
         async function load() {
-            const page = pageSelect.value;
+            const page = PAGE;
             if (!keyInput.value) {
                 setStatus('관리자 키를 입력하세요', true);
                 return;
@@ -281,7 +270,7 @@
             if (!btn) return;
             const id = btn.dataset.id;
             const act = btn.dataset.act;
-            const page = pageSelect.value;
+            const page = PAGE;
 
             if (act === 'delete' && !confirm('삭제하시겠습니까?')) return;
 
