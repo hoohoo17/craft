@@ -169,6 +169,19 @@
   .like-btn:active{transform:translate(2px,2px); box-shadow:0 0 0 var(--ink);}
   .like-btn.liked{background:#FFE066;}
 
+  .del-btn{
+    font-family:inherit;
+    font-size:1rem;
+    font-weight:700;
+    background:#fff;
+    border:2.5px solid var(--ink);
+    border-radius:20px;
+    padding:4px 10px;
+    cursor:pointer;
+    box-shadow:2px 2px 0 var(--ink);
+  }
+  .del-btn:active{transform:translate(2px,2px); box-shadow:0 0 0 var(--ink);}
+
   .empty, .loading{
     text-align:center;
     background:var(--paper);
@@ -233,6 +246,16 @@ const KEY = 'game-idea-room-v1';
 let ideas = [];
 let myLikes = new Set(); // session-only memory of what I liked
 
+// 이 기기에서 올린 글 목록 — 자기 글만 지울 수 있게 하려고 따로 기억해 둔다
+const MINE_KEY = 'game-idea-room-mine-v1';
+function readMine(){
+  try{ return new Set(JSON.parse(localStorage.getItem(MINE_KEY)) || []); }catch(e){ return new Set(); }
+}
+function writeMine(){
+  try{ localStorage.setItem(MINE_KEY, JSON.stringify([...mine])); }catch(e){}
+}
+let mine = readMine();
+
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -260,6 +283,8 @@ async function writeAll(list){
 async function loadIdeas(showToast){
   try{
     ideas = await readAll();
+    // 이 기능이 생기기 전에 올린 글도 지울 수 있게 한 번만 내 글로 인정한다
+    if(!mine.size && ideas.length){ ideas.forEach(i => mine.add(i.id)); writeMine(); }
     render();
     if(showToast) toast('새 게임팩 확인 완료! ✨');
   }catch(e){
@@ -291,6 +316,7 @@ async function submitIdea(){
     latest.unshift(idea);
     await writeAll(latest);
     ideas = latest;
+    mine.add(idea.id); writeMine();
     document.getElementById('title').value = '';
     document.getElementById('rules').value = '';
     render();
@@ -299,6 +325,22 @@ async function submitIdea(){
     toast('앗, 저장에 실패했어요. 다시 눌러 주세요!');
   }finally{
     btn.disabled = false;
+  }
+}
+
+async function deleteIdea(id){
+  if(!confirm('이 게임팩을 지울까? 되돌릴 수 없어!')) return;
+  try{
+    const latest = await readAll();
+    const left = latest.filter(i => i.id !== id);
+    if(left.length === latest.length){ toast('이 게임팩이 이미 사라졌어요 🤔'); await loadIdeas(); return; }
+    await writeAll(left);
+    mine.delete(id); writeMine();
+    ideas = left;
+    render();
+    toast('지웠어요! 🗑️');
+  }catch(e){
+    toast('앗, 지우지 못했어요. 다시 눌러 주세요!');
   }
 }
 
@@ -335,6 +377,7 @@ function render(){
         <div class="pak-meta">
           <span class="pak-author">🧒 ${esc(i.nick)}</span>
           <button class="like-btn ${myLikes.has(i.id)?'liked':''}" onclick="likeIdea('${i.id}')">👍 ${i.likes||0}</button>
+          ${mine.has(i.id) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내가 올린 게임팩 지우기">🗑️</button>` : ''}
         </div>
       </div>
     </article>`).join('') + '</div>';
