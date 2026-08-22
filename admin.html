@@ -220,8 +220,10 @@
                     fetch(`${API_URL}?page=${page}`, { headers: headers() }),
                     fetch(`${API_URL}/logs?page=${page}`, { headers: headers() }),
                 ]);
-                if (commentsRes.status === 403) {
-                    setStatus('관리자 키가 올바르지 않습니다', true);
+                // 목록 조회는 키가 틀려도 200(공개용)을 돌려준다.
+                // 키 검증은 관리자 전용인 /logs 응답으로 판단해야 한다.
+                if (commentsRes.status === 403 || logsRes.status === 403) {
+                    setStatus('관리자 키가 올바르지 않습니다 (승인·삭제를 할 수 없어요)', true);
                     return;
                 }
                 const comments = await commentsRes.json();
