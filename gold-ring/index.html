@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>돌반지 끼우기</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background:#FDF8F2;
+    color:#3A2E2A;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px 14px 32px;
+    user-select:none; -webkit-user-select:none;
+  }
+  h1 { font-size:22px; font-weight:700; margin-bottom:14px; letter-spacing:-0.5px; }
+  .hud { display:flex; gap:10px; margin-bottom:14px; width:100%; max-width:420px; }
+  .hud > div {
+    flex:1; background:#FFF; border-radius:12px; padding:10px 6px;
+    text-align:center; box-shadow:0 1px 3px rgba(90,60,40,0.08);
+  }
+  .hud .label { font-size:11px; color:#A08C80; }
+  .hud .val { font-size:22px; font-weight:700; margin-top:2px; }
+  #stage {
+    position:relative; width:100%; max-width:420px; height:340px;
+    background:#FFF3E6; border-radius:16px; overflow:hidden;
+    touch-action:manipulation; cursor:pointer;
+    box-shadow:0 2px 8px rgba(90,60,40,0.10);
+  }
+  #msg {
+    position:absolute; top:12px; left:0; right:0; z-index:5;
+    text-align:center; font-size:15px; font-weight:600; color:#8A6E5E; padding:0 12px;
+  }
+  #game { position:absolute; inset:0; }
+  #startBtn {
+    margin-top:16px; height:44px; padding:0 22px; font-size:16px; font-weight:700;
+    border:none; border-radius:12px; background:#E86A4C; color:#FFF; cursor:pointer;
+  }
+  #startBtn:active { transform:scale(0.97); }
+</style>
+</head>
+<body>
+<h1>💍 돌반지 끼우기</h1>
+
+<div class="hud">
+  <div><div class="label">모은 금</div><div class="val" id="don">0돈</div></div>
+  <div><div class="label">목표</div><div class="val">10돈</div></div>
+  <div><div class="label">남은 기회</div><div class="val" id="lives">3</div></div>
+</div>
+
+<div id="stage">
+  <div id="msg">탭하면 반지가 올라갑니다</div>
+  <svg id="game" width="100%" height="100%"></svg>
+</div>
+
+<button id="startBtn">게임 시작</button>
+
+<script>
+(function(){
+  var svg = document.getElementById('game');
+  var stage = document.getElementById('stage');
+  var msgEl = document.getElementById('msg');
+  var donEl = document.getElementById('don');
+  var livesEl = document.getElementById('lives');
+  var btn = document.getElementById('startBtn');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  var W = 0, H = 340;
+  var playing = false, don = 0, lives = 3;
+  var handX = 0, handDir = 1, handSpeed = 1.5;
+  var speedMul = 1, mulTimer = 0;
+  var HAND_Y = 90;
+  var ring = null;
+  var stacked = [];
+  var rafId = null;
+  var handG, fingerX = 0;
+
+  function el(tag, attrs){
+    var e = document.createElementNS(NS, tag);
+    for(var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function buildScene(){
+    W = stage.clientWidth;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = '';
+
+    handG = el('g', {});
+    /* 검지만 올린 손: 검지가 x=0 (판정 기준점), 손바닥은 오른쪽 */
+    var palm = el('rect', {x:-4, y:10, width:56, height:52, rx:16, fill:'#F3C9A8'});
+    var index = el('rect', {x:-7, y:-34, width:14, height:52, rx:7, fill:'#F3C9A8'});
+    var nail = el('rect', {x:-5, y:-34, width:10, height:8, rx:4, fill:'#FBE3D0'});
+    /* 접힌 손가락 마디 3개 */
+    var k1 = el('rect', {x:12, y:2, width:12, height:16, rx:6, fill:'#EDBD97'});
+    var k2 = el('rect', {x:26, y:2, width:12, height:16, rx:6, fill:'#EDBD97'});
+    var k3 = el('rect', {x:40, y:4, width:11, height:14, rx:5.5, fill:'#EDBD97'});
+    /* 엄지 */
+    var thumb = el('ellipse', {cx:-6, cy:42, rx:9, ry:15, fill:'#EDBD97'});
+    handG.appendChild(palm);
+    handG.appendChild(thumb);
+    handG.appendChild(k1);
+    handG.appendChild(k2);
+    handG.appendChild(k3);
+    handG.appendChild(index);
+    handG.appendChild(nail);
+    svg.appendChild(handG);
+
+    var pad = el('rect', {x:0, y:H-26, width:W, height:26, fill:'#D8B78E'});
+    svg.appendChild(pad);
+
+    /* 조준 기준선: 발사 지점 수직 점선 */
+    var guide = el('line', {x1:W/2, y1:40, x2:W/2, y2:H-30, stroke:'#E0B87F', 'stroke-width':2, 'stroke-dasharray':'3 7', opacity:0.6});
+    svg.appendChild(guide);
+  }
+
+  function newRing(){
+    if(ring && ring.el) ring.el.remove();
+    var g = el('g', {});
+    var body = el('ellipse', {cx:0, cy:0, rx:16, ry:7, fill:'none', stroke:'#EF9F27', 'stroke-width':6});
+    g.appendChild(body);
+    svg.appendChild(g);
+    ring = { el: g, x: W/2, y: H-44, vy: 0, flying: false };
+    ring.el.setAttribute('transform', 'translate('+ring.x+','+ring.y+')');
+  }
+
+  function addStackedRing(){
+    var r = el('ellipse', {cx:0, cy:0, rx:15, ry:6, fill:'none', stroke:'#EF9F27', 'stroke-width':5});
+    handG.appendChild(r);
+    stacked.push(r);
+    for(var i=0;i<stacked.length;i++){
+      stacked[i].setAttribute('cy', 14 - i*4.8);
+    }
+  }
+
+  function quota(d){ return d <= 3 ? 3 : d; }
+
+  function updateHud(){
+    donEl.textContent = don + '돈';
+    livesEl.textContent = lives;
+  }
+
+  function loop(){
+    /* 조준 중에만 30~60프레임마다 0.75~1.25배 불규칙 변속. 반지 비행 중엔 변속 동결 */
+    if(!(ring && ring.flying) && --mulTimer <= 0){
+      speedMul = 0.75 + Math.random() * 0.5;
+      mulTimer = 30 + Math.floor(Math.random() * 30);
+    }
+    handX += handDir * handSpeed * speedMul;
+    var margin = 60;
+    if(handX > W - margin){ handX = W - margin; handDir = -1; }
+    if(handX < margin){ handX = margin; handDir = 1; }
+    handG.setAttribute('transform', 'translate('+handX+','+HAND_Y+')');
+    fingerX = handX;
+
+    if(ring && ring.flying){
+      ring.y += ring.vy;
+      ring.el.setAttribute('transform', 'translate('+ring.x+','+ring.y+')');
+      var tipY = HAND_Y - 34;
+      if(ring.y <= tipY + 30 && ring.y >= tipY){
+        if(Math.abs(ring.x - fingerX) < 11){
+          ring.el.remove(); ring = null;
+          don++;
+          handSpeed += 0.3;
+          lives = quota(don);
+          updateHud();
+          addStackedRing();
+          if(don >= 10){ winGame(); return; }
+          msgEl.textContent = don + '돈! 기회 ' + lives + '번으로 충전';
+          newRing();
+        }
+      }
+      if(ring && ring.y < -20){
+        ring.el.remove(); ring = null;
+        lives--;
+        updateHud();
+        if(lives <= 0){ loseGame(); return; }
+        msgEl.textContent = '빗나감! 남은 기회 ' + lives;
+        newRing();
+      }
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+
+  stage.addEventListener('pointerdown', function(){
+    if(!playing || !ring || ring.flying) return;
+    ring.flying = true;
+    ring.vy = -10;
+  });
+
+  function winGame(){
+    playing = false;
+    cancelAnimationFrame(rafId);
+    msgEl.textContent = '열 돈 달성! 돌잔치 대성공 🎉';
+    btn.textContent = '다시 하기';
+    btn.style.display = '';
+  }
+
+  function loseGame(){
+    playing = false;
+    cancelAnimationFrame(rafId);
+    msgEl.textContent = '기회 소진... ' + don + '돈에서 마감';
+    btn.textContent = '다시 하기';
+    btn.style.display = '';
+  }
+
+  btn.addEventListener('click', function(){
+    btn.style.display = 'none';
+    don = 0; lives = quota(0); handSpeed = 1.5; handDir = 1;
+    speedMul = 1; mulTimer = 0;
+    stacked = [];
+    buildScene();
+    handX = W/2;
+    newRing();
+    updateHud();
+    msgEl.textContent = '탭하면 반지가 올라갑니다';
+    playing = true;
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(loop);
+  });
+})();
+</script>
+</body>
+</html>
