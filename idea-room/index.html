@@ -230,11 +230,11 @@
   <section class="form-card">
     <h2>📮 새 게임 올리기</h2>
     <label for="nick">내 이름 (별명도 좋아)</label>
-    <input id="nick" maxlength="12" placeholder="예: 번개대장">
+    <input id="nick" maxlength="8" placeholder="예: 번개대장">
     <label for="title">게임 제목</label>
-    <input id="title" maxlength="30" placeholder="예: 바닥은 용암이다 2">
+    <input id="title" maxlength="16" placeholder="예: 바닥은 용암이다 2">
     <label for="rules">하는 법</label>
-    <textarea id="rules" maxlength="500" placeholder="예: 술래가 '용암!' 하고 외치면 3초 안에 바닥에서 발을 떼야 해. 못 떼면 다음 술래!"></textarea>
+    <textarea id="rules" maxlength="60" placeholder="예: 술래가 '용암!' 하고 외치면 3초 안에 바닥에서 발을 떼야 해. 못 떼면 다음 술래!"></textarea>
     <p class="hint">여기 올리면 이 방에 들어온 친구들 모두가 볼 수 있어요.</p>
     <button class="submit-btn" onclick="submitIdea()">게임팩 만들기! 🕹️</button>
   </section>
@@ -303,8 +303,14 @@ function toast(msg){
 }
 
 // 이미 떠 있는 댓글 서버를 공유 게시판으로 쓴다(서버 배포 불필요).
-// 승인된 글만 message가 내려오므로, 내 글은 이 기기 사본으로 항상 보여 준다.
-const API = 'https://craft-comments.jaehoo.workers.dev?page=idea-room-v1';
+// 그 서버는 승인 전 글의 '내용'을 감추고 '이름'만 공개한다. 이름은 20자까지라,
+// 글을 20자짜리 조각으로 나눠 여러 번 보내고 읽을 때 다시 붙인다.
+const API = 'https://craft-comments.jaehoo.workers.dev?page=idea-room-v2';
+const HEAD = 5;              // 조각 머리말: 묶음번호 3 + 순번 1 + 개수 1
+const BODY = 20 - HEAD;      // 조각 하나에 담기는 글자 수
+const MAX_CHUNKS = 6;        // 한 아이디어가 쓸 수 있는 조각 수
+const LIMIT = { nick: 8, title: 16, rules: 60 };
+const SEP = '|';
 
 function readLocal(){
   try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; }
@@ -313,24 +319,61 @@ function writeLocal(list){
   try{ localStorage.setItem(KEY, JSON.stringify(list)); }catch(e){}
 }
 
-// 서버에서 승인된 글을 가져온다
+const b36 = n => n.toString(36).slice(-1);
+function newGroupId(){
+  let g = '';
+  for(let i=0;i<3;i++) g += b36(Math.floor(Math.random()*36));
+  return g;
+}
+
+function pack(idea){
+  const clean = v => String(v).split(SEP).join(' ');
+  const text = clean(idea.nick).slice(0,LIMIT.nick) + SEP
+             + clean(idea.title).slice(0,LIMIT.title) + SEP
+             + clean(idea.rules).slice(0,LIMIT.rules);
+  const parts = [];
+  for(let i=0;i<text.length;i+=BODY) parts.push(text.slice(i,i+BODY));
+  if(!parts.length) parts.push('');
+  if(parts.length > MAX_CHUNKS) throw new Error('too long');
+  const g = newGroupId();
+  return parts.map((body,i) => g + b36(i) + b36(parts.length) + body);
+}
+
+function unpack(rows){
+  const groups = new Map();
+  rows.forEach(function(c){
+    const name = c && typeof c.name === 'string' ? c.name : '';
+    if(name.length < HEAD) return;
+    const g = name.slice(0,3), seq = parseInt(name[3],36), total = parseInt(name[4],36);
+    if(isNaN(seq) || isNaN(total) || total < 1 || seq >= total) return;
+    if(!groups.has(g)) groups.set(g, { total:total, parts:new Map(), date:c.date });
+    const grp = groups.get(g);
+    if(grp.total !== total) return;          // 묶음번호가 겹쳤다면 버린다
+    grp.parts.set(seq, name.slice(HEAD));
+    if(c.date < grp.date) grp.date = c.date;
+  });
+  const out = [];
+  groups.forEach(function(grp,g){
+    if(grp.parts.size !== grp.total) return; // 조각이 빠졌으면(오래돼 잘림) 건너뛴다
+    let text = '';
+    for(let i=0;i<grp.total;i++) text += grp.parts.get(i);
+    const bits = text.split(SEP);
+    if(bits.length !== 3 || !bits[1] || !bits[2]) return;
+    out.push({ id:'s'+g, nick:bits[0]||'익명', title:bits[1], rules:bits[2],
+               ts:Date.parse(grp.date)||0, shared:true });
+  });
+  return out;
+}
+
 async function fetchShared(){
   const res = await fetch(API, { cache:'no-store' });
   if(!res.ok) throw new Error('http ' + res.status);
   const rows = await res.json();
   if(!Array.isArray(rows)) throw new Error('bad payload');
-  const out = [];
-  rows.forEach(function(c){
-    if(!c || !c.approved || typeof c.message !== 'string') return; // 아직 검토 중
-    let d; try{ d = JSON.parse(c.message); }catch(e){ return; }
-    if(!d || typeof d.title !== 'string' || typeof d.rules !== 'string') return;
-    out.push({ id:'s'+c.id, nick:String(c.name||'익명'), title:d.title, rules:d.rules,
-               likes:0, ts:Date.parse(c.date)||0, shared:true });
-  });
-  return out;
+  return unpack(rows);
 }
 
-// 화면에 뿌릴 목록 = 서버 글 + 아직 승인 안 난 내 글
+// 화면에 뿌릴 목록 = 서버 글 + 아직 서버에 못 올린 내 글
 async function readAll(){
   const localList = readLocal();
   let shared = [];
@@ -338,23 +381,25 @@ async function readAll(){
   try{ shared = await fetchShared(); }catch(e){ online = false; }
   lastOnline = online;
   if(!online) return localList.filter(function(i){ return !hidden.has(keyOf(i)); });
-  const seen = new Set(shared.map(function(i){ return i.nick + '\u0000' + i.title + '\u0000' + i.rules; }));
-  const pending = localList.filter(function(i){
-    return !seen.has(i.nick + '\u0000' + i.title + '\u0000' + i.rules);
-  }).map(function(i){ return Object.assign({}, i, { pending:true }); });
-  return pending.concat(shared).filter(function(i){ return !hidden.has(keyOf(i)); });
+  const seen = new Set(shared.map(keyOf));
+  const notYet = localList.filter(function(i){ return !seen.has(keyOf(i)); })
+                          .map(function(i){ return Object.assign({}, i, { pending:true }); });
+  return notYet.concat(shared).filter(function(i){ return !hidden.has(keyOf(i)); });
 }
 
-// 서버로 보낸다. 실패해도 이 기기 사본은 남는다.
+// 조각을 순서대로 보낸다. 하나라도 실패하면 실패로 본다.
 async function postShared(idea){
-  const res = await fetch(API, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({ name: idea.nick.slice(0,20),
-                           message: JSON.stringify({ title: idea.title, rules: idea.rules }) }),
-  });
-  if(!res.ok) throw new Error('http ' + res.status);
+  const chunks = pack(idea);
+  for(const name of chunks){
+    const res = await fetch(API, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ name: name, message: '.' }),
+    });
+    if(!res.ok) throw new Error('http ' + res.status);
+  }
 }
+
 
 let lastOnline = true;
 
@@ -452,7 +497,7 @@ function render(){
         <h3 class="pak-title">${esc(i.title)}</h3>
         <p class="pak-rules">${esc(i.rules)}</p>
         <div class="pak-meta">
-          <span class="pak-author">🧒 ${esc(i.nick)}${i.pending ? ' <span class="pending-tag">검토 중</span>' : ''}</span>
+          <span class="pak-author">🧒 ${esc(i.nick)}${i.pending ? ' <span class="pending-tag">내 폰에만</span>' : ''}</span>
           <button class="like-btn ${myLikes.has(i.id)?'liked':''}" onclick="likeIdea('${i.id}')">👍 ${likeCount(i)}</button>
           ${isMine(i) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내가 올린 게임팩 지우기">🗑️</button>` : ''}
         </div>
