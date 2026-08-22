@@ -232,7 +232,7 @@
 
   <div id="board"><div class="loading">게임팩 꺼내는 중... 🎒</div></div>
 
-  <p class="notice">올린 글은 친구들 모두에게 보여요 · 내가 올린 건 내가 지울 수 있어요.</p>
+  <p class="notice">올린 글은 친구들 모두에게 보여요 · 지우기는 누구나 할 수 있으니 조심!</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -458,8 +458,10 @@ async function deleteIdea(id){
   const target = ideas.find(i => i.id === id);
   if(!target){ toast('이 게임팩이 이미 사라졌어요 🤔'); await loadIdeas(); return; }
   const onServer = target.shared === true;
-  if(!confirm(onServer ? '이 게임팩을 지울까?\n친구들 화면에서도 사라져!'
-                       : '이 게임팩을 지울까?')) return;
+  const msg = !onServer ? '이 게임팩을 지울까?'
+            : isMine(target) ? '내 게임팩을 지울까?\n친구들 화면에서도 사라져!'
+            : '\u201C' + target.title + '\u201D\n' + target.nick + ' 가 올린 게임팩이야.\n정말 지울까? 친구들 화면에서도 사라져!';
+  if(!confirm(msg)) return;
   try{
     const k = keyOf(target);
     writeLocal(readLocal().filter(i => keyOf(i) !== k));
@@ -492,7 +494,7 @@ function render(){
         <p class="pak-rules">${esc(i.rules)}</p>
         <div class="pak-meta">
           <span class="pak-author">🧒 ${esc(i.nick)}${i.pending ? ' <span class="pending-tag">내 폰에만</span>' : ''}</span>
-          ${isMine(i) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내가 올린 게임팩 지우기">🗑️</button>` : ''}
+          <button class="del-btn" onclick="deleteIdea('${i.id}')" title="게임팩 지우기">🗑️</button>
         </div>
       </div>
     </article>`).join('') + '</div>';
