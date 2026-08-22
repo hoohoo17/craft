@@ -174,6 +174,12 @@
       <!-- 서류가방 -->
       <rect x="12" y="8" width="12" height="9" rx="1.5" fill="#78350f"/>
       <rect x="16.5" y="6" width="3" height="3" fill="#78350f"/>
+      <!-- 말풍선 -->
+      <g id="eggBubble" opacity="0">
+        <rect x="-72" y="-52" width="118" height="24" rx="12" fill="#f8fafc"/>
+        <path d="M-8 -28 L0 -16 L4 -28 Z" fill="#f8fafc"/>
+        <text x="-13" y="-35" font-size="12" text-anchor="middle" fill="#111827" font-family="sans-serif">얘들아, 게임 재밌지?</text>
+      </g>
     </g>
   </g>
 
@@ -205,6 +211,7 @@
   var clicks = 0, playing = false;
   var egg = document.getElementById('egg');
   var body = document.getElementById('eggBody');
+  var bubble = document.getElementById('eggBubble');
   var hit = document.getElementById('moonHit');
   if (!egg || !body || !hit) return;
   hit.addEventListener('click', function(){
@@ -217,10 +224,11 @@
     function frame(t){
       if (!start) start = t;
       var p = (t - start) / DUR;
-      if (p >= 1) { egg.setAttribute('opacity','0'); playing = false; return; }
+      if (p >= 1) { egg.setAttribute('opacity','0'); if (bubble) bubble.setAttribute('opacity','0'); playing = false; return; }
       var x = -60 + p * 820;
       var y = 385 + Math.sin(p * Math.PI * 6) * 3;
       body.setAttribute('transform','translate(' + x + ',' + y + ')');
+      if (bubble) bubble.setAttribute('opacity', (p > 0.3 && p < 0.75) ? '1' : '0');
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
