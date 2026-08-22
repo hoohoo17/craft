@@ -155,20 +155,6 @@
     font-size:.95rem;
   }
   .pak-author{font-weight:700;}
-  .like-btn{
-    font-family:inherit;
-    font-size:1rem;
-    font-weight:700;
-    background:#fff;
-    border:2.5px solid var(--ink);
-    border-radius:20px;
-    padding:4px 12px;
-    cursor:pointer;
-    box-shadow:2px 2px 0 var(--ink);
-  }
-  .like-btn:active{transform:translate(2px,2px); box-shadow:0 0 0 var(--ink);}
-  .like-btn.liked{background:#FFE066;}
-
   .del-btn{
     font-family:inherit;
     font-size:1rem;
@@ -246,7 +232,7 @@
 
   <div id="board"><div class="loading">게임팩 꺼내는 중... 🎒</div></div>
 
-  <p class="notice">올린 글은 친구들 모두에게 보여요 · 좋아요는 한 게임에 한 번!</p>
+  <p class="notice">올린 글은 친구들 모두에게 보여요 · 지우기는 내 화면에서만 적용돼요.</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -254,7 +240,6 @@
 <script>
 const KEY = 'game-idea-room-v1';
 let ideas = [];
-let myLikes = new Set(); // session-only memory of what I liked
 
 // 이 기기에서 올린 글 목록 — 자기 글만 지울 수 있게 하려고 따로 기억해 둔다
 const MINE_KEY = 'game-idea-room-mine-v2';
@@ -268,17 +253,6 @@ function writeMine(){
 }
 let mine = readMine();
 function isMine(i){ return mine.has(keyOf(i)); }
-
-// 좋아요는 서버가 못 고치므로 이 기기에만 쌓인다
-const LIKE_KEY = 'game-idea-room-likes-v1';
-function readLikes(){
-  try{ return JSON.parse(localStorage.getItem(LIKE_KEY)) || {}; }catch(e){ return {}; }
-}
-let likeMap = readLikes();
-function writeLikes(){
-  try{ localStorage.setItem(LIKE_KEY, JSON.stringify(likeMap)); }catch(e){}
-}
-function likeCount(i){ return likeMap[keyOf(i)] || 0; }
 
 // 서버 글은 지울 권한이 없으므로, 내가 지운 것은 이 기기에서 감춘다
 const HIDDEN_KEY = 'game-idea-room-hidden-v1';
@@ -449,7 +423,6 @@ async function submitIdea(){
   const idea = {
     id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
     nick, title, rules,
-    likes: 0,
     ts: Date.now()
   };
 
@@ -474,7 +447,7 @@ async function submitIdea(){
 }
 
 async function deleteIdea(id){
-  if(!confirm('이 게임팩을 지울까? 되돌릴 수 없어!')) return;
+  if(!confirm('이 게임팩을 내 화면에서 지울까?\n(친구 폰에서는 그대로 보여)')) return;
   try{
     const target = ideas.find(i => i.id === id);
     if(!target){ toast('이 게임팩이 이미 사라졌어요 🤔'); await loadIdeas(); return; }
@@ -489,22 +462,6 @@ async function deleteIdea(id){
   }
 }
 
-async function likeIdea(id){
-  if(myLikes.has(id)){ toast('이미 좋아요 눌렀어! 😆'); return; }
-  try{
-    const target = ideas.find(i => i.id === id);
-    if(!target){ toast('이 게임팩이 사라졌어요 🤔'); await loadIdeas(); return; }
-    const k = keyOf(target);
-    likeMap[k] = (likeMap[k] || 0) + 1;
-    writeLikes();
-    myLikes.add(id);
-    render();
-    toast('좋아요! 👍');
-  }catch(e){
-    toast('앗, 좋아요를 저장하지 못했어요.');
-  }
-}
-
 function render(){
   const board = document.getElementById('board');
   document.getElementById('count').textContent = ideas.length ? `(${ideas.length}개)` : '';
@@ -512,7 +469,7 @@ function render(){
     board.innerHTML = '<div class="empty"><span class="big">📭</span>아직 게임팩이 없어요.<br>첫 번째 게임을 올려 봐!</div>';
     return;
   }
-  const sorted = [...ideas].sort((a,b) => likeCount(b) - likeCount(a) || b.ts - a.ts);
+  const sorted = [...ideas].sort((a,b) => b.ts - a.ts);
   board.innerHTML = '<div class="grid">' + sorted.map(i => `
     <article class="pak">
       <div class="pak-label">
@@ -520,8 +477,7 @@ function render(){
         <p class="pak-rules">${esc(i.rules)}</p>
         <div class="pak-meta">
           <span class="pak-author">🧒 ${esc(i.nick)}${i.pending ? ' <span class="pending-tag">내 폰에만</span>' : ''}</span>
-          <button class="like-btn ${myLikes.has(i.id)?'liked':''}" onclick="likeIdea('${i.id}')">👍 ${likeCount(i)}</button>
-          ${isMine(i) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내가 올린 게임팩 지우기">🗑️</button>` : ''}
+          ${isMine(i) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내 화면에서 지우기">🗑️</button>` : ''}
         </div>
       </div>
     </article>`).join('') + '</div>';
