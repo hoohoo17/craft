@@ -387,16 +387,38 @@ async function readAll(){
   return notYet.concat(shared).filter(function(i){ return !hidden.has(keyOf(i)); });
 }
 
-// 조각을 순서대로 보낸다. 하나라도 실패하면 실패로 본다.
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function postChunk(name){
+  const res = await fetch(API, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ name: name, message: '.' }),
+  });
+  if(!res.ok) throw new Error('http ' + res.status);
+}
+
+// 서버 저장소는 전 세계로 퍼지는 데 시간이 걸린다. 조각을 너무 빨리 이어 보내면
+// 서버가 직전 조각을 아직 모른 채 덮어써서 조각이 사라진다. 그래서 사이를 띄우고,
+// 보낸 뒤 실제로 다 있는지 확인해서 빠진 것만 다시 보낸다.
 async function postShared(idea){
   const chunks = pack(idea);
-  for(const name of chunks){
-    const res = await fetch(API, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ name: name, message: '.' }),
-    });
-    if(!res.ok) throw new Error('http ' + res.status);
+  for(const name of chunks){ await postChunk(name); await sleep(400); }
+  if(chunks.length === 1) return;              // 조각이 하나면 겹칠 일이 없다
+
+  for(let attempt = 0; attempt < 3; attempt++){
+    await sleep(1200);
+    let rows;
+    try{
+      const res = await fetch(API, { cache:'no-store' });
+      if(!res.ok) return;
+      rows = await res.json();
+    }catch(e){ return; }
+    if(!Array.isArray(rows)) return;
+    const have = new Set(rows.map(function(r){ return r && r.name; }));
+    const missing = chunks.filter(function(n){ return !have.has(n); });
+    if(!missing.length) return;
+    for(const name of missing){ await postChunk(name); await sleep(400); }
   }
 }
 
