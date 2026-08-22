@@ -232,7 +232,7 @@
 
   <div id="board"><div class="loading">게임팩 꺼내는 중... 🎒</div></div>
 
-  <p class="notice">올린 글은 친구들 모두에게 보여요 · 지우기는 내 화면에서만 적용돼요.</p>
+  <p class="notice">올린 글은 친구들 모두에게 보여요 · 내가 올린 건 내가 지울 수 있어요.</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -315,11 +315,19 @@ function pack(idea){
 
 function unpack(rows){
   const groups = new Map();
+  const dead = new Set();
+  rows.forEach(function(c){
+    const name = c && typeof c.name === 'string' ? c.name : '';
+    // 지움 표시: 묶음번호 + '00' 다섯 글자. 조각 개수 0은 원래 있을 수 없는 값이라
+    // 이걸 모르는 옛 버전은 그냥 무시하고 지나간다.
+    if(name.length === HEAD && name[3] === '0' && name[4] === '0') dead.add(name.slice(0,3));
+  });
   rows.forEach(function(c){
     const name = c && typeof c.name === 'string' ? c.name : '';
     if(name.length < HEAD) return;
     const g = name.slice(0,3), seq = parseInt(name[3],36), total = parseInt(name[4],36);
     if(isNaN(seq) || isNaN(total) || total < 1 || seq >= total) return;
+    if(dead.has(g)) return;                  // 지운 글
     if(!groups.has(g)) groups.set(g, { total:total, parts:new Map(), date:c.date });
     const grp = groups.get(g);
     if(grp.total !== total) return;          // 묶음번호가 겹쳤다면 버린다
@@ -447,16 +455,23 @@ async function submitIdea(){
 }
 
 async function deleteIdea(id){
-  if(!confirm('이 게임팩을 내 화면에서 지울까?\n(친구 폰에서는 그대로 보여)')) return;
+  const target = ideas.find(i => i.id === id);
+  if(!target){ toast('이 게임팩이 이미 사라졌어요 🤔'); await loadIdeas(); return; }
+  const onServer = target.shared === true;
+  if(!confirm(onServer ? '이 게임팩을 지울까?\n친구들 화면에서도 사라져!'
+                       : '이 게임팩을 지울까?')) return;
   try{
-    const target = ideas.find(i => i.id === id);
-    if(!target){ toast('이 게임팩이 이미 사라졌어요 🤔'); await loadIdeas(); return; }
     const k = keyOf(target);
     writeLocal(readLocal().filter(i => keyOf(i) !== k));
     mine.delete(k); writeMine();
     hidden.add(k); writeHidden();
+    let sent = true;
+    if(onServer){
+      // 서버는 지우기를 못 하니 '이 묶음은 지웠음' 표시를 대신 올린다
+      try{ await postChunk(String(target.id).slice(1) + '00'); }catch(e){ sent = false; }
+    }
     await loadIdeas(false);
-    toast('지웠어요! 🗑️');
+    toast(!onServer || sent ? '지웠어요! 🗑️' : '내 화면에서만 지웠어요. 인터넷을 확인해 주세요 📵');
   }catch(e){
     toast('앗, 지우지 못했어요. 다시 눌러 주세요!');
   }
@@ -477,7 +492,7 @@ function render(){
         <p class="pak-rules">${esc(i.rules)}</p>
         <div class="pak-meta">
           <span class="pak-author">🧒 ${esc(i.nick)}${i.pending ? ' <span class="pending-tag">내 폰에만</span>' : ''}</span>
-          ${isMine(i) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내 화면에서 지우기">🗑️</button>` : ''}
+          ${isMine(i) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내가 올린 게임팩 지우기">🗑️</button>` : ''}
         </div>
       </div>
     </article>`).join('') + '</div>';
