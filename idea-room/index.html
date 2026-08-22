@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>게임 아이디어 방</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFD93D;
+    --ink:#1B1B1B;
+    --paper:#FFFDF5;
+    --pak1:#FF6B6B; --pak2:#4EA8DE; --pak3:#8AC926; --pak4:#B983FF; --pak5:#FF9F1C;
+    --shadow:5px 5px 0 var(--ink);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    background-image:radial-gradient(rgba(0,0,0,.06) 1.5px, transparent 1.5px);
+    background-size:22px 22px;
+    font-family:'Gaegu','Comic Sans MS',sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding:16px;
+  }
+  .wrap{max-width:760px; margin:0 auto;}
+
+  header{
+    background:var(--paper);
+    border:3px solid var(--ink);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:18px 20px 14px;
+    text-align:center;
+    margin-bottom:20px;
+    transform:rotate(-.6deg);
+  }
+  h1{
+    font-family:'Jua',sans-serif;
+    font-size:2rem;
+    letter-spacing:1px;
+  }
+  h1 .joy{display:inline-block; animation:bounce 1.6s infinite;}
+  h1 .joy:nth-child(3){animation-delay:.2s}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  header p{font-size:1.05rem; margin-top:2px;}
+
+  /* form */
+  .form-card{
+    background:var(--paper);
+    border:3px solid var(--ink);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:18px;
+    margin-bottom:26px;
+    transform:rotate(.4deg);
+  }
+  .form-card h2{font-family:'Jua',sans-serif; font-size:1.25rem; margin-bottom:12px;}
+  label{display:block; font-weight:700; font-size:1.05rem; margin:10px 0 4px;}
+  input, textarea{
+    width:100%;
+    border:3px solid var(--ink);
+    border-radius:10px;
+    background:#fff;
+    font-family:inherit;
+    font-size:1.1rem;
+    padding:10px 12px;
+  }
+  textarea{min-height:96px; resize:vertical;}
+  input:focus, textarea:focus{outline:3px solid var(--pak2); outline-offset:2px;}
+  .hint{font-size:.9rem; opacity:.65; margin-top:2px;}
+  .submit-btn{
+    margin-top:16px;
+    width:100%;
+    font-family:'Jua',sans-serif;
+    font-size:1.3rem;
+    background:var(--pak1);
+    color:#fff;
+    border:3px solid var(--ink);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+    padding:12px;
+    cursor:pointer;
+    transition:transform .08s;
+  }
+  .submit-btn:active{transform:translate(4px,4px); box-shadow:1px 1px 0 var(--ink);}
+
+  /* toolbar */
+  .toolbar{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px; gap:8px; flex-wrap:wrap;
+  }
+  .toolbar h2{font-family:'Jua',sans-serif; font-size:1.3rem;}
+  .refresh-btn{
+    font-family:'Jua',sans-serif;
+    font-size:1rem;
+    background:var(--paper);
+    border:3px solid var(--ink);
+    border-radius:10px;
+    box-shadow:3px 3px 0 var(--ink);
+    padding:6px 14px;
+    cursor:pointer;
+  }
+  .refresh-btn:active{transform:translate(3px,3px); box-shadow:0 0 0 var(--ink);}
+
+  /* cartridge cards */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:22px;}
+  .pak{
+    position:relative;
+    border:3px solid var(--ink);
+    border-radius:14px 14px 10px 10px;
+    box-shadow:var(--shadow);
+    padding-top:26px;
+    overflow:hidden;
+  }
+  .pak:nth-child(5n+1){background:var(--pak1); transform:rotate(-.8deg);}
+  .pak:nth-child(5n+2){background:var(--pak2); transform:rotate(.7deg);}
+  .pak:nth-child(5n+3){background:var(--pak3); transform:rotate(-.5deg);}
+  .pak:nth-child(5n+4){background:var(--pak4); transform:rotate(.9deg);}
+  .pak:nth-child(5n+5){background:var(--pak5); transform:rotate(-.6deg);}
+  /* cartridge notch */
+  .pak::before{
+    content:"";
+    position:absolute; top:8px; left:50%; transform:translateX(-50%);
+    width:46%; height:10px;
+    background:rgba(0,0,0,.25);
+    border-radius:6px;
+  }
+  .pak-label{
+    background:var(--paper);
+    border-top:3px solid var(--ink);
+    padding:14px 16px 12px;
+    min-height:150px;
+    display:flex; flex-direction:column;
+  }
+  .pak-title{
+    font-family:'Jua',sans-serif;
+    font-size:1.3rem;
+    line-height:1.25;
+    margin-bottom:6px;
+    word-break:keep-all;
+  }
+  .pak-rules{
+    font-size:1.05rem;
+    line-height:1.45;
+    white-space:pre-wrap;
+    word-break:break-word;
+    flex:1;
+  }
+  .pak-meta{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:12px;
+    border-top:2px dashed rgba(0,0,0,.25);
+    padding-top:8px;
+    font-size:.95rem;
+  }
+  .pak-author{font-weight:700;}
+  .like-btn{
+    font-family:inherit;
+    font-size:1rem;
+    font-weight:700;
+    background:#fff;
+    border:2.5px solid var(--ink);
+    border-radius:20px;
+    padding:4px 12px;
+    cursor:pointer;
+    box-shadow:2px 2px 0 var(--ink);
+  }
+  .like-btn:active{transform:translate(2px,2px); box-shadow:0 0 0 var(--ink);}
+  .like-btn.liked{background:#FFE066;}
+
+  .empty, .loading{
+    text-align:center;
+    background:var(--paper);
+    border:3px dashed var(--ink);
+    border-radius:16px;
+    padding:36px 20px;
+    font-size:1.15rem;
+  }
+  .empty .big{font-size:2.4rem; display:block; margin-bottom:8px;}
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(80px);
+    background:var(--ink); color:#fff;
+    font-family:'Jua',sans-serif; font-size:1.05rem;
+    padding:10px 22px; border-radius:24px;
+    opacity:0; transition:all .25s;
+    pointer-events:none;
+    z-index:10;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .notice{font-size:.85rem; text-align:center; opacity:.6; margin:20px 0 8px;}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="joy">🎮</span> 게임 아이디어 방 <span class="joy">💡</span></h1>
+    <p>내가 만든 게임을 자랑해 봐! 제목이랑 하는 법을 올려 줘.</p>
+  </header>
+
+  <section class="form-card">
+    <h2>📮 새 게임 올리기</h2>
+    <label for="nick">내 이름 (별명도 좋아)</label>
+    <input id="nick" maxlength="12" placeholder="예: 번개대장">
+    <label for="title">게임 제목</label>
+    <input id="title" maxlength="30" placeholder="예: 바닥은 용암이다 2">
+    <label for="rules">하는 법</label>
+    <textarea id="rules" maxlength="500" placeholder="예: 술래가 '용암!' 하고 외치면 3초 안에 바닥에서 발을 떼야 해. 못 떼면 다음 술래!"></textarea>
+    <p class="hint">여기 올리면 이 방에 들어온 친구들 모두가 볼 수 있어요.</p>
+    <button class="submit-btn" onclick="submitIdea()">게임팩 만들기! 🕹️</button>
+  </section>
+
+  <div class="toolbar">
+    <h2>🗂️ 게임팩 진열대 <span id="count"></span></h2>
+    <button class="refresh-btn" onclick="loadIdeas(true)">🔄 새로고침</button>
+  </div>
+
+  <div id="board"><div class="loading">게임팩 꺼내는 중... 🎒</div></div>
+
+  <p class="notice">올린 글은 친구들 모두에게 보여요 · 좋아요는 한 게임에 한 번!</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'game-idea-room-v1';
+let ideas = [];
+let myLikes = new Set(); // session-only memory of what I liked
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+async function readAll(){
+  try{
+    return JSON.parse(localStorage.getItem(KEY)) || [];
+  }catch(e){
+    return []; // key doesn't exist yet
+  }
+}
+
+async function writeAll(list){
+  localStorage.setItem(KEY, JSON.stringify(list));
+}
+
+async function loadIdeas(showToast){
+  try{
+    ideas = await readAll();
+    render();
+    if(showToast) toast('새 게임팩 확인 완료! ✨');
+  }catch(e){
+    document.getElementById('board').innerHTML =
+      '<div class="empty">저장소에 연결하지 못했어요. 새로고침을 눌러 다시 시도해 주세요.</div>';
+  }
+}
+
+async function submitIdea(){
+  const nick = document.getElementById('nick').value.trim();
+  const title = document.getElementById('title').value.trim();
+  const rules = document.getElementById('rules').value.trim();
+  if(!nick){ toast('이름을 알려 줘! ✏️'); return; }
+  if(!title){ toast('게임 제목이 필요해! 🎮'); return; }
+  if(!rules){ toast('하는 법도 적어 줘! 📖'); return; }
+
+  const idea = {
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    nick, title, rules,
+    likes: 0,
+    ts: Date.now()
+  };
+
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  try{
+    // read-merge-write so we don't clobber friends' posts
+    const latest = await readAll();
+    latest.unshift(idea);
+    await writeAll(latest);
+    ideas = latest;
+    document.getElementById('title').value = '';
+    document.getElementById('rules').value = '';
+    render();
+    toast('게임팩 완성! 🎉');
+  }catch(e){
+    toast('앗, 저장에 실패했어요. 다시 눌러 주세요!');
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+async function likeIdea(id){
+  if(myLikes.has(id)){ toast('이미 좋아요 눌렀어! 😆'); return; }
+  try{
+    const latest = await readAll();
+    const target = latest.find(i => i.id === id);
+    if(!target){ toast('이 게임팩이 사라졌어요 🤔'); await loadIdeas(); return; }
+    target.likes = (target.likes || 0) + 1;
+    await writeAll(latest);
+    myLikes.add(id);
+    ideas = latest;
+    render();
+    toast('좋아요! 👍');
+  }catch(e){
+    toast('앗, 좋아요를 저장하지 못했어요.');
+  }
+}
+
+function render(){
+  const board = document.getElementById('board');
+  document.getElementById('count').textContent = ideas.length ? `(${ideas.length}개)` : '';
+  if(!ideas.length){
+    board.innerHTML = '<div class="empty"><span class="big">📭</span>아직 게임팩이 없어요.<br>첫 번째 게임을 올려 봐!</div>';
+    return;
+  }
+  const sorted = [...ideas].sort((a,b) => (b.likes||0) - (a.likes||0) || b.ts - a.ts);
+  board.innerHTML = '<div class="grid">' + sorted.map(i => `
+    <article class="pak">
+      <div class="pak-label">
+        <h3 class="pak-title">${esc(i.title)}</h3>
+        <p class="pak-rules">${esc(i.rules)}</p>
+        <div class="pak-meta">
+          <span class="pak-author">🧒 ${esc(i.nick)}</span>
+          <button class="like-btn ${myLikes.has(i.id)?'liked':''}" onclick="likeIdea('${i.id}')">👍 ${i.likes||0}</button>
+        </div>
+      </div>
+    </article>`).join('') + '</div>';
+}
+
+loadIdeas();
+setInterval(()=>loadIdeas(false), 20000); // pull friends' new posts every 20s
+</script>
+</body>
+</html>
