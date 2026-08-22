@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>생일 촛불 끄기</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background:#FDF8F2;
+    color:#3A2E2A;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px 14px 32px;
+    user-select:none; -webkit-user-select:none;
+  }
+  h1 { font-size:22px; font-weight:700; margin-bottom:14px; letter-spacing:-0.5px; }
+  .hud { display:flex; gap:10px; margin-bottom:14px; width:100%; max-width:420px; }
+  .hud > div {
+    flex:1; background:#FFF; border-radius:12px; padding:10px 6px;
+    text-align:center; box-shadow:0 1px 3px rgba(90,60,40,0.08);
+  }
+  .hud .label { font-size:11px; color:#A08C80; }
+  .hud .val { font-size:22px; font-weight:700; margin-top:2px; }
+  #stage {
+    position:relative; width:100%; max-width:420px; height:320px;
+    background:#FFF3E6; border-radius:16px; overflow:hidden;
+    touch-action:manipulation; cursor:pointer;
+    box-shadow:0 2px 8px rgba(90,60,40,0.10);
+  }
+  #msg {
+    position:absolute; top:12px; left:0; right:0; z-index:5;
+    text-align:center; font-size:15px; font-weight:600; color:#8A6E5E; padding:0 12px;
+  }
+  #ending { display:none; position:absolute; inset:0; z-index:10; text-align:center; }
+  #controls {
+    margin-top:16px; display:flex; align-items:center; gap:10px; justify-content:center;
+    width:100%; max-width:420px;
+  }
+  #controls label { font-size:14px; color:#8A6E5E; }
+  #startAge {
+    width:72px; height:42px; font-size:17px; text-align:center;
+    border:1.5px solid #E4CFBB; border-radius:10px; background:#FFF; color:#3A2E2A;
+  }
+  #startBtn {
+    height:44px; padding:0 22px; font-size:16px; font-weight:700;
+    border:none; border-radius:12px; background:#E86A4C; color:#FFF; cursor:pointer;
+  }
+  #startBtn:active { transform:scale(0.97); }
+  #err { margin-top:8px; font-size:13px; color:#C23B3B; min-height:18px; }
+  .flame { transition:opacity 0.15s; }
+</style>
+</head>
+<body>
+<h1>🎂 생일 촛불 끄기</h1>
+
+<div class="hud">
+  <div><div class="label">나이 (레벨)</div><div class="val" id="lvl">1</div></div>
+  <div><div class="label">남은 시간</div><div class="val" id="timer">-</div></div>
+  <div><div class="label">남은 촛불</div><div class="val" id="left">-</div></div>
+</div>
+
+<div id="stage">
+  <div id="msg">시작 나이를 정하고 시작하세요</div>
+  <div id="ending"></div>
+</div>
+
+<div id="controls">
+  <label id="ageLabel" for="startAge">시작 나이</label>
+  <input type="number" id="startAge" min="1" max="99" value="1" step="1" inputmode="numeric">
+  <button id="startBtn">게임 시작</button>
+</div>
+<div id="err"></div>
+
+<script>
+(function(){
+  var GOAL = 100;
+  var level = 1, lit = 0, timeLeft = 0, timerId = null, relightId = null,
+      playing = false, relightBudget = 0, confettiId = null;
+  var candles = [];
+  var stage = document.getElementById('stage');
+  var lvlEl = document.getElementById('lvl');
+  var timerEl = document.getElementById('timer');
+  var leftEl = document.getElementById('left');
+  var msgEl = document.getElementById('msg');
+  var btn = document.getElementById('startBtn');
+  var ageInput = document.getElementById('startAge');
+  var ageLabel = document.getElementById('ageLabel');
+  var controls = document.getElementById('controls');
+  var errEl = document.getElementById('err');
+  var endingEl = document.getElementById('ending');
+  var CAKE_TOP = 100;
+
+  function drawCake(){
+    var W = stage.clientWidth;
+    var cx = W / 2;
+    var layers = [
+      {w: Math.min(360, W-20), h: 8,  b: 20, c: '#B4B2A9', r: '4px'},
+      {w: Math.min(330, W-40), h: 32, b: 28, c: '#F4C0D1', r: '10px 10px 0 0'},
+      {w: Math.min(290, W-70), h: 10, b: 60, c: '#FBEAF0', r: '5px'},
+      {w: Math.min(290, W-70), h: 34, b: 66, c: '#ED93B1', r: '10px 10px 0 0'}
+    ];
+    layers.forEach(function(L){
+      var d = document.createElement('div');
+      d.className = 'cake';
+      d.style.cssText = 'position:absolute; bottom:'+L.b+'px; left:'+(cx - L.w/2)+'px; width:'+L.w+'px; height:'+L.h+'px; background:'+L.c+'; border-radius:'+L.r+'; pointer-events:none;';
+      stage.appendChild(d);
+    });
+  }
+
+  function makeCandle(i, n, cx, topW, golden){
+    var usable = topW - 30;
+    var gap = n > 1 ? Math.min(44, usable / (n-1)) : 0;
+    var x = cx - (gap * (n-1)) / 2 + gap * i;
+    var bodyColors = golden ? ['#EF9F27'] : ['#85B7EB','#5DCAA5','#F0997B','#AFA9EC','#ED93B1','#97C459'];
+    var h = 52 + ((i*37)%38);
+    var wrap = document.createElement('div');
+    wrap.className = 'candle';
+    wrap.style.cssText = 'position:absolute; bottom:'+CAKE_TOP+'px; left:'+(x-8)+'px; width:16px; height:'+(h+32)+'px; pointer-events:none;';
+    wrap.innerHTML =
+      '<div class="flame" style="position:absolute; left:50%; transform:translateX(-50%); bottom:'+(h+6)+'px; width:14px; height:20px; background:#EF9F27; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;"></div>' +
+      '<div style="position:absolute; left:50%; transform:translateX(-50%); bottom:'+h+'px; width:2px; height:8px; background:#444441;"></div>' +
+      '<div class="body" style="position:absolute; left:50%; transform:translateX(-50%); bottom:0; width:12px; height:'+h+'px; background:'+bodyColors[i % bodyColors.length]+'; border-radius:3px 3px 0 0;"></div>';
+    stage.appendChild(wrap);
+    return { el: wrap, x: x, lit: true, relit: false };
+  }
+
+  function extinguish(c){
+    c.lit = false;
+    c.el.querySelector('.flame').style.opacity = '0';
+    if(c.relit || relightBudget === 0) c.el.querySelector('.body').style.opacity = '0.35';
+    lit--;
+    updateHud();
+    if(lit === 0) win();
+  }
+
+  stage.addEventListener('pointerdown', function(e){
+    if(!playing) return;
+    var rect = stage.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var best = null, bestD = 1e9;
+    candles.forEach(function(c){
+      if(!c.lit) return;
+      var d = Math.abs(c.x - x);
+      if(d < bestD){ bestD = d; best = c; }
+    });
+    if(best && bestD < 40) extinguish(best);
+  });
+
+  function updateHud(){
+    lvlEl.textContent = level;
+    timerEl.textContent = timeLeft.toFixed(1);
+    leftEl.textContent = lit;
+  }
+
+  function candleCount(lv){ return Math.min(lv, 24); }
+
+  function startLevel(){
+    clearInterval(timerId); clearInterval(relightId); clearInterval(confettiId);
+    endingEl.style.display = 'none';
+    endingEl.innerHTML = '';
+    msgEl.style.display = '';
+    [].slice.call(stage.querySelectorAll('.candle, .cake, .cf')).forEach(function(e){ e.remove(); });
+    drawCake();
+    var W = stage.clientWidth;
+    var cx = W / 2;
+    var topW = Math.min(290, W-70);
+    var golden = level === GOAL;
+    var n = candleCount(level);
+    candles = [];
+    lit = n;
+    relightBudget = level >= 3 ? Math.ceil(level / 3) : 0;
+    for(var i=0;i<n;i++) candles.push(makeCandle(i, n, cx, topW, golden));
+    timeLeft = level + level;
+    playing = true;
+    msgEl.textContent = golden
+      ? '100살, 황금 케이크! 마지막 소원입니다'
+      : level + '살! 촛불 ' + n + '개, 재점화 최대 ' + relightBudget + '회';
+    updateHud();
+    timerId = setInterval(function(){
+      timeLeft -= 0.1;
+      if(timeLeft <= 0){ timeLeft = 0; lose(); }
+      updateHud();
+    }, 100);
+    relightId = setInterval(function(){
+      if(!playing || relightBudget <= 0) return;
+      var out = candles.filter(function(c){ return !c.lit && !c.relit; });
+      if(out.length && Math.random() < Math.min(0.65, 0.15 + level*0.04)){
+        var c = out[Math.floor(Math.random()*out.length)];
+        c.lit = true; c.relit = true;
+        c.el.querySelector('.flame').style.opacity = '1';
+        lit++;
+        relightBudget--;
+        if(relightBudget === 0){
+          candles.forEach(function(cc){
+            if(!cc.lit) cc.el.querySelector('.body').style.opacity = '0.35';
+          });
+        }
+        updateHud();
+      }
+    }, 900);
+  }
+
+  function spawnConfetti(){
+    var colors = ['#EF9F27','#ED93B1','#85B7EB','#5DCAA5','#AFA9EC','#F0997B'];
+    var W = stage.clientWidth;
+    confettiId = setInterval(function(){
+      for(var i=0;i<3;i++){
+        var p = document.createElement('div');
+        p.className = 'cf';
+        var size = 6 + Math.random()*6;
+        p.style.cssText = 'position:absolute; top:-12px; left:'+(Math.random()*W)+'px; width:'+size+'px; height:'+size+'px; background:'+colors[Math.floor(Math.random()*colors.length)]+'; border-radius:'+(Math.random()<0.5?'50%':'2px')+'; pointer-events:none; transition:transform 3s linear, opacity 3s linear; z-index:8;';
+        stage.appendChild(p);
+        (function(el){
+          requestAnimationFrame(function(){
+            el.style.transform = 'translateY(340px) rotate('+(Math.random()*720-360)+'deg)';
+            el.style.opacity = '0';
+          });
+          setTimeout(function(){ el.remove(); }, 3200);
+        })(p);
+      }
+    }, 200);
+  }
+
+  function showEnding(){
+    playing = false;
+    clearInterval(timerId); clearInterval(relightId);
+    msgEl.style.display = 'none';
+    endingEl.style.display = 'block';
+    endingEl.innerHTML =
+      '<div style="padding-top:56px;">' +
+      '<div style="font-size:30px; font-weight:700;">🎉 100살 생일 축하합니다</div>' +
+      '<div style="margin-top:10px; font-size:15px; color:#8A6E5E;">1세기 동안 단 하나의 소원도 놓치지 않았습니다</div>' +
+      '<div style="margin-top:6px; font-size:13px; color:#A08C80;">촛불 끄기 명예의 전당 헌액</div>' +
+      '</div>';
+    spawnConfetti();
+    btn.textContent = '처음부터 다시';
+    ageInput.style.display = '';
+    ageLabel.style.display = '';
+    ageInput.value = '1';
+    controls.style.display = 'flex';
+  }
+
+  function win(){
+    if(level === GOAL){ showEnding(); return; }
+    playing = false;
+    clearInterval(timerId); clearInterval(relightId);
+    msgEl.textContent = '생일 축하합니다! ' + level + '살 클리어' + (level === GOAL-1 ? ' — 다음은 대망의 100살!' : '');
+    level++;
+    btn.textContent = level + '살 도전';
+    ageInput.style.display = 'none';
+    ageLabel.style.display = 'none';
+    controls.style.display = 'flex';
+  }
+
+  function lose(){
+    playing = false;
+    clearInterval(timerId); clearInterval(relightId);
+    msgEl.textContent = '촛불이 다 안 꺼졌어요... ' + level + '살에서 소원 무산!';
+    btn.textContent = '다시 ' + level + '살부터';
+    controls.style.display = 'flex';
+  }
+
+  btn.addEventListener('click', function(){
+    if(ageInput.style.display !== 'none'){
+      var v = parseInt(ageInput.value, 10);
+      if(isNaN(v) || v < 1 || v > 99){
+        errEl.textContent = '1~99 사이 나이를 입력하세요';
+        return;
+      }
+      errEl.textContent = '';
+      level = v;
+    }
+    controls.style.display = 'none';
+    startLevel();
+  });
+
+  ageInput.addEventListener('input', function(){ errEl.textContent = ''; });
+})();
+</script>
+</body>
+</html>
