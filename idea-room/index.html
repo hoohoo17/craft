@@ -182,6 +182,16 @@
   }
   .del-btn:active{transform:translate(2px,2px); box-shadow:0 0 0 var(--ink);}
 
+  .pending-tag{
+    font-size:.8rem;
+    background:#FFE066;
+    border:2px solid var(--ink);
+    border-radius:12px;
+    padding:1px 8px;
+    margin-left:4px;
+    white-space:nowrap;
+  }
+
   .empty, .loading{
     text-align:center;
     background:var(--paper);
@@ -247,7 +257,9 @@ let ideas = [];
 let myLikes = new Set(); // session-only memory of what I liked
 
 // 이 기기에서 올린 글 목록 — 자기 글만 지울 수 있게 하려고 따로 기억해 둔다
-const MINE_KEY = 'game-idea-room-mine-v1';
+const MINE_KEY = 'game-idea-room-mine-v2';
+// 글이 승인되면 서버가 새 id를 붙이므로, id 대신 내용으로 내 글을 알아본다
+function keyOf(i){ return i.nick + '\u0000' + i.title + '\u0000' + i.rules; }
 function readMine(){
   try{ return new Set(JSON.parse(localStorage.getItem(MINE_KEY)) || []); }catch(e){ return new Set(); }
 }
@@ -255,6 +267,28 @@ function writeMine(){
   try{ localStorage.setItem(MINE_KEY, JSON.stringify([...mine])); }catch(e){}
 }
 let mine = readMine();
+function isMine(i){ return mine.has(keyOf(i)); }
+
+// 좋아요는 서버가 못 고치므로 이 기기에만 쌓인다
+const LIKE_KEY = 'game-idea-room-likes-v1';
+function readLikes(){
+  try{ return JSON.parse(localStorage.getItem(LIKE_KEY)) || {}; }catch(e){ return {}; }
+}
+let likeMap = readLikes();
+function writeLikes(){
+  try{ localStorage.setItem(LIKE_KEY, JSON.stringify(likeMap)); }catch(e){}
+}
+function likeCount(i){ return likeMap[keyOf(i)] || 0; }
+
+// 서버 글은 지울 권한이 없으므로, 내가 지운 것은 이 기기에서 감춘다
+const HIDDEN_KEY = 'game-idea-room-hidden-v1';
+function readHidden(){
+  try{ return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY)) || []); }catch(e){ return new Set(); }
+}
+let hidden = readHidden();
+function writeHidden(){
+  try{ localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden])); }catch(e){}
+}
 
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -268,23 +302,67 @@ function toast(msg){
   t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
-async function readAll(){
-  try{
-    return JSON.parse(localStorage.getItem(KEY)) || [];
-  }catch(e){
-    return []; // key doesn't exist yet
-  }
+// 이미 떠 있는 댓글 서버를 공유 게시판으로 쓴다(서버 배포 불필요).
+// 승인된 글만 message가 내려오므로, 내 글은 이 기기 사본으로 항상 보여 준다.
+const API = 'https://craft-comments.jaehoo.workers.dev?page=idea-room-v1';
+
+function readLocal(){
+  try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; }
+}
+function writeLocal(list){
+  try{ localStorage.setItem(KEY, JSON.stringify(list)); }catch(e){}
 }
 
-async function writeAll(list){
-  localStorage.setItem(KEY, JSON.stringify(list));
+// 서버에서 승인된 글을 가져온다
+async function fetchShared(){
+  const res = await fetch(API, { cache:'no-store' });
+  if(!res.ok) throw new Error('http ' + res.status);
+  const rows = await res.json();
+  if(!Array.isArray(rows)) throw new Error('bad payload');
+  const out = [];
+  rows.forEach(function(c){
+    if(!c || !c.approved || typeof c.message !== 'string') return; // 아직 검토 중
+    let d; try{ d = JSON.parse(c.message); }catch(e){ return; }
+    if(!d || typeof d.title !== 'string' || typeof d.rules !== 'string') return;
+    out.push({ id:'s'+c.id, nick:String(c.name||'익명'), title:d.title, rules:d.rules,
+               likes:0, ts:Date.parse(c.date)||0, shared:true });
+  });
+  return out;
 }
+
+// 화면에 뿌릴 목록 = 서버 글 + 아직 승인 안 난 내 글
+async function readAll(){
+  const localList = readLocal();
+  let shared = [];
+  let online = true;
+  try{ shared = await fetchShared(); }catch(e){ online = false; }
+  lastOnline = online;
+  if(!online) return localList.filter(function(i){ return !hidden.has(keyOf(i)); });
+  const seen = new Set(shared.map(function(i){ return i.nick + '\u0000' + i.title + '\u0000' + i.rules; }));
+  const pending = localList.filter(function(i){
+    return !seen.has(i.nick + '\u0000' + i.title + '\u0000' + i.rules);
+  }).map(function(i){ return Object.assign({}, i, { pending:true }); });
+  return pending.concat(shared).filter(function(i){ return !hidden.has(keyOf(i)); });
+}
+
+// 서버로 보낸다. 실패해도 이 기기 사본은 남는다.
+async function postShared(idea){
+  const res = await fetch(API, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ name: idea.nick.slice(0,20),
+                           message: JSON.stringify({ title: idea.title, rules: idea.rules }) }),
+  });
+  if(!res.ok) throw new Error('http ' + res.status);
+}
+
+let lastOnline = true;
 
 async function loadIdeas(showToast){
   try{
     ideas = await readAll();
     // 이 기능이 생기기 전에 올린 글도 지울 수 있게 한 번만 내 글로 인정한다
-    if(!mine.size && ideas.length){ ideas.forEach(i => mine.add(i.id)); writeMine(); }
+    if(!mine.size){ readLocal().forEach(i => mine.add(keyOf(i))); writeMine(); }
     render();
     if(showToast) toast('새 게임팩 확인 완료! ✨');
   }catch(e){
@@ -311,16 +389,16 @@ async function submitIdea(){
   const btn = document.querySelector('.submit-btn');
   btn.disabled = true;
   try{
-    // read-merge-write so we don't clobber friends' posts
-    const latest = await readAll();
-    latest.unshift(idea);
-    await writeAll(latest);
-    ideas = latest;
-    mine.add(idea.id); writeMine();
+    const localList = readLocal();
+    localList.unshift(idea);
+    writeLocal(localList);
+    mine.add(keyOf(idea)); writeMine();
     document.getElementById('title').value = '';
     document.getElementById('rules').value = '';
-    render();
-    toast('게임팩 완성! 🎉');
+    let sent = true;
+    try{ await postShared(idea); }catch(e){ sent = false; }
+    await loadIdeas(false);
+    toast(sent ? '게임팩 완성! 친구들에게 곧 보여요 🎉' : '올렸어요! 인터넷이 안 돼서 내 폰에만 저장됐어요 📵');
   }catch(e){
     toast('앗, 저장에 실패했어요. 다시 눌러 주세요!');
   }finally{
@@ -331,13 +409,13 @@ async function submitIdea(){
 async function deleteIdea(id){
   if(!confirm('이 게임팩을 지울까? 되돌릴 수 없어!')) return;
   try{
-    const latest = await readAll();
-    const left = latest.filter(i => i.id !== id);
-    if(left.length === latest.length){ toast('이 게임팩이 이미 사라졌어요 🤔'); await loadIdeas(); return; }
-    await writeAll(left);
-    mine.delete(id); writeMine();
-    ideas = left;
-    render();
+    const target = ideas.find(i => i.id === id);
+    if(!target){ toast('이 게임팩이 이미 사라졌어요 🤔'); await loadIdeas(); return; }
+    const k = keyOf(target);
+    writeLocal(readLocal().filter(i => keyOf(i) !== k));
+    mine.delete(k); writeMine();
+    hidden.add(k); writeHidden();
+    await loadIdeas(false);
     toast('지웠어요! 🗑️');
   }catch(e){
     toast('앗, 지우지 못했어요. 다시 눌러 주세요!');
@@ -347,13 +425,12 @@ async function deleteIdea(id){
 async function likeIdea(id){
   if(myLikes.has(id)){ toast('이미 좋아요 눌렀어! 😆'); return; }
   try{
-    const latest = await readAll();
-    const target = latest.find(i => i.id === id);
+    const target = ideas.find(i => i.id === id);
     if(!target){ toast('이 게임팩이 사라졌어요 🤔'); await loadIdeas(); return; }
-    target.likes = (target.likes || 0) + 1;
-    await writeAll(latest);
+    const k = keyOf(target);
+    likeMap[k] = (likeMap[k] || 0) + 1;
+    writeLikes();
     myLikes.add(id);
-    ideas = latest;
     render();
     toast('좋아요! 👍');
   }catch(e){
@@ -368,16 +445,16 @@ function render(){
     board.innerHTML = '<div class="empty"><span class="big">📭</span>아직 게임팩이 없어요.<br>첫 번째 게임을 올려 봐!</div>';
     return;
   }
-  const sorted = [...ideas].sort((a,b) => (b.likes||0) - (a.likes||0) || b.ts - a.ts);
+  const sorted = [...ideas].sort((a,b) => likeCount(b) - likeCount(a) || b.ts - a.ts);
   board.innerHTML = '<div class="grid">' + sorted.map(i => `
     <article class="pak">
       <div class="pak-label">
         <h3 class="pak-title">${esc(i.title)}</h3>
         <p class="pak-rules">${esc(i.rules)}</p>
         <div class="pak-meta">
-          <span class="pak-author">🧒 ${esc(i.nick)}</span>
-          <button class="like-btn ${myLikes.has(i.id)?'liked':''}" onclick="likeIdea('${i.id}')">👍 ${i.likes||0}</button>
-          ${mine.has(i.id) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내가 올린 게임팩 지우기">🗑️</button>` : ''}
+          <span class="pak-author">🧒 ${esc(i.nick)}${i.pending ? ' <span class="pending-tag">검토 중</span>' : ''}</span>
+          <button class="like-btn ${myLikes.has(i.id)?'liked':''}" onclick="likeIdea('${i.id}')">👍 ${likeCount(i)}</button>
+          ${isMine(i) ? `<button class="del-btn" onclick="deleteIdea('${i.id}')" title="내가 올린 게임팩 지우기">🗑️</button>` : ''}
         </div>
       </div>
     </article>`).join('') + '</div>';
