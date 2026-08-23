@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>낙하 스택 쌓기</title>
+<style>
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:#12121F;
+    color:#F2F2FA;
+    display:flex; justify-content:center;
+    touch-action:manipulation;
+  }
+  #wrap{position:relative; width:100%; max-width:480px; height:100%;}
+  canvas{display:block; width:100%; height:100%;}
+
+  #score{
+    position:absolute; top:20px; left:0; right:0;
+    text-align:center;
+    font-size:3rem; font-weight:900;
+    text-shadow:0 3px 12px rgba(0,0,0,.5);
+    pointer-events:none;
+    z-index:2;
+  }
+  #combo{
+    position:absolute; top:86px; left:0; right:0;
+    text-align:center;
+    font-size:1.1rem; font-weight:800;
+    color:#FFD166;
+    opacity:0; transition:opacity .2s;
+    pointer-events:none;
+    z-index:2;
+  }
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(18,18,31,.9);
+    text-align:center;
+    padding:24px;
+    z-index:5;
+  }
+  .overlay h1{font-size:2.1rem; margin-bottom:10px;}
+  .overlay p{font-size:1.05rem; line-height:1.6; opacity:.85; margin-bottom:4px;}
+  .big-btn{
+    margin-top:22px;
+    font-family:inherit;
+    font-size:1.3rem; font-weight:900;
+    color:#12121F; background:#5EF0C6;
+    border:none; border-radius:14px;
+    padding:14px 42px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #2FA383;
+  }
+  .big-btn:active{transform:translateY(4px); box-shadow:0 1px 0 #2FA383;}
+  .final{font-size:3.4rem; font-weight:900; color:#5EF0C6; margin:8px 0;}
+  .best{font-size:1rem; opacity:.7;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="score">0</div>
+  <div id="combo"></div>
+
+  <div class="overlay" id="start">
+    <h1>🏗️ 낙하 스택 쌓기</h1>
+    <p>움직이는 블록을 <b>탭</b>해서 떨어뜨려!</p>
+    <p>어긋난 만큼 잘려서 점점 좁아져 😱</p>
+    <p>딱 맞추면 <b style="color:#FFD166">PERFECT!</b> 보너스</p>
+    <button class="big-btn" onclick="startGame(event)">시작!</button>
+  </div>
+
+  <div class="overlay hidden" id="over">
+    <h1>💥 와르르!</h1>
+    <div class="final" id="final">0층</div>
+    <div class="best" id="best"></div>
+    <button class="big-btn" onclick="startGame(event)">다시 쌓기</button>
+  </div>
+</div>
+
+<script>
+const KEY = 'stack-tower-best-v1';
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
+async function storageGet(k){
+  if(hasCloudStorage){ try{ const r = await window.storage.get(k); return r ? r.value : null; }catch(e){ return null; } }
+  return localStorage.getItem(k);
+}
+async function storageSet(k,v){
+  try{
+    if(hasCloudStorage) await window.storage.set(k,v);
+    else localStorage.setItem(k,v);
+  }catch(e){}
+}
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H;
+function resize(){
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  W = document.getElementById('wrap').clientWidth;
+  H = document.getElementById('wrap').clientHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const BLOCK_H = 34;
+let running = false;
+let stack, moving, debris, score, combo, speed, dir, camY, best = 0, hueBase;
+let shakeT = 0;
+
+function hue(i){ return (hueBase + i*7) % 360; }
+function blockColor(i, light=0){ return `hsl(${hue(i)}, 65%, ${48+light}%)`; }
+
+function startGame(e){
+  if(e) e.stopPropagation();
+  document.getElementById('start').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  hueBase = Math.random()*360;
+  score = 0; combo = 0;
+  speed = 160; dir = 1;
+  camY = 0;
+  debris = [];
+  const baseW = Math.min(W*0.6, 260);
+  stack = [{x:(W-baseW)/2, w:baseW, y:H-80}];
+  spawnMoving();
+  running = true;
+  updateScore();
+  lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+
+function spawnMoving(){
+  const top = stack[stack.length-1];
+  const fromLeft = stack.length % 2 === 1;
+  moving = {
+    x: fromLeft ? -top.w : W,
+    w: top.w,
+    y: top.y - BLOCK_H
+  };
+  dir = fromLeft ? 1 : -1;
+}
+
+function drop(){
+  if(!running || !moving) return;
+  const top = stack[stack.length-1];
+  const left = Math.max(moving.x, top.x);
+  const right = Math.min(moving.x + moving.w, top.x + top.w);
+  const overlap = right - left;
+
+  if(overlap <= 4){
+    // 완전 빗나감 → 게임 오버
+    debris.push({x:moving.x, w:moving.w, y:moving.y, vy:0, vx:dir*40, rot:0, vr:dir*2, i:stack.length});
+    moving = null;
+    endGame();
+    return;
+  }
+
+  const offCut = moving.w - overlap;
+  const PERFECT = 7;
+  if(offCut <= PERFECT){
+    // 퍼펙트: 안 자름 + 콤보
+    combo++;
+    score += 1 + combo;
+    showCombo(`PERFECT! x${combo} ⚡ +${combo}`);
+    // 퍼펙트 3연속마다 블록 살짝 넓어짐 (보상)
+    let w = top.w;
+    if(combo % 3 === 0) w = Math.min(w + 14, Math.min(W*0.6, 260));
+    stack.push({x: top.x + (top.w - w)/2, w, y: moving.y});
+    flash = 0.4;
+  }else{
+    combo = 0;
+    score += 1;
+    // 잘림
+    stack.push({x:left, w:overlap, y:moving.y});
+    // 잘린 조각 낙하
+    const cutX = moving.x < top.x ? moving.x : right;
+    debris.push({x:cutX, w:offCut, y:moving.y, vy:0, vx:(cutX<left?-1:1)*30, rot:0, vr:(cutX<left?-1:1)*3, i:stack.length-1});
+  }
+
+  speed = Math.min(520, speed + 7);
+  updateScore();
+  spawnMoving();
+}
+
+function endGame(){
+  running = false;
+  shakeT = 0.5;
+  best = Math.max(best, score);
+  storageSet(KEY, String(best));
+  setTimeout(()=>{
+    document.getElementById('final').textContent = score + '층';
+    document.getElementById('best').textContent = '🏆 최고 기록: ' + best + '층';
+    document.getElementById('over').classList.remove('hidden');
+    // 마지막 프레임 잔해 몇 프레임 더 그리기
+  }, 900);
+  // 잔해 애니메이션은 loop가 잠깐 더 돎
+  lastT = performance.now();
+  requestAnimationFrame(deathLoop);
+}
+
+function updateScore(){
+  document.getElementById('score').textContent = score;
+}
+let comboTimer = null;
+function showCombo(text){
+  const el = document.getElementById('combo');
+  el.textContent = text;
+  el.style.opacity = 1;
+  clearTimeout(comboTimer);
+  comboTimer = setTimeout(()=>{ el.style.opacity = 0; }, 900);
+}
+
+/* ---------- input ---------- */
+function onTap(e){
+  if(e.target.closest('.overlay')) return;
+  drop();
+}
+window.addEventListener('pointerdown', onTap);
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); drop(); }
+});
+
+/* ---------- loop ---------- */
+let lastT = 0, flash = 0;
+function loop(t){
+  if(!running) return;
+  const dt = Math.min((t-lastT)/1000, 0.05);
+  lastT = t;
+
+  // 이동 블록
+  if(moving){
+    moving.x += dir*speed*dt;
+    if(dir===1 && moving.x > W - moving.w*0.15) dir = -1;
+    if(dir===-1 && moving.x < -moving.w*0.85) dir = 1;
+  }
+
+  // 카메라: 탑이 높아지면 아래로 스크롤
+  const targetCam = Math.max(0, (H-160) - stack[stack.length-1].y);
+  camY += (targetCam - camY) * Math.min(1, dt*5);
+
+  updateDebris(dt);
+  if(flash > 0) flash -= dt;
+  if(shakeT > 0) shakeT -= dt;
+
+  render();
+  requestAnimationFrame(loop);
+}
+
+function deathLoop(t){
+  if(running) return;
+  const dt = Math.min((t-lastT)/1000, 0.05);
+  lastT = t;
+  if(shakeT > 0) shakeT -= dt;
+  updateDebris(dt);
+  render();
+  if(debris.length) requestAnimationFrame(deathLoop);
+}
+
+function updateDebris(dt){
+  for(let i=debris.length-1; i>=0; i--){
+    const d = debris[i];
+    d.vy += 900*dt;
+    d.y += d.vy*dt;
+    d.x += d.vx*dt;
+    d.rot += d.vr*dt;
+    if(d.y - camY > H + 100) debris.splice(i,1);
+  }
+}
+
+function render(){
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  if(shakeT>0) ctx.translate((Math.random()-.5)*10, (Math.random()-.5)*10);
+  ctx.translate(0, camY);
+
+  // 배경 그라데이션 (높이에 따라 어두워짐)
+  // (몸통은 CSS 배경, 여기선 블록만)
+
+  // 쌓인 블록
+  for(let i=0;i<stack.length;i++){
+    const b = stack[i];
+    drawBlock(b.x, b.y, b.w, blockColor(i), i===stack.length-1 && flash>0);
+  }
+  // 이동 블록
+  if(moving){
+    drawBlock(moving.x, moving.y, moving.w, blockColor(stack.length, 8));
+  }
+  // 잔해
+  for(const d of debris){
+    ctx.save();
+    ctx.translate(d.x + d.w/2, d.y + BLOCK_H/2);
+    ctx.rotate(d.rot);
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = blockColor(d.i, -8);
+    ctx.fillRect(-d.w/2, -BLOCK_H/2, d.w, BLOCK_H);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawBlock(x, y, w, color, glow){
+  ctx.save();
+  if(glow){ ctx.shadowColor = '#FFD166'; ctx.shadowBlur = 24; }
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, BLOCK_H);
+  // 윗면 하이라이트
+  ctx.fillStyle = 'rgba(255,255,255,.22)';
+  ctx.fillRect(x, y, w, 6);
+  // 옆면 그림자
+  ctx.fillStyle = 'rgba(0,0,0,.18)';
+  ctx.fillRect(x, y+BLOCK_H-5, w, 5);
+  ctx.restore();
+}
+
+/* ---------- boot ---------- */
+(async function(){
+  const raw = await storageGet(KEY);
+  if(raw) best = parseInt(raw)||0;
+})();
+</script>
+</body>
+</html>
