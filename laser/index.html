@@ -54,6 +54,20 @@
   .clear-banner .s{font-size:1rem; opacity:.8;}
 
   .controls{display:flex; gap:10px;}
+  .lv-picker{
+    display:flex; flex-wrap:wrap; gap:6px; justify-content:center;
+    margin:10px 0 4px;
+  }
+  .lv-picker button{
+    font-family:inherit; font-size:.95rem; font-weight:800;
+    width:34px; height:34px; padding:0;
+    border:none; border-radius:9px; cursor:pointer;
+    background:var(--panel); color:var(--ink);
+    box-shadow:0 2px 0 rgba(0,0,0,.3);
+  }
+  .lv-picker button.cur{background:#5EE7C6; color:#10121C;}
+  .lv-picker button.locked{opacity:.32; cursor:not-allowed;}
+
   .ctl{
     flex:1;
     font-family:inherit; font-size:1rem; font-weight:800;
@@ -87,6 +101,8 @@
       <button class="ctl primary" id="btn-banner-next" style="flex:0; padding:12px 34px;" onclick="nextLevel()">다음 레벨 ▶</button>
     </div>
   </div>
+
+  <div class="lv-picker" id="lv-picker"></div>
 
   <div class="controls">
     <button class="ctl" id="btn-prev" onclick="prevLevel()">◀ 이전</button>
@@ -311,6 +327,26 @@ function prevLevel(){ if(cur>0) loadLevel(cur-1); }
 function updateButtons(){
   document.getElementById('btn-prev').disabled = cur===0;
   document.getElementById('btn-next').disabled = !(cur+1<LEVELS.length && cur+1<=unlocked);
+  renderPicker();
+}
+
+// 깬 레벨은 아무 때나 다시 고를 수 있다
+function renderPicker(){
+  const box = document.getElementById('lv-picker');
+  if(!box) return;
+  box.innerHTML = '';
+  for(let i=0;i<LEVELS.length;i++){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = i+1;
+    const open = i <= unlocked;
+    if(i === cur) b.className = 'cur';
+    else if(!open) b.className = 'locked';
+    b.disabled = !open;
+    b.title = open ? (i+1) + '단계' : '아직 잠겨 있어요';
+    if(open) b.addEventListener('click', () => loadLevel(i));
+    box.appendChild(b);
+  }
 }
 function updateTaps(){
   document.getElementById('taps').textContent = taps ? `거울 돌린 횟수: ${taps}` : '';
@@ -461,7 +497,7 @@ function draw(t){
     const raw = await storageGet(KEY);
     if(raw) unlocked = JSON.parse(raw).unlocked || 0;
   }catch(e){}
-  loadLevel(Math.min(unlocked, LEVELS.length-1));
+  loadLevel(0);   // 항상 1단계부터. 이어서 하려면 위의 레벨 버튼을 누르면 된다
   requestAnimationFrame(draw);
 })();
 </script>
