@@ -55,6 +55,46 @@
     box-shadow:0 5px 0 #2FA383;
   }
   .big-btn:active{transform:translateY(4px); box-shadow:0 1px 0 #2FA383;}
+
+  /* 기록 등록 + 순위판 */
+  .save-row{display:flex; gap:8px; margin-top:16px; width:min(320px,90%);}
+  .save-row input{
+    flex:1; min-width:0;
+    font-family:inherit; font-size:1rem;
+    background:rgba(255,255,255,.1); color:#F2F2F7;
+    border:2px solid #3A3A55; border-radius:10px;
+    padding:9px 12px; outline:none; text-align:center;
+  }
+  .save-row input:focus{border-color:#5EF0C6;}
+  .save-row button{
+    font-family:inherit; font-size:1rem; font-weight:800;
+    color:#12121F; background:#5EF0C6;
+    border:none; border-radius:10px; padding:9px 18px; cursor:pointer;
+  }
+  .save-row.done{display:none;}
+
+  .rank-box{margin-top:18px; width:min(320px,90%);}
+  .rank-head{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:.95rem; font-weight:800; opacity:.85; margin-bottom:6px;
+  }
+  .rank-head button{
+    font-family:inherit; font-size:1rem;
+    background:none; border:none; color:#5EF0C6; cursor:pointer; padding:2px 6px;
+  }
+  .rank-list{list-style:none; font-size:.95rem; text-align:left;}
+  .rank-list li{
+    display:flex; gap:8px; align-items:baseline;
+    padding:3px 0; border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .rank-list li:last-child{border-bottom:none;}
+  .rank-list .no{width:18px; opacity:.5; font-size:.85rem;}
+  .rank-list .nm{flex:1; min-width:4em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .rank-list .fl{font-weight:900; color:#5EF0C6;}
+  .rank-list li.fresh .nm{color:#FFD166;}
+  .rank-list li.empty{opacity:.5; justify-content:center; border:none;}
+  .rank-note{font-size:.8rem; opacity:.55; margin-top:6px; min-height:1.1em;}
+  .rank-note.warn{color:#FF8FA3; opacity:.9;}
   .final{font-size:3.4rem; font-weight:900; color:#5EF0C6; margin:8px 0;}
   .best{font-size:1rem; opacity:.7;}
   .hidden{display:none !important;}
@@ -78,12 +118,139 @@
     <h1>💥 와르르!</h1>
     <div class="final" id="final">0층</div>
     <div class="best" id="best"></div>
+
+    <div class="save-row" id="saveRow" style="display:none">
+      <input id="nameInput" maxlength="6" placeholder="이름" autocomplete="off">
+      <button type="button" id="saveBtn">등록</button>
+    </div>
+
+    <div class="rank-box">
+      <div class="rank-head">
+        <span>🏗️ 높이 순위 <span id="rankCount"></span></span>
+        <button type="button" id="refreshBtn" title="순위 새로고침" aria-label="순위 새로고침">↻</button>
+      </div>
+      <ol class="rank-list" id="rankList"><li class="empty">아직 기록 없음</li></ol>
+      <div class="rank-note" id="rankNote"></div>
+    </div>
+
     <button class="big-btn" onclick="startGame(event)">다시 쌓기</button>
   </div>
 </div>
 
 <script>
 const KEY = 'stack-tower-best-v1';
+
+/* ---------- 높이 순위 (이미 떠 있는 댓글 서버를 그대로 쓴다) ----------
+   그 서버는 승인 전 글의 내용은 감추고 '이름'만 공개하므로,
+   기록을 이름 칸에 '이름|층수' 형태로 담는다. */
+const RKEY = 'stacktower:ranking:1';
+const API = 'https://craft-comments.jaehoo.workers.dev?page=stack-rank-v1';
+let ranking = [], lastRun = null, lastName = '', rankBusy = false;
+
+const rankList = document.getElementById('rankList');
+const rankNote = document.getElementById('rankNote');
+const rankCount = document.getElementById('rankCount');
+const refreshBtn = document.getElementById('refreshBtn');
+const saveRow = document.getElementById('saveRow');
+const nameInput = document.getElementById('nameInput');
+const saveBtn = document.getElementById('saveBtn');
+
+function sane(list){
+  return Array.isArray(list)
+    ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.f))
+          .map(r => ({ n: r.n, f: +r.f })).slice(0, 100)
+    : [];
+}
+const sortRank = list => list.sort((a,b) => b.f - a.f).slice(0, 100);
+
+function renderRank(freshIdx = -1){
+  rankCount.textContent = ranking.length ? `(${ranking.length}명)` : '';
+  if(!ranking.length){ rankList.innerHTML = '<li class="empty">아직 기록 없음</li>'; return; }
+  rankList.innerHTML = ranking.map((r,i) =>
+    `<li class="${i === freshIdx ? 'fresh' : ''}"><span class="no">${i+1}</span>` +
+    `<span class="nm">${String(r.n).replace(/[<>&]/g,'')}</span>` +
+    `<span class="fl">${r.f}층</span></li>`).join('');
+}
+function note(msg, warn){
+  rankNote.textContent = msg || '';
+  rankNote.classList.toggle('warn', !!warn);
+}
+function readLocalRank(){
+  try{ return sane(JSON.parse(localStorage.getItem(RKEY))); }catch(e){ return []; }
+}
+function writeLocalRank(){
+  try{ localStorage.setItem(RKEY, JSON.stringify(ranking)); }catch(e){}
+}
+
+const encodeRank = e => `${e.n.split('|').join('')}|${e.f}`.slice(0, 20);
+function decodeRank(name){
+  const m = /^(.*)\|(\d+)$/.exec(String(name || ''));
+  return m && m[1] ? { n: m[1], f: +m[2] } : null;
+}
+
+async function fetchBoard(){
+  const res = await fetch(API, { cache:'no-store' });
+  if(!res.ok) throw new Error('http ' + res.status);
+  const rows = await res.json();
+  if(!Array.isArray(rows)) throw new Error('bad payload');
+  return sortRank(rows.map(c => decodeRank(c && c.name)).filter(Boolean));
+}
+
+async function loadRank(){
+  if(rankBusy) return;
+  rankBusy = true;
+  try{
+    if(!ranking.length){ ranking = readLocalRank(); renderRank(); }
+    ranking = await fetchBoard();
+    writeLocalRank();
+    note('');
+  }catch(e){
+    ranking = readLocalRank();
+    note('오프라인 · 이 기기 기록만 표시', true);
+  }
+  renderRank();
+  rankBusy = false;
+}
+
+async function submitScore(){
+  if(!lastRun || rankBusy) return;
+  rankBusy = true;
+  const n = (nameInput.value || '').trim().slice(0,6) || '이름없음';
+  lastName = n;
+  const entry = { n, f: lastRun.f };
+  lastRun = null;
+  saveRow.style.display = 'none';
+
+  ranking = sortRank(ranking.concat([entry]));
+  writeLocalRank();
+  renderRank(ranking.indexOf(entry));
+
+  try{
+    const res = await fetch(API, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ name: encodeRank(entry), message: `${entry.f}층` }),
+    });
+    if(!res.ok) throw new Error('http ' + res.status);
+    ranking = await fetchBoard();
+    writeLocalRank();
+    note('');
+    renderRank(ranking.findIndex(r => r.n === entry.n && r.f === entry.f));
+  }catch(e){
+    note('저장 실패 · 이 기기에만 기록됨', true);
+  }
+  rankBusy = false;
+}
+
+saveBtn.addEventListener('click', e => { e.stopPropagation(); submitScore(); });
+refreshBtn.addEventListener('click', e => { e.stopPropagation(); loadRank(); });
+nameInput.addEventListener('keydown', e => {
+  e.stopPropagation();
+  if(e.key === 'Enter') submitScore();
+});
+saveRow.addEventListener('pointerdown', e => e.stopPropagation());
+loadRank();
+
 const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
 async function storageGet(k){
   if(hasCloudStorage){ try{ const r = await window.storage.get(k); return r ? r.value : null; }catch(e){ return null; } }
@@ -118,6 +285,8 @@ function hue(i){ return (hueBase + i*7) % 360; }
 function blockColor(i, light=0){ return `hsl(${hue(i)}, 65%, ${48+light}%)`; }
 
 function startGame(e){
+  saveRow.style.display = 'none';
+  lastRun = null;
   if(e) e.stopPropagation();
   document.getElementById('start').classList.add('hidden');
   document.getElementById('over').classList.add('hidden');
@@ -197,6 +366,10 @@ function endGame(){
     document.getElementById('final').textContent = score + '층';
     document.getElementById('best').textContent = '🏆 최고 기록: ' + best + '층';
     document.getElementById('over').classList.remove('hidden');
+    lastRun = { f: score };
+    nameInput.value = lastName;
+    saveRow.style.display = 'flex';
+    loadRank();
     // 마지막 프레임 잔해 몇 프레임 더 그리기
   }, 900);
   // 잔해 애니메이션은 loop가 잠깐 더 돎
