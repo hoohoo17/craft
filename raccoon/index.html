@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>너구리 키우기</title>
+<style>
+  :root{
+    --bg1:#DFF3E4; --bg2:#F7FBEF;
+    --night1:#2B3A55; --night2:#3E4E6E;
+    --ink:#33413A;
+    --card:#FFFFFF;
+    --green:#5C8D67;
+    --brown:#8A6D4B;
+    --bar-hunger:#F4A259;
+    --bar-energy:#6C9BD1;
+    --bar-exp:#8AC926;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:linear-gradient(var(--bg1), var(--bg2));
+    color:var(--ink);
+    display:flex; justify-content:center;
+    transition:background 1s;
+    min-height:100vh;
+  }
+  body.night{background:linear-gradient(var(--night1), var(--night2)); color:#EAF0FF;}
+  .wrap{width:100%; max-width:440px; padding:18px 16px 28px; display:flex; flex-direction:column; gap:14px;}
+
+  header{text-align:center; padding-top:4px;}
+  h1{font-size:1.5rem;}
+  .stage-label{
+    display:inline-block;
+    margin-top:6px;
+    background:var(--green); color:#fff;
+    font-weight:800; font-size:.95rem;
+    padding:4px 14px; border-radius:20px;
+  }
+  body.night .stage-label{background:#5A6FA3;}
+
+  /* raccoon yard */
+  .yard{
+    position:relative;
+    background:var(--card);
+    border-radius:20px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+    height:290px;
+    overflow:hidden;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  body.night .yard{background:#4A5B80;}
+  .ground{
+    position:absolute; bottom:0; left:0; right:0; height:56px;
+    background:#CDE7C2;
+    border-radius:0 0 20px 20px;
+  }
+  body.night .ground{background:#3A4B6E;}
+  #raccoon{
+    position:relative;
+    z-index:2;
+    margin-bottom:34px;
+    transition:width .6s, height .6s;
+    transform-origin:bottom center;
+  }
+  #raccoon.bounce{animation:bounce .5s;}
+  @keyframes bounce{0%,100%{transform:scale(1)}40%{transform:scale(1.12,0.9)}70%{transform:scale(0.95,1.08)}}
+  #raccoon.idle{animation:idle 3s ease-in-out infinite;}
+  @keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .zzz{
+    position:absolute; top:28px; right:30px;
+    font-size:1.8rem; z-index:3;
+    animation:zfloat 2s infinite;
+    display:none;
+  }
+  @keyframes zfloat{0%{opacity:0; transform:translateY(6px)}40%{opacity:1}100%{opacity:0; transform:translateY(-16px)}}
+  body.night .zzz{display:block;}
+  .speech{
+    position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    background:#fff; color:var(--ink);
+    border-radius:14px;
+    padding:8px 16px;
+    font-weight:700; font-size:1rem;
+    box-shadow:0 3px 8px rgba(0,0,0,.12);
+    opacity:0; transition:opacity .3s;
+    white-space:nowrap;
+    z-index:4;
+  }
+  .speech.show{opacity:1;}
+
+  /* status bars */
+  .stats{
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+    padding:14px 16px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  body.night .stats{background:#4A5B80;}
+  .stat{display:flex; align-items:center; gap:10px;}
+  .stat .lab{width:74px; font-weight:800; font-size:.95rem;}
+  .bar{
+    flex:1; height:16px;
+    background:rgba(0,0,0,.1);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .bar > div{height:100%; border-radius:10px; transition:width .5s;}
+  .fill-hunger{background:var(--bar-hunger);}
+  .fill-energy{background:var(--bar-energy);}
+  .fill-exp{background:var(--bar-exp);}
+  .stat .val{width:44px; text-align:right; font-size:.85rem; font-weight:700; opacity:.75;}
+
+  /* buttons */
+  .actions{display:flex; gap:10px;}
+  .act-btn{
+    flex:1;
+    font-family:inherit;
+    font-size:1.05rem; font-weight:800;
+    padding:14px 4px;
+    border:none; border-radius:14px;
+    cursor:pointer;
+    color:#fff;
+    box-shadow:0 4px 0 rgba(0,0,0,.18);
+    transition:transform .08s;
+  }
+  .act-btn:active{transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.18);}
+  .act-btn:disabled{opacity:.45; cursor:default;}
+  #btn-feed{background:#E07A3F;}
+  #btn-sleep{background:#5A78B8;}
+  #btn-pet{background:#5C8D67;}
+
+  .msg{
+    text-align:center;
+    font-size:.9rem;
+    opacity:.65;
+    min-height:1.2em;
+  }
+  .away-note{
+    background:#FFF3CD; color:#7A5B00;
+    border-radius:12px;
+    padding:10px 14px;
+    font-size:.95rem;
+    text-align:center;
+    display:none;
+  }
+  .reset-btn{
+    align-self:center;
+    font-family:inherit;
+    font-size:.85rem; font-weight:700;
+    color:inherit; opacity:.5;
+    background:none;
+    border:2px solid currentColor;
+    border-radius:20px;
+    padding:6px 16px;
+    cursor:pointer;
+  }
+  .reset-btn:active{opacity:.9;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🦝 너구리 키우기</h1>
+    <div class="stage-label" id="stage-label">아기 너구리</div>
+  </header>
+
+  <div class="away-note" id="away-note"></div>
+
+  <div class="yard">
+    <div class="speech" id="speech"></div>
+    <div class="zzz">💤</div>
+    <svg id="raccoon" viewBox="0 0 200 190" width="150" height="142">
+      <!-- tail -->
+      <g id="tail">
+        <path d="M155 130 Q195 115 185 80 Q180 62 165 68 Q178 95 148 112 Z" fill="#8D8D93"/>
+        <path d="M170 72 Q176 84 172 96 L160 90 Q168 82 164 74 Z" fill="#4A4A50"/>
+        <path d="M166 100 Q160 110 150 114 L146 104 Q156 102 160 96 Z" fill="#4A4A50"/>
+      </g>
+      <!-- body -->
+      <ellipse cx="100" cy="135" rx="52" ry="45" fill="#8D8D93"/>
+      <ellipse cx="100" cy="145" rx="30" ry="26" fill="#C9C9CE"/>
+      <!-- feet -->
+      <ellipse cx="78" cy="176" rx="14" ry="9" fill="#4A4A50"/>
+      <ellipse cx="122" cy="176" rx="14" ry="9" fill="#4A4A50"/>
+      <!-- ears -->
+      <path d="M55 40 Q50 12 75 22 Q68 32 66 44 Z" fill="#8D8D93"/>
+      <path d="M145 40 Q150 12 125 22 Q132 32 134 44 Z" fill="#8D8D93"/>
+      <path d="M60 36 Q58 22 72 27 Q66 32 65 40 Z" fill="#4A4A50"/>
+      <path d="M140 36 Q142 22 128 27 Q134 32 135 40 Z" fill="#4A4A50"/>
+      <!-- head -->
+      <ellipse cx="100" cy="62" rx="48" ry="40" fill="#8D8D93"/>
+      <!-- mask -->
+      <path d="M56 56 Q70 44 88 54 Q84 70 68 72 Q58 68 56 56 Z" fill="#4A4A50"/>
+      <path d="M144 56 Q130 44 112 54 Q116 70 132 72 Q142 68 144 56 Z" fill="#4A4A50"/>
+      <!-- muzzle -->
+      <ellipse cx="100" cy="78" rx="24" ry="18" fill="#EDEDEF"/>
+      <!-- eyes -->
+      <g id="eyes-open">
+        <circle cx="76" cy="60" r="6" fill="#fff"/>
+        <circle cx="77.5" cy="61" r="3.4" fill="#1C1C1E"/>
+        <circle cx="124" cy="60" r="6" fill="#fff"/>
+        <circle cx="122.5" cy="61" r="3.4" fill="#1C1C1E"/>
+      </g>
+      <g id="eyes-closed" style="display:none">
+        <path d="M70 61 Q76 66 82 61" stroke="#1C1C1E" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M118 61 Q124 66 130 61" stroke="#1C1C1E" stroke-width="3" fill="none" stroke-linecap="round"/>
+      </g>
+      <!-- nose & mouth -->
+      <ellipse cx="100" cy="73" rx="6.5" ry="5" fill="#1C1C1E"/>
+      <path id="mouth" d="M94 84 Q100 90 106 84" stroke="#1C1C1E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- crown for boss stage -->
+      <g id="crown" style="display:none">
+        <path d="M80 16 L86 3 L94 13 L100 0 L106 13 L114 3 L120 16 Z" fill="#F5B301" stroke="#C98A00" stroke-width="2"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="lab">🍙 배고픔</span>
+      <div class="bar"><div class="fill-hunger" id="bar-hunger"></div></div>
+      <span class="val" id="val-hunger"></span>
+    </div>
+    <div class="stat">
+      <span class="lab">⚡ 기운</span>
+      <div class="bar"><div class="fill-energy" id="bar-energy"></div></div>
+      <span class="val" id="val-energy"></span>
+    </div>
+    <div class="stat">
+      <span class="lab">🌱 성장</span>
+      <div class="bar"><div class="fill-exp" id="bar-exp"></div></div>
+      <span class="val" id="val-exp"></span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="act-btn" id="btn-feed" onclick="feed()">🍙 밥 주기</button>
+    <button class="act-btn" id="btn-sleep" onclick="toggleSleep()">💤 재우기</button>
+    <button class="act-btn" id="btn-pet" onclick="pet()">🤗 쓰다듬기</button>
+  </div>
+
+  <p class="msg" id="msg"></p>
+  <button class="reset-btn" onclick="resetAll()">🔄 처음부터</button>
+</div>
+
+<script>
+const KEY = 'raccoon-pet-v1';
+const STAGES = [
+  {name:'아기 너구리', exp:0,   size:110},
+  {name:'꼬마 너구리', exp:100, size:145},
+  {name:'어른 너구리', exp:300, size:180},
+  {name:'대장 너구리', exp:700, size:215},
+];
+const MAX = 100;
+
+let S = null;      // state
+let saveTimer = null;
+
+function defaultState(){
+  return {
+    exp: 0,
+    hunger: 80,
+    energy: 80,
+    meals: 0,
+    sleeping: false,
+    lastTs: Date.now(),
+    born: Date.now()
+  };
+}
+
+/* ---------- persistence ---------- */
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
+
+async function storageGet(key){
+  if(hasCloudStorage){
+    const res = await window.storage.get(key);
+    return res ? res.value : null;
+  }
+  return localStorage.getItem(key);
+}
+async function storageSet(key, value){
+  if(hasCloudStorage){
+    await window.storage.set(key, value);
+  }else{
+    localStorage.setItem(key, value);
+  }
+}
+
+async function load(){
+  try{
+    const raw = await storageGet(KEY);
+    S = raw ? JSON.parse(raw) : defaultState();
+  }catch(e){
+    S = defaultState();
+  }
+  applyOfflineTime();
+  render(true);
+}
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 400);
+}
+async function save(){
+  try{
+    S.lastTs = Date.now();
+    await storageSet(KEY, JSON.stringify(S));
+  }catch(e){
+    // 조용히 넘어가고 다음 저장 때 다시 시도
+  }
+}
+
+/* ---------- offline progression ---------- */
+function applyOfflineTime(){
+  const now = Date.now();
+  const hours = (now - (S.lastTs || now)) / 3600000;
+  if(hours < 0.02) return; // ~1분 미만은 무시
+
+  if(S.sleeping){
+    // 낮잠 자다가 앱이 꺼졌으면: 푹 잔 걸로 치고 기운 가득 채워서 일어남
+    S.sleeping = false;
+    S.energy = MAX;
+    S.meals = 0;
+  }
+  S.hunger = Math.max(0, S.hunger - hours * 40);
+  S.energy = Math.max(0, S.energy - hours * 5);
+  if(S.meals === undefined) S.meals = 0; // 예전 저장 데이터 호환
+
+  const note = document.getElementById('away-note');
+  if(hours >= 0.5){
+    const h = Math.floor(hours), m = Math.round((hours - h) * 60);
+    const dur = h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+    note.textContent = `⏰ ${dur} 만에 돌아왔네! 너구리가 기다렸어요.`;
+    note.style.display = 'block';
+    setTimeout(()=>{ note.style.display='none'; }, 6000);
+  }
+  S.lastTs = now;
+  scheduleSave();
+}
+
+/* ---------- actions ---------- */
+function stageOf(exp){
+  let st = STAGES[0], idx = 0;
+  for(let i=0;i<STAGES.length;i++){
+    if(exp >= STAGES[i].exp){ st = STAGES[i]; idx = i; }
+  }
+  return {st, idx};
+}
+
+function gainExp(n){
+  const before = stageOf(S.exp).idx;
+  S.exp += n;
+  const after = stageOf(S.exp).idx;
+  if(after > before){
+    say('레벨 업! 🎉 ' + STAGES[after].name + ' 등장!');
+    bounce();
+  }
+}
+
+function feed(){
+  if(S.sleeping){ say('쉿, 자고 있어요 💤'); return; }
+  if(S.hunger >= 95){ say('배불러~ 🫃 이따가 줘!'); return; }
+  S.hunger = Math.min(MAX, S.hunger + 25);
+  S.meals = Math.min(3, (S.meals || 0) + 1);
+  gainExp(10);
+  if(S.meals >= 3){
+    say('배부르다~ 이제 잘 수 있어! 💤');
+  }else{
+    say(['냠냠! 😋','맛있다! 🍙','더 없어? 👀'][Math.floor(Math.random()*3)] + ` (밥 ${S.meals}/3)`);
+  }
+  bounce();
+  render();
+  scheduleSave();
+}
+
+let napTimer = null;
+function toggleSleep(){
+  if(S.sleeping) return; // 자는 중엔 못 건드림 (10초 뒤 스스로 일어남)
+  if((S.meals || 0) < 3){
+    say(`밥을 3번 먹어야 잘 수 있어! (지금 ${S.meals||0}/3) 🍙`);
+    return;
+  }
+  S.sleeping = true;
+  say('잘 자요... 💤');
+  render();
+  scheduleSave();
+  clearTimeout(napTimer);
+  napTimer = setTimeout(wakeUp, 10000); // 10초 낮잠
+}
+
+function wakeUp(){
+  if(!S.sleeping) return;
+  S.sleeping = false;
+  S.energy = MAX;      // 기운 가득!
+  S.meals = 0;         // 다시 밥 3번 먹어야 잘 수 있음
+  gainExp(20);
+  say('잘 잤다! 기운 가득! ☀️💪');
+  bounce();
+  render();
+  scheduleSave();
+}
+
+function pet(){
+  if(S.sleeping){ say('...쓰담쓰담 (자면서 웃는다) 😴'); scheduleSave(); return; }
+  if(S.energy < 10){ say('너무 피곤해... 재워 줘 🥱'); return; }
+  S.energy = Math.max(0, S.energy - 5);
+  gainExp(5);
+  say(['히히 좋아! 🥰','꼬리 살랑살랑~','한 번 더! 🤗'][Math.floor(Math.random()*3)]);
+  bounce();
+  render();
+  scheduleSave();
+}
+
+/* ---------- live tick (while app is open) ---------- */
+setInterval(()=>{
+  if(!S) return;
+  if(!S.sleeping){
+    S.hunger = Math.max(0, S.hunger - 2);
+    S.energy = Math.max(0, S.energy - 0.05);
+  }
+  render();
+  scheduleSave();
+}, 3000);
+
+/* ---------- UI ---------- */
+function say(text){
+  const el = document.getElementById('speech');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+function bounce(){
+  const r = document.getElementById('raccoon');
+  r.classList.remove('bounce');
+  void r.offsetWidth;
+  r.classList.add('bounce');
+}
+function setMsg(t){ document.getElementById('msg').textContent = t; }
+
+function render(first){
+  const {st, idx} = stageOf(S.exp);
+
+  // size & stage
+  const r = document.getElementById('raccoon');
+  r.setAttribute('width', st.size);
+  r.setAttribute('height', Math.round(st.size * 0.95));
+  document.getElementById('stage-label').textContent = st.name;
+  document.getElementById('crown').style.display = idx === STAGES.length-1 ? 'block' : 'none';
+
+  // sleeping visuals
+  document.body.classList.toggle('night', S.sleeping);
+  document.getElementById('eyes-open').style.display = S.sleeping ? 'none' : 'block';
+  document.getElementById('eyes-closed').style.display = S.sleeping ? 'block' : 'none';
+  r.classList.toggle('idle', !S.sleeping);
+  const sleepBtn = document.getElementById('btn-sleep');
+  sleepBtn.textContent = S.sleeping ? '😴 자는 중...' : `💤 재우기 (${S.meals||0}/3)`;
+  sleepBtn.disabled = S.sleeping;
+  document.getElementById('btn-feed').disabled = S.sleeping;
+  document.getElementById('btn-pet').disabled = false;
+
+  // mouth: sad if very hungry
+  const mouth = document.getElementById('mouth');
+  mouth.setAttribute('d', (S.hunger < 25 && !S.sleeping) ? 'M94 88 Q100 82 106 88' : 'M94 84 Q100 90 106 84');
+
+  // bars
+  const nextExp = idx < STAGES.length-1 ? STAGES[idx+1].exp : STAGES[idx].exp;
+  const prevExp = STAGES[idx].exp;
+  const expPct = idx < STAGES.length-1
+    ? Math.round((S.exp - prevExp)/(nextExp - prevExp)*100)
+    : 100;
+  setBar('hunger', S.hunger, Math.round(S.hunger));
+  setBar('energy', S.energy, Math.round(S.energy));
+  setBar('exp', expPct, idx < STAGES.length-1 ? expPct + '%' : 'MAX');
+
+  if(!S.sleeping && S.hunger < 25 && !first) {
+    // occasional hungry whine
+    if(Math.random() < 0.15) say('배고파아... 🍙');
+  }
+}
+function setBar(name, pct, valText){
+  document.getElementById('bar-'+name).style.width = Math.max(0,Math.min(100,pct)) + '%';
+  document.getElementById('val-'+name).textContent = valText;
+}
+
+// save when leaving
+window.addEventListener('visibilitychange', ()=>{ if(document.hidden) save(); });
+
+async function resetAll(){
+  const {st} = stageOf(S.exp);
+  if(!confirm(`정말 처음부터 할까?\n지금 키우는 ${st.name}는 사라져요!`)) return;
+  clearTimeout(napTimer);
+  S = defaultState();
+  try{ await save(); }catch(e){}
+  render(true);
+  say('안녕! 나는 새 아기 너구리야 🦝');
+}
+
+load();
+</script>
+</body>
+</html>
