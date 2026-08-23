@@ -40,6 +40,42 @@
   }
   body.night .stage-label{background:#5A6FA3;}
 
+  /* 마지막 단계 달성 축하 */
+  .clear-badge{
+    display:none;
+    margin-top:8px;
+    background:#F5B301; color:#5A3E00;
+    font-weight:900; font-size:1rem;
+    padding:5px 16px; border-radius:20px;
+    border:2px solid #C98A00;
+  }
+  .clear-badge.show{display:inline-block;}
+
+  .clear-pop{
+    position:fixed; inset:0; z-index:50;
+    display:none; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.45);
+    padding:20px;
+  }
+  .clear-pop.show{display:flex;}
+  .clear-card{
+    background:#fff; border-radius:22px;
+    padding:28px 26px; text-align:center;
+    max-width:340px; width:100%;
+    box-shadow:0 12px 40px rgba(0,0,0,.3);
+    animation:pop .35s ease-out;
+  }
+  @keyframes pop{from{transform:scale(.7); opacity:0} to{transform:scale(1); opacity:1}}
+  .clear-card .big{font-size:3.2rem; line-height:1;}
+  .clear-card h2{margin:12px 0 6px; font-size:1.7rem; color:#C98A00;}
+  .clear-card p{margin:0 0 18px; color:#555; font-size:1rem;}
+  .clear-card button{
+    font-family:inherit; font-size:1.05rem; font-weight:800;
+    background:var(--green); color:#fff;
+    border:0; border-radius:14px; padding:11px 26px; cursor:pointer;
+  }
+  @media (prefers-reduced-motion:reduce){.clear-card{animation:none}}
+
   /* raccoon yard */
   .yard{
     position:relative;
@@ -164,7 +200,17 @@
   <header>
     <h1>🦝 너구리 키우기</h1>
     <div class="stage-label" id="stage-label">아기 너구리</div>
+    <div class="clear-badge" id="clear-badge">🏆 게임 클리어!!!!</div>
   </header>
+
+  <div class="clear-pop" id="clear-pop">
+    <div class="clear-card">
+      <div class="big">🦝👑</div>
+      <h2>게임 클리어!!!!</h2>
+      <p>대장 너구리까지 다 키웠어요!<br>정말 대단해요 🎉</p>
+      <button type="button" onclick="closeClear()">계속 놀기</button>
+    </div>
+  </div>
 
   <div class="away-note" id="away-note"></div>
 
@@ -265,6 +311,7 @@ function defaultState(){
     energy: 80,
     meals: 0,
     sleeping: false,
+    cleared: false,
     lastTs: Date.now(),
     born: Date.now()
   };
@@ -356,6 +403,7 @@ function gainExp(n){
   if(after > before){
     say('레벨 업! 🎉 ' + STAGES[after].name + ' 등장!');
     bounce();
+    if(after === STAGES.length - 1) showClear();
   }
 }
 
@@ -425,6 +473,14 @@ setInterval(()=>{
 }, 3000);
 
 /* ---------- UI ---------- */
+function showClear(){
+  document.getElementById('clear-pop').classList.add('show');
+  if(S){ S.cleared = true; }
+}
+function closeClear(){
+  document.getElementById('clear-pop').classList.remove('show');
+}
+
 function say(text){
   const el = document.getElementById('speech');
   el.textContent = text;
@@ -448,7 +504,11 @@ function render(first){
   r.setAttribute('width', st.size);
   r.setAttribute('height', Math.round(st.size * 0.95));
   document.getElementById('stage-label').textContent = st.name;
-  document.getElementById('crown').style.display = idx === STAGES.length-1 ? 'block' : 'none';
+  const isMax = idx === STAGES.length-1;
+  document.getElementById('crown').style.display = isMax ? 'block' : 'none';
+  document.getElementById('clear-badge').classList.toggle('show', isMax);
+  // 이미 다 키운 채로 다시 들어왔다면 축하 화면을 한 번 더 보여 준다
+  if(first && isMax && !S.cleared) showClear();
 
   // sleeping visuals
   document.body.classList.toggle('night', S.sleeping);
