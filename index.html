@@ -158,6 +158,10 @@
 </head>
 <body>
     <div class="map-container">
+        <a href="https://hoohoo17.github.io/craft/choco">
+            <div class="title">초코송이 받기</div>
+            <div class="url">hoohoo17.github.io/craft/choco</div>
+        </a>
         <a href="https://hoohoo17.github.io/craft/idea-room">
             <div class="title">게임 아이디어 방</div>
             <div class="url">hoohoo17.github.io/craft/idea-room</div>
@@ -234,15 +238,15 @@
 
     <div class="comment-section">
         <h3>댓글</h3>
-        <div class="comment-notice">작성된 댓글은 관리자 검토 후 공개됩니다.</div>
+        <div class="comment-notice">쓰면 바로 올라갑니다. 이름 8자, 메시지 60자까지.</div>
         <form class="comment-form" id="commentForm">
             <label for="commentName" class="visually-hidden">이름</label>
-            <input type="text" id="commentName" name="commentName" placeholder="이름" maxlength="20" required>
+            <input type="text" id="commentName" name="commentName" placeholder="이름" maxlength="8" required>
             <label for="commentMessage" class="visually-hidden">메시지</label>
-            <textarea id="commentMessage" name="commentMessage" placeholder="메시지를 입력하세요" maxlength="500" required></textarea>
+            <textarea id="commentMessage" name="commentMessage" placeholder="메시지를 입력하세요" maxlength="60" required></textarea>
             <button type="submit" id="submitBtn">등록</button>
         </form>
-        <div class="comment-success" id="successMsg">등록되었습니다. 관리자 검토 후 공개됩니다.</div>
+        <div class="comment-success" id="successMsg">등록되었습니다!</div>
         <div id="commentList">
             <div class="no-comments">댓글을 불러오는 중...</div>
         </div>
@@ -263,10 +267,61 @@
             return d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
         }
 
+        // 서버는 승인 전 댓글의 message를 감추고 name만 돌려준다. 그래서 새 댓글은
+        // 20자짜리 조각으로 나눠 name에 담아 보내고, 읽을 때 다시 붙인다.
+        // 예전에 승인된 댓글은 지금까지처럼 그대로 보여 준다.
+        const HEAD = 5;               // 묶음번호 3 + 순번 1 + 개수 1
+        const BODY = 20 - HEAD;
+        const MAX_CHUNKS = 6;
+        const LIMIT = { name: 8, message: 60 };
+        const SEP = '|';
+
+        const b36 = n => n.toString(36).slice(-1);
+
+        function packComment(name, message) {
+            const clean = v => String(v).split(SEP).join(' ');
+            const text = clean(name).slice(0, LIMIT.name) + SEP
+                       + clean(message).slice(0, LIMIT.message);
+            const parts = [];
+            for (let i = 0; i < text.length; i += BODY) parts.push(text.slice(i, i + BODY));
+            if (!parts.length) parts.push('');
+            if (parts.length > MAX_CHUNKS) throw new Error('too long');
+            let g = '';
+            for (let i = 0; i < 3; i++) g += b36(Math.floor(Math.random() * 36));
+            return parts.map((body, i) => g + b36(i) + b36(parts.length) + body);
+        }
+
+        function unpackComments(rows) {
+            const out = [];
+            const groups = new Map();
+            rows.forEach(c => {
+                if (c.approved) { out.push({ name: c.name, message: c.message, date: c.date }); return; }
+                const n = typeof c.name === 'string' ? c.name : '';
+                if (n.length < HEAD) return;
+                const g = n.slice(0, 3), seq = parseInt(n[3], 36), total = parseInt(n[4], 36);
+                if (isNaN(seq) || isNaN(total) || total < 1 || seq >= total) return;
+                if (!groups.has(g)) groups.set(g, { total, parts: new Map(), date: c.date });
+                const grp = groups.get(g);
+                if (grp.total !== total) return;
+                grp.parts.set(seq, n.slice(HEAD));
+                if (c.date < grp.date) grp.date = c.date;
+            });
+            groups.forEach(grp => {
+                if (grp.parts.size !== grp.total) return;   // 조각이 빠졌으면 건너뛴다
+                let text = '';
+                for (let i = 0; i < grp.total; i++) text += grp.parts.get(i);
+                const bits = text.split(SEP);
+                if (bits.length !== 2 || !bits[1]) return;
+                out.push({ name: bits[0] || '익명', message: bits[1], date: grp.date });
+            });
+            out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+            return out;
+        }
+
         async function loadComments() {
             try {
-                const res = await fetch(`${API_URL}?page=index`);
-                const comments = await res.json();
+                const res = await fetch(`${API_URL}?page=index`, { cache: 'no-store' });
+                const comments = unpackComments(await res.json());
                 const list = document.getElementById('commentList');
                 if (comments.length === 0) {
                     list.innerHTML = '<div class="no-comments">아직 댓글이 없습니다</div>';
@@ -275,10 +330,7 @@
                 list.innerHTML = comments.slice().reverse().map(c => `
                     <div class="comment-item">
                         <div class="comment-meta"><strong>${escapeHtml(c.name)}</strong> &middot; ${formatDate(c.date)}</div>
-                        ${c.approved
-                            ? `<div class="comment-body">${escapeHtml(c.message)}</div>`
-                            : `<div class="comment-body pending">검토 대기 중...</div>`
-                        }
+                        <div class="comment-body">${escapeHtml(c.message)}</div>
                     </div>
                 `).join('');
             } catch {
@@ -314,12 +366,16 @@
             btn.disabled = true;
             btn.textContent = '등록 중...';
             try {
-                const res = await fetch(`${API_URL}?page=index`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, message }),
-                });
-                if (!res.ok) throw new Error('failed');
+                const chunks = packComment(name, message);
+                for (const part of chunks) {
+                    const res = await fetch(`${API_URL}?page=index`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: part, message: '.' }),
+                    });
+                    if (!res.ok) throw new Error('failed');
+                    await new Promise(r => setTimeout(r, 400));
+                }
                 document.getElementById('commentMessage').value = '';
                 showSuccess();
                 await loadComments();

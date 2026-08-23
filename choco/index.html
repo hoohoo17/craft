@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>초코송이 받기</title>
+<style>
+  :root{
+    --sky1:#FFE8C9; --sky2:#FFF7EA;
+    --ink:#3B2417;
+    --choco:#5C3317;
+    --accent:#E8590C;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:linear-gradient(var(--sky1), var(--sky2));
+    color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    touch-action:none;
+  }
+  #game-wrap{position:relative; width:100%; height:100%; max-width:520px;}
+  canvas{display:block; width:100%; height:100%;}
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(255,244,230,.92);
+    text-align:center;
+    padding:24px;
+    z-index:5;
+  }
+  .overlay h1{font-size:2rem; margin-bottom:10px;}
+  .overlay p{font-size:1.05rem; line-height:1.6; margin-bottom:6px;}
+  .overlay .rules{margin:14px 0 20px;}
+  .overlay .rules div{margin:6px 0; font-size:1.1rem;}
+  .big-btn{
+    font-family:inherit;
+    font-size:1.3rem; font-weight:800;
+    color:#fff; background:var(--choco);
+    border:none; border-radius:14px;
+    padding:14px 38px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #3d2110;
+  }
+  .big-btn:active{transform:translateY(4px); box-shadow:0 1px 0 #3d2110;}
+  .score-final{font-size:2.6rem; font-weight:900; color:var(--accent); margin:8px 0 4px;}
+  .best{font-size:1rem; opacity:.7; margin-bottom:18px;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="cv"></canvas>
+
+  <div class="overlay" id="start">
+    <h1>🍄 초코송이 받기</h1>
+    <div class="rules">
+      <div>🍫 초코송이 받기 = <b>+10점</b></div>
+      <div>✨ 황금 초코송이 = <b>+50점</b></div>
+      <div>🍄 진짜 버섯 받으면 = <b>❤️ 하나 잃음!</b></div>
+      <div>🍫 놓쳐도 ❤️ 하나 잃음</div>
+    </div>
+    <p>손가락으로 끌거나 ← → 키로 바구니를 움직여!</p>
+    <br>
+    <button class="big-btn" onclick="startGame()">시작!</button>
+  </div>
+
+  <div class="overlay hidden" id="over">
+    <h1>😵 게임 끝!</h1>
+    <div class="score-final" id="final-score">0점</div>
+    <div class="best" id="best-score"></div>
+    <button class="big-btn" onclick="startGame()">다시 하기</button>
+  </div>
+</div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H, scale;
+
+function resize(){
+  const wrap = document.getElementById('game-wrap');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = wrap.clientWidth; H = wrap.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  scale = Math.min(W/420, 1.2);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---- state ----
+let running = false;
+let score, lives, items, basket, spawnTimer, spawnGap, fallSpeed, tPrev;
+let particles = [];
+let shakeT = 0;
+let bestScore = 0;
+
+const ITEM = { CHOCO:'choco', GOLD:'gold', SHROOM:'shroom' };
+
+function startGame(){
+  document.getElementById('start').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  score = 0; lives = 3;
+  items = []; particles = [];
+  spawnTimer = 0; spawnGap = 1100; fallSpeed = 150;
+  basket = { x: W/2, w: 92*scale, h: 54*scale, y: H - 90*scale };
+  running = true;
+  tPrev = performance.now();
+  requestAnimationFrame(loop);
+}
+
+function endGame(){
+  running = false;
+  bestScore = Math.max(bestScore, score);
+  document.getElementById('final-score').textContent = score + '점';
+  document.getElementById('best-score').textContent = '🏆 최고 기록: ' + bestScore + '점';
+  document.getElementById('over').classList.remove('hidden');
+}
+
+// ---- input ----
+let keys = {};
+window.addEventListener('keydown', e => { keys[e.key] = true; });
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+function pointerMove(clientX){
+  const rect = cv.getBoundingClientRect();
+  basket.x = clientX - rect.left;
+}
+cv.addEventListener('touchstart', e => { pointerMove(e.touches[0].clientX); }, {passive:true});
+cv.addEventListener('touchmove', e => { pointerMove(e.touches[0].clientX); }, {passive:true});
+cv.addEventListener('mousemove', e => { if(e.buttons || true) pointerMove(e.clientX); });
+
+// ---- spawn ----
+function spawn(){
+  const r = Math.random();
+  let type = ITEM.CHOCO;
+  if(r < 0.07) type = ITEM.GOLD;
+  else if(r < 0.35) type = ITEM.SHROOM;
+  const size = 34*scale;
+  items.push({
+    type,
+    x: size + Math.random()*(W - size*2),
+    y: -size,
+    size,
+    rot: (Math.random()-0.5)*0.5,
+    rotV: (Math.random()-0.5)*1.5,
+    vy: fallSpeed * (0.85 + Math.random()*0.4)
+  });
+}
+
+// ---- particles ----
+function burst(x, y, color, n=10){
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2, sp = 60+Math.random()*160;
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-80,life:0.6,color});
+  }
+}
+function floatText(x, y, text, color){
+  particles.push({x,y,vx:0,vy:-70,life:0.9,text,color});
+}
+
+// ---- drawing ----
+function drawChoco(x, y, s, rot, gold){
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  // stem (biscuit)
+  ctx.fillStyle = gold ? '#E8C36A' : '#E8C98F';
+  ctx.strokeStyle = 'rgba(0,0,0,.18)';
+  ctx.lineWidth = 2;
+  const sw = s*0.34, sh = s*0.62;
+  ctx.beginPath();
+  ctx.roundRect(-sw/2, -sh*0.05, sw, sh, sw/2);
+  ctx.fill(); ctx.stroke();
+  // cap (chocolate ball)
+  ctx.fillStyle = gold ? '#F5B301' : '#5C3317';
+  ctx.beginPath();
+  ctx.arc(0, -s*0.28, s*0.42, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // shine
+  ctx.fillStyle = 'rgba(255,255,255,.45)';
+  ctx.beginPath();
+  ctx.ellipse(-s*0.13, -s*0.4, s*0.1, s*0.06, -0.6, 0, Math.PI*2);
+  ctx.fill();
+  if(gold){
+    ctx.fillStyle = '#fff';
+    ctx.font = `${s*0.4}px sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText('✦', s*0.28, -s*0.42);
+  }
+  ctx.restore();
+}
+
+function drawShroom(x, y, s, rot){
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.strokeStyle = 'rgba(0,0,0,.18)';
+  ctx.lineWidth = 2;
+  // stem (white, thicker — real mushroom)
+  ctx.fillStyle = '#F3EEE4';
+  const sw = s*0.42, sh = s*0.6;
+  ctx.beginPath();
+  ctx.roundRect(-sw/2, -sh*0.02, sw, sh, sw/3);
+  ctx.fill(); ctx.stroke();
+  // cap (beige dome, flat bottom)
+  ctx.fillStyle = '#D9B98C';
+  ctx.beginPath();
+  ctx.arc(0, -s*0.2, s*0.48, Math.PI, 0);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // gills line
+  ctx.strokeStyle = '#B08F60';
+  ctx.beginPath();
+  ctx.moveTo(-s*0.48, -s*0.2); ctx.lineTo(s*0.48, -s*0.2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawBasket(){
+  const {x, y, w, h} = basket;
+  ctx.save();
+  ctx.translate(x, y);
+  // basket body
+  ctx.fillStyle = '#C97B2D';
+  ctx.strokeStyle = '#8A5218';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-w/2, 0);
+  ctx.lineTo(-w/2 + w*0.12, h);
+  ctx.lineTo(w/2 - w*0.12, h);
+  ctx.lineTo(w/2, 0);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // weave lines
+  ctx.strokeStyle = 'rgba(138,82,24,.5)';
+  ctx.lineWidth = 2;
+  for(let i=1;i<3;i++){
+    const yy = h*i/3;
+    ctx.beginPath();
+    ctx.moveTo(-w/2 + w*0.12*i/3, yy);
+    ctx.lineTo(w/2 - w*0.12*i/3, yy);
+    ctx.stroke();
+  }
+  // rim
+  ctx.fillStyle = '#8A5218';
+  ctx.beginPath();
+  ctx.roundRect(-w/2 - 4, -6, w + 8, 12, 6);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawHUD(){
+  ctx.save();
+  ctx.font = `800 ${22*scale}px sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'var(--ink)';
+  ctx.fillStyle = '#3B2417';
+  ctx.fillText('점수 ' + score, 16, 34*scale);
+  ctx.textAlign = 'right';
+  ctx.fillText('❤️'.repeat(lives) + '🤍'.repeat(Math.max(0, 3-lives)), W-16, 34*scale);
+  ctx.restore();
+}
+
+// ---- loop ----
+function loop(t){
+  if(!running) return;
+  const dt = Math.min((t - tPrev)/1000, 0.05);
+  tPrev = t;
+
+  // difficulty ramp
+  fallSpeed += dt * 6;
+  spawnGap = Math.max(420, spawnGap - dt*22);
+
+  // input
+  if(keys['ArrowLeft'])  basket.x -= 420*scale*dt;
+  if(keys['ArrowRight']) basket.x += 420*scale*dt;
+  basket.x = Math.max(basket.w/2, Math.min(W - basket.w/2, basket.x));
+
+  // spawn
+  spawnTimer += dt*1000;
+  if(spawnTimer > spawnGap){ spawnTimer = 0; spawn(); }
+
+  // update items
+  for(let i = items.length-1; i >= 0; i--){
+    const it = items[i];
+    it.y += it.vy * dt;
+    it.vy += 30*dt;
+    it.rot += it.rotV * dt;
+
+    // catch check
+    const inX = Math.abs(it.x - basket.x) < basket.w/2 + it.size*0.2;
+    const inY = it.y > basket.y - it.size*0.2 && it.y < basket.y + basket.h*0.6;
+    if(inX && inY){
+      items.splice(i,1);
+      if(it.type === ITEM.CHOCO){
+        score += 10;
+        burst(it.x, it.y, '#5C3317');
+        floatText(it.x, it.y - 20, '+10', '#E8590C');
+      }else if(it.type === ITEM.GOLD){
+        score += 50;
+        burst(it.x, it.y, '#F5B301', 18);
+        floatText(it.x, it.y - 20, '+50!', '#F5B301');
+      }else{
+        lives--;
+        shakeT = 0.35;
+        burst(it.x, it.y, '#D9B98C');
+        floatText(it.x, it.y - 20, '으엑!', '#C92A2A');
+        if(lives <= 0){ endGame(); return; }
+      }
+      continue;
+    }
+    // missed
+    if(it.y > H + it.size){
+      items.splice(i,1);
+      if(it.type !== ITEM.SHROOM){
+        lives--;
+        shakeT = 0.35;
+        floatText(it.x, H - 60, '놓쳤다!', '#C92A2A');
+        if(lives <= 0){ endGame(); return; }
+      }
+    }
+  }
+
+  // update particles
+  for(let i = particles.length-1; i >= 0; i--){
+    const p = particles[i];
+    p.life -= dt;
+    if(p.life <= 0){ particles.splice(i,1); continue; }
+    p.x += p.vx*dt; p.y += p.vy*dt;
+    if(!p.text) p.vy += 400*dt;
+  }
+
+  // shake decay
+  if(shakeT > 0) shakeT -= dt;
+
+  // ---- render ----
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  if(shakeT > 0){
+    ctx.translate((Math.random()-0.5)*8, (Math.random()-0.5)*8);
+  }
+
+  for(const it of items){
+    if(it.type === ITEM.SHROOM) drawShroom(it.x, it.y, it.size, it.rot);
+    else drawChoco(it.x, it.y, it.size, it.rot, it.type === ITEM.GOLD);
+  }
+  drawBasket();
+
+  for(const p of particles){
+    if(p.text){
+      ctx.globalAlpha = Math.min(1, p.life/0.4);
+      ctx.font = `900 ${20*scale}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.globalAlpha = 1;
+    }else{
+      ctx.globalAlpha = Math.min(1, p.life/0.3);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  ctx.restore();
+  drawHUD();
+
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
