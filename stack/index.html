@@ -272,6 +272,7 @@ function resize(){
   H = document.getElementById('wrap').clientHeight;
   cv.width = W*dpr; cv.height = H*dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(typeof buildScenery === 'function') buildScenery();
 }
 window.addEventListener('resize', resize);
 resize();
@@ -446,14 +447,91 @@ function updateDebris(dt){
   }
 }
 
+/* ---------- 배경: 땅에서 하늘로 ---------- */
+var stars = [], clouds = [];   // resize()가 먼저 불려도 안전하도록 var
+function buildScenery(){
+  // 화면 크기가 바뀔 때만 다시 만든다(매 프레임 흔들리지 않게)
+  stars = [];
+  for(let i=0;i<70;i++){
+    stars.push({ x: Math.random()*W, y: Math.random()*H, r: Math.random()*1.4 + .4,
+                 tw: Math.random()*Math.PI*2, sp: .25 + Math.random()*.45 });
+  }
+  clouds = [];
+  for(let i=0;i<5;i++){
+    clouds.push({ x: Math.random()*W, y: Math.random()*H, w: W*0.16 + Math.random()*W*0.14,
+                  sp: .35 + Math.random()*.3, a: .05 + Math.random()*.07 });
+  }
+}
+
+buildScenery();
+
+const lerp = (a,b,t) => a + (b-a)*t;
+const mix = (c1,c2,t) => `rgb(${Math.round(lerp(c1[0],c2[0],t))},${Math.round(lerp(c1[1],c2[1],t))},${Math.round(lerp(c1[2],c2[2],t))})`;
+
+function drawSky(){
+  const t = Math.min(1, camY / 1800);          // 0 = 땅, 1 = 높은 하늘
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, mix([38,56,96],  [4,5,12],   t));   // 위쪽
+  g.addColorStop(1, mix([120,150,196],[10,13,26], t));  // 아래쪽(지평선 빛)
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // 별: 높이 올라갈수록 진해진다
+  if(t > 0.15){
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, (t - 0.15) / 0.5);
+    for(const st of stars){
+      const y = ((st.y + camY * st.sp) % (H + 40)) - 20;
+      ctx.globalAlpha *= 1;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(st.x, y, st.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // 구름: 낮은 곳에서만 보인다
+  const cloudAlpha = 1 - Math.min(1, camY / 1400);
+  if(cloudAlpha > 0.02){
+    ctx.save();
+    for(const c of clouds){
+      const y = ((c.y + camY * c.sp) % (H + 120)) - 60;
+      ctx.globalAlpha = c.a * cloudAlpha;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.ellipse(c.x, y, c.w*.5, c.w*.20, 0, 0, Math.PI*2);
+      ctx.ellipse(c.x - c.w*.22, y + 5, c.w*.30, c.w*.15, 0, 0, Math.PI*2);
+      ctx.ellipse(c.x + c.w*.24, y + 4, c.w*.28, c.w*.14, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// 땅은 탑과 같은 좌표계에 있어서 올라가면 함께 멀어진다
+function drawGround(groundY){
+  ctx.fillStyle = '#3C7A3C';                    // 잔디
+  ctx.fillRect(-40, groundY, W + 80, 16);
+  ctx.fillStyle = '#5A3E28';                    // 흙
+  ctx.fillRect(-40, groundY + 16, W + 80, 1400);
+  ctx.fillStyle = 'rgba(0,0,0,.18)';            // 흙 결
+  for(let i=0;i<8;i++){
+    ctx.fillRect(-40, groundY + 40 + i*70, W + 80, 3);
+  }
+  ctx.fillStyle = '#2E5F2E';                    // 잔디 그림자
+  ctx.fillRect(-40, groundY + 16, W + 80, 4);
+}
+
 function render(){
   ctx.clearRect(0,0,W,H);
+  drawSky();
   ctx.save();
   if(shakeT>0) ctx.translate((Math.random()-.5)*10, (Math.random()-.5)*10);
   ctx.translate(0, camY);
 
-  // 배경 그라데이션 (높이에 따라 어두워짐)
-  // (몸통은 CSS 배경, 여기선 블록만)
+  // 맨 아래 블록이 놓인 자리가 땅 높이
+  if(stack && stack.length) drawGround(stack[0].y + BLOCK_H);
 
   // 쌓인 블록
   for(let i=0;i<stack.length;i++){
