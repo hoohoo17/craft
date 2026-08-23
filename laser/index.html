@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>빛 반사 퍼즐</title>
+<style>
+  :root{
+    --bg1:#141433; --bg2:#1E1E4A;
+    --panel:#26265C;
+    --ink:#EDEDFF;
+    --laser:#4DFFF3;
+    --crystal:#FF6BD6;
+    --mirror:#FFD166;
+    --lock:#5A5A8C;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:linear-gradient(var(--bg1), var(--bg2));
+    color:var(--ink);
+    display:flex; justify-content:center;
+    min-height:100vh;
+    touch-action:manipulation;
+  }
+  .wrap{width:100%; max-width:460px; padding:16px 14px 24px; display:flex; flex-direction:column; gap:12px;}
+
+  header{display:flex; justify-content:space-between; align-items:center;}
+  h1{font-size:1.3rem;}
+  .lv{font-weight:800; font-size:1.05rem; background:var(--panel); padding:6px 14px; border-radius:20px;}
+
+  .hint-line{font-size:.95rem; opacity:.75; text-align:center; min-height:1.3em;}
+
+  #board-wrap{
+    position:relative;
+    background:var(--panel);
+    border-radius:18px;
+    padding:10px;
+    box-shadow:0 6px 20px rgba(0,0,0,.35);
+  }
+  canvas{display:block; width:100%; border-radius:12px;}
+
+  .clear-banner{
+    position:absolute; inset:10px;
+    border-radius:12px;
+    background:rgba(20,20,51,.88);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    opacity:0; pointer-events:none;
+    transition:opacity .35s;
+  }
+  .clear-banner.show{opacity:1; pointer-events:auto;}
+  .clear-banner .t{font-size:2rem; font-weight:900; color:var(--laser); text-shadow:0 0 18px var(--laser);}
+  .clear-banner .s{font-size:1rem; opacity:.8;}
+
+  .controls{display:flex; gap:10px;}
+  .ctl{
+    flex:1;
+    font-family:inherit; font-size:1rem; font-weight:800;
+    color:var(--ink);
+    background:var(--panel);
+    border:none; border-radius:12px;
+    padding:12px 6px;
+    cursor:pointer;
+    box-shadow:0 3px 0 rgba(0,0,0,.3);
+  }
+  .ctl:active{transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.3);}
+  .ctl:disabled{color:var(--lock); cursor:default;}
+  .ctl.primary{background:var(--laser); color:#10102A;}
+
+  .taps{font-size:.85rem; opacity:.6; text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🔦 빛 반사 퍼즐</h1>
+    <div class="lv" id="lv-label">LV 1</div>
+  </header>
+  <p class="hint-line" id="hint">거울을 탭해서 레이저를 💎에 맞혀 봐!</p>
+
+  <div id="board-wrap">
+    <canvas id="cv"></canvas>
+    <div class="clear-banner" id="clear-banner">
+      <div class="t" id="clear-title">✨ 클리어! ✨</div>
+      <div class="s" id="clear-sub"></div>
+      <button class="ctl primary" id="btn-banner-next" style="flex:0; padding:12px 34px;" onclick="nextLevel()">다음 레벨 ▶</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl" id="btn-prev" onclick="prevLevel()">◀ 이전</button>
+    <button class="ctl" onclick="resetLevel()">🔄 다시</button>
+    <button class="ctl" id="btn-next" onclick="nextLevel()">다음 ▶</button>
+  </div>
+  <p class="taps" id="taps"></p>
+</div>
+
+<script>
+/* ---------- levels ----------
+   dir: R L U D
+   mirror type: '/' or '\\'  (tap toggles)
+   start: scrambled state, sol shown only in comments
+*/
+const LEVELS = [
+  { // 1: 거울 하나
+    n:5,
+    emitter:{x:0,y:2,d:'R'},
+    crystals:[{x:2,y:0}],
+    walls:[],
+    mirrors:[{x:2,y:2,t:'\\'}]            // sol: '/'
+  },
+  { // 2: 거울 두 개 ㄴ자
+    n:5,
+    emitter:{x:0,y:2,d:'R'},
+    crystals:[{x:4,y:4}],
+    walls:[],
+    mirrors:[{x:2,y:2,t:'/'},{x:2,y:4,t:'/'}]   // sol: '\','\'
+  },
+  { // 3: 벽 피해서 지그재그
+    n:6,
+    emitter:{x:0,y:0,d:'R'},
+    crystals:[{x:5,y:5}],
+    walls:[{x:3,y:0}],
+    mirrors:[{x:2,y:0,t:'/'},{x:2,y:3,t:'/'},{x:5,y:3,t:'/'}]  // sol: '\','\','\'
+  },
+  { // 4: 크리스탈 2개 통과
+    n:6,
+    emitter:{x:0,y:2,d:'R'},
+    crystals:[{x:2,y:2},{x:4,y:0}],
+    walls:[],
+    mirrors:[{x:4,y:2,t:'\\'}]            // sol: '/'
+  },
+  { // 5: 함정 거울 등장
+    n:6,
+    emitter:{x:0,y:3,d:'R'},
+    crystals:[{x:5,y:4}],
+    walls:[{x:2,y:3}],
+    mirrors:[
+      {x:1,y:3,t:'\\'},   // sol '/'
+      {x:1,y:1,t:'\\'},   // sol '/'
+      {x:4,y:1,t:'/'},    // sol '\'
+      {x:4,y:4,t:'/'},    // sol '\'
+      {x:3,y:2,t:'/'}     // 함정 (경로 밖)
+    ]
+  },
+  { // 6: 크리스탈 2개 + 함정 2개
+    n:7,
+    emitter:{x:0,y:5,d:'R'},
+    crystals:[{x:2,y:3},{x:4,y:1}],
+    walls:[],
+    mirrors:[
+      {x:2,y:5,t:'\\'},   // sol '/'
+      {x:2,y:1,t:'\\'},   // sol '/'
+      {x:4,y:3,t:'/'},    // 함정
+      {x:5,y:5,t:'\\'}    // 함정
+    ]
+  },
+  { // 7: 아래로 쏘는 발사기 + 긴 지그재그
+    n:7,
+    emitter:{x:3,y:0,d:'D'},
+    crystals:[{x:1,y:6}],
+    walls:[{x:3,y:4}],
+    mirrors:[
+      {x:3,y:2,t:'/'},    // sol '\'
+      {x:5,y:2,t:'/'},    // sol '\'
+      {x:5,y:5,t:'\\'},   // sol '/'
+      {x:1,y:5,t:'\\'},   // sol '/'
+      {x:1,y:2,t:'/'},    // 함정
+      {x:5,y:0,t:'\\'}    // 함정
+    ]
+  },
+  { // 8: 최종 — 크리스탈 3개
+    n:8,
+    emitter:{x:0,y:4,d:'R'},
+    crystals:[{x:1,y:4},{x:3,y:2},{x:1,y:0}],
+    walls:[{x:5,y:4},{x:4,y:1}],
+    mirrors:[
+      {x:3,y:4,t:'\\'},   // sol '/'
+      {x:3,y:0,t:'/'},    // sol '\'
+      {x:5,y:2,t:'/'},    // 함정
+      {x:6,y:6,t:'\\'},   // 함정
+      {x:1,y:6,t:'/'}     // 함정
+    ]
+  }
+];
+
+const KEY = 'laser-puzzle-progress-v1';
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
+async function storageGet(k){
+  if(hasCloudStorage){ const r = await window.storage.get(k); return r ? r.value : null; }
+  return localStorage.getItem(k);
+}
+async function storageSet(k,v){
+  if(hasCloudStorage){ await window.storage.set(k,v); }
+  else localStorage.setItem(k,v);
+}
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+let cur = 0;          // current level index
+let unlocked = 0;     // highest unlocked
+let mirrors = [];     // live mirror states
+let taps = 0;
+let cleared = false;
+let beamSegs = [];    // computed beam segments
+let litCrystals = new Set();
+let animT = 0;
+
+/* ---------- geometry ---------- */
+const DIRS = { R:[1,0], L:[-1,0], U:[0,-1], D:[0,1] };
+const REFLECT = {
+  '/': {R:'U', U:'R', L:'D', D:'L'},
+  '\\':{R:'D', D:'R', L:'U', U:'L'}
+};
+
+function traceBeam(){
+  const L = LEVELS[cur];
+  const wallSet = new Set(L.walls.map(w=>w.x+','+w.y));
+  const mMap = new Map(mirrors.map(m=>[m.x+','+m.y, m]));
+  const cSet = new Set(L.crystals.map(c=>c.x+','+c.y));
+
+  litCrystals = new Set();
+  beamSegs = [];
+
+  let x = L.emitter.x, y = L.emitter.y, d = L.emitter.d;
+  let sx = x, sy = y;
+  const visited = new Set();
+
+  for(let step=0; step<200; step++){
+    const stateKey = x+','+y+','+d;
+    if(visited.has(stateKey)) break; // 무한 루프 방지
+    visited.add(stateKey);
+
+    const [dx,dy] = DIRS[d];
+    const nx = x+dx, ny = y+dy;
+
+    // 격자 밖
+    if(nx<0 || ny<0 || nx>=L.n || ny>=L.n){
+      beamSegs.push({x1:sx,y1:sy,x2:x+dx*0.6,y2:y+dy*0.6, half:true});
+      return;
+    }
+    // 벽
+    if(wallSet.has(nx+','+ny)){
+      beamSegs.push({x1:sx,y1:sy,x2:nx-dx*0.5,y2:ny-dy*0.5, half:true});
+      return;
+    }
+    x = nx; y = ny;
+    // 크리스탈 (통과)
+    if(cSet.has(x+','+y)) litCrystals.add(x+','+y);
+    // 거울 (반사)
+    const m = mMap.get(x+','+y);
+    if(m){
+      beamSegs.push({x1:sx,y1:sy,x2:x,y2:y});
+      d = REFLECT[m.t][d];
+      sx = x; sy = y;
+    }
+  }
+  beamSegs.push({x1:sx,y1:sy,x2:x,y2:y});
+}
+
+function checkClear(){
+  const L = LEVELS[cur];
+  if(litCrystals.size === L.crystals.length && !cleared){
+    cleared = true;
+    unlocked = Math.max(unlocked, cur+1);
+    storageSet(KEY, JSON.stringify({unlocked}));
+    const isLast = cur === LEVELS.length - 1;
+    document.getElementById('clear-title').textContent = isLast ? '🏆 모든 레벨 클리어! 🏆' : '✨ 클리어! ✨';
+    document.getElementById('clear-sub').textContent = isLast
+      ? `마지막 퍼즐까지 ${taps}번 만에 성공! 빛의 달인이다!`
+      : `${taps}번 만에 성공!`;
+    document.getElementById('btn-banner-next').style.display = isLast ? 'none' : '';
+    setTimeout(()=>{
+      document.getElementById('clear-banner').classList.add('show');
+      updateButtons();
+    }, 600);
+  }
+}
+
+/* ---------- level management ---------- */
+function loadLevel(i){
+  cur = i;
+  const L = LEVELS[cur];
+  mirrors = L.mirrors.map(m=>({...m}));
+  taps = 0;
+  cleared = false;
+  document.getElementById('clear-banner').classList.remove('show');
+  document.getElementById('lv-label').textContent = 'LV ' + (cur+1);
+  document.getElementById('hint').textContent =
+    cur===0 ? '거울을 탭해서 레이저를 💎에 맞혀 봐!' :
+    L.crystals.length>1 ? `💎 ${L.crystals.length}개를 모두 빛나게 해야 해!` :
+    '벽 🧱 은 빛을 막아. 돌아가는 길을 찾아봐!';
+  sizeCanvas();
+  traceBeam();
+  checkClear();
+  updateButtons();
+  updateTaps();
+}
+
+function resetLevel(){ loadLevel(cur); }
+function nextLevel(){
+  if(cur+1 < LEVELS.length && cur+1 <= unlocked) loadLevel(cur+1);
+  else if(cur+1 >= LEVELS.length && cleared){
+    document.getElementById('hint').textContent = '🎉 모든 레벨 클리어! 대단해!';
+  }
+}
+function prevLevel(){ if(cur>0) loadLevel(cur-1); }
+
+function updateButtons(){
+  document.getElementById('btn-prev').disabled = cur===0;
+  document.getElementById('btn-next').disabled = !(cur+1<LEVELS.length && cur+1<=unlocked);
+}
+function updateTaps(){
+  document.getElementById('taps').textContent = taps ? `거울 돌린 횟수: ${taps}` : '';
+}
+
+/* ---------- input ---------- */
+function handleTap(clientX, clientY){
+  if(cleared) return;
+  const rect = cv.getBoundingClientRect();
+  const L = LEVELS[cur];
+  const cell = rect.width / L.n;
+  const gx = Math.floor((clientX - rect.left) / cell);
+  const gy = Math.floor((clientY - rect.top) / cell);
+  const m = mirrors.find(m=>m.x===gx && m.y===gy);
+  if(!m) return;
+  m.t = m.t === '/' ? '\\' : '/';
+  taps++;
+  updateTaps();
+  traceBeam();
+  checkClear();
+}
+cv.addEventListener('click', e => handleTap(e.clientX, e.clientY));
+
+/* ---------- rendering ---------- */
+let cellPx = 60, dpr = 1;
+function sizeCanvas(){
+  const L = LEVELS[cur];
+  const w = document.getElementById('board-wrap').clientWidth - 20;
+  dpr = Math.min(window.devicePixelRatio||1, 2);
+  cellPx = w / L.n;
+  cv.style.height = w + 'px';
+  cv.width = w*dpr; cv.height = w*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', ()=>{ sizeCanvas(); });
+
+function C(v){ return (v+0.5)*cellPx; } // grid → px center
+
+function draw(t){
+  animT = t/1000;
+  const L = LEVELS[cur];
+  const size = cellPx*L.n;
+  ctx.clearRect(0,0,size,size);
+
+  // grid
+  ctx.strokeStyle = 'rgba(255,255,255,.07)';
+  ctx.lineWidth = 1;
+  for(let i=0;i<=L.n;i++){
+    ctx.beginPath(); ctx.moveTo(i*cellPx,0); ctx.lineTo(i*cellPx,size); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,i*cellPx); ctx.lineTo(size,i*cellPx); ctx.stroke();
+  }
+
+  // beam (glow)
+  const pulse = 0.75 + 0.25*Math.sin(animT*5);
+  ctx.save();
+  ctx.strokeStyle = '#4DFFF3';
+  ctx.shadowColor = '#4DFFF3';
+  ctx.shadowBlur = 14*pulse;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  for(const s of beamSegs){
+    ctx.beginPath();
+    ctx.moveTo(C(s.x1), C(s.y1));
+    ctx.lineTo(C(s.x2), C(s.y2));
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // walls
+  for(const w of L.walls){
+    const x = w.x*cellPx, y = w.y*cellPx, p = cellPx*0.08;
+    ctx.fillStyle = '#3A3A6E';
+    ctx.beginPath();
+    ctx.roundRect(x+p, y+p, cellPx-2*p, cellPx-2*p, 6);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.12)';
+    ctx.fillRect(x+p, y+p, cellPx-2*p, (cellPx-2*p)*0.25);
+  }
+
+  // emitter
+  {
+    const e = L.emitter;
+    ctx.save();
+    ctx.translate(C(e.x), C(e.y));
+    const rot = {R:0, D:Math.PI/2, L:Math.PI, U:-Math.PI/2}[e.d];
+    ctx.rotate(rot);
+    ctx.fillStyle = '#8A8AE0';
+    ctx.beginPath();
+    ctx.roundRect(-cellPx*0.3, -cellPx*0.24, cellPx*0.5, cellPx*0.48, 6);
+    ctx.fill();
+    ctx.fillStyle = '#4DFFF3';
+    ctx.beginPath();
+    ctx.moveTo(cellPx*0.2, -cellPx*0.14);
+    ctx.lineTo(cellPx*0.42, 0);
+    ctx.lineTo(cellPx*0.2, cellPx*0.14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // mirrors
+  for(const m of mirrors){
+    const cx = C(m.x), cy = C(m.y), r = cellPx*0.32;
+    ctx.save();
+    ctx.strokeStyle = '#FFD166';
+    ctx.shadowColor = '#FFD166';
+    ctx.shadowBlur = 6;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    if(m.t === '/'){ ctx.moveTo(cx-r, cy+r); ctx.lineTo(cx+r, cy-r); }
+    else           { ctx.moveTo(cx-r, cy-r); ctx.lineTo(cx+r, cy+r); }
+    ctx.stroke();
+    ctx.restore();
+    // 탭 가능 표시 (은은한 링)
+    ctx.strokeStyle = 'rgba(255,209,102,.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, cellPx*0.42, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  // crystals
+  for(const c of L.crystals){
+    const lit = litCrystals.has(c.x+','+c.y);
+    const cx = C(c.x), cy = C(c.y), r = cellPx*0.26 * (lit ? (1+0.08*Math.sin(animT*6)) : 1);
+    ctx.save();
+    if(lit){ ctx.shadowColor = '#FF6BD6'; ctx.shadowBlur = 22; }
+    ctx.fillStyle = lit ? '#FF6BD6' : 'rgba(255,107,214,.28)';
+    ctx.strokeStyle = lit ? '#FFB6EA' : 'rgba(255,107,214,.5)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-r);
+    ctx.lineTo(cx+r*0.8, cy);
+    ctx.lineTo(cx, cy+r);
+    ctx.lineTo(cx-r*0.8, cy);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  requestAnimationFrame(draw);
+}
+
+/* ---------- boot ---------- */
+(async function(){
+  try{
+    const raw = await storageGet(KEY);
+    if(raw) unlocked = JSON.parse(raw).unlocked || 0;
+  }catch(e){}
+  loadLevel(Math.min(unlocked, LEVELS.length-1));
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
