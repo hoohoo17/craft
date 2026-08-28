@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>나의 정원</title>
+<style>
+  :root{
+    --sky:#CDEBF7; --sky2:#E8F7EE;
+    --soil:#8A5D3B; --soil-dry:#B08D6A;
+    --ink:#3A4A3E;
+    --card:#FFFFFF;
+    --green:#6BA368;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:linear-gradient(var(--sky), var(--sky2));
+    color:var(--ink);
+    min-height:100vh;
+    display:flex; justify-content:center;
+    user-select:none;
+  }
+  .wrap{width:100%; max-width:440px; padding:16px 14px 30px; display:flex; flex-direction:column; gap:14px;}
+
+  header{display:flex; justify-content:space-between; align-items:center;}
+  h1{font-size:1.45rem;}
+  .book-btn{
+    font-family:inherit; font-size:1rem; font-weight:800;
+    background:var(--card); color:var(--ink);
+    border:none; border-radius:20px;
+    padding:8px 16px;
+    box-shadow:0 3px 8px rgba(0,0,0,.12);
+    cursor:pointer;
+  }
+  .book-btn:active{transform:translateY(2px);}
+
+  .tip{
+    background:var(--card);
+    border-radius:12px;
+    padding:10px 14px;
+    font-size:.95rem;
+    text-align:center;
+    box-shadow:0 3px 8px rgba(0,0,0,.08);
+  }
+
+  .garden{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:14px;
+  }
+  .plot{
+    position:relative;
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:0 4px 10px rgba(0,0,0,.1);
+    aspect-ratio:1/1.15;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+    cursor:pointer;
+  }
+  .plot .view{flex:1; display:flex; align-items:flex-end; justify-content:center; padding:6px;}
+  .plot svg{width:82%; display:block;}
+  .plot .status{
+    padding:7px 8px 9px;
+    text-align:center;
+    font-size:.85rem; font-weight:800;
+    background:rgba(107,163,104,.12);
+    min-height:2.2em;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .plot.ready{animation:glow 1.6s infinite;}
+  @keyframes glow{
+    0%,100%{box-shadow:0 4px 10px rgba(0,0,0,.1);}
+    50%{box-shadow:0 4px 20px rgba(255,196,60,.75);}
+  }
+  .moist{
+    position:absolute; top:8px; left:8px; right:8px;
+    height:7px;
+    background:rgba(0,0,0,.1);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .moist > div{height:100%; background:#5AAFE0; border-radius:4px; transition:width .4s;}
+  .dry-mark{
+    position:absolute; top:20px; right:10px;
+    font-size:1.15rem;
+    display:none;
+  }
+  .plot.dry .dry-mark{display:block; animation:blink 1s infinite;}
+  @keyframes blink{50%{opacity:.3}}
+
+  .pop{
+    position:absolute; left:50%; top:38%;
+    transform:translateX(-50%);
+    font-weight:900; font-size:1.15rem;
+    pointer-events:none;
+    animation:rise .8s forwards;
+    text-shadow:0 1px 3px rgba(255,255,255,.8);
+    white-space:nowrap;
+    z-index:3;
+  }
+  @keyframes rise{from{opacity:1; margin-top:0}to{opacity:0; margin-top:-30px}}
+
+  /* sheets */
+  .sheet-bg{
+    position:fixed; inset:0;
+    background:rgba(40,60,45,.45);
+    display:none;
+    align-items:flex-end; justify-content:center;
+    z-index:10;
+  }
+  .sheet-bg.show{display:flex;}
+  .sheet{
+    background:var(--card);
+    width:100%; max-width:440px;
+    border-radius:22px 22px 0 0;
+    padding:20px 18px 28px;
+    max-height:75vh;
+    overflow-y:auto;
+  }
+  .sheet h2{font-size:1.2rem; margin-bottom:14px; text-align:center;}
+  .seed-list{display:flex; flex-direction:column; gap:10px;}
+  .seed-item{
+    display:flex; align-items:center; gap:12px;
+    border:2px solid rgba(0,0,0,.08);
+    border-radius:14px;
+    padding:10px 12px;
+    cursor:pointer;
+    background:none;
+    font-family:inherit; text-align:left;
+    width:100%;
+  }
+  .seed-item:active{background:rgba(107,163,104,.1);}
+  .seed-item svg{width:44px; flex:none;}
+  .seed-item .info{flex:1;}
+  .seed-item .nm{font-weight:900; font-size:1.05rem;}
+  .seed-item .tm{font-size:.85rem; opacity:.65;}
+  .close-btn{
+    margin-top:16px; width:100%;
+    font-family:inherit; font-size:1rem; font-weight:800;
+    background:rgba(0,0,0,.07); color:var(--ink);
+    border:none; border-radius:12px;
+    padding:12px; cursor:pointer;
+  }
+
+  .book-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  .book-cell{
+    text-align:center;
+    border:2px solid rgba(0,0,0,.08);
+    border-radius:14px;
+    padding:10px 4px;
+  }
+  .book-cell svg{width:56px;}
+  .book-cell .nm{font-weight:800; font-size:.85rem;}
+  .book-cell .ct{font-size:.8rem; opacity:.65;}
+  .book-cell.locked{filter:grayscale(1); opacity:.4;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🌷 나의 정원</h1>
+    <button class="book-btn" onclick="openBook()">📖 꽃 도감 <span id="book-count"></span></button>
+  </header>
+  <p class="tip" id="tip">빈 화분을 탭해서 씨앗을 심어 봐!</p>
+  <div class="garden" id="garden"></div>
+</div>
+
+<!-- seed picker -->
+<div class="sheet-bg" id="seed-sheet">
+  <div class="sheet">
+    <h2>🌱 어떤 씨앗을 심을까?</h2>
+    <div class="seed-list" id="seed-list"></div>
+    <button class="close-btn" onclick="closeSheets()">닫기</button>
+  </div>
+</div>
+
+<!-- flower book -->
+<div class="sheet-bg" id="book-sheet">
+  <div class="sheet">
+    <h2>📖 꽃 도감</h2>
+    <div class="book-grid" id="book-grid"></div>
+    <button class="close-btn" onclick="closeSheets()">닫기</button>
+  </div>
+</div>
+
+<script>
+/* ---------- storage ---------- */
+const KEY = 'my-garden-v1';
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
+async function storageGet(k){
+  if(hasCloudStorage){ try{ const r = await window.storage.get(k); return r ? r.value : null; }catch(e){ return null; } }
+  return localStorage.getItem(k);
+}
+async function storageSet(k,v){
+  try{
+    if(hasCloudStorage) await window.storage.set(k,v);
+    else localStorage.setItem(k,v);
+  }catch(e){}
+}
+
+/* ---------- flowers ---------- */
+// growMin: 다 자라는 데 걸리는 시간(분)
+const FLOWERS = [
+  {id:'dandelion', name:'민들레',   growMin:2,    color:'#FFD93D', center:'#E8A200', desc:'금방 피어요'},
+  {id:'tulip',     name:'튤립',     growMin:15,   color:'#FF7BAC', center:'#E84A8A', desc:'15분'},
+  {id:'sunflower', name:'해바라기', growMin:60,   color:'#FFC43D', center:'#7A4A1D', desc:'1시간'},
+  {id:'morning',   name:'나팔꽃',   growMin:240,  color:'#8E7CF0', center:'#5B47C7', desc:'4시간'},
+  {id:'rainbow',   name:'무지개꽃', growMin:720,  color:'rainbow', center:'#fff',    desc:'12시간 · 아주 귀한 꽃!'},
+];
+const MOIST_HOURS = 5; // 물 가득 → 마름까지 5시간
+
+/* ---------- SVG ---------- */
+function petals(cx, cy, r, color, n=6){
+  let s = '';
+  for(let i=0;i<n;i++){
+    const a = (i/n)*Math.PI*2;
+    const px = cx + Math.cos(a)*r, py = cy + Math.sin(a)*r;
+    const c = color==='rainbow' ? `hsl(${i*360/n},80%,65%)` : color;
+    s += `<ellipse cx="${px}" cy="${py}" rx="${r*0.62}" ry="${r*0.42}" fill="${c}" transform="rotate(${a*180/Math.PI} ${px} ${py})"/>`;
+  }
+  return s;
+}
+function svgPlot(state){
+  // state: {stage:0빈,1새싹,2줄기,3꽃봉오리,4활짝, f:flower, dry:bool}
+  const soil = state.dry ? 'var(--soil-dry)' : 'var(--soil)';
+  let inner = '';
+  const f = state.f;
+  if(state.stage >= 1){
+    inner += `<path d="M50 84 Q49 70 50 ${state.stage>=2?36:62}" stroke="#5E9455" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+    inner += `<path d="M50 72 Q40 66 38 58 Q48 60 50 68 Z" fill="#6BA368"/>`;
+    if(state.stage>=2) inner += `<path d="M50 58 Q60 52 62 44 Q52 46 50 54 Z" fill="#6BA368"/>`;
+  }
+  if(state.stage === 3 && f){
+    const c = f.color==='rainbow' ? '#C9B3FF' : f.color;
+    inner += `<ellipse cx="50" cy="32" rx="9" ry="12" fill="${c}"/><path d="M44 36 Q50 26 56 36" fill="#6BA368"/>`;
+  }
+  if(state.stage === 4 && f){
+    inner += petals(50, 30, 13, f.color);
+    inner += `<circle cx="50" cy="30" r="8" fill="${f.center}"/>`;
+    inner += `<text x="72" y="24" font-size="12">✨</text>`;
+  }
+  return `<svg viewBox="0 0 100 96">
+    <ellipse cx="50" cy="86" rx="34" ry="9" fill="${soil}"/>
+    <path d="M18 86 Q50 74 82 86 L78 93 Q50 99 22 93 Z" fill="${soil}"/>
+    ${inner}
+  </svg>`;
+}
+function svgFlowerIcon(f){
+  return `<svg viewBox="0 0 100 100">${petals(50,50,16,f.color)}<circle cx="50" cy="50" r="10" fill="${f.center}"/></svg>`;
+}
+
+/* ---------- state ---------- */
+const PLOTS = 6;
+let S = null;
+let pickTarget = -1;
+let saveTimer = null;
+
+function defaultState(){
+  return {
+    plots: Array.from({length:PLOTS}, ()=>({f:null, prog:0, moist:0})),
+    book: {},           // {flowerId: count}
+    lastTs: Date.now()
+  };
+}
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{ S.lastTs = Date.now(); storageSet(KEY, JSON.stringify(S)); }, 400);
+}
+
+/* ---------- time progression ---------- */
+function applyTime(hours){
+  for(const p of S.plots){
+    if(!p.f) continue;
+    // 물이 남아 있던 시간만큼만 자람
+    const moistHours = (p.moist/100) * MOIST_HOURS;
+    const growHours = Math.min(hours, moistHours);
+    const f = FLOWERS.find(x=>x.id===p.f);
+    if(growHours > 0 && p.prog < 100){
+      p.prog = Math.min(100, p.prog + (growHours*60 / f.growMin) * 100);
+    }
+    p.moist = Math.max(0, p.moist - (hours/MOIST_HOURS)*100);
+  }
+}
+
+/* ---------- actions ---------- */
+function stageOf(p){
+  if(!p.f) return 0;
+  if(p.prog >= 100) return 4;
+  if(p.prog >= 66) return 3;
+  if(p.prog >= 33) return 2;
+  return 1;
+}
+
+function tapPlot(i){
+  const p = S.plots[i];
+  if(!p.f){
+    pickTarget = i;
+    document.getElementById('seed-sheet').classList.add('show');
+    return;
+  }
+  if(p.prog >= 100){
+    // 수확!
+    const f = FLOWERS.find(x=>x.id===p.f);
+    S.book[f.id] = (S.book[f.id]||0) + 1;
+    popText(i, f.name + ' 획득! 🎉');
+    S.plots[i] = {f:null, prog:0, moist:0};
+    setTip(`${f.name}를 도감에 넣었어! 📖`);
+    render();
+    scheduleSave();
+    return;
+  }
+  // 물 주기
+  if(p.moist >= 95){
+    popText(i, '물은 충분해! 💧');
+  }else{
+    p.moist = 100;
+    popText(i, '물 주기 완료! 💧');
+    setTip('물이 마르면 꽃이 안 자라니까 가끔 들러서 챙겨 줘!');
+  }
+  render();
+  scheduleSave();
+}
+
+function plant(fid){
+  if(pickTarget < 0) return;
+  S.plots[pickTarget] = {f:fid, prog:0, moist:100};
+  const f = FLOWERS.find(x=>x.id===fid);
+  setTip(`${f.name} 씨앗을 심었어! ${f.desc.includes('분')||f.desc.includes('시간') ? '다 자라는 데 ' + f.desc.split('·')[0].trim() : ''} 🌱`);
+  closeSheets();
+  render();
+  scheduleSave();
+}
+
+/* ---------- UI ---------- */
+function setTip(t){ document.getElementById('tip').textContent = t; }
+
+function popText(i, text){
+  const plotEl = document.querySelectorAll('.plot')[i];
+  const el = document.createElement('div');
+  el.className = 'pop';
+  el.textContent = text;
+  plotEl.appendChild(el);
+  setTimeout(()=>el.remove(), 800);
+}
+
+function render(){
+  const g = document.getElementById('garden');
+  if(!g.children.length){
+    for(let i=0;i<PLOTS;i++){
+      const d = document.createElement('div');
+      d.className = 'plot';
+      d.innerHTML = `<div class="moist"><div></div></div><div class="dry-mark">🥀</div><div class="view"></div><div class="status"></div>`;
+      d.addEventListener('pointerdown', ()=>tapPlot(i));
+      g.appendChild(d);
+    }
+  }
+  S.plots.forEach((p, i)=>{
+    const el = g.children[i];
+    const stage = stageOf(p);
+    const f = p.f ? FLOWERS.find(x=>x.id===p.f) : null;
+    const dry = p.f && p.moist <= 0 && p.prog < 100;
+    el.querySelector('.view').innerHTML = svgPlot({stage, f, dry});
+    el.querySelector('.moist > div').style.width = (p.f && p.prog<100 ? p.moist : 0) + '%';
+    el.classList.toggle('ready', p.prog >= 100);
+    el.classList.toggle('dry', !!dry);
+    const st = el.querySelector('.status');
+    if(!p.f) st.textContent = '➕ 씨앗 심기';
+    else if(p.prog >= 100) st.textContent = '✨ 활짝! 탭해서 수확';
+    else if(dry) st.textContent = '🥀 목말라! 탭해서 물 주기';
+    else st.textContent = `${f.name} ${Math.floor(p.prog)}% 🌱`;
+  });
+  const total = Object.values(S.book).reduce((a,b)=>a+b,0);
+  document.getElementById('book-count').textContent = total ? `(${total})` : '';
+}
+
+function buildSeedList(){
+  document.getElementById('seed-list').innerHTML = FLOWERS.map(f=>`
+    <button class="seed-item" onclick="plant('${f.id}')">
+      ${svgFlowerIcon(f)}
+      <span class="info">
+        <span class="nm">${f.name}</span><br>
+        <span class="tm">⏱️ ${f.desc}</span>
+      </span>
+    </button>`).join('');
+}
+
+function openBook(){
+  const grid = document.getElementById('book-grid');
+  grid.innerHTML = FLOWERS.map(f=>{
+    const ct = S.book[f.id]||0;
+    return `<div class="book-cell ${ct? '':'locked'}">
+      ${svgFlowerIcon(f)}
+      <div class="nm">${ct? f.name : '???'}</div>
+      <div class="ct">${ct? ct+'송이' : '아직 못 키움'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('book-sheet').classList.add('show');
+}
+function closeSheets(){
+  document.querySelectorAll('.sheet-bg').forEach(s=>s.classList.remove('show'));
+  pickTarget = -1;
+}
+document.querySelectorAll('.sheet-bg').forEach(s=>{
+  s.addEventListener('pointerdown', e=>{ if(e.target===s) closeSheets(); });
+});
+
+/* ---------- ticks ---------- */
+setInterval(()=>{
+  if(!S) return;
+  applyTime(10/3600); // 10초씩
+  render();
+  scheduleSave();
+}, 10000);
+
+window.addEventListener('visibilitychange', ()=>{
+  if(!S) return;
+  if(document.hidden){ S.lastTs = Date.now(); storageSet(KEY, JSON.stringify(S)); }
+  else{
+    const hours = (Date.now()-S.lastTs)/3600000;
+    if(hours > 0.003) applyTime(hours);
+    S.lastTs = Date.now();
+    render();
+  }
+});
+
+/* ---------- boot ---------- */
+(async function(){
+  try{
+    const raw = await storageGet(KEY);
+    S = raw ? JSON.parse(raw) : defaultState();
+  }catch(e){ S = defaultState(); }
+  const hours = (Date.now() - (S.lastTs||Date.now()))/3600000;
+  if(hours > 0.003) applyTime(hours);
+  S.lastTs = Date.now();
+  buildSeedList();
+  render();
+  const growing = S.plots.filter(p=>p.f && p.prog<100).length;
+  const ready = S.plots.filter(p=>p.prog>=100).length;
+  if(ready) setTip(`✨ 활짝 핀 꽃이 ${ready}송이 기다리고 있어!`);
+  else if(growing) setTip(`🌱 ${growing}개가 자라는 중이야. 물 확인해 줘!`);
+  scheduleSave();
+})();
+</script>
+</body>
+</html>
