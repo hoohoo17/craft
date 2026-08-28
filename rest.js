@@ -24,7 +24,9 @@
     pill = document.createElement('div');
     pill.id = 'craft-timer';
     pill.style.cssText = [
-      'position:fixed', 'bottom:6px', 'left:8px', 'z-index:2147483646',
+      'position:fixed', 'left:8px', 'z-index:2147483646',
+      // 아이폰 홈 인디케이터에 가리지 않게 여백을 더한다
+      'bottom:calc(8px + env(safe-area-inset-bottom, 0px))',
       'pointer-events:none',                      // 게임 조작을 절대 가리지 않게
       'font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif',
       'font-size:12px', 'font-weight:700', 'font-variant-numeric:tabular-nums',
