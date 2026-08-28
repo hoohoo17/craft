@@ -16,7 +16,24 @@
     try{ localStorage.setItem(k, String(v)); }catch(e){}
   }
 
-  var box = null, label = null;
+  var box = null, label = null, pill = null;
+
+  // 화면 구석에 쉬는 시간까지 남은 시간을 띄운다
+  function buildPill(){
+    if(pill) return;
+    pill = document.createElement('div');
+    pill.id = 'craft-timer';
+    pill.style.cssText = [
+      'position:fixed', 'bottom:6px', 'left:8px', 'z-index:2147483646',
+      'pointer-events:none',                      // 게임 조작을 절대 가리지 않게
+      'font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif',
+      'font-size:12px', 'font-weight:700', 'font-variant-numeric:tabular-nums',
+      'color:#fff', 'background:rgba(0,0,0,.42)',
+      'padding:3px 9px', 'border-radius:12px',
+      'opacity:.75', 'line-height:1.4', 'white-space:nowrap'
+    ].join(';');
+    (document.body || document.documentElement).appendChild(pill);
+  }
 
   function build(){
     if(box) return;
@@ -55,6 +72,15 @@
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
   }
 
+  function showPill(leftMs){
+    buildPill();
+    pill.style.display = 'block';
+    pill.textContent = '⏱ ' + fmt(leftMs) + ' 뒤 쉬는 시간';
+    var soon = leftMs <= 5 * 60 * 1000;          // 5분 남으면 눈에 띄게
+    pill.style.background = soon ? 'rgba(200,60,60,.72)' : 'rgba(0,0,0,.42)';
+    pill.style.opacity = soon ? '.95' : '.75';
+  }
+
   var last = Date.now();
 
   function tick(){
@@ -64,6 +90,7 @@
     if(until > now){                 // 쉬는 중
       show();
       if(label) label.textContent = fmt(until - now);
+      if(pill) pill.style.display = 'none';   // 쉬는 화면에 이미 시계가 있다
       last = now;
       return;
     }
@@ -71,6 +98,7 @@
       put(K_UNTIL, 0);
       hide();
     }
+    showPill(PLAY_MS - num(K_PLAYED));
 
     // 화면을 보고 있을 때만 논 시간으로 센다
     var gap = now - last;
@@ -93,6 +121,7 @@
 
   function start(){
     build();
+    buildPill();
     tick();
     setInterval(tick, 1000);
     document.addEventListener('visibilitychange', function(){ last = Date.now(); });
