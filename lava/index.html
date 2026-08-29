@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>용암!!</title>
+<style>
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:#26224A;
+    color:#FFF4E8;
+    display:flex; justify-content:center;
+    touch-action:manipulation;
+    user-select:none;
+  }
+  #wrap{position:relative; width:100%; max-width:480px; height:100%;}
+  canvas{display:block; width:100%; height:100%;}
+
+  #hud{
+    position:absolute; top:16px; left:16px; right:16px;
+    display:flex; justify-content:space-between;
+    font-size:1.25rem; font-weight:900;
+    text-shadow:0 2px 6px rgba(0,0,0,.5);
+    pointer-events:none; z-index:2;
+  }
+  #alert{
+    position:absolute; top:22%; left:0; right:0;
+    text-align:center;
+    font-size:3rem; font-weight:900;
+    color:#FF5A3C;
+    text-shadow:0 0 24px #FF5A3C, 0 3px 6px rgba(0,0,0,.6);
+    opacity:0;
+    pointer-events:none; z-index:2;
+    transform:scale(.8);
+    transition:opacity .15s, transform .15s;
+  }
+  #alert.show{opacity:1; transform:scale(1); animation:pulse .4s infinite;}
+  @keyframes pulse{50%{transform:scale(1.12)}}
+  #countdown{
+    position:absolute; top:36%; left:0; right:0;
+    text-align:center;
+    font-size:2.2rem; font-weight:900;
+    color:#FFD166;
+    text-shadow:0 2px 8px rgba(0,0,0,.6);
+    pointer-events:none; z-index:2;
+  }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(20,17,45,.9);
+    text-align:center;
+    padding:24px; z-index:5;
+  }
+  .overlay h1{font-size:2.2rem; margin-bottom:12px;}
+  .overlay p{font-size:1.05rem; line-height:1.7; opacity:.9;}
+  .big-btn{
+    margin-top:22px;
+    font-family:inherit;
+    font-size:1.3rem; font-weight:900;
+    color:#26224A; background:#FFD166;
+    border:none; border-radius:14px;
+    padding:14px 44px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #B8912F;
+  }
+  .big-btn:active{transform:translateY(4px); box-shadow:0 1px 0 #B8912F;}
+  .final{font-size:3.2rem; font-weight:900; color:#FF9A3C; margin:10px 0;}
+  .hidden{display:none !important;}
+  .char-row{
+    display:flex; gap:10px; margin:10px 0 6px;
+    justify-content:center; flex-wrap:wrap;
+  }
+  .char-btn{
+    font-size:2rem;
+    background:rgba(255,255,255,.1);
+    border:3px solid transparent;
+    border-radius:14px;
+    padding:8px 12px;
+    cursor:pointer;
+  }
+  .char-btn.sel{border-color:#FFD166; background:rgba(255,209,102,.2);}
+  #tap-guide{
+    position:absolute; top:48%; left:0; right:0;
+    text-align:center;
+    font-size:1.7rem; font-weight:900;
+    color:#fff;
+    text-shadow:0 2px 10px rgba(0,0,0,.7);
+    pointer-events:none; z-index:2;
+    display:none;
+    animation:pulse .35s infinite;
+  }
+  #rec-name{
+    font-family:inherit; font-size:1.1rem; font-weight:800;
+    text-align:center;
+    border:3px solid #FFD166;
+    border-radius:12px;
+    background:rgba(255,255,255,.95);
+    color:#26224A;
+    padding:10px 14px;
+    width:220px;
+  }
+  #board{
+    margin:14px 0 4px;
+    width:min(300px, 84vw);
+    max-height:32vh;
+    overflow-y:auto;
+  }
+  .board-row{
+    display:flex; justify-content:space-between; gap:8px;
+    background:rgba(255,255,255,.08);
+    border-radius:10px;
+    padding:7px 14px;
+    margin-bottom:6px;
+    font-weight:800; font-size:1rem;
+  }
+  .board-row.me{background:rgba(255,209,102,.3); border:2px solid #FFD166;}
+  .board-row .rk{width:2.2em; text-align:left;}
+  .board-row .nm{flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <span>⭐ <span id="score">0</span></span>
+    <span>🌋 <span id="rounds">0</span>번 피함</span>
+  </div>
+  <div id="alert">🌋 용암!!</div>
+  <div id="countdown"></div>
+  <div id="tap-guide">👆 지금 탭해서 점프!!</div>
+
+  <div class="overlay" id="start">
+    <h1>🌋 용암!!</h1>
+    <p style="font-size:1.15rem; line-height:2">
+      ⭐ 별은 서 있으면 자동으로 주워져<br>
+      🌋 <b style="color:#FF5A3C">"용암!!"</b> 이 뜨면?<br>
+      👆 <b>화면을 탭! 점프!</b>
+    </p>
+    <p style="margin-top:14px; font-weight:800">내 캐릭터 고르기</p>
+    <div class="char-row" id="char-row"></div>
+    <button class="big-btn" onclick="startGame(event)">시작!</button>
+  </div>
+
+  <div class="overlay hidden" id="over">
+    <h1>🫠 앗 뜨거!!</h1>
+    <div class="final" id="final">0점</div>
+    <p id="round-line"></p>
+    <div id="record-form">
+      <input id="rec-name" maxlength="8" placeholder="이름 (8자까지)">
+      <button class="big-btn" style="margin-top:10px; padding:12px 30px; font-size:1.1rem" onclick="saveRecord()">📝 기록 남기기</button>
+    </div>
+    <div id="board"></div>
+    <button class="big-btn" onclick="startGame(event)">다시 도전!</button>
+  </div>
+</div>
+
+<script>
+/* ---------- storage ---------- */
+const KEY = 'lava-game-best-v1';
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
+async function storageGet(k){
+  if(hasCloudStorage){ try{ const r = await window.storage.get(k); return r ? r.value : null; }catch(e){ return null; } }
+  return localStorage.getItem(k);
+}
+async function storageSet(k,v){
+  try{ if(hasCloudStorage) await window.storage.set(k,v); else localStorage.setItem(k,v); }catch(e){}
+}
+
+/* ---------- canvas ---------- */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H, GROUND;
+function resize(){
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  W = document.getElementById('wrap').clientWidth;
+  H = document.getElementById('wrap').clientHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  GROUND = H - 90;
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------- state ---------- */
+let running = false;
+let score, best = 0;
+let round;           // 몇 번째 용암을 넘겼나
+let rac;             // 너구리 {y, vy, grounded}
+let stars;           // [{x}]
+let scroll;          // 바닥 스크롤 속도
+let phase;           // 'calm' | 'warn' | 'lava'
+let phaseT;          // 남은 시간
+let warnDur, lavaDur, calmMin, calmMax;
+let lavaLevel = 0;   // 용암 시각 높이 0~1
+let lastT = 0;
+let hurtFlash = 0, hitThisLava = false;
+
+function startGame(e){
+  if(e) e.stopPropagation();
+  document.getElementById('start').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  score = 0; round = 0;
+  rac = {y:GROUND, vy:0, grounded:true};
+  stars = [];
+  scroll = 130;
+  phase = 'calm';
+  phaseT = 3;
+  warnDur = 3.0; lavaDur = 0.5; calmMin = 2.5; calmMax = 5;
+  lavaLevel = 0; hurtFlash = 0; hitThisLava = false;
+  updateHud();
+  hideAlert();
+  running = true;
+  lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- voice ---------- */
+function shout(text){
+  try{
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 1.2; u.pitch = 1.3; u.volume = 1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){}
+  navigator.vibrate && navigator.vibrate([80,40,80]);
+}
+
+/* ---------- input ---------- */
+function jump(){
+  if(!running) return;
+  if(rac.grounded){
+    rac.vy = -750;
+    rac.grounded = false;
+  }
+}
+window.addEventListener('pointerdown', e=>{
+  if(e.target.closest('.overlay')) return;
+  jump();
+});
+window.addEventListener('keydown', e=>{
+  if(e.target && e.target.tagName === 'INPUT') return;
+  if(e.code==='Space'){ e.preventDefault(); jump(); }
+});
+
+/* ---------- phases ---------- */
+function nextPhase(){
+  if(phase === 'calm'){
+    phase = 'warn';
+    phaseT = warnDur;
+    showAlert();
+    shout('용암!');
+  }else if(phase === 'warn'){
+    phase = 'lava';
+    phaseT = lavaDur;
+    hitThisLava = false;
+    hideAlert();
+  }else{
+    // 용암 끝 → 라운드 클리어
+    phase = 'calm';
+    phaseT = calmMin + Math.random()*(calmMax-calmMin);
+    if(!hitThisLava){
+      round++;
+      score += 5;
+      // 난이도 상승 (용암은 점프 체공시간보다 항상 짧게!)
+      warnDur = Math.max(1.5, warnDur - 0.12);
+      lavaDur = Math.min(0.55, lavaDur + 0.01);
+      calmMin = Math.max(1.5, calmMin - 0.06);
+      calmMax = Math.max(2.5, calmMax - 0.12);
+      scroll = Math.min(240, scroll + 5);
+    }
+    updateHud();
+  }
+}
+
+function showAlert(){
+  document.getElementById('alert').classList.add('show');
+}
+function hideAlert(){
+  document.getElementById('alert').classList.remove('show');
+  document.getElementById('countdown').textContent = '';
+  document.getElementById('tap-guide').style.display = 'none';
+}
+
+/* ---------- loop ---------- */
+function loop(t){
+  if(!running) return;
+  const dt = Math.min((t-lastT)/1000, 0.05);
+  lastT = t;
+
+  // phase timer
+  phaseT -= dt;
+  if(phase==='warn'){
+    document.getElementById('countdown').textContent = Math.ceil(phaseT*10)/10 <= 0 ? '' : phaseT.toFixed(1);
+    // 처음 2번은 언제 탭할지 알려주는 연습 모드
+    document.getElementById('tap-guide').style.display =
+      (round < 2 && phaseT < 0.5 && rac.grounded) ? 'block' : 'none';
+  }else{
+    document.getElementById('tap-guide').style.display = 'none';
+  }
+  if(phaseT <= 0) nextPhase();
+
+  // lava visual
+  const targetLava = phase==='lava' ? 1 : 0;
+  lavaLevel += (targetLava - lavaLevel) * Math.min(1, dt*10);
+
+  // raccoon physics
+  rac.vy += 1300*dt;
+  rac.y += rac.vy*dt;
+  if(rac.y >= GROUND){
+    rac.y = GROUND; rac.vy = 0; rac.grounded = true;
+  }
+
+  // lava hit check (용암이 다 차오른 뒤부터만 아픔 — 늦게 뛰어도 기회 있음)
+  const lavaAge = lavaDur - phaseT;
+  if(phase==='lava' && rac.grounded && !hitThisLava && lavaAge > 0.3){
+    hitThisLava = true;
+    hurtFlash = 0.5;
+    navigator.vibrate && navigator.vibrate(300);
+    endGame();
+    return;
+  }
+
+  // stars
+  if(Math.random() < dt*0.9 && stars.length < 4){
+    stars.push({x: W + 30});
+  }
+  for(let i=stars.length-1;i>=0;i--){
+    stars[i].x -= scroll*dt;
+    // 줍기: 너구리는 x 고정(왼쪽 1/4 지점), 바닥에 있을 때만
+    const racX = W*0.28;
+    if(Math.abs(stars[i].x - racX) < 34 && rac.grounded && phase!=='lava'){
+      stars.splice(i,1);
+      score += 1;
+      updateHud();
+      continue;
+    }
+    if(stars[i].x < -40) stars.splice(i,1);
+  }
+
+  if(hurtFlash > 0) hurtFlash -= dt;
+
+  render();
+  requestAnimationFrame(loop);
+}
+
+function endGame(){
+  running = false;
+  hideAlert();
+  best = Math.max(best, score);
+  storageSet(KEY, String(best));
+  document.getElementById('final').textContent = score + '점';
+  document.getElementById('round-line').textContent = '🌋 용암을 ' + round + '번 피했어!';
+  document.getElementById('record-form').style.display = 'block';
+  renderBoard(-1);
+  document.getElementById('over').classList.remove('hidden');
+}
+
+/* ---------- leaderboard ---------- */
+let boardData = [];
+async function loadBoard(){
+  try{
+    const raw = await storageGet(KEY+'-board');
+    boardData = raw ? JSON.parse(raw) : [];
+  }catch(e){ boardData = []; }
+}
+async function saveRecord(){
+  const name = document.getElementById('rec-name').value.trim() || '이름없음';
+  storageSet(KEY+'-name', name);
+  boardData.push({name, score, round, ts:Date.now()});
+  boardData.sort((a,b)=> b.score - a.score || a.ts - b.ts);
+  boardData = boardData.slice(0, 10);
+  storageSet(KEY+'-board', JSON.stringify(boardData));
+  const myIdx = boardData.findIndex(r => r.ts && r.name===name && r.score===score);
+  document.getElementById('record-form').style.display = 'none';
+  renderBoard(myIdx);
+}
+function renderBoard(myIdx){
+  const el = document.getElementById('board');
+  if(!boardData.length){ el.innerHTML = ''; return; }
+  const medals = ['🥇','🥈','🥉'];
+  el.innerHTML = boardData.map((r,i)=>`
+    <div class="board-row ${i===myIdx?'me':''}">
+      <span class="rk">${medals[i] || (i+1)+'위'}</span>
+      <span class="nm">${String(r.name).replace(/[<>&"]/g,'')}</span>
+      <span>${r.score}점</span>
+    </div>`).join('');
+}
+
+function updateHud(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('rounds').textContent = round;
+}
+
+/* ---------- render ---------- */
+function render(){
+  // 하늘: warn일 때 붉어짐
+  const warnGlow = phase==='warn' ? (0.5+0.5*Math.sin(performance.now()/120)) : 0;
+  ctx.fillStyle = phase==='lava' ? '#3A1830' : `rgb(${38+warnGlow*60}, ${34-warnGlow*10}, ${74-warnGlow*20})`;
+  ctx.fillRect(0,0,W,H);
+
+  // 별(장식 하늘)
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  for(let i=0;i<14;i++){
+    const sx = (i*97)%W, sy = (i*53)%Math.floor(H*0.4);
+    ctx.fillRect(sx, sy, 2, 2);
+  }
+
+  // 바닥
+  ctx.fillStyle = '#4A4470';
+  ctx.fillRect(0, GROUND+8, W, H-GROUND);
+  ctx.fillStyle = '#5C5588';
+  ctx.fillRect(0, GROUND, W, 10);
+
+  // 별 아이템
+  for(const s of stars){
+    drawStar(s.x, GROUND-14, 13);
+  }
+
+  // 용암
+  if(lavaLevel > 0.02){
+    const lh = (H-GROUND-20) * lavaLevel + 30*lavaLevel;
+    const ly = H - lh;
+    const grad = ctx.createLinearGradient(0, ly, 0, H);
+    grad.addColorStop(0, '#FF7A3C');
+    grad.addColorStop(1, '#D7263D');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, ly+10);
+    for(let x=0;x<=W;x+=30){
+      ctx.quadraticCurveTo(x+15, ly + (Math.sin(performance.now()/150 + x)*8), x+30, ly+10);
+    }
+    ctx.lineTo(W,H); ctx.lineTo(0,H);
+    ctx.closePath();
+    ctx.fill();
+    // 거품
+    ctx.fillStyle = '#FFD166';
+    for(let i=0;i<5;i++){
+      const bx = ((performance.now()/12 + i*180)%(W+40))-20;
+      ctx.beginPath();
+      ctx.arc(bx, ly+18+((i*37)%20), 4, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // 캐릭터
+  drawChar(W*0.28, rac.y, 58);
+
+  // 피격 플래시
+  if(hurtFlash > 0){
+    ctx.fillStyle = `rgba(215,38,61,${hurtFlash*0.5})`;
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+function drawStar(x, y, r){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.fillStyle = '#FFD166';
+  ctx.shadowColor = '#FFD166';
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  for(let i=0;i<10;i++){
+    const rr = i%2===0 ? r : r*0.45;
+    const a = (i/10)*Math.PI*2 - Math.PI/2;
+    ctx[i===0?'moveTo':'lineTo'](Math.cos(a)*rr, Math.sin(a)*rr);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+let myChar = '🐰';
+function drawChar(x, footY, s){
+  ctx.save();
+  ctx.translate(x, footY);
+  if(!rac.grounded) ctx.rotate(-0.18);
+  ctx.font = s + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(myChar, 0, 4);
+  ctx.restore();
+}
+
+/* ---------- boot ---------- */
+const CHARS = ['🐰','🐱','🦄','🐶','🦝','🐧'];
+function buildCharRow(){
+  const row = document.getElementById('char-row');
+  row.innerHTML = CHARS.map(c =>
+    `<button class="char-btn ${c===myChar?'sel':''}" onclick="pickChar('${c}', this)">${c}</button>`
+  ).join('');
+}
+function pickChar(c, btn){
+  myChar = c;
+  document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  storageSet(KEY+'-char', c);
+}
+(async function(){
+  const raw = await storageGet(KEY);
+  if(raw) best = parseInt(raw)||0;
+  const c = await storageGet(KEY+'-char');
+  if(c && CHARS.includes(c)) myChar = c;
+  buildCharRow();
+  await loadBoard();
+  const nm = await storageGet(KEY+'-name');
+  if(nm) document.getElementById('rec-name').value = nm;
+})();
+</script>
+<script src="../rest.js?v=3"></script>
+</body>
+</html>
