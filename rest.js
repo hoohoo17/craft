@@ -84,6 +84,7 @@
   }
 
   var last = Date.now();
+  var wasVisible = false;   // 돌아온 직후인지 구분
 
   function tick(){
     var now = Date.now();
@@ -102,12 +103,15 @@
     }
     showPill(PLAY_MS - num(K_PLAYED));
 
-    // 화면을 보고 있을 때만 논 시간으로 센다
+    // 화면을 보고 있을 때만 논 시간으로 센다.
+    // 앱을 나갔다 돌아온 직후 한 번은 건너뛴다 — 나가 있던 시간이 섞이지 않게.
     var gap = now - last;
+    var visible = document.visibilityState === 'visible';
     last = now;
-    if(document.visibilityState !== 'visible') return;
+    if(!visible){ wasVisible = false; return; }
+    if(!wasVisible){ wasVisible = true; return; }
     if(gap < 0) return;
-    // 절전이나 느려진 타이머로 확 튄 시간은 잘라서 더한다(버리면 아예 안 쌓인다)
+    // 느려진 타이머로 확 튄 시간은 잘라서 더한다(버리면 아예 안 쌓인다)
     if(gap > 2000) gap = 2000;
 
     var played = num(K_PLAYED) + gap;
