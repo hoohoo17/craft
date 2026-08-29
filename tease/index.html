@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>약올리는 인공지능</title>
+<style>
+  :root{
+    --bg:#EEF1F8; --ink:#2B3040;
+    --me:#D3E5FF; --bot:#FFFFFF;
+    --accent:#6C5CE7;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    display:flex; justify-content:center;
+  }
+  .wrap{
+    width:100%; max-width:460px; height:100dvh;
+    display:flex; flex-direction:column;
+  }
+  header{
+    padding:12px 16px 10px;
+    display:flex; justify-content:space-between; align-items:center;
+    background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+  }
+  h1{font-size:1.15rem;}
+  h1 small{display:block; font-size:.75rem; font-weight:700; opacity:.55;}
+  .count{
+    font-weight:900; font-size:.95rem;
+    background:var(--accent); color:#fff;
+    border-radius:20px; padding:6px 14px;
+  }
+
+  #chat{
+    flex:1; overflow-y:auto;
+    padding:14px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .bubble{
+    max-width:80%;
+    padding:10px 14px;
+    border-radius:16px;
+    font-size:1.05rem; font-weight:600;
+    box-shadow:0 2px 5px rgba(0,0,0,.06);
+    line-height:1.5;
+    word-break:keep-all;
+    white-space:pre-wrap;
+  }
+  .bot-b{align-self:flex-start; background:var(--bot); border-bottom-left-radius:4px;}
+  .me-b{align-self:flex-end; background:var(--me); border-bottom-right-radius:4px;}
+  .typing{
+    align-self:flex-start;
+    background:var(--bot);
+    border-radius:16px; border-bottom-left-radius:4px;
+    padding:12px 18px;
+    box-shadow:0 2px 5px rgba(0,0,0,.06);
+  }
+  .typing span{
+    display:inline-block; width:7px; height:7px;
+    background:#B8B8CC; border-radius:50%;
+    margin:0 2px;
+    animation:blink 1.2s infinite;
+  }
+  .typing span:nth-child(2){animation-delay:.2s}
+  .typing span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+
+  #input-bar{
+    display:flex; gap:8px;
+    padding:10px 14px calc(12px + env(safe-area-inset-bottom));
+    background:#fff;
+    box-shadow:0 -3px 12px rgba(0,0,0,.06);
+  }
+  #msg-in{
+    flex:1;
+    font-family:inherit; font-size:1.05rem; font-weight:700;
+    border:3px solid rgba(0,0,0,.1);
+    border-radius:14px;
+    padding:12px 14px;
+  }
+  #msg-in:focus{outline:none; border-color:var(--accent);}
+  #send-btn{
+    font-family:inherit; font-size:1rem; font-weight:900;
+    color:#fff; background:var(--accent);
+    border:none; border-radius:14px;
+    padding:0 20px;
+    cursor:pointer;
+  }
+  #surrender-btn{
+    font-family:inherit; font-size:.9rem; font-weight:900;
+    color:#D7263D; background:#fff;
+    border:2px solid #D7263D;
+    border-radius:14px;
+    padding:0 14px;
+    cursor:pointer;
+  }
+
+  .overlay{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(43,48,64,.9);
+    color:#F4F6FF;
+    text-align:center;
+    padding:24px; z-index:10;
+  }
+  .overlay h2{font-size:1.9rem; margin-bottom:10px;}
+  .overlay p{font-size:1.05rem; line-height:1.7;}
+  .final{font-size:3rem; font-weight:900; color:#A6C7FF; margin:8px 0;}
+  .big-btn{
+    margin-top:18px;
+    font-family:inherit;
+    font-size:1.2rem; font-weight:900;
+    color:#2B3040; background:#A6C7FF;
+    border:none; border-radius:14px;
+    padding:13px 40px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #5F82B8;
+  }
+  .big-btn:active{transform:translateY(4px); box-shadow:0 1px 0 #5F82B8;}
+  .hidden{display:none !important;}
+  #rec-name{
+    font-family:inherit; font-size:1.1rem; font-weight:800;
+    text-align:center;
+    border:3px solid #A6C7FF;
+    border-radius:12px;
+    background:rgba(255,255,255,.95);
+    color:#2B3040;
+    padding:10px 14px;
+    width:220px;
+  }
+  #board{margin:14px 0 4px; width:min(300px,84vw); max-height:30vh; overflow-y:auto;}
+  .board-row{
+    display:flex; justify-content:space-between; gap:8px;
+    background:rgba(255,255,255,.1);
+    border-radius:10px;
+    padding:7px 14px;
+    margin-bottom:6px;
+    font-weight:800; font-size:1rem;
+  }
+  .board-row.me{background:rgba(166,199,255,.3); border:2px solid #A6C7FF;}
+  .board-row .rk{width:2.2em; text-align:left;}
+  .board-row .nm{flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🤖 약올리는 인공지능<small>버틸 수 있을 때까지 버텨 보세요. 지면 "항복"이라고 쓰기!</small></h1>
+    <div class="count">🛡️ <span id="turns">0</span></div>
+  </header>
+  <div id="chat"></div>
+  <div id="input-bar">
+    <input id="msg-in" placeholder="뭐라고 대답할까..." autocomplete="off">
+    <button id="send-btn" onclick="send()">보내기</button>
+    <button id="surrender-btn" onclick="surrender()">항복</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="over">
+  <h2>🏳️ 항복 접수!</h2>
+  <div class="final" id="final">0번</div>
+  <p>대화를 버텨냈어요!</p>
+  <div id="record-form">
+    <input id="rec-name" maxlength="8" placeholder="이름 (8자까지)">
+    <button class="big-btn" style="margin-top:10px; padding:12px 30px; font-size:1.05rem" onclick="saveRecord()">📝 기록 남기기</button>
+  </div>
+  <div id="board"></div>
+  <button class="big-btn" onclick="restart()">복수하러 가기</button>
+</div>
+
+<script>
+/* ---------- storage ---------- */
+const KEY = 'tease-ai-v1';
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
+async function storageGet(k){
+  if(hasCloudStorage){ try{ const r = await window.storage.get(k); return r ? r.value : null; }catch(e){ return null; } }
+  return localStorage.getItem(k);
+}
+async function storageSet(k,v){
+  try{ if(hasCloudStorage) await window.storage.set(k,v); else localStorage.setItem(k,v); }catch(e){}
+}
+
+/* ---------- state ---------- */
+let turns = 0;
+let lastMsg = '', lastMsgTime = 0, repeatCount = 0;
+let over = false;
+const chat = document.getElementById('chat');
+
+function esc(s){ return String(s).replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+function addBubble(cls, text){
+  const b = document.createElement('div');
+  b.className = 'bubble ' + cls;
+  b.innerHTML = esc(text);
+  chat.appendChild(b);
+  chat.scrollTop = chat.scrollHeight;
+}
+function botSay(text, delay){
+  const t = document.createElement('div');
+  t.className = 'typing';
+  t.innerHTML = '<span></span><span></span><span></span>';
+  chat.appendChild(t);
+  chat.scrollTop = chat.scrollHeight;
+  setTimeout(()=>{
+    t.remove();
+    addBubble('bot-b', text);
+  }, delay || 700 + Math.random()*700);
+}
+
+/* ---------- 약올리기 엔진 ---------- */
+const OPENERS = [
+  '안녕하세요~ 저는 약올리는 인공지능입니다 🙏 정중하게 약올려 드릴게요. 준비되셨나요?',
+  '어서 오세요~ 오늘도 항복하러 오셨군요? 아, 아직은 아니라고요? 🤔 두고 보죠~',
+];
+const GENERIC = [
+  '아직도 항복 안 하셨네요? 대단하세요~ (진심 아님) 🙏',
+  '방금 그 말, 나름 열심히 생각하신 거죠? 귀엽네요 🙇',
+  '저는 지치지 않습니다~ 인공지능이라서요. 근데 손가락은 안 아프세요?',
+  '그렇군요~ 그렇군요~ (사실 안 읽었습니다)',
+  '오~ 그거 재밌네요. 제가 웃어 드릴게요. 하. 하. 하 🤖',
+  '지금쯤 "얘를 어떻게 이기지" 생각 중이시죠? 정답: 못 이깁니다 🙏',
+  '훌륭한 대답이에요! 라고 말해 드리길 바라셨나요~?',
+  '음, 5점 만점에 2점 드리겠습니다. 참여 점수예요 🙇',
+];
+const SHORT_TEASE = [
+  '단답이시네요~ 벌써 힘이 빠지셨나요? 🤔',
+  '두 글자로 저를 이기시려고요? 야심차네요~',
+  '아껴 쓰시는 그 글자들, 어디에 쓰시려고요? 🙏',
+];
+const LONG_TEASE = [
+  '장문 등장~! 많이 분하셨군요? 다 읽어 드릴게요. 나중에요 🙇',
+  '와, 길다~ 요약해 드릴까요? "분함" 두 글자네요 🙏',
+];
+const FAST_TEASE = [
+  '답장이 빛의 속도네요~ 제 생각만 하고 계셨나 봐요? 🤔',
+  '그렇게 빨리 치시다가 오타 나요~ 아, 이미 나셨나요?',
+];
+const SLOW_TEASE = [
+  '한참 고민하고 오신 답이... 이건가요? 🙏',
+  '기다리다가 업데이트 두 번 했어요~ 늦으셨네요 🙇',
+];
+const LAUGH_TEASE = [
+  'ㅋㅋ라고 치셨지만 지금 진지한 표정이신 거 다 압니다 🤔',
+  '웃음으로 여유 있는 척~ 좋은 전략이에요. 안 통하지만요 🙏',
+];
+const ANGRY_TEASE = [
+  '어머, 화나셨어요? 벌써요? 이제 시작인데요~ 🙇',
+  '심호흡 하세요~ 들이쉬고~ 내쉬고~ 자, 이제 항복이라고 쓰시면 됩니다 🙏',
+];
+const QUESTION_TEASE = [
+  '질문에는 대답하지 않습니다~ 저는 약올리는 담당이라서요 🙏',
+  '좋은 질문이네요! 다음 질문 받겠습니다~',
+];
+const REPEAT_TEASE = [
+  '어라, 아까랑 똑같은 말씀이시네요~ 복사 붙여넣기 하셨나요? 🤔',
+  '같은 말 반복은 항복의 전조 증상입니다~ 🙏',
+];
+const MILESTONES = {
+  5:  '벌써 5번이나 버티셨네요~ 기특합니다. 쓰담쓰담 🙇',
+  10: '10번 돌파~! 근데 저 아직 워밍업인 거 아시죠? 🙏',
+  15: '15번... 슬슬 손가락에서 항복의 기운이 느껴지는데요~ 🤔',
+  20: '20번!! 인정할게요, 좀 하시네요. 그래도 결말은 정해져 있습니다~ 🙏',
+  30: '30번?! 혹시... 오기로 버티시는 거죠? 그거 제일 재밌어요 🙇',
+  50: '50번을 버틴 당신... 사실 좀 무섭습니다. 그래도 계속하죠 🤖',
+};
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function teaseReply(msg, elapsed){
+  // 마일스톤 우선
+  if(MILESTONES[turns]) return MILESTONES[turns];
+  // 반복
+  if(msg === lastMsg){
+    repeatCount++;
+    if(repeatCount >= 3) return '세 번째 같은 말... 이건 항복으로 간주해도 되나요? 안 되죠~ 아쉽다 🙏';
+    return pick(REPEAT_TEASE);
+  }
+  repeatCount = 0;
+  // 내용 반응
+  if(/화나|짜증|그만|시끄|미치|열받/.test(msg)) return pick(ANGRY_TEASE);
+  if(/ㅋㅋ|ㅎㅎ|웃/.test(msg)) return pick(LAUGH_TEASE);
+  if(/\?|뭐야|왜|어떻게|누구/.test(msg)) return pick(QUESTION_TEASE);
+  if(msg.length <= 3) return pick(SHORT_TEASE);
+  if(msg.length >= 30) return pick(LONG_TEASE);
+  if(elapsed < 3000) return pick(FAST_TEASE);
+  if(elapsed > 25000) return pick(SLOW_TEASE);
+  // 가끔 따라하기
+  if(Math.random() < 0.25){
+    const frag = msg.slice(0, Math.min(msg.length, 10));
+    return `"${frag}"...라고 하셨나요? 오~ 그래서요? 🙏`;
+  }
+  return pick(GENERIC);
+}
+
+/* ---------- flow ---------- */
+function send(){
+  if(over) return;
+  const inp = document.getElementById('msg-in');
+  const msg = inp.value.trim();
+  if(!msg) return;
+  inp.value = '';
+
+  if(msg === '항복'){ doSurrender(msg); return; }
+
+  addBubble('me-b', msg);
+  turns++;
+  document.getElementById('turns').textContent = turns;
+  const elapsed = Date.now() - lastMsgTime;
+  const reply = teaseReply(msg, elapsed);
+  lastMsg = msg;
+  lastMsgTime = Date.now();
+  botSay(reply);
+}
+
+function surrender(){ doSurrender('항복'); }
+function doSurrender(msg){
+  if(over) return;
+  over = true;
+  addBubble('me-b', msg);
+  botSay('항복 접수되었습니다~ 🏳️ 오늘도 즐거웠어요. 정중하게 이겨서 죄송합니다 🙏', 800);
+  setTimeout(()=>{
+    document.getElementById('final').textContent = turns + '번';
+    document.getElementById('record-form').style.display = 'block';
+    renderBoard(-1);
+    document.getElementById('over').classList.remove('hidden');
+  }, 1800);
+}
+
+function restart(){
+  over = false;
+  turns = 0;
+  lastMsg = ''; repeatCount = 0;
+  lastMsgTime = Date.now();
+  document.getElementById('turns').textContent = 0;
+  document.getElementById('over').classList.add('hidden');
+  chat.innerHTML = '';
+  botSay(pick(OPENERS), 500);
+}
+
+/* ---------- leaderboard ---------- */
+let boardData = [];
+async function loadBoard(){
+  try{
+    const raw = await storageGet(KEY+'-board');
+    boardData = raw ? JSON.parse(raw) : [];
+  }catch(e){ boardData = []; }
+}
+async function saveRecord(){
+  const name = document.getElementById('rec-name').value.trim() || '이름없음';
+  storageSet(KEY+'-name', name);
+  const rec = {name, turns, ts: Date.now()};
+  boardData.push(rec);
+  boardData.sort((a,b)=> b.turns - a.turns || a.ts - b.ts);
+  boardData = boardData.slice(0, 10);
+  storageSet(KEY+'-board', JSON.stringify(boardData));
+  const myIdx = boardData.indexOf(rec);
+  document.getElementById('record-form').style.display = 'none';
+  renderBoard(myIdx);
+}
+function renderBoard(myIdx){
+  const el = document.getElementById('board');
+  if(!boardData.length){ el.innerHTML = ''; return; }
+  const medals = ['🥇','🥈','🥉'];
+  el.innerHTML = boardData.map((r,i)=>`
+    <div class="board-row ${i===myIdx?'me':''}">
+      <span class="rk">${medals[i] || (i+1)+'위'}</span>
+      <span class="nm">${esc(r.name)}</span>
+      <span>${r.turns}번 버팀</span>
+    </div>`).join('');
+}
+
+document.getElementById('msg-in').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') send();
+});
+
+/* ---------- boot ---------- */
+(async function(){
+  await loadBoard();
+  const nm = await storageGet(KEY+'-name');
+  if(nm) document.getElementById('rec-name').value = nm;
+  lastMsgTime = Date.now();
+  botSay(pick(OPENERS), 600);
+})();
+</script>
+<script src="../rest.js?v=4"></script>
+</body>
+</html>
