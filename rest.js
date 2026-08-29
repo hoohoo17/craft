@@ -24,9 +24,10 @@
     pill = document.createElement('div');
     pill.id = 'craft-timer';
     pill.style.cssText = [
-      'position:fixed', 'left:8px', 'z-index:2147483646',
-      // 아이폰 홈 인디케이터에 가리지 않게 여백을 더한다
-      'bottom:calc(8px + env(safe-area-inset-bottom, 0px))',
+      // 게임마다 아래쪽에 입력칸이나 버튼이 있어서, 위쪽 가운데에 둔다.
+      // 가운데라 좌우 어느 쪽 버튼과도 잘 겹치지 않는다.
+      'position:fixed', 'top:calc(4px + env(safe-area-inset-top, 0px))',
+      'left:50%', 'transform:translateX(-50%)', 'z-index:2147483646',
       'pointer-events:none',                      // 게임 조작을 절대 가리지 않게
       'font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif',
       'font-size:12px', 'font-weight:700', 'font-variant-numeric:tabular-nums',
