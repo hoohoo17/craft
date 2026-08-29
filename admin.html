@@ -133,13 +133,15 @@
     </div>
 
     <div class="panel">
-        <h2>대기중 <span id="pendingCount" class="badge pending">0</span></h2>
-        <div id="pendingList"><div class="empty">불러오기를 눌러주세요</div></div>
+        <h2>댓글 <span id="commentCount" class="badge approved">0</span></h2>
+        <div id="commentList"><div class="empty">불러오기를 눌러주세요</div></div>
     </div>
 
     <div class="panel">
-        <h2>공개중 <span id="approvedCount" class="badge approved">0</span></h2>
-        <div id="approvedList"><div class="empty">-</div></div>
+        <details>
+            <summary>남은 조각 · 미승인 <span id="leftoverCount" class="badge pending">0</span></summary>
+            <div id="leftoverList" style="margin-top: 8px;"><div class="empty">-</div></div>
+        </details>
     </div>
 
     <div class="panel">
@@ -197,6 +199,64 @@
             statusEl.style.color = isError ? '#c93838' : '#888';
         }
 
+        // 사이트 댓글은 서버가 승인 전 message를 감추기 때문에, index.html이 글을
+        // name 칸에 20자짜리 조각으로 쪼개 올린다(묶음번호 3 + 순번 1 + 개수 1 + 본문 15).
+        // 관리 화면도 같은 방식으로 다시 붙여야 사람이 쓴 글로 보이고,
+        // 지울 때도 그 글의 조각을 전부 지워야 한다.
+        const HEAD = 5;
+        const SEP = '|';
+
+        // 서버 응답 → { comments: 사람이 쓴 글, leftovers: 조각만 남았거나 형식이 아닌 행 }
+        function parseRows(rows) {
+            const comments = [];
+            const leftovers = [];
+            const groups = new Map();
+
+            rows.forEach(c => {
+                if (c.approved) {
+                    // 조각 방식 이전에 승인해 둔 옛 댓글은 한 행이 곧 한 글이다
+                    comments.push({ name: c.name, message: c.message, date: c.date, ids: [c.id] });
+                    return;
+                }
+                const n = typeof c.name === 'string' ? c.name : '';
+                const seq = n.length >= HEAD ? parseInt(n[3], 36) : NaN;
+                const total = n.length >= HEAD ? parseInt(n[4], 36) : NaN;
+                if (isNaN(seq) || isNaN(total) || total < 1 || seq >= total) {
+                    leftovers.push({ name: n, message: c.message || '', date: c.date, ids: [c.id], raw: true });
+                    return;
+                }
+                const g = n.slice(0, 3);
+                if (!groups.has(g)) groups.set(g, { total, parts: new Map(), ids: [], date: c.date });
+                const grp = groups.get(g);
+                if (grp.total !== total) {          // 묶음번호가 겹쳤다
+                    leftovers.push({ name: n, message: '', date: c.date, ids: [c.id] });
+                    return;
+                }
+                grp.parts.set(seq, n.slice(HEAD));
+                grp.ids.push(c.id);                 // 같은 순번이 두 번 와도 지울 땐 둘 다 지운다
+                if (c.date < grp.date) grp.date = c.date;
+            });
+
+            groups.forEach(grp => {
+                // 조각이 빠진 글은 사이트에도 안 보인다 — 찌꺼기로 모아 지울 수 있게 한다
+                if (grp.parts.size !== grp.total) {
+                    leftovers.push({ name: `조각 ${grp.parts.size}/${grp.total}`, message: '',
+                                     date: grp.date, ids: grp.ids });
+                    return;
+                }
+                let text = '';
+                for (let i = 0; i < grp.total; i++) text += grp.parts.get(i);
+                const bits = text.split(SEP);
+                if (bits.length !== 2 || !bits[1]) {
+                    leftovers.push({ name: text.slice(0, 20), message: '', date: grp.date, ids: grp.ids });
+                    return;
+                }
+                comments.push({ name: bits[0] || '익명', message: bits[1], date: grp.date, ids: grp.ids });
+            });
+
+            return { comments, leftovers };
+        }
+
         async function load() {
             const page = PAGE;
             if (!keyInput.value) {
@@ -206,8 +266,8 @@
             setStatus('불러오는 중...');
             try {
                 const [commentsRes, logsRes] = await Promise.all([
-                    fetch(`${API_URL}?page=${page}`, { headers: headers() }),
-                    fetch(`${API_URL}/logs?page=${page}`, { headers: headers() }),
+                    fetch(`${API_URL}?page=${page}`, { headers: headers(), cache: 'no-store' }),
+                    fetch(`${API_URL}/logs?page=${page}`, { headers: headers(), cache: 'no-store' }),
                 ]);
                 // 목록 조회는 키가 틀려도 200(공개용)을 돌려준다.
                 // 키 검증은 관리자 전용인 /logs 응답으로 판단해야 한다.
@@ -215,31 +275,30 @@
                     setStatus('관리자 키가 올바르지 않습니다 (승인·삭제를 할 수 없어요)', true);
                     return;
                 }
-                const comments = await commentsRes.json();
+                const rows = await commentsRes.json();
                 const logs = logsRes.ok ? await logsRes.json() : [];
-                render(comments, logs);
-                setStatus(`${comments.length}개 댓글 / ${logs.length}개 로그`);
+                const counts = render(rows, logs);
+                setStatus(`댓글 ${counts.comments}개 / 남은 조각 ${counts.leftovers}개 / 로그 ${logs.length}개`);
             } catch (err) {
                 setStatus('불러오기 실패: ' + err.message, true);
             }
         }
 
-        function render(comments, logs) {
-            const pending = comments.filter(c => !c.approved);
-            const approved = comments.filter(c => c.approved);
-
-            document.getElementById('pendingCount').textContent = pending.length;
-            document.getElementById('approvedCount').textContent = approved.length;
-
+        function render(rows, logs) {
+            const { comments, leftovers } = parseRows(rows);
             const newest = (a, b) => new Date(b.date) - new Date(a.date);
-            document.getElementById('pendingList').innerHTML =
-                pending.length === 0
-                    ? '<div class="empty">대기중인 댓글이 없습니다</div>'
-                    : pending.sort(newest).map(c => commentRow(c, true)).join('');
-            document.getElementById('approvedList').innerHTML =
-                approved.length === 0
-                    ? '<div class="empty">공개된 댓글이 없습니다</div>'
-                    : approved.sort(newest).map(c => commentRow(c, false)).join('');
+
+            document.getElementById('commentCount').textContent = comments.length;
+            document.getElementById('leftoverCount').textContent = leftovers.length;
+
+            document.getElementById('commentList').innerHTML =
+                comments.length === 0
+                    ? '<div class="empty">댓글이 없습니다</div>'
+                    : comments.sort(newest).map(c => commentRow(c, false)).join('');
+            document.getElementById('leftoverList').innerHTML =
+                leftovers.length === 0
+                    ? '<div class="empty">없음</div>'
+                    : leftovers.sort(newest).map(c => commentRow(c, true)).join('');
 
             document.getElementById('logList').innerHTML =
                 logs.length === 0
@@ -247,42 +306,86 @@
                     : logs.slice().reverse().slice(0, 100).map(l =>
                         `<div class="log-line">[${fmtDate(l.date)}] ${l.action} — ${escapeHtml(l.detail?.name || '')}: ${escapeHtml((l.detail?.message || '').slice(0, 80))}</div>`
                     ).join('');
+
+            return { comments: comments.length, leftovers: leftovers.length };
         }
 
-        function commentRow(c, isPending) {
-            const actions = isPending
-                ? `<button class="success" data-act="approve" data-id="${c.id}">승인</button>
-                   <button class="danger" data-act="delete" data-id="${c.id}">삭제</button>`
-                : `<button class="danger" data-act="delete" data-id="${c.id}">삭제</button>`;
+        function commentRow(c, isLeftover) {
+            const ids = c.ids.join(',');
+            // 미승인 상태로 남은 옛 형식의 글은 승인해서 공개할 수 있다
+            const approve = isLeftover && c.raw
+                ? `<button class="success" data-act="approve" data-ids="${ids}">승인</button>`
+                : '';
+            const pieces = c.ids.length > 1
+                ? `<span class="badge pending">조각 ${c.ids.length}개</span>`
+                : '';
             return `
                 <div class="comment">
                     <div class="comment-content">
-                        <div class="comment-meta"><strong>${escapeHtml(c.name)}</strong> &middot; ${fmtDate(c.date)}</div>
+                        <div class="comment-meta"><strong>${escapeHtml(c.name)}</strong> &middot; ${fmtDate(c.date)}${pieces}</div>
                         <div class="comment-body">${escapeHtml(c.message)}</div>
                     </div>
-                    <div class="actions">${actions}</div>
+                    <div class="actions">
+                        ${approve}
+                        <button class="danger" data-act="delete" data-ids="${ids}">삭제</button>
+                    </div>
                 </div>
             `;
+        }
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        // 서버는 요청마다 댓글 목록 전체를 읽고 다시 쓴다. 조각을 너무 빨리 이어
+        // 지우면 직전 삭제를 아직 모른 채 덮어써서 지운 조각이 되살아난다.
+        // 그래서 사이를 띄워 하나씩 지우고, 남은 게 있으면 다시 지운다.
+        async function deleteIds(ids) {
+            let left = ids.slice();
+            for (let attempt = 0; attempt < 3 && left.length; attempt++) {
+                for (const id of left) {
+                    const res = await fetch(`${API_URL}?page=${PAGE}&id=${id}`, {
+                        method: 'DELETE', headers: headers(),
+                    });
+                    if (!res.ok) throw new Error(`${res.status}`);
+                    await sleep(450);
+                }
+                await sleep(600);
+                const res = await fetch(`${API_URL}?page=${PAGE}`, { headers: headers(), cache: 'no-store' });
+                if (!res.ok) break;
+                const rows = await res.json();
+                const alive = new Set(rows.map(r => r && r.id));
+                left = left.filter(id => alive.has(id));
+            }
+            return left.length;   // 끝내 못 지운 조각 수
         }
 
         document.body.addEventListener('click', async (e) => {
             const btn = e.target.closest('button[data-act]');
             if (!btn) return;
-            const id = btn.dataset.id;
             const act = btn.dataset.act;
-            const page = PAGE;
+            const ids = (btn.dataset.ids || '').split(',').filter(Boolean);
+            if (!ids.length) return;
 
-            if (act === 'delete' && !confirm('삭제하시겠습니까?')) return;
+            if (act === 'delete') {
+                const ask = ids.length > 1
+                    ? `조각 ${ids.length}개로 나뉜 댓글입니다. 삭제하시겠습니까?`
+                    : '삭제하시겠습니까?';
+                if (!confirm(ask)) return;
+            }
 
             btn.disabled = true;
             try {
-                const url = act === 'approve'
-                    ? `${API_URL}/approve?page=${page}&id=${id}`
-                    : `${API_URL}?page=${page}&id=${id}`;
-                const method = act === 'approve' ? 'PUT' : 'DELETE';
-                const res = await fetch(url, { method, headers: headers() });
-                if (!res.ok) throw new Error(`${res.status}`);
-                await load();
+                if (act === 'approve') {
+                    const res = await fetch(`${API_URL}/approve?page=${PAGE}&id=${ids[0]}`, {
+                        method: 'PUT', headers: headers(),
+                    });
+                    if (!res.ok) throw new Error(`${res.status}`);
+                    await load();
+                } else {
+                    setStatus(`삭제 중... (조각 ${ids.length}개)`);
+                    const failed = await deleteIds(ids);
+                    await load();
+                    if (failed) setStatus(`조각 ${failed}개가 남았습니다. 삭제를 한 번 더 눌러주세요`, true);
+                }
             } catch (err) {
                 setStatus(`${act} 실패: ${err.message}`, true);
                 btn.disabled = false;
