@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>떨어지는 블럭</title>
+<style>
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:#1A2238;
+    color:#F4F6FF;
+    display:flex; justify-content:center;
+    touch-action:none;
+    user-select:none;
+  }
+  #wrap{position:relative; width:100%; max-width:480px; height:100%;}
+  canvas{display:block; width:100%; height:100%;}
+
+  #hud{
+    position:absolute; top:16px; left:0; right:0;
+    text-align:center;
+    font-size:2.6rem; font-weight:900;
+    text-shadow:0 3px 10px rgba(0,0,0,.5);
+    pointer-events:none; z-index:2;
+  }
+  #hud small{display:block; font-size:.95rem; font-weight:800; opacity:.7;}
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(16,20,38,.92);
+    text-align:center;
+    padding:24px; z-index:5;
+  }
+  .overlay h1{font-size:2.1rem; margin-bottom:12px;}
+  .overlay p{font-size:1.1rem; line-height:1.9;}
+  .big-btn{
+    margin-top:20px;
+    font-family:inherit;
+    font-size:1.3rem; font-weight:900;
+    color:#1A2238; background:#7BDFF2;
+    border:none; border-radius:14px;
+    padding:14px 44px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #3E96AA;
+  }
+  .big-btn:active{transform:translateY(4px); box-shadow:0 1px 0 #3E96AA;}
+  .final{font-size:3.2rem; font-weight:900; color:#7BDFF2; margin:10px 0;}
+  .hidden{display:none !important;}
+
+  .char-row{display:flex; gap:10px; margin:12px 0 4px; justify-content:center; flex-wrap:wrap;}
+  .char-btn{
+    font-size:2rem;
+    background:rgba(255,255,255,.1);
+    border:3px solid transparent;
+    border-radius:14px;
+    padding:8px 12px;
+    cursor:pointer;
+  }
+  .char-btn.sel{border-color:#7BDFF2; background:rgba(123,223,242,.2);}
+
+  #rec-name{
+    font-family:inherit; font-size:1.1rem; font-weight:800;
+    text-align:center;
+    border:3px solid #7BDFF2;
+    border-radius:12px;
+    background:rgba(255,255,255,.95);
+    color:#1A2238;
+    padding:10px 14px;
+    width:220px;
+  }
+  #board{margin:14px 0 4px; width:min(300px, 84vw); max-height:32vh; overflow-y:auto;}
+  .board-row{
+    display:flex; justify-content:space-between; gap:8px;
+    background:rgba(255,255,255,.08);
+    border-radius:10px;
+    padding:7px 14px;
+    margin-bottom:6px;
+    font-weight:800; font-size:1rem;
+  }
+  .board-row.me{background:rgba(123,223,242,.25); border:2px solid #7BDFF2;}
+  .board-row .rk{width:2.2em; text-align:left;}
+  .board-row .nm{flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="hud"><span id="score">0.0</span><small>초 버티는 중!</small></div>
+
+  <div class="overlay" id="start">
+    <h1>🧱 떨어지는 블럭</h1>
+    <p>
+      하늘에서 블록이 쏟아져! 😱<br>
+      👈👉 <b>손가락으로 끌어서</b> 요리조리 피해 봐<br>
+      한 번 맞으면 바로 끝! 오래 버틸수록 최고 기록
+    </p>
+    <p style="margin-top:14px; font-weight:800">내 캐릭터 고르기</p>
+    <div class="char-row" id="char-row"></div>
+    <button class="big-btn" onclick="startGame(event)">시작!</button>
+  </div>
+
+  <div class="overlay hidden" id="over">
+    <h1>💥 깔렸다!!</h1>
+    <div class="final" id="final">0초</div>
+    <div id="record-form">
+      <input id="rec-name" maxlength="8" placeholder="이름 (8자까지)">
+      <button class="big-btn" style="margin-top:10px; padding:12px 30px; font-size:1.1rem" onclick="saveRecord()">📝 기록 남기기</button>
+    </div>
+    <div id="board"></div>
+    <button class="big-btn" onclick="startGame(event)">다시 도전!</button>
+  </div>
+</div>
+
+<script>
+/* ---------- storage ---------- */
+const KEY = 'falling-blocks-v1';
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
+async function storageGet(k){
+  if(hasCloudStorage){ try{ const r = await window.storage.get(k); return r ? r.value : null; }catch(e){ return null; } }
+  return localStorage.getItem(k);
+}
+async function storageSet(k,v){
+  try{ if(hasCloudStorage) await window.storage.set(k,v); else localStorage.setItem(k,v); }catch(e){}
+}
+
+/* ---------- canvas ---------- */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H;
+function resize(){
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  W = document.getElementById('wrap').clientWidth;
+  H = document.getElementById('wrap').clientHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------- state ---------- */
+const CHAR_SIZE = 46;
+let running = false;
+let time, blocks, px, spawnT, spawnGap, fallSpeed, lastT;
+let pvx = 0, knockT = 0;
+let bonks = [];
+let shakeT = 0;
+let myChar = '🐰';
+const CHARS = ['🐰','🐱','🦄','🐶','🦝','🐧'];
+const COLORS = ['#FF6B6B','#FFB84C','#7BDFF2','#B983FF','#8AC926','#FF7BAC'];
+
+function startGame(e){
+  if(e) e.stopPropagation();
+  document.getElementById('start').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  time = 0;
+  blocks = [];
+  px = W/2;
+  spawnT = 0; spawnGap = 750; fallSpeed = 190;
+  pvx = 0; knockT = 0; bonks = [];
+  shakeT = 0;
+  running = true;
+  lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- input ---------- */
+function move(clientX){
+  if(!running || knockT > 0) return;
+  const rect = cv.getBoundingClientRect();
+  px = Math.max(CHAR_SIZE/2, Math.min(W - CHAR_SIZE/2, clientX - rect.left));
+}
+cv.addEventListener('touchstart', e=>move(e.touches[0].clientX), {passive:true});
+cv.addEventListener('touchmove', e=>move(e.touches[0].clientX), {passive:true});
+cv.addEventListener('mousemove', e=>move(e.clientX));
+let keys = {};
+window.addEventListener('keydown', e=>{
+  if(e.target && e.target.tagName==='INPUT') return;
+  keys[e.key] = true;
+});
+window.addEventListener('keyup', e=>{ keys[e.key] = false; });
+
+/* ---------- spawn ---------- */
+function spawn(){
+  const w = 40 + Math.random()*70;
+  blocks.push({
+    x: Math.random()*(W - w),
+    y: -60,
+    w,
+    h: 26 + Math.random()*30,
+    vy: fallSpeed * (0.8 + Math.random()*0.5),
+    c: COLORS[Math.floor(Math.random()*COLORS.length)],
+    rot: (Math.random()-0.5)*0.15
+  });
+}
+
+/* ---------- loop ---------- */
+function loop(t){
+  if(!running) return;
+  const dt = Math.min((t-lastT)/1000, 0.05);
+  lastT = t;
+  time += dt;
+
+  // 키보드 이동
+  if(keys['ArrowLeft'])  px = Math.max(CHAR_SIZE/2, px - 400*dt);
+  if(keys['ArrowRight']) px = Math.min(W - CHAR_SIZE/2, px + 400*dt);
+
+  // 난이도: 갈수록 빨라지고 촘촘해짐
+  fallSpeed += dt*14;
+  spawnGap = Math.max(240, spawnGap - dt*24);
+
+  spawnT += dt*1000;
+  if(spawnT > spawnGap){ spawnT = 0; spawn(); }
+
+  // 캐릭터 히트박스 (살짝 관대하게)
+  const cy = H - 70;
+  const cr = CHAR_SIZE*0.34;
+
+  for(let i=blocks.length-1;i>=0;i--){
+    const b = blocks[i];
+    b.y += b.vy*dt;
+    // 충돌: 원 vs 사각형
+    const nx = Math.max(b.x, Math.min(px, b.x+b.w));
+    const ny = Math.max(b.y, Math.min(cy, b.y+b.h));
+    const dx = px-nx, dy = cy-ny;
+    if(dx*dx + dy*dy < cr*cr){
+      // 위에서 깔림 vs 옆에서 박음 구분
+      if(dy > 0 && Math.abs(dy) >= Math.abs(dx)*0.8){
+        // 블록 아랫면이 머리 위로 → 진짜 깔림
+        endGame();
+        return;
+      }else{
+        // 옆에서 박음 → 통! 튕겨나가기
+        const dir = dx >= 0 ? 1 : -1;
+        pvx = dir * 560;
+        knockT = 0.28;
+        px = nx + dir*(cr+2);
+        bonkAt(px, cy);
+        navigator.vibrate && navigator.vibrate(40);
+      }
+    }
+    if(b.y > H+80) blocks.splice(i,1);
+  }
+
+  // 튕김 이동
+  if(knockT > 0){
+    knockT -= dt;
+    px += pvx*dt;
+    pvx *= Math.pow(0.02, dt); // 빠르게 감속
+    px = Math.max(CHAR_SIZE/2, Math.min(W - CHAR_SIZE/2, px));
+  }
+
+  document.getElementById('score').textContent = time.toFixed(1);
+  render(cy);
+  requestAnimationFrame(loop);
+}
+
+function endGame(){
+  running = false;
+  shakeT = 0.5;
+  navigator.vibrate && navigator.vibrate(300);
+  document.getElementById('final').textContent = time.toFixed(1) + '초';
+  document.getElementById('record-form').style.display = 'block';
+  renderBoard(-1);
+  setTimeout(()=>{
+    document.getElementById('over').classList.remove('hidden');
+  }, 500);
+  // 마지막 장면 흔들림
+  const et = performance.now();
+  (function death(t2){
+    if(shakeT > 0){
+      shakeT -= 0.016;
+      render(H-70);
+      requestAnimationFrame(death);
+    }
+  })();
+}
+
+function bonkAt(x, y){
+  bonks.push({x, y, life:0.5});
+}
+
+/* ---------- render ---------- */
+function render(cy){
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  if(shakeT>0) ctx.translate((Math.random()-.5)*12, (Math.random()-.5)*12);
+
+  // 바닥선
+  ctx.fillStyle = '#2A3352';
+  ctx.fillRect(0, H-40, W, 40);
+
+  // 블록
+  for(const b of blocks){
+    ctx.save();
+    ctx.translate(b.x+b.w/2, b.y+b.h/2);
+    ctx.rotate(b.rot);
+    ctx.fillStyle = b.c;
+    ctx.fillRect(-b.w/2, -b.h/2, b.w, b.h);
+    ctx.fillStyle = 'rgba(255,255,255,.25)';
+    ctx.fillRect(-b.w/2, -b.h/2, b.w, 5);
+    ctx.fillStyle = 'rgba(0,0,0,.2)';
+    ctx.fillRect(-b.w/2, b.h/2-5, b.w, 5);
+    ctx.restore();
+  }
+
+  // 캐릭터 (튕길 땐 찌그러짐)
+  ctx.save();
+  ctx.translate(px, cy);
+  if(knockT > 0) ctx.scale(0.8, 1.15);
+  ctx.font = CHAR_SIZE + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(myChar, 0, 0);
+  ctx.restore();
+
+  // 통! 이펙트
+  for(let i=bonks.length-1;i>=0;i--){
+    const bk = bonks[i];
+    bk.life -= 0.016;
+    if(bk.life <= 0){ bonks.splice(i,1); continue; }
+    ctx.globalAlpha = Math.min(1, bk.life*3);
+    ctx.font = '900 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#FFD166';
+    ctx.fillText('통!', bk.x, bk.y - 40 - (0.5-bk.life)*40);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
+/* ---------- leaderboard ---------- */
+let boardData = [];
+async function loadBoard(){
+  try{
+    const raw = await storageGet(KEY+'-board');
+    boardData = raw ? JSON.parse(raw) : [];
+  }catch(e){ boardData = []; }
+}
+async function saveRecord(){
+  const name = document.getElementById('rec-name').value.trim() || '이름없음';
+  storageSet(KEY+'-name', name);
+  const rec = {name, score: parseFloat(time.toFixed(1)), ts: Date.now()};
+  boardData.push(rec);
+  boardData.sort((a,b)=> b.score - a.score || a.ts - b.ts);
+  boardData = boardData.slice(0, 10);
+  storageSet(KEY+'-board', JSON.stringify(boardData));
+  const myIdx = boardData.indexOf(rec);
+  document.getElementById('record-form').style.display = 'none';
+  renderBoard(myIdx);
+}
+function renderBoard(myIdx){
+  const el = document.getElementById('board');
+  if(!boardData.length){ el.innerHTML = ''; return; }
+  const medals = ['🥇','🥈','🥉'];
+  el.innerHTML = boardData.map((r,i)=>`
+    <div class="board-row ${i===myIdx?'me':''}">
+      <span class="rk">${medals[i] || (i+1)+'위'}</span>
+      <span class="nm">${String(r.name).replace(/[<>&"]/g,'')}</span>
+      <span>${r.score}초</span>
+    </div>`).join('');
+}
+
+/* ---------- character ---------- */
+function buildCharRow(){
+  const row = document.getElementById('char-row');
+  row.innerHTML = CHARS.map(c =>
+    `<button class="char-btn ${c===myChar?'sel':''}" onclick="pickChar('${c}', this)">${c}</button>`
+  ).join('');
+}
+function pickChar(c, btn){
+  myChar = c;
+  document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  storageSet(KEY+'-char', c);
+}
+
+/* ---------- boot ---------- */
+(async function(){
+  const c = await storageGet(KEY+'-char');
+  if(c && CHARS.includes(c)) myChar = c;
+  buildCharRow();
+  await loadBoard();
+  const nm = await storageGet(KEY+'-name');
+  if(nm) document.getElementById('rec-name').value = nm;
+})();
+</script>
+<script src="../rest.js?v=3"></script>
+</body>
+</html>
