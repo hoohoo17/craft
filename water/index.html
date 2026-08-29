@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>물총놀이</title>
+<style>
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:#7ED3E8;
+    color:#123B4C;
+    display:flex; justify-content:center;
+    touch-action:none;
+    user-select:none;
+  }
+  #wrap{position:relative; width:100%; max-width:480px; height:100%;}
+  canvas{display:block; width:100%; height:100%;}
+
+  #skill-btn{
+    position:absolute; right:18px; bottom:24px;
+    width:76px; height:76px;
+    border-radius:50%;
+    border:4px solid #fff;
+    background:#FF8FAB;
+    font-size:2rem;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+    cursor:pointer;
+    z-index:3;
+    display:none;
+    align-items:center; justify-content:center;
+  }
+  #skill-btn.cd{filter:grayscale(.9); opacity:.6;}
+  #skill-btn .ring{
+    position:absolute; inset:-4px;
+    border-radius:50%;
+    pointer-events:none;
+  }
+  #skill-cd{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.3rem; font-weight:900; color:#fff;
+    text-shadow:0 1px 3px rgba(0,0,0,.5);
+  }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(10,45,60,.88);
+    color:#F0FBFF;
+    text-align:center;
+    padding:24px; z-index:5;
+  }
+  .overlay h1{font-size:2.1rem; margin-bottom:10px;}
+  .overlay p{font-size:1.05rem; line-height:1.8;}
+  .big-btn{
+    margin-top:18px;
+    font-family:inherit;
+    font-size:1.3rem; font-weight:900;
+    color:#123B4C; background:#7BDFF2;
+    border:none; border-radius:14px;
+    padding:14px 44px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #3E96AA;
+  }
+  .big-btn:active{transform:translateY(4px); box-shadow:0 1px 0 #3E96AA;}
+  .hidden{display:none !important;}
+
+  .pick-row{display:flex; gap:10px; margin:10px 0 4px; justify-content:center; flex-wrap:wrap;}
+  .pick-btn{
+    font-size:2rem;
+    background:rgba(255,255,255,.12);
+    border:3px solid transparent;
+    border-radius:14px;
+    padding:8px 12px;
+    cursor:pointer;
+  }
+  .pick-btn.sel{border-color:#7BDFF2; background:rgba(123,223,242,.25);}
+  .skill-pick{
+    display:flex; flex-direction:column; gap:8px;
+    margin:10px 0 4px;
+    width:min(320px, 86vw);
+  }
+  .skill-item{
+    display:flex; align-items:center; gap:12px;
+    background:rgba(255,255,255,.1);
+    border:3px solid transparent;
+    border-radius:14px;
+    padding:10px 14px;
+    cursor:pointer;
+    font-family:inherit; color:inherit;
+    text-align:left;
+  }
+  .skill-item.sel{border-color:#FFD166; background:rgba(255,209,102,.2);}
+  .skill-item .ic{font-size:1.9rem;}
+  .skill-item .nm{font-weight:900; font-size:1.05rem;}
+  .skill-item .ds{font-size:.85rem; opacity:.8;}
+  .result-big{font-size:3rem; font-weight:900; margin:8px 0; color:#FFD166;}
+  #rec-name{
+    font-family:inherit; font-size:1.1rem; font-weight:800;
+    text-align:center;
+    border:3px solid #FFD166;
+    border-radius:12px;
+    background:rgba(255,255,255,.95);
+    color:#123B4C;
+    padding:10px 14px;
+    width:220px;
+  }
+  #board{margin:14px 0 4px; width:min(300px, 84vw); max-height:30vh; overflow-y:auto;}
+  .board-row{
+    display:flex; justify-content:space-between; gap:8px;
+    background:rgba(255,255,255,.1);
+    border-radius:10px;
+    padding:7px 14px;
+    margin-bottom:6px;
+    font-weight:800; font-size:1rem;
+  }
+  .board-row.me{background:rgba(255,209,102,.3); border:2px solid #FFD166;}
+  .board-row .rk{width:2.2em; text-align:left;}
+  .board-row .nm{flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <button id="skill-btn"><span id="skill-ic">💣</span><span id="skill-cd"></span></button>
+
+  <div class="overlay" id="start">
+    <h1>💦 물총놀이</h1>
+    <p>친구 3명과 물총 대결!<br>흠뻑 젖으면 탈락, <b>마지막까지 마른 사람이 승리!</b><br>손가락 끄는 대로 움직이고, 물총은 자동 발사 🔫</p>
+    <p style="margin-top:12px; font-weight:800">내 캐릭터</p>
+    <div class="pick-row" id="char-row"></div>
+    <p style="margin-top:10px; font-weight:800">스킬 하나 고르기</p>
+    <div class="skill-pick" id="skill-pick"></div>
+    <button class="big-btn" onclick="startGame(event)">물놀이 시작!</button>
+  </div>
+
+  <div class="overlay hidden" id="over">
+    <h1 id="result-title">🏆 승리!</h1>
+    <div class="result-big" id="result-rank"></div>
+    <p id="streak-line"></p>
+    <div id="record-form" style="display:none">
+      <input id="rec-name" maxlength="8" placeholder="이름 (8자까지)">
+      <button class="big-btn" style="margin-top:10px; padding:12px 30px; font-size:1.1rem" onclick="saveRecord()">📝 연승 기록 남기기</button>
+    </div>
+    <div id="board"></div>
+    <button class="big-btn" onclick="backToStart()">한 판 더!</button>
+  </div>
+</div>
+
+<script>
+/* ---------- storage ---------- */
+const KEY = 'water-fight-v1';
+const hasCloudStorage = typeof window.storage !== 'undefined' && window.storage;
+async function storageGet(k){
+  if(hasCloudStorage){ try{ const r = await window.storage.get(k); return r ? r.value : null; }catch(e){ return null; } }
+  return localStorage.getItem(k);
+}
+async function storageSet(k,v){
+  try{ if(hasCloudStorage) await window.storage.set(k,v); else localStorage.setItem(k,v); }catch(e){}
+}
+
+/* ---------- canvas ---------- */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H;
+function resize(){
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  W = document.getElementById('wrap').clientWidth;
+  H = document.getElementById('wrap').clientHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------- config ---------- */
+const CHARS = ['🐰','🐱','🦄','🐶','🦝','🐧'];
+const BOTS = [
+  {name:'상어', ch:'🦈'},
+  {name:'문어', ch:'🐙'},
+  {name:'오리', ch:'🦆'},
+];
+const SKILLS = [
+  {id:'bomb',  ic:'💣', nm:'물폭탄',  ds:'주변 모두에게 물벼락! (7초마다)', cd:7},
+  {id:'brella',ic:'☂️', nm:'우산',    ds:'3초 동안 하나도 안 젖음 (10초마다)', cd:10},
+  {id:'dash',  ic:'⚡', nm:'번개발',  ds:'2.5초 동안 엄청 빨라짐 (7초마다)', cd:7},
+];
+
+let myChar = '🐰';
+let mySkillId = 'bomb';
+let streak = 0, bestStreak = 0;
+
+/* ---------- state ---------- */
+let running = false;
+let players = [];     // [{name,ch,x,y,wet,out,isMe,tx,ty,fireT,shield,speedM,outRank}]
+let shots = [];       // [{x,y,vx,vy,from}]
+let splashes = [];
+let finger = null;    // {x,y}
+let skillCd = 0, skillActiveT = 0;
+let lastT = 0, outCount = 0;
+
+function startGame(e){
+  if(e) e.stopPropagation();
+  document.getElementById('start').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  document.getElementById('skill-btn').style.display = 'flex';
+  document.getElementById('skill-ic').textContent = SKILLS.find(s=>s.id===mySkillId).ic;
+
+  const pad = 70;
+  players = [
+    {name:'나', ch:myChar, x:W/2, y:H-140, wet:0, out:false, isMe:true, fireT:0, shield:0, speedM:1, outRank:0},
+    {name:BOTS[0].name, ch:BOTS[0].ch, x:pad, y:pad+40, wet:0, out:false, isMe:false, tx:pad, ty:pad, fireT:Math.random(), shield:0, speedM:1, outRank:0, skillCd:3+Math.random()*3},
+    {name:BOTS[1].name, ch:BOTS[1].ch, x:W-pad, y:pad+40, wet:0, out:false, isMe:false, tx:W-pad, ty:pad, fireT:Math.random(), shield:0, speedM:1, outRank:0, skillCd:3+Math.random()*3},
+    {name:BOTS[2].name, ch:BOTS[2].ch, x:W/2, y:H/2-60, wet:0, out:false, isMe:false, tx:W/2, ty:H/2, fireT:Math.random(), shield:0, speedM:1, outRank:0, skillCd:3+Math.random()*3},
+  ];
+  shots = []; splashes = [];
+  skillCd = 0; skillActiveT = 0;
+  outCount = 0;
+  running = true;
+  lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+function backToStart(){
+  document.getElementById('over').classList.add('hidden');
+  document.getElementById('start').classList.remove('hidden');
+  document.getElementById('skill-btn').style.display = 'none';
+}
+
+/* ---------- input ---------- */
+function setFinger(e){
+  const t = e.touches ? e.touches[0] : e;
+  const rect = cv.getBoundingClientRect();
+  finger = {x: t.clientX - rect.left, y: t.clientY - rect.top};
+}
+cv.addEventListener('touchstart', e=>setFinger(e), {passive:true});
+cv.addEventListener('touchmove', e=>setFinger(e), {passive:true});
+cv.addEventListener('touchend', ()=>{ finger = null; }, {passive:true});
+cv.addEventListener('mousedown', e=>setFinger(e));
+cv.addEventListener('mousemove', e=>{ if(e.buttons) setFinger(e); });
+cv.addEventListener('mouseup', ()=>{ finger = null; });
+
+document.getElementById('skill-btn').addEventListener('pointerdown', e=>{
+  e.stopPropagation();
+  useSkill();
+});
+
+/* ---------- skill ---------- */
+function useSkill(){
+  if(!running || skillCd > 0) return;
+  const me = players[0];
+  if(me.out) return;
+  const sk = SKILLS.find(s=>s.id===mySkillId);
+  skillCd = sk.cd;
+  if(mySkillId === 'bomb'){
+    splashes.push({x:me.x, y:me.y, r:0, maxR:150, life:0.5, big:true});
+    for(const p of players){
+      if(p===me || p.out) continue;
+      const d = Math.hypot(p.x-me.x, p.y-me.y);
+      if(d < 150) addWet(p, 35);
+    }
+    navigator.vibrate && navigator.vibrate(100);
+  }else if(mySkillId === 'brella'){
+    me.shield = 3;
+    skillActiveT = 3;
+  }else if(mySkillId === 'dash'){
+    me.speedM = 2.2;
+    skillActiveT = 2.5;
+    setTimeout(()=>{ me.speedM = 1; }, 2500);
+  }
+}
+
+function addWet(p, n){
+  if(p.shield > 0) return;
+  p.wet = Math.min(100, p.wet + n);
+  if(p.wet >= 100 && !p.out){
+    p.out = true;
+    outCount++;
+    p.outRank = outCount; // 1=첫 탈락
+    splashes.push({x:p.x, y:p.y, r:0, maxR:70, life:0.5});
+    checkEnd();
+  }
+}
+
+/* ---------- game end ---------- */
+function checkEnd(){
+  const alive = players.filter(p=>!p.out);
+  const me = players[0];
+  if(me.out || alive.length <= 1){
+    running = false;
+    document.getElementById('skill-btn').style.display = 'none';
+    let rank;
+    if(!me.out) rank = 1;
+    else rank = players.length - me.outRank + 1; // 4명 중 첫 탈락 = 4등
+    const title = document.getElementById('result-title');
+    const rk = document.getElementById('result-rank');
+    if(rank === 1){
+      streak++;
+      title.textContent = '🏆 승리!';
+      rk.textContent = '1등! 뽀송뽀송 🌞';
+    }else{
+      streak = 0;
+      title.textContent = '💦 흠뻑 젖었다!';
+      rk.textContent = rank + '등...';
+    }
+    bestStreak = Math.max(bestStreak, streak);
+    storageSet(KEY+'-streak', String(bestStreak));
+    document.getElementById('streak-line').textContent =
+      streak > 1 ? `🔥 ${streak}연승 중! (최고 ${bestStreak}연승)` : `최고 기록: ${bestStreak}연승`;
+    // 이겼을 때만 연승 기록 등록 가능
+    document.getElementById('record-form').style.display = (rank === 1) ? 'block' : 'none';
+    renderBoard(-1);
+    setTimeout(()=>{
+      document.getElementById('over').classList.remove('hidden');
+    }, 800);
+  }
+}
+
+/* ---------- leaderboard (연승) ---------- */
+let boardData = [];
+async function loadBoard(){
+  try{
+    const raw = await storageGet(KEY+'-board');
+    boardData = raw ? JSON.parse(raw) : [];
+  }catch(e){ boardData = []; }
+}
+async function saveRecord(){
+  const name = document.getElementById('rec-name').value.trim() || '이름없음';
+  storageSet(KEY+'-name', name);
+  // 같은 이름은 최고 연승만 유지
+  const exist = boardData.find(r => r.name === name);
+  if(exist){
+    if(streak > exist.streak){ exist.streak = streak; exist.ts = Date.now(); }
+  }else{
+    boardData.push({name, streak, ts: Date.now()});
+  }
+  boardData.sort((a,b)=> b.streak - a.streak || a.ts - b.ts);
+  boardData = boardData.slice(0, 10);
+  storageSet(KEY+'-board', JSON.stringify(boardData));
+  const myIdx = boardData.findIndex(r => r.name === name);
+  document.getElementById('record-form').style.display = 'none';
+  renderBoard(myIdx);
+}
+function renderBoard(myIdx){
+  const el = document.getElementById('board');
+  if(!boardData.length){ el.innerHTML = ''; return; }
+  const medals = ['🥇','🥈','🥉'];
+  el.innerHTML = boardData.map((r,i)=>`
+    <div class="board-row ${i===myIdx?'me':''}">
+      <span class="rk">${medals[i] || (i+1)+'위'}</span>
+      <span class="nm">${String(r.name).replace(/[<>&"]/g,'')}</span>
+      <span>${r.streak}연승</span>
+    </div>`).join('');
+}
+
+/* ---------- shooting ---------- */
+function nearestTarget(p){
+  let best = null, bd = 1e9;
+  for(const q of players){
+    if(q===p || q.out) continue;
+    const d = Math.hypot(q.x-p.x, q.y-p.y);
+    if(d < bd){ bd = d; best = q; }
+  }
+  return best;
+}
+// 제일 안 젖은 사람(=현재 1등)을 노림. 가끔은 그냥 가까운 사람
+function leaderTarget(p){
+  if(Math.random() < 0.3) return nearestTarget(p);
+  let best = null, bw = 1e9;
+  for(const q of players){
+    if(q===p || q.out) continue;
+    if(q.wet < bw){ bw = q.wet; best = q; }
+  }
+  return best;
+}
+// 봇 스킬: 상어=번개발, 문어=물폭탄, 오리=우산
+function botUseSkill(p){
+  if(p.name === '상어'){
+    p.speedM = 2.2;
+    p.skillCd = 8;
+    setTimeout(()=>{ p.speedM = 1; }, 2000);
+  }else if(p.name === '문어'){
+    // 가까이 있는 사람 있을 때만 터뜨림
+    const near = players.some(q => q!==p && !q.out && Math.hypot(q.x-p.x,q.y-p.y) < 140);
+    if(!near){ p.skillCd = 0.5; return; }
+    splashes.push({x:p.x, y:p.y, r:0, maxR:150, life:0.5, big:true});
+    for(const q of players){
+      if(q===p || q.out) continue;
+      if(Math.hypot(q.x-p.x, q.y-p.y) < 150) addWet(q, 35);
+    }
+    p.skillCd = 9;
+  }else if(p.name === '오리'){
+    // 많이 젖었을 때만 우산 폄
+    if(p.wet < 45){ p.skillCd = 0.5; return; }
+    p.shield = 3;
+    p.skillCd = 11;
+  }
+}
+function shoot(p, target, accuracy){
+  const a = Math.atan2(target.y-p.y, target.x-p.x) + (Math.random()-0.5)*accuracy;
+  const sp = 340;
+  shots.push({x:p.x, y:p.y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, from:p});
+}
+
+/* ---------- loop ---------- */
+function loop(t){
+  if(!running) return;
+  const dt = Math.min((t-lastT)/1000, 0.05);
+  lastT = t;
+
+  const me = players[0];
+
+  // 스킬 타이머
+  if(skillCd > 0) skillCd -= dt;
+  if(me.shield > 0) me.shield -= dt;
+  updateSkillBtn();
+
+  // 내 이동 (손가락 따라)
+  if(finger && !me.out){
+    const dx = finger.x - me.x, dy = finger.y - me.y;
+    const d = Math.hypot(dx,dy);
+    if(d > 6){
+      const sp = 220 * me.speedM;
+      me.x += dx/d * Math.min(sp*dt, d);
+      me.y += dy/d * Math.min(sp*dt, d);
+    }
+  }
+
+  // 봇 AI
+  for(const p of players){
+    if(p.isMe || p.out) continue;
+    // 목적지 재설정
+    if(!p.tx || Math.hypot(p.tx-p.x, p.ty-p.y) < 24 || Math.random() < dt*0.5){
+      p.tx = 40 + Math.random()*(W-80);
+      p.ty = 40 + Math.random()*(H-160);
+    }
+    const dx = p.tx-p.x, dy = p.ty-p.y, d = Math.hypot(dx,dy);
+    if(d > 4){
+      const sp = 150 * (p.speedM||1);
+      p.x += dx/d*sp*dt; p.y += dy/d*sp*dt;
+    }
+    // 봇 스킬 사용
+    p.skillCd = (p.skillCd||0) - dt;
+    if(p.shield > 0) p.shield -= dt;
+    if(p.skillCd <= 0){
+      botUseSkill(p);
+    }
+    // 발사: 제일 마른 사람(=1등)을 집중 공격!
+    p.fireT -= dt;
+    if(p.fireT <= 0){
+      const tg = leaderTarget(p);
+      if(tg) shoot(p, tg, 0.18);
+      p.fireT = 0.5 + Math.random()*0.3;
+    }
+  }
+
+  // 내 자동 발사
+  if(!me.out){
+    me.fireT -= dt;
+    if(me.fireT <= 0){
+      const tg = nearestTarget(me);
+      if(tg) shoot(me, tg, 0.12);
+      me.fireT = 0.4;
+    }
+  }
+
+  // 물줄기 이동/명중
+  for(let i=shots.length-1;i>=0;i--){
+    const s = shots[i];
+    s.x += s.vx*dt; s.y += s.vy*dt;
+    if(s.x<-20||s.y<-20||s.x>W+20||s.y>H+20){ shots.splice(i,1); continue; }
+    let hit = false;
+    for(const p of players){
+      if(p===s.from || p.out) continue;
+      if(Math.hypot(p.x-s.x, p.y-s.y) < 26){
+        addWet(p, 8);
+        splashes.push({x:s.x, y:s.y, r:0, maxR:26, life:0.3});
+        hit = true;
+        break;
+      }
+    }
+    if(hit) shots.splice(i,1);
+  }
+
+  // 스플래시
+  for(let i=splashes.length-1;i>=0;i--){
+    const sp = splashes[i];
+    sp.life -= dt;
+    sp.r = sp.maxR * (1 - sp.life/(sp.big?0.5:0.3+0.2));
+    if(sp.life <= 0) splashes.splice(i,1);
+  }
+
+  render();
+  requestAnimationFrame(loop);
+}
+
+function updateSkillBtn(){
+  const btn = document.getElementById('skill-btn');
+  const cdEl = document.getElementById('skill-cd');
+  if(skillCd > 0){
+    btn.classList.add('cd');
+    cdEl.textContent = Math.ceil(skillCd);
+  }else{
+    btn.classList.remove('cd');
+    cdEl.textContent = '';
+  }
+}
+
+/* ---------- render ---------- */
+function render(){
+  // 물놀이장 바닥
+  ctx.fillStyle = '#8FDCEE';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  for(let i=0;i<6;i++){
+    const y = (i*137 + performance.now()/40) % H;
+    ctx.beginPath();
+    ctx.ellipse(((i*211)%W), y, 40, 8, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // 물줄기
+  ctx.fillStyle = '#2D8FC4';
+  for(const s of shots){
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y, 7, 4, Math.atan2(s.vy,s.vx), 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // 스플래시
+  for(const sp of splashes){
+    ctx.strokeStyle = sp.big ? 'rgba(45,143,196,.7)' : 'rgba(255,255,255,.7)';
+    ctx.lineWidth = sp.big ? 6 : 3;
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  // 플레이어
+  for(const p of players){
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    if(p.out){
+      ctx.globalAlpha = 0.45;
+      ctx.font = '40px sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(p.ch, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.font = '20px sans-serif';
+      ctx.fillText('💦', 0, -34);
+      ctx.restore();
+      continue;
+    }
+    // 우산 이펙트
+    if(p.shield > 0){
+      ctx.font = '30px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('☂️', 0, -40);
+      ctx.strokeStyle = 'rgba(255,209,102,.8)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0,0,30,0,Math.PI*2); ctx.stroke();
+    }
+    // 번개발 이펙트
+    if(p.speedM > 1){
+      ctx.font = '18px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('⚡', -24, 8);
+    }
+    ctx.font = '40px sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(p.ch, 0, 0);
+    // 이름
+    ctx.font = '800 12px sans-serif';
+    ctx.fillStyle = p.isMe ? '#0B5E7A' : '#123B4C';
+    ctx.fillText(p.name, 0, 32);
+    // 젖음 게이지
+    const bw = 44;
+    ctx.fillStyle = 'rgba(0,0,0,.2)';
+    ctx.fillRect(-bw/2, -34, bw, 7);
+    ctx.fillStyle = p.wet < 60 ? '#3AA7DB' : '#D7263D';
+    ctx.fillRect(-bw/2, -34, bw*p.wet/100, 7);
+    ctx.restore();
+  }
+}
+
+/* ---------- pickers ---------- */
+function buildPickers(){
+  document.getElementById('char-row').innerHTML = CHARS.map(c =>
+    `<button class="pick-btn ${c===myChar?'sel':''}" onclick="pickChar('${c}', this)">${c}</button>`
+  ).join('');
+  document.getElementById('skill-pick').innerHTML = SKILLS.map(s => `
+    <button class="skill-item ${s.id===mySkillId?'sel':''}" onclick="pickSkill('${s.id}', this)">
+      <span class="ic">${s.ic}</span>
+      <span><span class="nm">${s.nm}</span><br><span class="ds">${s.ds}</span></span>
+    </button>`).join('');
+}
+function pickChar(c, btn){
+  myChar = c;
+  document.querySelectorAll('.pick-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  storageSet(KEY+'-char', c);
+}
+function pickSkill(id, btn){
+  mySkillId = id;
+  document.querySelectorAll('.skill-item').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  storageSet(KEY+'-skill', id);
+}
+
+/* ---------- boot ---------- */
+(async function(){
+  const c = await storageGet(KEY+'-char');
+  if(c && CHARS.includes(c)) myChar = c;
+  const sk = await storageGet(KEY+'-skill');
+  if(sk && SKILLS.some(s=>s.id===sk)) mySkillId = sk;
+  const st = await storageGet(KEY+'-streak');
+  if(st) bestStreak = parseInt(st)||0;
+  await loadBoard();
+  const nm = await storageGet(KEY+'-name');
+  if(nm) document.getElementById('rec-name').value = nm;
+  buildPickers();
+})();
+</script>
+<script src="../rest.js?v=3"></script>
+</body>
+</html>
