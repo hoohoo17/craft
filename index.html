@@ -40,109 +40,141 @@
             color: #888;
             margin-top: 4px;
         }
+        /* ---------- 대화방 ---------- */
         .comment-section {
             margin-top: 24px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 24px;
+            background: linear-gradient(160deg, #EAF3FF 0%, #F7ECFF 100%);
+            border-radius: 18px;
+            box-shadow: 0 6px 22px rgba(80,100,160,.14);
+            padding: 20px;
         }
         .comment-section h3 {
-            margin: 0 0 4px 0;
-            font-size: 16px;
-            color: #333;
+            margin: 0 0 2px 0;
+            font-size: 20px;
+            color: #2C3560;
+            letter-spacing: .5px;
         }
         .comment-notice {
             font-size: 12px;
-            color: #888;
-            margin-bottom: 16px;
+            color: #7C86A8;
+            margin-bottom: 14px;
         }
-        .comment-success {
-            margin-top: 8px;
-            padding: 10px 12px;
-            background: #eaf6ea;
-            color: #2d6a2d;
-            border-radius: 6px;
-            font-size: 13px;
-            display: none;
-        }
-        .comment-success.show {
-            display: block;
-        }
+
+        /* 쓰는 곳 */
         .comment-form {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 104px 1fr auto;
             gap: 8px;
-            margin-bottom: 20px;
+            align-items: start;
+            background: #fff;
+            border-radius: 14px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(80,100,160,.10);
+            margin-bottom: 8px;
         }
         .comment-form input,
         .comment-form textarea {
             padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            border: 2px solid #E3E9F6;
+            border-radius: 12px;
             font-size: 14px;
             font-family: inherit;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color .2s;
+            min-width: 0;
         }
         .comment-form input:focus,
-        .comment-form textarea:focus {
-            border-color: #4a9eff;
-        }
+        .comment-form textarea:focus { border-color: #7BA7FF; }
         .comment-form textarea {
             resize: vertical;
-            min-height: 60px;
+            min-height: 44px;
+            grid-column: 2;
         }
         .comment-form button {
-            align-self: flex-end;
-            padding: 8px 20px;
-            background: #4a9eff;
-            color: white;
+            padding: 11px 18px;
+            background: #5B8DEF;
+            color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 12px;
             font-size: 14px;
+            font-weight: 700;
             cursor: pointer;
-            transition: background 0.2s;
+            white-space: nowrap;
+            transition: background .2s, transform .08s;
         }
-        .comment-form button:hover {
-            background: #3a8eef;
+        .comment-form button:hover { background: #4A7CDB; }
+        .comment-form button:active { transform: translateY(2px); }
+        .comment-form button:disabled { background: #BBD1F7; cursor: not-allowed; }
+        @media (max-width: 480px) {
+            .comment-form { grid-template-columns: 1fr auto; }
+            .comment-form textarea { grid-column: 1 / -1; }
         }
-        .comment-form button:disabled {
-            background: #b0d4ff;
-            cursor: not-allowed;
+
+        .comment-success {
+            margin: 0 0 12px;
+            padding: 9px 12px;
+            background: #DFF3E4;
+            color: #24713A;
+            border-radius: 10px;
+            font-size: 13px;
+            display: none;
         }
+        .comment-success.show { display: block; }
+
+        /* 말풍선 */
+        #commentList { display: flex; flex-direction: column; gap: 12px; }
         .comment-item {
-            padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
         }
-        .comment-item:last-child {
-            border-bottom: none;
+        .comment-face {
+            flex: none;
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(80,100,160,.16);
+        }
+        .comment-bubble {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+            background: #fff;
+            border-radius: 4px 14px 14px 14px;
+            padding: 9px 13px 10px;
+            box-shadow: 0 2px 8px rgba(80,100,160,.12);
+        }
+        .comment-bubble::before {          /* 말풍선 꼬리 */
+            content: '';
+            position: absolute;
+            left: -6px; top: 10px;
+            border-width: 6px 7px 6px 0;
+            border-style: solid;
+            border-color: transparent #fff transparent transparent;
         }
         .comment-meta {
-            font-size: 13px;
-            color: #888;
-            margin-bottom: 4px;
+            font-size: 12px;
+            color: #98A0BE;
+            margin-bottom: 3px;
         }
-        .comment-meta strong {
-            color: #333;
-        }
+        .comment-meta strong { color: #2C3560; font-size: 13px; }
         .comment-body {
-            font-size: 14px;
-            color: #444;
-            line-height: 1.5;
+            font-size: 14.5px;
+            color: #333B5C;
+            line-height: 1.55;
             white-space: pre-wrap;
             word-break: break-word;
         }
-        .comment-body.pending {
-            color: #aaa;
-            font-style: italic;
-        }
+        .comment-body.pending { color: #A9B0CA; font-style: italic; }
         .no-comments {
             text-align: center;
-            color: #aaa;
+            color: #939CBC;
             font-size: 14px;
-            padding: 20px 0;
+            padding: 26px 0;
         }
+        .no-comments .big { display: block; font-size: 32px; margin-bottom: 6px; }
         .visually-hidden {
             position: absolute;
             width: 1px;
@@ -293,18 +325,18 @@
     </div>
 
     <div class="comment-section">
-        <h3>댓글</h3>
-        <div class="comment-notice">쓰면 바로 올라갑니다. 이름 8자, 메시지 60자까지.</div>
+        <h3>💬 대화방</h3>
+        <div class="comment-notice">쓰면 바로 올라가요. 이름 8자, 메시지 60자까지.</div>
         <form class="comment-form" id="commentForm">
             <label for="commentName" class="visually-hidden">이름</label>
             <input type="text" id="commentName" name="commentName" placeholder="이름" maxlength="8" required>
             <label for="commentMessage" class="visually-hidden">메시지</label>
-            <textarea id="commentMessage" name="commentMessage" placeholder="메시지를 입력하세요" maxlength="60" required></textarea>
-            <button type="submit" id="submitBtn">등록</button>
+            <textarea id="commentMessage" name="commentMessage" placeholder="하고 싶은 말을 써 봐!" maxlength="60" required></textarea>
+            <button type="submit" id="submitBtn">보내기 ✈️</button>
         </form>
         <div class="comment-success" id="successMsg">등록되었습니다!</div>
         <div id="commentList">
-            <div class="no-comments">댓글을 불러오는 중...</div>
+            <div class="no-comments"><span class="big">💬</span>대화를 불러오는 중…</div>
         </div>
     </div>
 
@@ -374,19 +406,34 @@
             return out;
         }
 
+        // 같은 이름이면 늘 같은 얼굴과 색이 나오게 이름으로 번호를 만든다
+        const FACES = ['\u{1F436}','\u{1F431}','\u{1F438}','\u{1F435}','\u{1F43C}','\u{1F981}','\u{1F984}','\u{1F427}',
+                       '\u{1F98A}','\u{1F430}','\u{1F42F}','\u{1F428}','\u{1F43B}','\u{1F439}','\u{1F414}','\u{1F419}'];
+        const TINTS = ['#FFE3E3','#FFF0D6','#FBF6C9','#E2F6D9','#D8F1F0','#DDE9FF','#E8E0FF','#FBDDF3'];
+        function hashName(name) {
+            let h = 0;
+            for (const ch of String(name)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+            return h;
+        }
+        const faceOf = name => FACES[hashName(name) % FACES.length];
+        const faceColor = name => TINTS[hashName(name) % TINTS.length];
+
         async function loadComments() {
             try {
                 const res = await fetch(`${API_URL}?page=index`, { cache: 'no-store' });
                 const comments = unpackComments(await res.json());
                 const list = document.getElementById('commentList');
                 if (comments.length === 0) {
-                    list.innerHTML = '<div class="no-comments">아직 댓글이 없습니다</div>';
+                    list.innerHTML = '<div class="no-comments"><span class="big">🙂</span>아직 아무 말도 없어요.<br>첫 마디를 남겨 봐!</div>';
                     return;
                 }
                 list.innerHTML = comments.slice().reverse().map(c => `
                     <div class="comment-item">
-                        <div class="comment-meta"><strong>${escapeHtml(c.name)}</strong> &middot; ${formatDate(c.date)}</div>
-                        <div class="comment-body">${escapeHtml(c.message)}</div>
+                        <div class="comment-face" style="background:${faceColor(c.name)}">${faceOf(c.name)}</div>
+                        <div class="comment-bubble">
+                            <div class="comment-meta"><strong>${escapeHtml(c.name)}</strong> &middot; ${formatDate(c.date)}</div>
+                            <div class="comment-body">${escapeHtml(c.message)}</div>
+                        </div>
                     </div>
                 `).join('');
             } catch {
