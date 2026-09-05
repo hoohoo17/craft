@@ -60,6 +60,8 @@
     max-height:260px;overflow-y:auto;overscroll-behavior:contain}
   .rank li{display:flex;gap:6px;align-items:baseline;border-bottom:1px dotted var(--grid-strong);padding:2px 0}
   .rank li .no{width:16px;color:var(--pencil);font-size:15px}
+  /* 메달은 숫자보다 넓으니 자리를 더 준다 */
+  .rank li .no.medal{width:20px;font-size:16px;text-align:center}
   /* 이름은 6자까지 들어간다. 자리가 모자라면 이름 대신 거리부터 줄인다. */
   .rank li .nm{flex:1 1 auto;min-width:4.2em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
   .rank li .st{flex:0 0 auto;color:var(--red);font-weight:700}
@@ -219,8 +221,11 @@
   function renderRank(freshIdx = -1){
     rankCount.textContent = ranking.length ? `TOP ${TOP}` : '';
     if (!ranking.length){ rankList.innerHTML = '<li class="empty">아직 기록 없음</li>'; return; }
+    // 1~3등은 메달, 나머지는 숫자
+    const MEDAL = ['🥇', '🥈', '🥉'];
     rankList.innerHTML = ranking.map((r, i) =>
-      `<li class="${i === freshIdx ? 'fresh' : ''}"><span class="no">${i + 1}</span>` +
+      `<li class="${i === freshIdx ? 'fresh' : ''}">` +
+      `<span class="no${i < 3 ? ' medal' : ''}">${MEDAL[i] || (i + 1)}</span>` +
       `<span class="nm">${String(r.n).replace(/[<>&]/g, '')}</span>` +
       `<span class="st">★${r.s}</span><span class="dm">${r.d}m</span></li>`).join('');
   }
