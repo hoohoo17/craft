@@ -360,13 +360,21 @@ function stageName(){
   if(P.m>=300) return '미행성';
   return '먼지 덩어리';
 }
+// 가스 방울은 매 프레임 그라데이션을 새로 만들면 폰에서 느리다. 한 번 그려 두고 갖다 쓴다.
+const gasSprite=(()=>{
+  const S=64, c=document.createElement('canvas'); c.width=c.height=S;
+  const g=c.getContext('2d');
+  const gr=g.createRadialGradient(S/2,S/2,0.5,S/2,S/2,S/2);
+  gr.addColorStop(0,'rgba(169,140,240,.72)'); gr.addColorStop(1,'rgba(169,140,240,0)');
+  g.fillStyle=gr; g.fillRect(0,0,S,S);
+  return c;
+})();
+
 function drawBit(b){
   const r=R(b.m);
   ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.rot);
   if(b.type==='gas'){
-    const g=ctx.createRadialGradient(0,0,1,0,0,r*1.9);
-    g.addColorStop(0,'rgba(169,140,240,.72)'); g.addColorStop(1,'rgba(169,140,240,0)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r*1.9,0,7); ctx.fill();
+    ctx.drawImage(gasSprite, -r*1.9, -r*1.9, r*3.8, r*3.8);
   }else if(b.type==='ice'){
     ctx.fillStyle='#4bb8e8'; ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.5/scale;
     ctx.beginPath();
@@ -441,23 +449,29 @@ function minimap(){
   ctx.fillStyle='#2a3154';
   ctx.beginPath(); ctx.arc(cx+P.x*k, cy+P.y*k, Math.max(3,R(P.m)*k), 0,7); ctx.fill();
 }
+// 배경과 원반 그라데이션은 늘 똑같은데 매 프레임 새로 만들면 폰에서 무겁다. 한 번만 만든다.
+let bgGrad=null, diskGrad=null;
+function makeGrads(){
+  bgGrad=ctx.createLinearGradient(0,H,W,0);
+  bgGrad.addColorStop(0,'#e9f0fb'); bgGrad.addColorStop(1,'#fdf1e2');
+  diskGrad=ctx.createRadialGradient(0,0,10,0,0,DISK);
+  diskGrad.addColorStop(0,'rgba(255,178,70,.85)');
+  diskGrad.addColorStop(.14,'rgba(255,196,120,.30)');
+  diskGrad.addColorStop(.5,'rgba(210,220,245,.20)');
+  diskGrad.addColorStop(1,'rgba(190,205,240,.05)');
+}
+
 function render(){
+  if(!bgGrad) makeGrads();
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
-  const bgs=ctx.createLinearGradient(0,H,W,0);
-  bgs.addColorStop(0,'#e9f0fb'); bgs.addColorStop(1,'#fdf1e2');
-  ctx.fillStyle=bgs; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
 
   ctx.save();
   if(shake>.4) ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
   ctx.translate(W/2,H/2); ctx.scale(scale,scale); ctx.translate(-cam.x,-cam.y);
 
   // 원반
-  const disk=ctx.createRadialGradient(0,0,10,0,0,DISK);
-  disk.addColorStop(0,'rgba(255,178,70,.85)');
-  disk.addColorStop(.14,'rgba(255,196,120,.30)');
-  disk.addColorStop(.5,'rgba(210,220,245,.20)');
-  disk.addColorStop(1,'rgba(190,205,240,.05)');
-  ctx.fillStyle=disk; ctx.beginPath(); ctx.arc(0,0,DISK,0,7); ctx.fill();
+  ctx.fillStyle=diskGrad; ctx.beginPath(); ctx.arc(0,0,DISK,0,7); ctx.fill();
   ctx.fillStyle='#ffcf7a'; ctx.beginPath(); ctx.arc(0,0,64,0,7); ctx.fill();
 
   ctx.strokeStyle='rgba(75,184,232,.5)'; ctx.lineWidth=2/scale; ctx.setLineDash([9/scale,11/scale]);
@@ -465,7 +479,13 @@ function render(){
   ctx.strokeStyle='rgba(42,49,84,.16)';
   ctx.beginPath(); ctx.arc(0,0,DISK,0,7); ctx.stroke(); ctx.setLineDash([]);
 
-  for(const b of bits) drawBit(b);
+  // 화면 밖에 있는 건 그려 봐야 안 보인다. 270개 중 40개쯤만 실제로 보인다.
+  const halfW=W/2/scale, halfH=H/2/scale;
+  for(const b of bits){
+    const pad=R(b.m)*2+8;
+    if(Math.abs(b.x-cam.x)>halfW+pad || Math.abs(b.y-cam.y)>halfH+pad) continue;
+    drawBit(b);
+  }
   drawPlanet();
   for(const p of parts){ ctx.globalAlpha=Math.max(0,p.life*1.6); ctx.fillStyle=p.col;
     ctx.fillRect(p.x-2/scale,p.y-2/scale,4/scale,4/scale); }
@@ -522,6 +542,26 @@ function ui(){
   setBar('bWater','fWater','vWater',Math.round(P.water)+'%',P.water,'nWater',
     P.temp>58?'끓어서 증발한다':(P.gas<45&&P.water>0?'대기가 얇다':''), P.water>=100);
 }
+/* 폰마다 성능이 다르다. 화면이 뚝뚝 끊기면 떠다니는 개수를 스스로 줄여서
+   부드럽게 만든다. 빠른 기기는 100·80·90 그대로 쓴다. */
+const MIN_BITS=120;   // 아무리 느려도 이 아래로는 안 줄인다
+let fpsMs=0, fpsFrames=0, lastFrame=0, trims=0;
+function watchSpeed(now){
+  if(lastFrame && now-lastFrame < 400){ fpsMs += now-lastFrame; fpsFrames++; }
+  lastFrame = now;
+  if(fpsMs < 2500) return;
+  const fps = fpsFrames/(fpsMs/1000);
+  fpsMs=0; fpsFrames=0;
+  if(fps >= 45 || WANT.ice+WANT.gas+WANT.rock <= MIN_BITS || trims >= 3) return;
+  trims++;
+  for(const k in WANT) WANT[k] = Math.max(20, Math.round(WANT[k]*0.75));
+  for(const k in WANT){
+    let extra = bits.filter(b=>b.type===k).length - WANT[k];
+    for(let i=bits.length-1; i>=0 && extra>0; i--)
+      if(bits[i].type===k){ bits.splice(i,1); extra--; }
+  }
+}
+
 let saveAcc=0;
 function autosave(){
   if(won) return;
@@ -532,7 +572,7 @@ function autosave(){
 document.addEventListener('visibilitychange',()=>{ if(document.hidden && !won) save(); });
 window.addEventListener('pagehide',()=>{ if(!won) save(); });
 
-function loop(){ update(); autosave(); render(); ui(); requestAnimationFrame(loop); }
+function loop(now){ watchSpeed(now||performance.now()); update(); autosave(); render(); ui(); requestAnimationFrame(loop); }
 
 function pos(e){
   const r=cv.getBoundingClientRect(), t=e.touches?e.touches[0]:e;
