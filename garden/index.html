@@ -96,6 +96,25 @@
     overflow:hidden;
   }
   .moist > div{height:100%; background:#5AAFE0; border-radius:4px; transition:width .4s;}
+  .pull-btn{
+    position:absolute; top:6px; right:6px;
+    z-index:4;
+    font-family:inherit; font-size:.9rem; font-weight:900;
+    background:rgba(255,255,255,.92); color:#8A5D3B;
+    border:2px solid rgba(0,0,0,.1); border-radius:50%;
+    width:26px; height:26px; line-height:1;
+    padding:0; cursor:pointer; display:none;
+  }
+  .plot.growing .pull-btn{display:block;}
+  /* 화면 안에서 물어보는 줄 — 창을 띄우지 않는다 */
+  .ask{display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap;}
+  .ask button{
+    font-family:inherit; font-size:.9rem; font-weight:800;
+    border:none; border-radius:10px; padding:6px 14px; cursor:pointer;
+  }
+  .ask .yes{background:#E2705F; color:#fff;}
+  .ask .no{background:rgba(0,0,0,.1); color:var(--ink);}
+
   .dry-mark{
     position:absolute; top:20px; right:10px;
     font-size:1.15rem;
@@ -394,7 +413,7 @@ function plant(fid){
 }
 
 /* ---------- UI ---------- */
-function setTip(t){ document.getElementById('tip').textContent = t; }
+function setTip(t){ document.getElementById('tip').textContent = t; }   // innerHTML 을 지우고 글자만
 
 function popText(i, text){
   const plotEl = document.querySelectorAll('.plot')[i];
@@ -414,8 +433,11 @@ function render(){
     for(let i=0;i<plotCount();i++){
       const d = document.createElement('div');
       d.className = 'plot';
-      d.innerHTML = `<div class="moist"><div></div></div><div class="dry-mark">🥀</div><div class="view"></div><div class="status"></div>`;
+      d.innerHTML = `<div class="moist"><div></div></div><div class="dry-mark">🥀</div>` +
+        `<button class="pull-btn" title="뽑기">✕</button>` +
+        `<div class="view"></div><div class="status"></div>`;
       d.addEventListener('pointerdown', ()=>tapPlot(i));
+      d.querySelector('.pull-btn').addEventListener('pointerdown', e=>{ e.stopPropagation(); askPull(i); });
       g.appendChild(d);
     }
   }
@@ -428,6 +450,7 @@ function render(){
     el.querySelector('.view').innerHTML = svgPlot({stage, f, dry});
     el.querySelector('.moist > div').style.width = (p.f && p.prog<100 ? p.moist : 0) + '%';
     el.classList.toggle('ready', p.prog >= 100);
+    el.classList.toggle('growing', !!p.f && p.prog < 100);   // 자라는 중에만 뽑기 버튼
     el.classList.toggle('dry', !!dry);
     const st = el.querySelector('.status');
     if(!p.f) st.textContent = '➕ 씨앗 심기';
@@ -448,6 +471,29 @@ function buildSeedList(){
         <span class="tm">⏱️ ${f.desc}</span>
       </span>
     </button>`).join('');
+}
+
+// 창을 띄우지 않고 안내줄에서 물어본다(폰에서 confirm이 막힐 때가 있다)
+function askInTip(msg, onYes){
+  const tip = document.getElementById('tip');
+  tip.innerHTML = `<span class="ask"><span>${msg}</span>` +
+    `<button class="yes" id="ask-yes">네</button>` +
+    `<button class="no" id="ask-no">아니요</button></span>`;
+  document.getElementById('ask-yes').onclick = ()=>{ onYes(); };
+  document.getElementById('ask-no').onclick  = ()=>{ setTip('알겠어! 계속 키우자 🌱'); };
+}
+
+function askPull(i){
+  const p = S.plots[i];
+  if(!p || !p.f || p.prog >= 100) return;
+  const f = FLOWERS.find(x=>x.id===p.f);
+  askInTip(`자라던 ${f.name}을(를) 뽑을까? 포인트는 못 받아.`, ()=>{
+    S.plots[i] = {f:null, prog:0, moist:0};
+    popText(i, '뽑았다! 🌱');
+    setTip(`${f.name}을(를) 뽑았어. 새 씨앗을 심어 보자!`);
+    render();
+    scheduleSave();
+  });
 }
 
 function updateCoin(){
@@ -566,6 +612,6 @@ window.addEventListener('visibilitychange', ()=>{
   scheduleSave();
 })();
 </script>
-<script src="../rest.js?v=6"></script>
+<script src="../rest.js?v=7"></script>
 </body>
 </html>

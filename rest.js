@@ -44,14 +44,20 @@
     (document.body || document.documentElement).appendChild(pill);
     // 무제한일 때만 눌러서 다시 켤 수 있게 한다(끄는 데는 비밀번호가 필요하지만
     // 다시 켜는 건 아무나 해도 안전하니까).
-    pill.addEventListener('click', function(){
+    pill.addEventListener('click', function(e){
       if(!isFree()) return;
-      if(confirm('쉬는 시간을 다시 켤까요?')){
-        put(K_FREE, 0);
-        put(K_PLAYED, 0);
-        put(K_UNTIL, 0);
+      if(e.target && e.target.dataset && e.target.dataset.ans){
+        if(e.target.dataset.ans === 'y'){
+          put(K_FREE, 0);
+          put(K_PLAYED, 0);
+          put(K_UNTIL, 0);
+        }
+        asking = false;
         tick();
+        return;
       }
+      asking = true;                 // 시계 안에서 물어본다(창을 안 띄운다)
+      renderPill();
     });
   }
 
@@ -78,25 +84,50 @@
         '<button id="craft-unlock" style="font-family:inherit;font-size:.95rem;font-weight:700;' +
           'color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);' +
           'border-radius:12px;padding:8px 16px;cursor:pointer">🔒 비밀번호 넣기</button>' +
+        // 입력칸은 화면 안에 직접 둔다. prompt 창은 폰에서 막힐 때가 있다.
+        '<div id="craft-pwbox" style="display:none;margin-top:6px">' +
+          '<input id="craft-pw" type="tel" inputmode="numeric" maxlength="8" placeholder="비밀번호" ' +
+            'style="font-family:inherit;font-size:1.2rem;font-weight:700;text-align:center;width:130px;' +
+            'color:#fff;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.35);' +
+            'border-radius:12px;padding:9px 10px;outline:none">' +
+          '<button id="craft-pwgo" style="font-family:inherit;font-size:1rem;font-weight:800;margin-left:8px;' +
+            'color:#12121F;background:#8ED9B4;border:none;border-radius:12px;padding:11px 16px;cursor:pointer">확인</button>' +
+          '<div id="craft-pwmsg" style="margin-top:8px;font-size:.9rem;min-height:1.2em;color:#FF9AAE"></div>' +
+        '</div>' +
       '</div>';
     (document.body || document.documentElement).appendChild(box);
     label = box.querySelector('#craft-rest-time');
-    box.querySelector('#craft-unlock').addEventListener('click', unlock);
+    box.querySelector('#craft-unlock').addEventListener('click', function(){
+      this.style.display = 'none';
+      box.querySelector('#craft-pwbox').style.display = 'block';
+      var input = box.querySelector('#craft-pw');
+      input.value = '';
+      input.focus();
+    });
+    box.querySelector('#craft-pwgo').addEventListener('click', unlock);
+    box.querySelector('#craft-pw').addEventListener('keydown', function(e){
+      if(e.key === 'Enter') unlock();
+    });
   }
 
   function unlock(){
-    var typed = prompt('비밀번호를 넣으면 무제한으로 놀 수 있어요.');
-    if(typed === null) return;                      // 취소
-    if(String(typed).trim() !== PASS){
-      alert('비밀번호가 달라요 🙈');
+    var input = box.querySelector('#craft-pw');
+    var msg = box.querySelector('#craft-pwmsg');
+    if(String(input.value).trim() !== PASS){
+      msg.textContent = '비밀번호가 달라요 🙈';
+      input.value = '';
+      input.focus();
       return;
     }
     put(K_FREE, 1);
     put(K_PLAYED, 0);
     put(K_UNTIL, 0);
+    // 다음에 다시 열릴 때를 위해 입력칸을 접어 둔다
+    box.querySelector('#craft-pwbox').style.display = 'none';
+    box.querySelector('#craft-unlock').style.display = '';
+    msg.textContent = '';
     hide();
     tick();
-    alert('무제한으로 바뀌었어요! 🔓\n위쪽 시계를 누르면 다시 켤 수 있어요.');
   }
 
   function show(){
@@ -111,17 +142,30 @@
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
   }
 
+  var asking = false;      // 시계 안에서 "다시 켤까?" 를 묻는 중인지
+  function renderPill(){ showPill(0); }
+
+  var ANSBTN = 'font-family:inherit;font-size:12px;font-weight:800;border:0;border-radius:9px;' +
+               'padding:2px 8px;margin-left:5px;cursor:pointer';
+
   function showPill(leftMs){
     buildPill();
     pill.style.display = 'block';
     if(isFree()){
-      pill.textContent = '🔓 무제한';
+      if(asking){
+        pill.innerHTML = '쉬는 시간 다시 켤까?' +
+          '<button data-ans="y" style="' + ANSBTN + ';background:#8ED9B4;color:#12121F">네</button>' +
+          '<button data-ans="n" style="' + ANSBTN + ';background:rgba(255,255,255,.25);color:#fff">아니요</button>';
+      }else{
+        pill.textContent = '🔓 무제한';
+      }
       pill.style.background = 'rgba(40,120,70,.6)';
-      pill.style.opacity = '.75';
+      pill.style.opacity = asking ? '.95' : '.75';
       pill.style.pointerEvents = 'auto';           // 눌러서 다시 켤 수 있게
       pill.style.cursor = 'pointer';
       return;
     }
+    asking = false;
     pill.textContent = '⏱ ' + fmt(leftMs) + ' 뒤 쉬는 시간';
     var soon = leftMs <= 2 * 60 * 1000;            // 2분 남으면 눈에 띄게
     pill.style.background = soon ? 'rgba(200,60,60,.72)' : 'rgba(0,0,0,.42)';
