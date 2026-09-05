@@ -89,6 +89,8 @@
   }
   .rank-list li:last-child{border-bottom:none;}
   .rank-list .no{width:18px; opacity:.5; font-size:.85rem;}
+  /* 메달은 숫자보다 넓으니 자리를 더 주고, 흐리게 하지 않는다 */
+  .rank-list .no.medal{width:22px; opacity:1; font-size:1rem; text-align:center;}
   .rank-list .nm{flex:1; min-width:4em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .rank-list .fl{font-weight:900; color:#5EF0C6;}
   .rank-list li.fresh .nm{color:#FFD166;}
@@ -158,16 +160,21 @@ const saveBtn = document.getElementById('saveBtn');
 function sane(list){
   return Array.isArray(list)
     ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.f))
-          .map(r => ({ n: r.n, f: +r.f })).slice(0, 100)
+          .map(r => ({ n: r.n, f: +r.f })).slice(0, 5)
     : [];
 }
-const sortRank = list => list.sort((a,b) => b.f - a.f).slice(0, 100);
+// 5등까지만 남긴다(높이 순)
+const TOP = 5;
+const sortRank = list => list.sort((a,b) => b.f - a.f).slice(0, TOP);
 
 function renderRank(freshIdx = -1){
-  rankCount.textContent = ranking.length ? `(${ranking.length}명)` : '';
+  rankCount.textContent = ranking.length ? `TOP ${TOP}` : '';
   if(!ranking.length){ rankList.innerHTML = '<li class="empty">아직 기록 없음</li>'; return; }
+  // 1~3등은 메달, 나머지는 숫자
+  const MEDAL = ['🥇', '🥈', '🥉'];
   rankList.innerHTML = ranking.map((r,i) =>
-    `<li class="${i === freshIdx ? 'fresh' : ''}"><span class="no">${i+1}</span>` +
+    `<li class="${i === freshIdx ? 'fresh' : ''}">` +
+    `<span class="no${i < 3 ? ' medal' : ''}">${MEDAL[i] || (i+1)}</span>` +
     `<span class="nm">${String(r.n).replace(/[<>&]/g,'')}</span>` +
     `<span class="fl">${r.f}층</span></li>`).join('');
 }
