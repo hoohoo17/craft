@@ -1,12 +1,12 @@
 /* 눈 쉬는 시간
-   게임을 10분 하면 10분 쉬는 화면이 뜬다.
+   게임을 30분 하면 30분 쉬는 화면이 뜬다.
    놀았던 시간은 모든 게임이 함께 센다(같은 사이트라 저장소를 공유).
    쉬는 동안에도 게임 자체는 계속 돌아간다 — 나의 정원처럼 실제 시각으로
    자라는 게임은 쉬는 시간에도 그대로 자란다.
    비밀번호를 넣으면 무제한으로 놀 수 있고, 언제든 다시 켤 수 있다. */
 (function(){
-  var PLAY_MS = 10 * 60 * 1000;   // 10분 놀면
-  var REST_MS = 10 * 60 * 1000;   // 10분 쉰다
+  var PLAY_MS = 30 * 60 * 1000;   // 30분 놀면
+  var REST_MS = 30 * 60 * 1000;   // 30분 쉰다
   var PASS    = '0823';           // 무제한으로 푸는 비밀번호
   var K_PLAYED = 'craft-played-ms';
   var K_UNTIL  = 'craft-rest-until';
@@ -78,8 +78,8 @@
       '<div style="max-width:340px">' +
         '<div style="font-size:3.4rem;line-height:1">👀</div>' +
         '<h2 style="margin:14px 0 8px;font-size:1.6rem">눈 쉬는 시간!</h2>' +
-        '<p style="margin:0 0 4px;font-size:1.05rem;opacity:.85">10분 동안 재미있게 놀았어요.<br>10분만 쉬었다 하자 🙂</p>' +
-        '<div id="craft-rest-time" style="font-size:2.6rem;font-weight:900;margin:16px 0 10px">10:00</div>' +
+        '<p style="margin:0 0 4px;font-size:1.05rem;opacity:.85">30분 동안 재미있게 놀았어요.<br>30분만 쉬었다 하자 🙂</p>' +
+        '<div id="craft-rest-time" style="font-size:2.6rem;font-weight:900;margin:16px 0 10px">30:00</div>' +
         '<p style="margin:0 0 18px;font-size:.9rem;opacity:.6">쉬는 동안에도 꽃은 계속 자라요 🌱</p>' +
         '<button id="craft-unlock" style="font-family:inherit;font-size:.95rem;font-weight:700;' +
           'color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);' +
@@ -167,7 +167,7 @@
     }
     asking = false;
     pill.textContent = '⏱ ' + fmt(leftMs) + ' 뒤 쉬는 시간';
-    var soon = leftMs <= 2 * 60 * 1000;            // 2분 남으면 눈에 띄게
+    var soon = leftMs <= 5 * 60 * 1000;            // 5분 남으면 눈에 띄게
     pill.style.background = soon ? 'rgba(200,60,60,.72)' : 'rgba(0,0,0,.42)';
     pill.style.opacity = soon ? '.95' : '.75';
     pill.style.pointerEvents = 'none';             // 평소엔 게임 조작을 가리지 않게
