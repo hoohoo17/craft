@@ -157,9 +157,13 @@ const saveRow = document.getElementById('saveRow');
 const nameInput = document.getElementById('nameInput');
 const saveBtn = document.getElementById('saveBtn');
 
+// 순위에서 빼기로 한 이름들 (서버 글은 지울 수 없어서 여기서 걸러 낸다)
+const HIDDEN = ['박혜담'];
+const hidden = n => HIDDEN.includes(String(n || '').trim());
+
 function sane(list){
   return Array.isArray(list)
-    ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.f))
+    ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.f) && !hidden(r.n))
           .map(r => ({ n: r.n, f: +r.f })).slice(0, 5)
     : [];
 }
@@ -200,7 +204,7 @@ async function fetchBoard(){
   if(!res.ok) throw new Error('http ' + res.status);
   const rows = await res.json();
   if(!Array.isArray(rows)) throw new Error('bad payload');
-  return sortRank(rows.map(c => decodeRank(c && c.name)).filter(Boolean));
+  return sortRank(rows.map(c => decodeRank(c && c.name)).filter(r => r && !hidden(r.n)));
 }
 
 async function loadRank(){
