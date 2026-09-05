@@ -8,38 +8,74 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             max-width: 600px;
-            margin: 50px auto;
+            margin: 24px auto 50px;
             padding: 20px;
-            background: #f5f5f5;
+            background: #F4F6FD;
+            background-image:
+              radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+              radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+        }
+
+        /* ---------- 게임 모아둔 곳 ---------- */
+        .shelf-head {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .shelf-head h1 {
+            margin: 0;
+            font-size: 26px;
+            color: #2C3560;
+            letter-spacing: .5px;
+        }
+        .shelf-head p {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: #7C86A8;
         }
         .map-container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
         }
-        a {
-            display: block;
-            padding: 16px 24px;
+        .map-container a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 12px;
             text-decoration: none;
-            color: #333;
-            border-bottom: 1px solid #eee;
-            transition: background 0.2s;
+            color: #2C3560;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 3px 10px rgba(80,100,160,.12);
+            transition: transform .12s, box-shadow .12s;
         }
-        a:last-child {
-            border-bottom: none;
+        .map-container a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 18px rgba(80,100,160,.20);
         }
-        a:hover {
-            background: #f0f7ff;
+        .map-container a:active { transform: translateY(0); }
+        .map-container .ico {
+            flex: none;
+            width: 38px; height: 38px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 21px;
+            background: #EEF3FF;
         }
-        .title {
-            font-weight: 600;
+        /* 카드마다 아이콘 색을 돌려 가며 준다 */
+        .map-container a:nth-child(6n+1) .ico { background: #FFE7E7; }
+        .map-container a:nth-child(6n+2) .ico { background: #FFF3DC; }
+        .map-container a:nth-child(6n+3) .ico { background: #E6F7E4; }
+        .map-container a:nth-child(6n+4) .ico { background: #E1F2FA; }
+        .map-container a:nth-child(6n+5) .ico { background: #EAE6FF; }
+        .map-container a:nth-child(6n+6) .ico { background: #FCE4F3; }
+        .map-container .title {
+            font-weight: 700;
+            font-size: 14px;
+            line-height: 1.3;
+            word-break: keep-all;
         }
-        .url {
-            font-size: 12px;
-            color: #888;
-            margin-top: 4px;
-        }
+
         /* ---------- 대화방 ---------- */
         .comment-section {
             margin-top: 24px;
@@ -189,138 +225,142 @@
     </style>
 </head>
 <body>
+    <div class="shelf-head">
+        <h1>🎮 게임 모음</h1>
+        <p>곽재후가 만든 게임 <span id="gameCount"></span></p>
+    </div>
     <div class="map-container">
         <a href="https://hoohoo17.github.io/craft/guinness">
-            <div class="title">기네스북</div>
-            <div class="url">hoohoo17.github.io/craft/guinness</div>
+            <span class="ico">🏅</span>
+            <span class="title">기네스북</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/mole-dodge">
-            <div class="title">두더지 피하기</div>
-            <div class="url">hoohoo17.github.io/craft/mole-dodge</div>
+            <span class="ico">🐹</span>
+            <span class="title">두더지 피하기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/brick">
-            <div class="title">벽돌 깨기</div>
-            <div class="url">hoohoo17.github.io/craft/brick</div>
+            <span class="ico">🧱</span>
+            <span class="title">벽돌 깨기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/story">
-            <div class="title">나의 이야기</div>
-            <div class="url">hoohoo17.github.io/craft/story</div>
+            <span class="ico">📕</span>
+            <span class="title">나의 이야기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/tease">
-            <div class="title">약올리는 인공지능</div>
-            <div class="url">hoohoo17.github.io/craft/tease</div>
+            <span class="ico">😜</span>
+            <span class="title">약올리는 인공지능</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/wordchain">
-            <div class="title">끝말잇기</div>
-            <div class="url">hoohoo17.github.io/craft/wordchain</div>
+            <span class="ico">🔤</span>
+            <span class="title">끝말잇기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/water">
-            <div class="title">물총놀이</div>
-            <div class="url">hoohoo17.github.io/craft/water</div>
+            <span class="ico">💦</span>
+            <span class="title">물총놀이</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/blocks">
-            <div class="title">떨어지는 블럭</div>
-            <div class="url">hoohoo17.github.io/craft/blocks</div>
+            <span class="ico">🧩</span>
+            <span class="title">떨어지는 블럭</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/lava">
-            <div class="title">용암!!</div>
-            <div class="url">hoohoo17.github.io/craft/lava</div>
+            <span class="ico">🌋</span>
+            <span class="title">용암!!</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/garden">
-            <div class="title">나의 정원</div>
-            <div class="url">hoohoo17.github.io/craft/garden</div>
+            <span class="ico">🌷</span>
+            <span class="title">나의 정원</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/mole">
-            <div class="title">두더지 잡기</div>
-            <div class="url">hoohoo17.github.io/craft/mole</div>
+            <span class="ico">🔨</span>
+            <span class="title">두더지 잡기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/stack">
-            <div class="title">낙하 스택 쌓기</div>
-            <div class="url">hoohoo17.github.io/craft/stack</div>
+            <span class="ico">🏗️</span>
+            <span class="title">낙하 스택 쌓기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/laser">
-            <div class="title">빛 반사 퍼즐</div>
-            <div class="url">hoohoo17.github.io/craft/laser</div>
+            <span class="ico">🔦</span>
+            <span class="title">빛 반사 퍼즐</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/raccoon">
-            <div class="title">너구리 키우기</div>
-            <div class="url">hoohoo17.github.io/craft/raccoon</div>
+            <span class="ico">🦝</span>
+            <span class="title">너구리 키우기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/choco">
-            <div class="title">초코송이 받기</div>
-            <div class="url">hoohoo17.github.io/craft/choco</div>
+            <span class="ico">🍄</span>
+            <span class="title">초코송이 받기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/idea-room">
-            <div class="title">게임 아이디어 방</div>
-            <div class="url">hoohoo17.github.io/craft/idea-room</div>
+            <span class="ico">💡</span>
+            <span class="title">게임 아이디어 방</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/mystery">
-            <div class="title">??</div>
-            <div class="url">hoohoo17.github.io/craft/mystery</div>
+            <span class="ico">❓</span>
+            <span class="title">??</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/train-driver">
-            <div class="title">기관사의 하루</div>
-            <div class="url">hoohoo17.github.io/craft/train-driver</div>
+            <span class="ico">🚂</span>
+            <span class="title">기관사의 하루</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/gold-ring">
-            <div class="title">돌반지 끼우기</div>
-            <div class="url">hoohoo17.github.io/craft/gold-ring</div>
+            <span class="ico">💍</span>
+            <span class="title">돌반지 끼우기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/birthday">
-            <div class="title">생일 촛불 끄기</div>
-            <div class="url">hoohoo17.github.io/craft/birthday</div>
+            <span class="ico">🎂</span>
+            <span class="title">생일 촛불 끄기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/split-rewind">
-            <div class="title">생각을 해야 할걸</div>
-            <div class="url">hoohoo17.github.io/craft/split-rewind</div>
+            <span class="ico">🧠</span>
+            <span class="title">생각을 해야 할걸</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/accretion">
-            <div class="title">행성 만들기</div>
-            <div class="url">hoohoo17.github.io/craft/accretion</div>
+            <span class="ico">🪐</span>
+            <span class="title">행성 만들기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/subway">
-            <div class="title">지하철 노선도 게임</div>
-            <div class="url">hoohoo17.github.io/craft/subway</div>
+            <span class="ico">🚇</span>
+            <span class="title">지하철 노선도 게임</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/samgak">
-            <div class="title">삼각김밥</div>
-            <div class="url">hoohoo17.github.io/craft/samgak</div>
+            <span class="ico">🍙</span>
+            <span class="title">삼각김밥</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/planet-merge">
-            <div class="title">행성 합치기</div>
-            <div class="url">hoohoo17.github.io/craft/planet-merge</div>
+            <span class="ico">🌍</span>
+            <span class="title">행성 합치기</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/nakseo-run">
-            <div class="title">낙서런</div>
-            <div class="url">hoohoo17.github.io/craft/nakseo-run</div>
+            <span class="ico">✏️</span>
+            <span class="title">낙서런</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/world">
-            <div class="title">월드컵</div>
-            <div class="url">hoohoo17.github.io/craft/world</div>
+            <span class="ico">⚽</span>
+            <span class="title">월드컵</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/pocketmon">
-            <div class="title">포켓몬볼</div>
-            <div class="url">hoohoo17.github.io/craft/pocketmon</div>
+            <span class="ico">⚡</span>
+            <span class="title">포켓몬볼</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/craft">
-            <div class="title">원소크래프트</div>
-            <div class="url">hoohoo17.github.io/craft/craft</div>
+            <span class="ico">⚗️</span>
+            <span class="title">원소크래프트</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/tooth">
-            <div class="title">이빨크래프트</div>
-            <div class="url">hoohoo17.github.io/craft/tooth</div>
+            <span class="ico">🦷</span>
+            <span class="title">이빨크래프트</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/doobuy">
-            <div class="title">두바이초코렛</div>
-            <div class="url">hoohoo17.github.io/craft/doobuy</div>
+            <span class="ico">🍫</span>
+            <span class="title">두바이초코렛</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/snow">
-            <div class="title">눈송이</div>
-            <div class="url">hoohoo17.github.io/craft/snow</div>
+            <span class="ico">❄️</span>
+            <span class="title">눈송이</span>
         </a>
         <a href="https://hoohoo17.github.io/craft/tree">
-            <div class="title">나무크래프트</div>
-            <div class="url">hoohoo17.github.io/craft/tree</div>
+            <span class="ico">🌳</span>
+            <span class="title">나무크래프트</span>
         </a>
     </div>
 
@@ -405,6 +445,10 @@
             out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
             return out;
         }
+
+        // 게임이 몇 개인지 세어서 머리말에 보여 준다
+        document.getElementById('gameCount').textContent =
+            document.querySelectorAll('.map-container a').length + '개';
 
         // 같은 이름이면 늘 같은 얼굴과 색이 나오게 이름으로 번호를 만든다
         const FACES = ['\u{1F436}','\u{1F431}','\u{1F438}','\u{1F435}','\u{1F43C}','\u{1F981}','\u{1F984}','\u{1F427}',
