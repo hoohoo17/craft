@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>두더지 피하기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #e8f8ff; color: #2b2b4a;
+    font-family: "Jua", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 12px; touch-action: none;
+  }
+  h1 { font-size: 26px; margin-bottom: 6px; }
+  .hud { display: flex; gap: 24px; font-size: 18px; margin-bottom: 8px; }
+  canvas { background: #b9e56b; border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.12); max-width: 100%; }
+  .records { margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 18px; width: 100%; max-width: 480px; box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+  .records h3 { font-size: 18px; margin-bottom: 6px; }
+  .records ol { padding-left: 24px; font-size: 17px; line-height: 1.7; }
+  .records .empty { list-style: none; margin-left: -24px; opacity: .6; }
+  .records .new { color: #ff5a1f; font-weight: bold; }
+  .hint { margin-top: 10px; font-size: 14px; opacity: .7; text-align: center; }
+  .msg { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.4); }
+  .msg.show { display: flex; }
+  .box { background: #fff; padding: 28px 36px; border-radius: 16px; text-align: center; }
+  .box h2 { font-size: 28px; margin-bottom: 10px; }
+  .box p { font-size: 18px; margin-bottom: 18px; }
+  button { margin: 4px; font: inherit; font-size: 20px; padding: 10px 26px; border: none; border-radius: 10px; background: #ff7a45; color: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>🐹 두더지 피하기</h1>
+<div class="hud"><span>점수 <b id="score">0</b></span></div>
+<canvas id="c" width="480" height="480"></canvas>
+<div class="records"><h3>🏅 기록</h3><ol id="recList"><li class="empty">아직 기록이 없어요</li></ol></div>
+<div class="hint">← → ↑ ↓ 키나 탭으로 칸을 옮겨요. 땅이 흔들리는 칸에서 도망쳐!</div>
+
+<div class="msg" id="msg">
+  <div class="box">
+    <h2>😵 잡혔다!</h2>
+    <p id="msgText"></p>
+    <div style="margin-bottom:12px"><input id="nameInput" maxlength="8" placeholder="이름 쓰기" style="font:inherit;font-size:18px;padding:8px 12px;border:2px solid #ccc;border-radius:10px;width:150px;text-align:center"> <button onclick="saveRecord()" style="background:#2e9e5b">기록하기</button></div>
+    <button onclick="share()">📤 친구에게 자랑하기</button>
+    <button onclick="restart()">다시 하기</button>
+    <p id="copied" style="margin:10px 0 0;font-size:14px;color:#2e9e5b;height:18px"></p>
+  </div>
+</div>
+
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const N = 3, CELL = W / N;
+let player, holes, score, lives, running, lastTime, spawnTimer, spawnGap;
+
+function reset() {
+  player = { r: 1, c: 1 };
+  holes = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) holes.push({ r, c, state: 'idle', t: 0 });
+  score = 0; lives = 3; running = true; spawnTimer = 0; spawnGap = 1.6;
+  updateHud();
+}
+function updateHud() {
+  document.getElementById('score').textContent = score;
+}
+function restart() { document.getElementById('msg').classList.remove('show'); reset(); }
+let best = 0, records = [];
+let recorded = false;
+function renderRecords(newest) {
+  const ol = document.getElementById('recList'); ol.innerHTML = '';
+  if (!records.length) { ol.innerHTML = '<li class="empty">아직 기록이 없어요</li>'; return; }
+  records.forEach(r => {
+    const li = document.createElement('li');
+    li.textContent = r.name + '  ' + r.sc + '점';
+    if (r === newest) li.className = 'new';
+    ol.appendChild(li);
+  });
+}
+function saveRecord() {
+  if (recorded) return;
+  const name = document.getElementById('nameInput').value.trim() || '이름없음';
+  const rec = { name, sc: score };
+  records.push(rec); records.sort((a, b) => b.sc - a.sc); records = records.slice(0, 5);
+  recorded = true;
+  renderRecords(rec);
+  document.getElementById('copied').textContent = '기록했어! 🏅';
+}
+function clearRecords() { records = []; renderRecords(); }
+function endGame() {
+  running = false;
+  best = Math.max(best, score);
+  recorded = false;
+  document.getElementById('nameInput').value = '';
+  document.getElementById('msgText').textContent = '점수: ' + score + '   |   최고: ' + best;
+  document.getElementById('copied').textContent = '';
+  document.getElementById('msg').classList.add('show');
+}
+async function share() {
+  const text = '🐹 두더지 피하기에서 ' + score + '점 기록! 나보다 잘할 수 있어?';
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) {} }
+  try { await navigator.clipboard.writeText(text); document.getElementById('copied').textContent = '복사됐어! 친구한테 붙여넣기 해봐 ✅'; }
+  catch (e) { document.getElementById('copied').textContent = text; }
+}
+
+const WARN = 1.0, UP = 0.9;
+
+function update(dt) {
+  if (!running) return;
+  spawnTimer += dt;
+  if (spawnTimer >= spawnGap) {
+    spawnTimer = 0;
+    const idle = holes.filter(h => h.state === 'idle');
+    if (idle.length) { const h = idle[Math.floor(Math.random() * idle.length)]; h.state = 'warn'; h.t = 0; }
+    spawnGap = Math.max(0.7, spawnGap - 0.03);
+  }
+  for (const h of holes) {
+    if (h.state === 'idle') continue;
+    h.t += dt;
+    if (h.state === 'warn' && h.t >= WARN) {
+      h.state = 'up'; h.t = 0;
+      if (h.r === player.r && h.c === player.c) { endGame(); return; }
+      score += 1; updateHud();
+    } else if (h.state === 'up' && h.t >= UP) { h.state = 'idle'; h.t = 0; }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  for (const h of holes) {
+    const cx = h.c * CELL + CELL/2, cy = h.r * CELL + CELL/2;
+    // hole
+    ctx.fillStyle = '#7a4b2a';
+    ctx.beginPath(); ctx.ellipse(cx, cy + 25, 55, 22, 0, 0, Math.PI*2); ctx.fill();
+    if (h.state === 'warn') {
+      const shake = Math.sin(h.t * 40) * 4;
+      ctx.fillStyle = '#a56b3c';
+      ctx.beginPath(); ctx.ellipse(cx + shake, cy + 25, 55, 22, 0, 0, Math.PI*2); ctx.fill();
+      ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('❗', cx, cy - 20);
+    }
+    if (h.state === 'up') {
+      const pop = Math.min(1, h.t / 0.15);
+      ctx.font = `${Math.round(64 * pop)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('🐹', cx, cy);
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+  // player
+  const px = player.c * CELL + CELL/2, py = player.r * CELL + CELL/2 - 10;
+  ctx.font = '60px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🧒', px, py);
+  ctx.textBaseline = 'alphabetic';
+}
+
+function loop(t) {
+  if (!lastTime) lastTime = t;
+  const dt = Math.min(0.05, (t - lastTime) / 1000); lastTime = t;
+  update(dt); draw(); requestAnimationFrame(loop);
+}
+
+function move(dr, dc) {
+  if (!running) return;
+  player.r = Math.max(0, Math.min(N-1, player.r + dr));
+  player.c = Math.max(0, Math.min(N-1, player.c + dc));
+}
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') move(0, -1);
+  if (e.key === 'ArrowRight') move(0, 1);
+  if (e.key === 'ArrowUp') move(-1, 0);
+  if (e.key === 'ArrowDown') move(1, 0);
+  if (e.key.startsWith('Arrow')) e.preventDefault();
+});
+function tap(clientX, clientY) {
+  if (!running) return;
+  const rect = cv.getBoundingClientRect();
+  const x = (clientX - rect.left) * (W / rect.width), y = (clientY - rect.top) * (H / rect.height);
+  player.c = Math.max(0, Math.min(N-1, Math.floor(x / CELL)));
+  player.r = Math.max(0, Math.min(N-1, Math.floor(y / CELL)));
+}
+cv.addEventListener('mousedown', e => tap(e.clientX, e.clientY));
+cv.addEventListener('touchstart', e => { e.preventDefault(); tap(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+
+reset(); requestAnimationFrame(loop);
+</script>
+<script src="../rest.js?v=8"></script>
+</body>
+</html>
