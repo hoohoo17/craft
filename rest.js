@@ -7,7 +7,7 @@
 (function(){
   var PLAY_MS = 10 * 60 * 1000;   // 10분 놀면
   var REST_MS = 10 * 60 * 1000;   // 10분 쉰다
-  var PASS    = '309';            // 무제한으로 푸는 비밀번호
+  var PASS    = '0823';           // 무제한으로 푸는 비밀번호
   var K_PLAYED = 'craft-played-ms';
   var K_UNTIL  = 'craft-rest-until';
   var K_FREE   = 'craft-unlimited';
