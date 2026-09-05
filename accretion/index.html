@@ -37,16 +37,18 @@
   canvas{display:block;width:100%;height:auto;border-radius:16px;background:#f4f6fd;
     border:1px solid var(--line);box-shadow:0 10px 30px rgba(70,85,150,.10);touch-action:none;cursor:none}
 
+  /* 규칙만 스크롤되고, 시작 버튼은 늘 맨 아래에 보이게 붙여 둔다 */
   .intro{position:absolute;inset:0;border-radius:16px;background:rgba(244,246,253,.95);
-    display:flex;flex-direction:column;justify-content:center;padding:5% 7%;gap:11px;overflow:auto}
+    display:flex;flex-direction:column;justify-content:flex-start;padding:5% 7%;gap:11px;overflow:hidden}
   .intro.hide{display:none}
-  .intro h2{font-size:clamp(16px,2.5vw,24px)}
-  .intro ol{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .intro h2{flex:none;font-size:clamp(16px,2.5vw,24px)}
+  .intro ol{flex:1 1 auto;min-height:0;overflow:auto;
+    list-style:none;display:flex;flex-direction:column;gap:7px}
   .intro li{display:flex;gap:10px;font-size:clamp(11.5px,1.45vw,14px);line-height:1.45;color:#3b4368}
   .intro li b{flex:none;width:10px;height:10px;border-radius:50%;margin-top:5px}
   .intro em{font-style:normal;font-weight:700;color:var(--ink)}
-  .intro button{align-self:flex-start;margin-top:3px;background:var(--accent);color:#fff;border:0;
-    border-radius:10px;padding:10px 26px;font-size:14px;font-weight:700;cursor:pointer;
+  .intro button{flex:none;align-self:stretch;margin-top:0;background:var(--accent);color:#fff;border:0;
+    border-radius:10px;padding:13px 26px;font-size:15px;font-weight:700;cursor:pointer;
     box-shadow:0 4px 14px rgba(63,111,216,.35)}
   .tools{display:flex;gap:6px;margin-top:12px;width:100%;max-width:960px;justify-content:flex-end}
   .tools button{font:600 12px/1 ui-monospace,Menlo,monospace;color:var(--ink);background:#fff;
@@ -67,9 +69,11 @@
   .dex div.got{color:var(--ink);font-weight:700}
   .dex i{flex:none;width:11px;height:11px;border-radius:50%;background:#dfe4f2}
   .dex div.got i{background:var(--c)}
-  .result .row{display:flex;gap:8px;margin-top:4px}
-  .result button{background:var(--accent);color:#fff;border:0;border-radius:10px;
-    padding:11px 24px;font-size:14px;font-weight:700;cursor:pointer}
+  /* 결과가 길어도 '다시 만들기'는 늘 맨 아래에 붙어 보인다 */
+  .result .row{display:flex;gap:8px;margin-top:auto;position:sticky;bottom:0;padding:10px 0 0;
+    background:linear-gradient(rgba(244,246,253,0),rgba(244,246,253,.96) 40%)}
+  .result button{flex:1;background:var(--accent);color:#fff;border:0;border-radius:10px;
+    padding:13px 24px;font-size:15px;font-weight:700;cursor:pointer}
 </style>
 </head>
 <body>
