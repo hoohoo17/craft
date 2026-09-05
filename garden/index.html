@@ -43,7 +43,13 @@
   }
   .menu{display:flex; gap:8px; flex-wrap:wrap; justify-content:center;}
   .menu .book-btn{font-size:.95rem; padding:7px 13px;}
-  .shop-coin{text-align:center; font-weight:800; margin-bottom:12px; color:#8A6A10;}
+  .shop-coin{text-align:center; font-weight:800; margin-bottom:4px; color:#8A6A10;}
+  .shop-sub{text-align:center; font-size:.85rem; opacity:.6; margin-bottom:12px;}
+  .shop-group{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:1rem; margin:18px 0 8px; color:var(--green);
+  }
+  .shop-group span{font-size:.85rem; opacity:.7;}
   .seed-item.owned{background:rgba(107,163,104,.14); border-color:rgba(107,163,104,.5);}
   .seed-item.tooexp{opacity:.5;}
   .seed-item .icon{font-size:2rem; width:44px; flex:none; text-align:center;}
@@ -273,14 +279,66 @@ const MOIST_HOURS = 5; // 물 가득 → 마름까지 5시간
 
 /* ---------- 도구 가게 ---------- */
 // 꽃을 팔아 모은 포인트로 산다. 한 번 사면 계속 쓴다.
-const TOOLS = [
-  {id:'can',       name:'물뿌리개',   icon:'🪣', cost:30,   desc:'화분 전부에 한 번에 물 주기'},
-  {id:'fertilizer',name:'비료',       icon:'🌿', cost:150,  desc:'꽃이 2배 빨리 자라요'},
-  {id:'bigGarden', name:'큰 정원',    icon:'🪴', cost:300,  desc:'화분이 6개 → 9개로!'},
-  {id:'sprinkler', name:'스프링클러', icon:'💦', cost:600,  desc:'물이 마르지 않아요'},
-  {id:'market',    name:'꽃시장 단골',icon:'💰', cost:1000, desc:'꽃 값이 2배!'},
+// kind 로 효과가 정해진다: plot(화분+1) speed(빨리 자람) price(꽃값)
+//                        dry(물 오래감) can(전부 물주기) sprinkler(안 마름)
+//                        lucky(대박 확률) theme(정원 색)
+const TOOLS = [];
+function addTool(t){ TOOLS.push(t); }
+
+// 🪴 화분 늘리기 — 7번째부터 20번째까지 하나씩
+[300,450,650,900,1200,1600,2100,2700,3400,4200,5100,6100,7200,8400].forEach((cost,i)=>{
+  addTool({id:'plot'+i, kind:'plot', name:`화분 ${7+i}번째`, icon:'🪴', cost,
+           desc:`화분이 하나 더 늘어나요 (${6+i} → ${7+i}개)`});
+});
+
+// 🌿 비료 — 한 단계마다 25%씩 빨라진다
+[150,250,400,600,900,1300,1800,2500,3400,4500].forEach((cost,i)=>{
+  addTool({id:'speed'+i, kind:'speed', name:`비료 ${i+1}단계`, icon:'🌿', cost,
+           desc:`꽃이 ${(1.25+0.25*i).toFixed(2)}배 빨리 자라요`});
+});
+
+// 💰 꽃값 — 한 단계마다 25%씩 비싸게 팔린다
+[200,350,550,800,1200,1700,2400,3300,4400,6000].forEach((cost,i)=>{
+  addTool({id:'price'+i, kind:'price', name:`꽃시장 단골 ${i+1}단계`, icon:'💰', cost,
+           desc:`꽃 값이 ${(1.25+0.25*i).toFixed(2)}배가 돼요`});
+});
+
+// 💧 물 도구
+addTool({id:'can', kind:'can', name:'물뿌리개', icon:'🪣', cost:30,
+         desc:'화분 전부에 한 번에 물 주기'});
+[80,160,320,640].forEach((cost,i)=>{
+  addTool({id:'dry'+i, kind:'dry', name:`촉촉이 ${i+1}단계`, icon:'💧', cost,
+           desc:`물이 ${(1.5+0.5*i).toFixed(1)}배 오래가요`});
+});
+addTool({id:'sprinkler', kind:'sprinkler', name:'스프링클러', icon:'💦', cost:1200,
+         desc:'물이 아예 마르지 않아요'});
+
+// 🍀 행운 — 수확할 때 가끔 두 배로 팔린다
+[500,1000,2000,3500,5500].forEach((cost,i)=>{
+  addTool({id:'lucky'+i, kind:'lucky', name:`네잎클로버 ${i+1}개`, icon:'🍀', cost,
+           desc:`수확할 때 ${10*(i+1)}% 확률로 두 배!`});
+});
+
+// 🎨 정원 색 — 산 걸 누르면 배경이 바뀐다
+const THEMES = [
+  ['하늘색','#CDEBF7','#E8F7EE'], ['노을','#FFD8C2','#FFF0DA'], ['한밤','#B9C6E8','#DCE3F5'],
+  ['봄들판','#D8F2C6','#F0FADF'], ['바다','#BFE9F0','#DFF6F2'], ['라벤더','#E0D4F7','#F2ECFC'],
+  ['복숭아','#FFDCE5','#FFF0F3'], ['민트','#C9F0E0','#E6FAF3'], ['모래','#F2E4C9','#FBF4E4'],
+  ['숲속','#C6E3CB','#E4F3E6'], ['포도','#DCC9F0','#EFE6FA'], ['레몬','#FBF0BF','#FDF9E2'],
+  ['장미빛','#F7C9D4','#FCE8ED'], ['잿빛하늘','#D8DEE4','#EEF1F4'], ['무지개','#FFD6E0','#D6F0FF'],
 ];
+THEMES.forEach((t,i)=>{
+  addTool({id:'theme'+i, kind:'theme', name:`정원 색 · ${t[0]}`, icon:'🎨', cost:120,
+           desc:'정원 배경이 바뀌어요', c1:t[1], c2:t[2]});
+});
+
 const has = id => !!(S && S.tools && S.tools[id]);
+const countKind = k => TOOLS.filter(t=>t.kind===k && has(t.id)).length;
+// 효과 계산
+const speedMul  = () => 1 + 0.25 * countKind('speed');
+const priceMul  = () => 1 + 0.25 * countKind('price');
+const dryHours  = () => MOIST_HOURS * (1 + 0.5 * countKind('dry'));
+const luckyRate = () => 0.10 * countKind('lucky');
 
 /* ---------- SVG ---------- */
 function petals(cx, cy, r, color, n=6){
@@ -324,8 +382,8 @@ function svgFlowerIcon(f){
 
 /* ---------- state ---------- */
 const PLOTS = 6;          // 기본 화분 수
-const BIG_PLOTS = 9;      // 큰 정원을 사면 늘어나는 수
-const plotCount = () => has('bigGarden') ? BIG_PLOTS : PLOTS;
+const BIG_PLOTS = 20;     // 화분을 다 사면 20개까지
+const plotCount = () => Math.min(BIG_PLOTS, PLOTS + countKind('plot'));
 let S = null;
 let pickTarget = -1;
 let saveTimer = null;
@@ -349,15 +407,15 @@ function applyTime(hours){
   for(const p of S.plots){
     if(!p.f) continue;
     // 물이 남아 있던 시간만큼만 자람 (스프링클러가 있으면 늘 촉촉)
-    const moistHours = has('sprinkler') ? hours : (p.moist/100) * MOIST_HOURS;
+    const hrs = dryHours();                       // 촉촉이를 사면 더 오래간다
+    const moistHours = has('sprinkler') ? hours : (p.moist/100) * hrs;
     const growHours = Math.min(hours, moistHours);
     const f = FLOWERS.find(x=>x.id===p.f);
     if(growHours > 0 && p.prog < 100){
-      const speed = has('fertilizer') ? 2 : 1;   // 비료는 두 배로 자란다
-      p.prog = Math.min(100, p.prog + (growHours*60 / f.growMin) * 100 * speed);
+      p.prog = Math.min(100, p.prog + (growHours*60 / f.growMin) * 100 * speedMul());
     }
     if(has('sprinkler')) p.moist = 100;
-    else p.moist = Math.max(0, p.moist - (hours/MOIST_HOURS)*100);
+    else p.moist = Math.max(0, p.moist - (hours/hrs)*100);
   }
 }
 
@@ -381,9 +439,10 @@ function tapPlot(i){
     // 수확!
     const f = FLOWERS.find(x=>x.id===p.f);
     S.book[f.id] = (S.book[f.id]||0) + 1;
-    const earned = f.price * (has('market') ? 2 : 1);
+    const lucky = Math.random() < luckyRate();     // 네잎클로버 대박
+    const earned = Math.round(f.price * priceMul() * (lucky ? 2 : 1));
     S.points = (S.points||0) + earned;
-    popText(i, `${f.name} 팔았다! +${earned} 🌼`);
+    popText(i, lucky ? `대박! ${f.name} +${earned} 🍀` : `${f.name} 팔았다! +${earned} 🌼`);
     S.plots[i] = {f:null, prog:0, moist:0};
     setTip(`${f.name}를 팔아서 ${earned}포인트! 도감에도 넣었어 📖`);
     render();
@@ -502,27 +561,65 @@ function updateCoin(){
   document.getElementById('water-all').style.display = has('can') ? '' : 'none';
 }
 
+// 가게는 종류별로 묶어서 보여 준다(60개나 되니까)
+const SHOP_GROUPS = [
+  {kinds:['can','dry','sprinkler'], title:'💧 물 도구'},
+  {kinds:['speed'],                 title:'🌿 비료 — 빨리 자라기'},
+  {kinds:['price','lucky'],         title:'💰 더 비싸게 팔기'},
+  {kinds:['plot'],                  title:'🪴 화분 늘리기'},
+  {kinds:['theme'],                 title:'🎨 정원 색'},
+];
+
 function openShop(){
   const pts = S.points || 0;
   document.getElementById('shop-coin').textContent = `가진 포인트: 🌼 ${pts}`;
-  document.getElementById('shop-list').innerHTML = TOOLS.map(t=>{
-    const owned = has(t.id);
-    const canBuy = !owned && pts >= t.cost;
-    return `<button class="seed-item ${owned?'owned':(canBuy?'':'tooexp')}" onclick="buyTool('${t.id}')">
-      <span class="icon">${t.icon}</span>
-      <span class="info">
-        <span class="nm">${t.name}</span><br>
-        <span class="tm">${t.desc}</span>
-      </span>
-      <span class="cost">${owned ? '✅ 있음' : '🌼 ' + t.cost}</span>
-    </button>`;
-  }).join('');
+  const owned = TOOLS.filter(t=>has(t.id)).length;
+  let html = `<p class="shop-sub">가진 도구 ${owned} / ${TOOLS.length}개</p>`;
+  SHOP_GROUPS.forEach(g=>{
+    const list = TOOLS.filter(t=>g.kinds.includes(t.kind));
+    const mine = list.filter(t=>has(t.id)).length;
+    html += `<h3 class="shop-group">${g.title} <span>${mine}/${list.length}</span></h3>`;
+    html += list.map(t=>{
+      const own = has(t.id);
+      const canBuy = !own && pts >= t.cost;
+      const swatch = t.kind === 'theme'
+        ? `<span class="icon" style="background:linear-gradient(${t.c1},${t.c2});border-radius:10px"></span>`
+        : `<span class="icon">${t.icon}</span>`;
+      return `<button class="seed-item ${own?'owned':(canBuy?'':'tooexp')}" onclick="buyTool('${t.id}')">
+        ${swatch}
+        <span class="info">
+          <span class="nm">${t.name}</span><br>
+          <span class="tm">${t.desc}</span>
+        </span>
+        <span class="cost">${own ? (t.kind==='theme' ? '🎨 쓰기' : '✅ 있음') : '🌼 ' + t.cost}</span>
+      </button>`;
+    }).join('');
+  });
+  document.getElementById('shop-list').innerHTML = html;
   document.getElementById('shop-sheet').classList.add('show');
+}
+
+// 산 정원 색을 화면에 입힌다
+function applyTheme(){
+  const t = TOOLS.find(x=>x.kind==='theme' && x.id === S.theme);
+  if(!t) return;
+  document.documentElement.style.setProperty('--sky', t.c1);
+  document.documentElement.style.setProperty('--sky2', t.c2);
 }
 
 function buyTool(id){
   const t = TOOLS.find(x=>x.id===id);
-  if(!t || has(id)) return;
+  if(!t) return;
+  if(has(id)){
+    if(t.kind === 'theme'){          // 이미 산 색은 눌러서 바꿔 쓴다
+      S.theme = id;
+      applyTheme();
+      setTip(`정원을 ${t.name.replace('정원 색 · ','')} 색으로 바꿨어! 🎨`);
+      openShop();
+      scheduleSave();
+    }
+    return;
+  }
   const pts = S.points || 0;
   if(pts < t.cost){
     setTip(`${t.name}은(는) 🌼 ${t.cost}이 필요해. 꽃을 더 팔아 보자!`);
@@ -531,6 +628,7 @@ function buyTool(id){
   S.points = pts - t.cost;
   S.tools = S.tools || {};
   S.tools[id] = true;
+  if(t.kind === 'theme'){ S.theme = id; applyTheme(); }
   setTip(`${t.icon} ${t.name} 샀다! ${t.desc}`);
   openShop();          // 가게 목록을 새로 그린다
   render();
@@ -603,6 +701,7 @@ window.addEventListener('visibilitychange', ()=>{
   const hours = (Date.now() - (S.lastTs||Date.now()))/3600000;
   if(hours > 0.003) applyTime(hours);
   S.lastTs = Date.now();
+  applyTheme();
   buildSeedList();
   render();
   const growing = S.plots.filter(p=>p.f && p.prog<100).length;
