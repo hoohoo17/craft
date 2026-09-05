@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기네스북</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#20160B;
+    --paper:#FFF8E7;
+    --gold:#D4A017;
+    --gold-deep:#8C6209;
+    --red:#8E1B1B;
+    --shadow:5px 5px 0 var(--ink);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:#1E140A;
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(212,160,23,.22), transparent 45%),
+      radial-gradient(circle at 82% 70%, rgba(212,160,23,.16), transparent 45%);
+    font-family:'Gaegu','Comic Sans MS',sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding:16px;
+  }
+  .wrap{max-width:760px; margin:0 auto;}
+
+  header{
+    background:var(--paper);
+    border:4px solid var(--gold);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:20px 20px 16px;
+    text-align:center;
+    margin-bottom:20px;
+  }
+  h1{
+    font-family:'Jua',sans-serif;
+    font-size:2.1rem;
+    color:var(--red);
+    letter-spacing:2px;
+  }
+  h1 .star{display:inline-block; animation:spin 3s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  header p{font-size:1.05rem; margin-top:4px;}
+  .rule{
+    height:4px; margin:12px auto 0; max-width:220px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  }
+
+  /* 적는 곳 */
+  .form-card{
+    background:var(--paper);
+    border:4px solid var(--gold);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:18px;
+    margin-bottom:26px;
+  }
+  .form-card h2{font-family:'Jua',sans-serif; font-size:1.25rem; margin-bottom:6px; color:var(--red);}
+  label{display:block; font-weight:700; font-size:1.05rem; margin:12px 0 4px;}
+  input, textarea{
+    width:100%;
+    border:3px solid var(--ink);
+    border-radius:10px;
+    background:#fff;
+    font-family:inherit;
+    font-size:1.1rem;
+    padding:10px 12px;
+    color:var(--ink);
+  }
+  textarea{min-height:80px; resize:vertical;}
+  input:focus, textarea:focus{outline:3px solid var(--gold); outline-offset:2px;}
+  .hint{font-size:.9rem; opacity:.6; margin-top:2px;}
+  .submit-btn{
+    margin-top:16px;
+    width:100%;
+    font-family:'Jua',sans-serif;
+    font-size:1.3rem;
+    background:var(--red);
+    color:#FFE9A8;
+    border:3px solid var(--ink);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+    padding:12px;
+    cursor:pointer;
+    transition:transform .08s;
+  }
+  .submit-btn:active{transform:translate(4px,4px); box-shadow:1px 1px 0 var(--ink);}
+  .submit-btn:disabled{opacity:.6; cursor:default;}
+
+  /* 목록 위 줄 */
+  .toolbar{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px; gap:8px; flex-wrap:wrap;
+  }
+  .toolbar h2{font-family:'Jua',sans-serif; font-size:1.3rem; color:#FFE9A8;}
+  .toolbar .count{font-size:1rem; color:#FFE9A8; opacity:.7;}
+  .refresh-btn{
+    font-family:'Jua',sans-serif;
+    font-size:1rem;
+    background:var(--paper);
+    border:3px solid var(--gold);
+    border-radius:10px;
+    box-shadow:3px 3px 0 var(--ink);
+    padding:6px 14px;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .refresh-btn:active{transform:translate(3px,3px); box-shadow:0 0 0 var(--ink);}
+
+  /* 기록 카드 = 상장 */
+  .list{display:flex; flex-direction:column; gap:18px;}
+  .cert{
+    position:relative;
+    background:var(--paper);
+    border:4px double var(--gold-deep);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+    padding:18px 18px 14px 74px;
+  }
+  .cert .seal{
+    position:absolute; left:16px; top:18px;
+    width:44px; height:44px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #F4D06F, var(--gold) 60%, var(--gold-deep));
+    border:2px solid var(--gold-deep);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+  }
+  .cert .who{
+    font-family:'Jua',sans-serif;
+    font-size:1.45rem;
+    color:var(--red);
+    line-height:1.25;
+    word-break:break-word;
+  }
+  .cert .deed{
+    font-size:1.15rem;
+    margin-top:6px;
+    line-height:1.5;
+    word-break:break-word;
+  }
+  .cert .meta{
+    display:flex; align-items:center; gap:8px;
+    margin-top:12px; padding-top:8px;
+    border-top:2px dotted rgba(140,98,9,.45);
+    font-size:.98rem;
+  }
+  .cert .by{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:.75;}
+  .pending-tag{
+    font-size:.8rem; background:var(--gold); color:var(--ink);
+    border-radius:6px; padding:1px 6px; margin-left:4px;
+  }
+  .del-btn{
+    font-family:inherit; font-size:1rem;
+    background:none; border:2px solid rgba(140,98,9,.45);
+    border-radius:8px; padding:2px 8px; cursor:pointer;
+  }
+  .ask{display:flex; align-items:center; gap:6px; font-size:.98rem;}
+  .ask button{
+    font-family:'Jua',sans-serif; font-size:.95rem;
+    border:2px solid var(--ink); border-radius:8px;
+    padding:3px 10px; cursor:pointer;
+  }
+  .ask .yes{background:var(--red); color:#FFE9A8;}
+  .ask .no{background:#fff; color:var(--ink);}
+
+  .empty{
+    background:var(--paper);
+    border:4px dashed var(--gold);
+    border-radius:16px;
+    padding:34px 20px;
+    text-align:center;
+    font-size:1.15rem;
+  }
+  .empty .big{display:block; font-size:2.6rem; margin-bottom:8px;}
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#FFE9A8;
+    border:3px solid var(--gold);
+    border-radius:12px; padding:10px 18px;
+    font-size:1.05rem; opacity:0; pointer-events:none;
+    transition:opacity .2s, transform .2s; z-index:50;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{margin:26px 0 6px; text-align:center; font-size:.95rem; color:#FFE9A8; opacity:.65;}
+  footer a{color:#FFE9A8;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1><span class="star">✨</span> 기네스북 <span class="star">✨</span></h1>
+  <p>세상에서 제일 대단한 사람들을 모아 두는 곳</p>
+  <div class="rule"></div>
+</header>
+
+<section class="form-card">
+  <h2>🏅 대단한 사람 올리기</h2>
+  <label for="nick">올린 사람</label>
+  <input id="nick" maxlength="8" placeholder="내 이름 (8자까지)">
+  <label for="who">누구야?</label>
+  <input id="who" maxlength="16" placeholder="예: 우사인 볼트 (16자까지)">
+  <label for="deed">뭐가 대단해?</label>
+  <textarea id="deed" maxlength="60" placeholder="예: 100m를 9초 58에 달린 세상에서 제일 빠른 사람"></textarea>
+  <p class="hint">60자까지 쓸 수 있어요</p>
+  <button class="submit-btn" onclick="submitRecord()">기네스북에 새기기 ✒️</button>
+</section>
+
+<div class="toolbar">
+  <h2>📖 기네스북 <span class="count" id="count"></span></h2>
+  <button class="refresh-btn" onclick="loadRecords(true)">새로고침 🔄</button>
+</div>
+
+<div id="board">
+  <div class="empty"><span class="big">📖</span>불러오는 중…</div>
+</div>
+
+<footer>누구나 올릴 수 있고, 누구나 지울 수 있어요.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* 이미 떠 있는 댓글 서버를 공유 게시판으로 쓴다(서버를 새로 만들 필요가 없다).
+   그 서버는 승인 전 글의 '내용'은 감추고 '이름'만 공개한다. 이름은 20자까지라,
+   글을 20자짜리 조각으로 나눠 여러 번 보내고, 읽을 때 다시 이어 붙인다. */
+const API = 'https://craft-comments.jaehoo.workers.dev?page=guinness-v1';
+const KEY = 'guinness-local-v1';
+const MINE_KEY = 'guinness-mine-v1';
+const HIDDEN_KEY = 'guinness-hidden-v1';
+
+const HEAD = 5;              // 조각 머리말: 묶음번호 3 + 순번 1 + 개수 1
+const BODY = 20 - HEAD;      // 조각 하나에 담기는 글자 수
+const MAX_CHUNKS = 6;        // 한 기록이 쓸 수 있는 조각 수
+const LIMIT = { nick: 8, who: 16, deed: 60 };
+const SEP = '|';
+
+let records = [], lastOnline = true;
+
+const keyOf = r => r.nick + ' ' + r.who + ' ' + r.deed;
+
+function readSet(k){
+  try{ return new Set(JSON.parse(localStorage.getItem(k)) || []); }catch(e){ return new Set(); }
+}
+function writeSet(k, s){
+  try{ localStorage.setItem(k, JSON.stringify([...s])); }catch(e){}
+}
+let mine = readSet(MINE_KEY);
+let hidden = readSet(HIDDEN_KEY);   // 서버 글은 못 지우니, 지운 건 이 기기에서도 감춘다
+
+function readLocal(){
+  try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; }
+}
+function writeLocal(list){
+  try{ localStorage.setItem(KEY, JSON.stringify(list)); }catch(e){}
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+const b36 = n => n.toString(36).slice(-1);
+function newGroupId(){
+  let g = '';
+  for(let i=0;i<3;i++) g += b36(Math.floor(Math.random()*36));
+  return g;
+}
+
+function pack(rec){
+  const clean = v => String(v).split(SEP).join(' ');
+  const text = clean(rec.nick).slice(0,LIMIT.nick) + SEP
+             + clean(rec.who).slice(0,LIMIT.who) + SEP
+             + clean(rec.deed).slice(0,LIMIT.deed);
+  const parts = [];
+  for(let i=0;i<text.length;i+=BODY) parts.push(text.slice(i,i+BODY));
+  if(!parts.length) parts.push('');
+  if(parts.length > MAX_CHUNKS) throw new Error('too long');
+  const g = newGroupId();
+  return parts.map((body,i) => g + b36(i) + b36(parts.length) + body);
+}
+
+function unpack(rows){
+  const groups = new Map();
+  const dead = new Set();
+  rows.forEach(function(c){
+    const name = c && typeof c.name === 'string' ? c.name : '';
+    // 지움 표시: 묶음번호 + '00' 다섯 글자. 조각 개수 0은 원래 있을 수 없는 값이다.
+    if(name.length === HEAD && name[3] === '0' && name[4] === '0') dead.add(name.slice(0,3));
+  });
+  rows.forEach(function(c){
+    const name = c && typeof c.name === 'string' ? c.name : '';
+    if(name.length < HEAD) return;
+    const g = name.slice(0,3), seq = parseInt(name[3],36), total = parseInt(name[4],36);
+    if(isNaN(seq) || isNaN(total) || total < 1 || seq >= total) return;
+    if(dead.has(g)) return;
+    if(!groups.has(g)) groups.set(g, { total:total, parts:new Map(), date:c.date });
+    const grp = groups.get(g);
+    if(grp.total !== total) return;          // 묶음번호가 겹쳤다면 버린다
+    grp.parts.set(seq, name.slice(HEAD));
+    if(c.date < grp.date) grp.date = c.date;
+  });
+  const out = [];
+  groups.forEach(function(grp,g){
+    if(grp.parts.size !== grp.total) return; // 조각이 빠졌으면 건너뛴다
+    let text = '';
+    for(let i=0;i<grp.total;i++) text += grp.parts.get(i);
+    const bits = text.split(SEP);
+    if(bits.length !== 3 || !bits[1] || !bits[2]) return;
+    out.push({ id:'s'+g, nick:bits[0]||'익명', who:bits[1], deed:bits[2],
+               ts:Date.parse(grp.date)||0, shared:true });
+  });
+  return out;
+}
+
+async function fetchShared(){
+  const res = await fetch(API, { cache:'no-store' });
+  if(!res.ok) throw new Error('http ' + res.status);
+  const rows = await res.json();
+  if(!Array.isArray(rows)) throw new Error('bad payload');
+  return unpack(rows);
+}
+
+// 화면에 뿌릴 목록 = 서버 글 + 아직 서버에 못 올린 내 글
+async function readAll(){
+  const localList = readLocal();
+  let shared = [], online = true;
+  try{ shared = await fetchShared(); }catch(e){ online = false; }
+  lastOnline = online;
+  if(!online) return localList.filter(r => !hidden.has(keyOf(r)));
+  const seen = new Set(shared.map(keyOf));
+  const notYet = localList.filter(r => !seen.has(keyOf(r)))
+                          .map(r => Object.assign({}, r, { pending:true }));
+  return notYet.concat(shared).filter(r => !hidden.has(keyOf(r)));
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function postChunk(name){
+  const res = await fetch(API, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ name: name, message: '.' }),
+  });
+  if(!res.ok) throw new Error('http ' + res.status);
+}
+
+/* 서버 저장소는 퍼지는 데 시간이 걸린다. 조각을 너무 빨리 이어 보내면 서버가
+   직전 조각을 아직 모른 채 덮어써서 조각이 사라진다. 그래서 사이를 띄우고,
+   보낸 뒤 다 있는지 확인해서 빠진 것만 다시 보낸다. */
+async function postShared(rec){
+  const chunks = pack(rec);
+  for(const name of chunks){ await postChunk(name); await sleep(400); }
+  if(chunks.length === 1) return;
+
+  for(let attempt = 0; attempt < 3; attempt++){
+    await sleep(1200);
+    let rows;
+    try{
+      const res = await fetch(API, { cache:'no-store' });
+      if(!res.ok) return;
+      rows = await res.json();
+    }catch(e){ return; }
+    if(!Array.isArray(rows)) return;
+    const have = new Set(rows.map(r => r && r.name));
+    const missing = chunks.filter(n => !have.has(n));
+    if(!missing.length) return;
+    for(const name of missing){ await postChunk(name); await sleep(400); }
+  }
+}
+
+async function loadRecords(showToast){
+  try{
+    records = await readAll();
+    // 이 기능이 생기기 전에 올린 글도 지울 수 있게 한 번만 내 글로 인정한다
+    if(!mine.size){ readLocal().forEach(r => mine.add(keyOf(r))); writeSet(MINE_KEY, mine); }
+    render();
+    if(showToast) toast(lastOnline ? '기네스북 최신으로 폈어요! 📖' : '인터넷이 안 돼요 📵');
+  }catch(e){
+    document.getElementById('board').innerHTML =
+      '<div class="empty"><span class="big">📵</span>기네스북을 펴지 못했어요.<br>새로고침을 눌러 다시 해 봐!</div>';
+  }
+}
+
+async function submitRecord(){
+  const nick = document.getElementById('nick').value.trim();
+  const who  = document.getElementById('who').value.trim();
+  const deed = document.getElementById('deed').value.trim();
+  if(!nick){ toast('올린 사람 이름을 알려 줘! ✏️'); return; }
+  if(!who){  toast('누가 대단한지 적어 줘! 🧑'); return; }
+  if(!deed){ toast('뭐가 대단한지도 적어 줘! 🏅'); return; }
+
+  const rec = {
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    nick, who, deed,
+    ts: Date.now()
+  };
+
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  try{
+    const localList = readLocal();
+    localList.unshift(rec);
+    writeLocal(localList);
+    mine.add(keyOf(rec)); writeSet(MINE_KEY, mine);
+    document.getElementById('who').value = '';
+    document.getElementById('deed').value = '';
+    let sent = true;
+    try{ await postShared(rec); }catch(e){ sent = false; }
+    await loadRecords(false);
+    toast(sent ? '기네스북에 새겼어요! 친구들에게도 곧 보여요 🎉'
+               : '올렸어요! 인터넷이 안 돼서 내 폰에만 저장됐어요 📵');
+  }catch(e){
+    toast('앗, 새기지 못했어요. 다시 눌러 주세요!');
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+// 폰에서는 confirm 창이 안 뜨는 일이 있어서, 카드 안에서 직접 물어본다
+function askDelete(id, btn){
+  const row = btn.parentElement;
+  if(row.querySelector('.ask')) return;
+  btn.style.display = 'none';
+  const ask = document.createElement('span');
+  ask.className = 'ask';
+  ask.innerHTML = '정말 지울까? <button class="yes">네</button><button class="no">아니요</button>';
+  ask.querySelector('.yes').onclick = () => deleteRecord(id);
+  ask.querySelector('.no').onclick = () => { ask.remove(); btn.style.display = ''; };
+  row.appendChild(ask);
+}
+
+async function deleteRecord(id){
+  const target = records.find(r => r.id === id);
+  if(!target){ toast('이 기록은 이미 사라졌어요 🤔'); await loadRecords(); return; }
+  try{
+    const k = keyOf(target);
+    writeLocal(readLocal().filter(r => keyOf(r) !== k));
+    mine.delete(k); writeSet(MINE_KEY, mine);
+    hidden.add(k); writeSet(HIDDEN_KEY, hidden);
+    let sent = true;
+    if(target.shared === true){
+      // 서버는 지우기를 못 하니 '이 묶음은 지웠음' 표시를 대신 올린다
+      try{ await postChunk(String(target.id).slice(1) + '00'); }catch(e){ sent = false; }
+    }
+    await loadRecords(false);
+    toast(sent ? '지웠어요! 🗑️' : '내 화면에서만 지웠어요. 인터넷을 확인해 주세요 📵');
+  }catch(e){
+    toast('앗, 지우지 못했어요. 다시 눌러 주세요!');
+  }
+}
+
+const SEALS = ['🏅','🥇','⭐','🏆','👑','💪','🚀','🎖️'];
+
+function render(){
+  const board = document.getElementById('board');
+  document.getElementById('count').textContent = records.length ? `(${records.length}명)` : '';
+  if(!records.length){
+    board.innerHTML = '<div class="empty"><span class="big">📖</span>기네스북이 아직 비어 있어요.<br>제일 대단한 사람을 첫 번째로 올려 봐!</div>';
+    return;
+  }
+  const sorted = [...records].sort((a,b) => b.ts - a.ts);
+  board.innerHTML = '<div class="list">' + sorted.map((r,i) => `
+    <article class="cert">
+      <div class="seal">${SEALS[i % SEALS.length]}</div>
+      <div class="who">${esc(r.who)}</div>
+      <div class="deed">${esc(r.deed)}</div>
+      <div class="meta">
+        <span class="by">✏️ ${esc(r.nick)} 가 올림${r.pending ? ' <span class="pending-tag">내 폰에만</span>' : ''}</span>
+        <button class="del-btn" onclick="askDelete('${r.id}', this)" title="지우기">🗑️</button>
+      </div>
+    </article>`).join('') + '</div>';
+}
+
+loadRecords();
+setInterval(()=>loadRecords(false), 20000);   // 친구가 올린 걸 20초마다 가져온다
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
