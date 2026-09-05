@@ -183,6 +183,35 @@
     padding:12px; cursor:pointer;
   }
 
+  .ending-bg{
+    position:fixed; inset:0; z-index:30;
+    background:rgba(30,45,35,.75);
+    display:none; align-items:center; justify-content:center;
+    padding:22px;
+  }
+  .ending-bg.show{display:flex;}
+  .ending-card{
+    background:var(--card);
+    border-radius:22px;
+    padding:28px 22px 22px;
+    width:100%; max-width:360px;
+    text-align:center;
+    box-shadow:0 14px 40px rgba(0,0,0,.35);
+    animation:pop .4s ease-out;
+  }
+  @keyframes pop{from{transform:scale(.75); opacity:0} to{transform:scale(1); opacity:1}}
+  .ending-card .crown{font-size:3.6rem; line-height:1;}
+  .ending-card h2{font-size:1.7rem; margin:10px 0 8px; color:var(--green);}
+  .ending-card .sub{font-size:1rem; opacity:.75; line-height:1.55; margin-bottom:16px;}
+  .ending-card .stats{
+    background:rgba(107,163,104,.12);
+    border-radius:14px; padding:12px 14px; margin-bottom:6px;
+    font-size:.95rem; text-align:left;
+  }
+  .ending-card .stats div{display:flex; justify-content:space-between; padding:3px 0;}
+  .ending-card .stats b{font-weight:900;}
+  @media (prefers-reduced-motion:reduce){.ending-card{animation:none}}
+
   .book-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
   .book-cell{
     text-align:center;
@@ -227,6 +256,17 @@
     <p class="shop-coin" id="shop-coin"></p>
     <div class="seed-list" id="shop-list"></div>
     <button class="close-btn" onclick="closeSheets()">닫기</button>
+  </div>
+</div>
+
+<!-- ending -->
+<div class="ending-bg" id="ending">
+  <div class="ending-card">
+    <div class="crown">🏆</div>
+    <h2>정원 완성!</h2>
+    <p class="sub">도구 60개를 전부 모았어요.<br>이제 이 정원에서 못 하는 건 없어요 🌸</p>
+    <div class="stats" id="ending-stats"></div>
+    <button class="close-btn" onclick="closeEnding()">계속 정원 가꾸기 🌱</button>
   </div>
 </div>
 
@@ -555,6 +595,30 @@ function askPull(i){
   });
 }
 
+// 도구를 전부 사면 나오는 엔딩
+function allToolsOwned(){ return TOOLS.every(t=>has(t.id)); }
+
+function showEnding(){
+  const grown = Object.values(S.book||{}).reduce((a,b)=>a+b, 0);
+  const kinds = FLOWERS.filter(f=>(S.book||{})[f.id]).length;
+  document.getElementById('ending-stats').innerHTML =
+    `<div><span>🛒 모은 도구</span><b>${TOOLS.length} / ${TOOLS.length}개</b></div>` +
+    `<div><span>🌸 키운 꽃</span><b>${grown}송이</b></div>` +
+    `<div><span>📖 꽃 도감</span><b>${kinds} / ${FLOWERS.length}종</b></div>` +
+    `<div><span>🪴 화분</span><b>${plotCount()}개</b></div>` +
+    `<div><span>🌼 남은 포인트</span><b>${S.points||0}</b></div>`;
+  document.getElementById('ending').classList.add('show');
+}
+function closeEnding(){ document.getElementById('ending').classList.remove('show'); }
+
+function checkEnding(){
+  if(!allToolsOwned() || S.ending) return;
+  S.ending = true;              // 한 번만 저절로 뜬다
+  setTip('🏆 축하해! 도구를 전부 모았어!');
+  showEnding();
+  scheduleSave();
+}
+
 function updateCoin(){
   const pts = S.points || 0;
   document.getElementById('coin').textContent = '🌼 ' + pts;
@@ -575,6 +639,13 @@ function openShop(){
   document.getElementById('shop-coin').textContent = `가진 포인트: 🌼 ${pts}`;
   const owned = TOOLS.filter(t=>has(t.id)).length;
   let html = `<p class="shop-sub">가진 도구 ${owned} / ${TOOLS.length}개</p>`;
+  if(allToolsOwned()){
+    html += `<button class="seed-item owned" onclick="showEnding()">
+      <span class="icon">🏆</span>
+      <span class="info"><span class="nm">정원 완성!</span><br>
+      <span class="tm">엔딩을 다시 보기</span></span>
+      <span class="cost">보기</span></button>`;
+  }
   SHOP_GROUPS.forEach(g=>{
     const list = TOOLS.filter(t=>g.kinds.includes(t.kind));
     const mine = list.filter(t=>has(t.id)).length;
@@ -633,6 +704,7 @@ function buyTool(id){
   openShop();          // 가게 목록을 새로 그린다
   render();
   scheduleSave();
+  checkEnding();
 }
 
 function waterAll(){
@@ -704,6 +776,7 @@ window.addEventListener('visibilitychange', ()=>{
   applyTheme();
   buildSeedList();
   render();
+  checkEnding();
   const growing = S.plots.filter(p=>p.f && p.prog<100).length;
   const ready = S.plots.filter(p=>p.prog>=100).length;
   if(ready) setTip(`✨ 활짝 핀 꽃이 ${ready}송이 기다리고 있어!`);
