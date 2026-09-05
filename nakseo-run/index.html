@@ -217,7 +217,7 @@
   let ranking = [], lastRun = null, lastName = '', busy = false;
 
   function renderRank(freshIdx = -1){
-    rankCount.textContent = ranking.length ? `${ranking.length}명` : '';
+    rankCount.textContent = ranking.length ? `TOP ${TOP}` : '';
     if (!ranking.length){ rankList.innerHTML = '<li class="empty">아직 기록 없음</li>'; return; }
     rankList.innerHTML = ranking.map((r, i) =>
       `<li class="${i === freshIdx ? 'fresh' : ''}"><span class="no">${i + 1}</span>` +
@@ -232,7 +232,7 @@
   function sane(list){
     return Array.isArray(list)
       ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.s) && Number.isFinite(+r.d))
-            .map(r => ({ n: r.n, s: +r.s, d: +r.d })).slice(0, 100)
+            .map(r => ({ n: r.n, s: +r.s, d: +r.d })).slice(0, 5)
       : [];
   }
   function readLocal(){
@@ -247,8 +247,9 @@
     const m = /^(.*)\|(\d+)\|(\d+)$/.exec(String(name || ''));
     return m && m[1] ? { n: m[1], s: +m[2], d: +m[3] } : null;
   }
-  // 지금까지 이 게임을 한 사람 전부를 보여준다(별 많은 순 → 멀리 간 순)
-  const sortRank = (list) => list.sort((a, b) => b.s - a.s || b.d - a.d).slice(0, 100);
+  // 5등까지만 남긴다(별 많은 순 → 멀리 간 순)
+  const TOP = 5;
+  const sortRank = (list) => list.sort((a, b) => b.s - a.s || b.d - a.d).slice(0, TOP);
 
   async function fetchBoard(){
     const res = await fetch(API, { cache: 'no-store' });
