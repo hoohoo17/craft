@@ -11,6 +11,8 @@
   var K_PLAYED = 'craft-played-ms';
   var K_UNTIL  = 'craft-rest-until';
   var K_FREE   = 'craft-unlimited';
+  var K_GRACE  = 'craft-grace-until';
+  var GRACE_MS = 2 * 60 * 1000;   // 30분이 돼도 2분은 하던 판을 마무리할 시간을 준다
 
   function num(k){
     try{ return parseInt(localStorage.getItem(k), 10) || 0; }catch(e){ return 0; }
@@ -45,6 +47,10 @@
     // 무제한일 때만 눌러서 다시 켤 수 있게 한다(끄는 데는 비밀번호가 필요하지만
     // 다시 켜는 건 아무나 해도 안전하니까).
     pill.addEventListener('click', function(e){
+      if(e.target && e.target.dataset && e.target.dataset.rest === 'now'){
+        startRest(Date.now());      // 마무리 시간을 건너뛰고 바로 쉰다
+        return;
+      }
       if(!isFree()) return;
       if(e.target && e.target.dataset && e.target.dataset.ans){
         if(e.target.dataset.ans === 'y'){
@@ -122,6 +128,7 @@
     put(K_FREE, 1);
     put(K_PLAYED, 0);
     put(K_UNTIL, 0);
+    put(K_GRACE, 0);
     // 다음에 다시 열릴 때를 위해 입력칸을 접어 둔다
     box.querySelector('#craft-pwbox').style.display = 'none';
     box.querySelector('#craft-unlock').style.display = '';
@@ -174,6 +181,29 @@
     pill.style.cursor = 'default';
   }
 
+  function startRest(now){
+    put(K_GRACE, 0);
+    put(K_PLAYED, 0);
+    put(K_UNTIL, now + REST_MS);
+    if(pill) pill.style.display = 'none';   // 마무리 배너를 바로 치운다
+    show();
+    if(label) label.textContent = fmt(REST_MS);
+  }
+
+  // "곧 쉬는 시간" 알림. 화면을 덮지 않아서 하던 판을 계속할 수 있다.
+  function showGrace(leftMs){
+    buildPill();
+    asking = false;
+    pill.style.display = 'block';
+    pill.innerHTML = '🔔 곧 쉬는 시간! ' + fmt(leftMs) + ' 안에 마무리하자' +
+      '<button data-rest="now" style="' + ANSBTN + ';background:#fff;color:#B03A2E;' +
+      'pointer-events:auto">지금 쉬기</button>';
+    pill.style.background = 'rgba(200,60,60,.85)';
+    pill.style.opacity = '1';
+    pill.style.pointerEvents = 'none';   // 배너는 안 가리고, 버튼만 눌린다
+    pill.style.cursor = 'default';
+  }
+
   var last = Date.now();
   var wasVisible = false;   // 돌아온 직후인지 구분
 
@@ -198,8 +228,21 @@
     }
     if(until){                       // 막 끝났다
       put(K_UNTIL, 0);
+      put(K_GRACE, 0);
       hide();
     }
+
+    var grace = num(K_GRACE);
+    if(grace > now){                 // 마무리할 시간 — 게임은 그대로 할 수 있다
+      showGrace(grace - now);
+      last = now;
+      return;
+    }
+    if(grace){                       // 마무리 시간이 끝났다 → 이제 쉰다
+      startRest(now);
+      return;
+    }
+
     showPill(PLAY_MS - num(K_PLAYED));
 
     // 화면을 보고 있을 때만 논 시간으로 센다.
@@ -215,10 +258,9 @@
 
     var played = num(K_PLAYED) + gap;
     if(played >= PLAY_MS){
-      put(K_PLAYED, 0);
-      put(K_UNTIL, now + REST_MS);
-      show();
-      if(label) label.textContent = fmt(REST_MS);
+      // 바로 화면을 덮지 않는다. 하던 판을 끝낼 시간을 먼저 준다.
+      put(K_GRACE, now + GRACE_MS);
+      showGrace(GRACE_MS);
     }else{
       put(K_PLAYED, played);
     }

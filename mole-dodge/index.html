@@ -16,10 +16,20 @@
   .hud { display: flex; gap: 24px; font-size: 18px; margin-bottom: 8px; }
   canvas { background: #b9e56b; border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.12); max-width: 100%; }
   .records { margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 18px; width: 100%; max-width: 480px; box-shadow: 0 4px 14px rgba(0,0,0,.08); }
-  .records h3 { font-size: 18px; margin-bottom: 6px; }
-  .records ol { padding-left: 24px; font-size: 17px; line-height: 1.7; }
-  .records .empty { list-style: none; margin-left: -24px; opacity: .6; }
-  .records .new { color: #ff5a1f; font-weight: bold; }
+  .records .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .records h3 { font-size: 18px; }
+  .records .cnt { font-size: 13px; opacity: .55; }
+  .records .refresh { margin-left: auto; font-size: 13px; padding: 4px 10px; background: #eef3f6; color: #2b2b4a; border-radius: 8px; }
+  .records ol { list-style: none; font-size: 17px; line-height: 1.7; }
+  .records li { display: flex; align-items: center; gap: 8px; }
+  .records .no { width: 22px; text-align: center; opacity: .55; }
+  .records .no.medal { opacity: 1; font-size: 18px; }
+  .records .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .records .sc { font-weight: bold; }
+  .records .empty { opacity: .6; }
+  .records .fresh { color: #ff5a1f; font-weight: bold; }
+  .records .note { font-size: 13px; margin-top: 6px; min-height: 16px; opacity: .6; }
+  .records .note.warn { color: #d24b2b; opacity: 1; }
   .hint { margin-top: 10px; font-size: 14px; opacity: .7; text-align: center; }
   .msg { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.4); }
   .msg.show { display: flex; }
@@ -33,7 +43,11 @@
 <h1>🐹 두더지 피하기</h1>
 <div class="hud"><span>점수 <b id="score">0</b></span></div>
 <canvas id="c" width="480" height="480"></canvas>
-<div class="records"><h3>🏅 기록</h3><ol id="recList"><li class="empty">아직 기록이 없어요</li></ol></div>
+<div class="records">
+  <div class="head"><h3>🏅 기록</h3><span class="cnt" id="recCount"></span><button class="refresh" id="refreshBtn">새로고침</button></div>
+  <ol id="recList"><li class="empty">불러오는 중…</li></ol>
+  <div class="note" id="recNote"></div>
+</div>
 <div class="hint">← → ↑ ↓ 키나 탭으로 칸을 옮겨요. 땅이 흔들리는 칸에서 도망쳐!</div>
 
 <div class="msg" id="msg">
@@ -64,28 +78,105 @@ function updateHud() {
   document.getElementById('score').textContent = score;
 }
 function restart() { document.getElementById('msg').classList.remove('show'); reset(); }
-let best = 0, records = [];
-let recorded = false;
-function renderRecords(newest) {
-  const ol = document.getElementById('recList'); ol.innerHTML = '';
-  if (!records.length) { ol.innerHTML = '<li class="empty">아직 기록이 없어요</li>'; return; }
-  records.forEach(r => {
-    const li = document.createElement('li');
-    li.textContent = r.name + '  ' + r.sc + '점';
-    if (r === newest) li.className = 'new';
-    ol.appendChild(li);
-  });
+let best = 0;
+
+/* ---------- 기록 (댓글 서버를 그대로 쓴다) ----------
+   그 서버는 승인 전 글의 내용은 감추고 '이름'만 공개하니까,
+   기록을 이름 칸에 '이름|점수' 로 담아 둔다. 그래서 다른 폰에서도 보인다. */
+const RKEY = 'moledodge:ranking:1';
+const API = 'https://craft-comments.jaehoo.workers.dev?page=mole-rank-v1';
+const TOP = 5;
+let records = [], recorded = false, rankBusy = false;
+
+const recList = document.getElementById('recList');
+const recNote = document.getElementById('recNote');
+const recCount = document.getElementById('recCount');
+
+const sortRank = list => list.sort((a, b) => b.sc - a.sc).slice(0, TOP);
+function sane(list) {
+  return Array.isArray(list)
+    ? list.filter(r => r && typeof r.name === 'string' && Number.isFinite(+r.sc))
+          .map(r => ({ name: r.name, sc: +r.sc })).slice(0, TOP)
+    : [];
 }
-function saveRecord() {
-  if (recorded) return;
-  const name = document.getElementById('nameInput').value.trim() || '이름없음';
+function renderRecords(freshIdx = -1) {
+  recCount.textContent = records.length ? 'TOP ' + TOP : '';
+  if (!records.length) { recList.innerHTML = '<li class="empty">아직 기록이 없어요</li>'; return; }
+  const MEDAL = ['🥇', '🥈', '🥉'];
+  recList.innerHTML = records.map((r, i) =>
+    '<li class="' + (i === freshIdx ? 'fresh' : '') + '">' +
+    '<span class="no' + (i < 3 ? ' medal' : '') + '">' + (MEDAL[i] || (i + 1)) + '</span>' +
+    '<span class="nm">' + String(r.name).replace(/[<>&]/g, '') + '</span>' +
+    '<span class="sc">' + r.sc + '점</span></li>').join('');
+}
+function note(msg, warn) {
+  recNote.textContent = msg || '';
+  recNote.classList.toggle('warn', !!warn);
+}
+function readLocal() {
+  try { return sane(JSON.parse(localStorage.getItem(RKEY))); } catch (e) { return []; }
+}
+function writeLocal() {
+  try { localStorage.setItem(RKEY, JSON.stringify(records)); } catch (e) {}
+}
+const encodeRank = r => (r.name.split('|').join('') + '|' + r.sc).slice(0, 20);
+function decodeRank(name) {
+  const m = /^(.*)\|(\d+)$/.exec(String(name || ''));
+  return m && m[1] ? { name: m[1], sc: +m[2] } : null;
+}
+async function fetchBoard() {
+  const res = await fetch(API, { cache: 'no-store' });
+  if (!res.ok) throw new Error('http ' + res.status);
+  const rows = await res.json();
+  if (!Array.isArray(rows)) throw new Error('bad payload');
+  return sortRank(rows.map(c => decodeRank(c && c.name)).filter(Boolean));
+}
+async function loadRecords() {
+  if (rankBusy) return;
+  rankBusy = true;
+  try {
+    if (!records.length) { records = readLocal(); renderRecords(); }
+    records = await fetchBoard();
+    writeLocal();
+    note('');
+  } catch (e) {
+    records = readLocal();
+    note('오프라인 · 이 기기 기록만 표시', true);
+  }
+  renderRecords();
+  rankBusy = false;
+}
+async function saveRecord() {
+  if (recorded || rankBusy) return;
+  const name = (document.getElementById('nameInput').value || '').trim().slice(0, 6) || '이름없음';
   const rec = { name, sc: score };
-  records.push(rec); records.sort((a, b) => b.sc - a.sc); records = records.slice(0, 5);
   recorded = true;
-  renderRecords(rec);
+  rankBusy = true;
   document.getElementById('copied').textContent = '기록했어! 🏅';
+
+  records = sortRank(records.concat([rec]));
+  writeLocal();
+  renderRecords(records.indexOf(rec));
+
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: encodeRank(rec), message: rec.sc + '점' }),
+    });
+    if (!res.ok) throw new Error('http ' + res.status);
+    records = await fetchBoard();
+    writeLocal();
+    note('');
+    renderRecords(records.findIndex(r => r.name === rec.name && r.sc === rec.sc));
+  } catch (e) {
+    note('저장 실패 · 이 기기에만 기록됨', true);
+  }
+  rankBusy = false;
 }
-function clearRecords() { records = []; renderRecords(); }
+document.getElementById('refreshBtn').addEventListener('click', loadRecords);
+loadRecords();
+
 function endGame() {
   running = false;
   best = Math.max(best, score);
@@ -181,6 +272,6 @@ cv.addEventListener('touchstart', e => { e.preventDefault(); tap(e.touches[0].cl
 
 reset(); requestAnimationFrame(loop);
 </script>
-<script src="../rest.js?v=8"></script>
+<script src="../rest.js?v=9"></script>
 </body>
 </html>
