@@ -129,7 +129,8 @@ const W=960,H=640, DT=1/60;
 // 태양은 원점. 벽 없음 — 원반 바깥으로 나가면 중력이 서서히 끌어당긴다.
 const SUN_REACH=1400, FROST=1250, DISK=2600;
 const MASS_GOAL=3800, HOLD_MASS=1400, START=45;
-const NBITS=72, TOTAL=150;
+const WANT={ice:100, gas:80, rock:90};          // 우주에 떠다니는 것 종류별 개수
+const NBITS=WANT.ice+WANT.gas+WANT.rock, TOTAL=150;
 const R=m=>Math.sqrt(m)*1.7;
 
 const ENDINGS={
@@ -209,7 +210,7 @@ function reset(){
   tLeft=TOTAL; ending=null;
   document.getElementById('result').classList.remove('show');
   scale=targetScale(); cam={x:P.x,y:P.y};
-  for(let i=0;i<NBITS;i++) bits.push(spawn(true));
+  fillBits();
   ptr={x:P.x,y:P.y};ptrOn=false;
   clearRun();
 }
@@ -220,14 +221,18 @@ function resume(s){
   tLeft=s.tLeft; ending=null;
   document.getElementById('result').classList.remove('show');
   scale=targetScale(); cam={x:P.x,y:P.y};
-  for(let i=0;i<NBITS;i++) bits.push(spawn(true));
+  fillBits();
   ptr={x:P.x,y:P.y};ptrOn=false;
+}
+// 종류마다 정해진 개수만큼 채운다
+function fillBits(){
+  for(const k in WANT) for(let i=0;i<WANT[k];i++) bits.push(spawn(true,k));
 }
 const sunD=(x,y)=>Math.hypot(x,y);
 const targetScale=()=>Math.max(0.30, Math.min(1.30, 46/R(P.m)));
 const viewR=()=>Math.hypot(W,H)/2/scale;
 
-function spawn(anywhere){
+function spawn(anywhere, want){
   let x,y,tries=0;
   do{
     const a=Math.random()*6.283;
@@ -235,10 +240,14 @@ function spawn(anywhere){
     x=P.x+Math.cos(a)*d; y=P.y+Math.sin(a)*d;
   }while((sunD(x,y)>DISK || (anywhere&&Math.hypot(x-P.x,y-P.y)<R(P.m)+90)) && ++tries<50);
 
-  // 설선: 태양에서 멀수록 얼음·가스가 많다
-  const far=Math.min(1, sunD(x,y)/(FROST*1.6));
-  const vol=Math.random()<(0.34+far*0.58);
-  const type = vol ? (Math.random()<0.56?'ice':'gas') : 'rock';
+  // 종류를 정해 주면 그대로 쓰고, 아니면 설선에 따라 고른다
+  // (설선: 태양에서 멀수록 얼음·가스가 많다)
+  let type = want;
+  if(!type){
+    const far=Math.min(1, sunD(x,y)/(FROST*1.6));
+    const vol=Math.random()<(0.34+far*0.58);
+    type = vol ? (Math.random()<0.56?'ice':'gas') : 'rock';
+  }
   const m = type==='rock' ? Math.max(6,Math.min(P.m*(0.05+Math.random()*0.55),16000)) : 14+Math.random()*24;
   const a=Math.random()*6.283, sp=8+Math.random()*28;
   return {x,y,m,type,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,rot:Math.random()*6.283,seed:Math.random()*99};
@@ -270,8 +279,8 @@ function update(){
   P.temp = Math.max(0,Math.min(100,P.temp));
 
   const pull=pr*6.2, cull=viewR()*1.75;
-  const want=Math.round(NBITS*(0.30+0.70*(tLeft/TOTAL)));
-  const rebirth=i=>{ if(bits.length>want) bits.splice(i,1); else bits[i]=spawn(false); };
+  // 먹은 것은 같은 종류로 다시 나타난다 — 개수가 계속 그대로 유지된다
+  const rebirth=i=>{ bits[i]=spawn(false, bits[i].type); };
   for(let i=bits.length-1;i>=0;i--){
     const b=bits[i], br=R(b.m);
     const dx=P.x-b.x, dy=P.y-b.y, d=Math.hypot(dx,dy)||1;
