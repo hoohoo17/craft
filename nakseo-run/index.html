@@ -233,10 +233,14 @@
     rankNote.textContent = msg || '';
     rankNote.classList.toggle('warn', !!warn);
   }
+  // 순위에서 빼기로 한 이름들 (서버 글은 지울 수 없어서 여기서 걸러 낸다)
+  const HIDDEN = ['박혜담'];
+  const hidden = n => HIDDEN.includes(String(n || '').trim());
+
   // 로컬 사본: 서버가 안 될 때를 위한 폴백
   function sane(list){
     return Array.isArray(list)
-      ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.s) && Number.isFinite(+r.d))
+      ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.s) && Number.isFinite(+r.d) && !hidden(r.n))
             .map(r => ({ n: r.n, s: +r.s, d: +r.d })).slice(0, 5)
       : [];
   }
@@ -262,7 +266,7 @@
     const data = await res.json();
     if (!Array.isArray(data)) throw new Error('bad payload');
     // 순위 형식이 아닌 항목(사람이 남긴 댓글 등)은 조용히 무시한다
-    return sortRank(data.map(c => decode(c && c.name)).filter(Boolean));
+    return sortRank(data.map(c => decode(c && c.name)).filter(r => r && !hidden(r.n)));
   }
   async function loadRank(){
     if (busy) return;
