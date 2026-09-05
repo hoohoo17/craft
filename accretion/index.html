@@ -102,8 +102,8 @@
       <li><b style="background:#3f6fd8"></b><div><em>이동</em> — 화면을 누른 채 끌면 그쪽으로 간다. 커지면 화면이 저절로 줌아웃되고, 오른쪽 아래 지도로 위치를 볼 수 있다.</div></li>
       <li><b style="background:#8a7f74"></b><div><em>갈색 암석</em>은 부딪히면 전부 흡수된다. 질량이 오른다.</div></li>
       <li><b style="background:#f0862c"></b><div><em>온도</em> — 암석을 먹을 때마다, 그리고 한가운데 태양에 가까울수록 오른다. 바깥으로 나가면 식는다.</div></li>
-      <li><b style="background:#a98cf0"></b><div><em>보라 가스</em>는 대기. 질량이 작으면 중력이 약해 새어나가고, 80도가 넘으면 타 버린다.</div></li>
-      <li><b style="background:#4bb8e8"></b><div><em>파란 얼음</em>은 바다. 58도가 넘으면 끓고 대기가 얇아도 증발한다. 얼음·가스는 <em>파란 점선(설선) 바깥</em>에 많다.</div></li>
+      <li><b style="background:#a98cf0"></b><div><em>보라 가스</em>는 대기. 질량이 작으면 중력이 약해 새어나간다. 뜨거워도 타지는 않는다.</div></li>
+      <li><b style="background:#4bb8e8"></b><div><em>파란 얼음</em>은 바다. 대기가 얇으면 마르지만, 뜨겁다고 끓어 없어지진 않는다. 얼음·가스는 <em>파란 점선(설선) 바깥</em>에 많다.</div></li>
       <li><b style="background:#2fae6a"></b><div><em>150초 뒤 원반이 흩어진다.</em> 그 순간의 질량·온도·대기·바다로 어떤 행성이 됐는지 결정된다. 결말은 아홉 가지 — 생명 행성은 그중 하나일 뿐이다.</div></li>
     </ol>
     <button id="startBtn">시작</button>
@@ -292,8 +292,7 @@ function update(){
       if(b.type==='gas'){
         P.gas=Math.min(100,P.gas+4.2); P.m+=1.5; burst(b.x,b.y,'#a98cf0',7);
       } else if(b.type==='ice'){
-        if(P.temp<58){ P.water=Math.min(100,P.water+4.8); burst(b.x,b.y,'#4bb8e8',7); }
-        else burst(b.x,b.y,'#f0b23c',9);
+        P.water=Math.min(100,P.water+4.8); burst(b.x,b.y,'#4bb8e8',7);
         P.m+=2;
       } else {
         P.m+=b.m; P.temp=Math.min(100,P.temp+8+Math.min(34,b.m/P.m*46));
@@ -333,10 +332,10 @@ function camera(){
   cam.x += (P.x-cam.x)*0.12; cam.y += (P.y-cam.y)*0.12;
 }
 function decay(){
+  // 뜨거워도 대기와 바다는 타 없어지지 않는다.
+  // 중력이 약하면 대기가 새고, 대기가 얇으면 바다가 마르는 것만 남는다.
   if(P.m<HOLD_MASS) P.gas=Math.max(0,P.gas-6.5*DT);
-  if(P.temp>80)     P.gas=Math.max(0,P.gas-8*DT);
-  if(P.temp>58)     P.water=Math.max(0,P.water-11*DT);
-  else if(P.gas<45) P.water=Math.max(0,P.water-7*DT);
+  if(P.gas<45)      P.water=Math.max(0,P.water-7*DT);
   for(let i=parts.length-1;i>=0;i--){
     const p=parts[i]; p.x+=p.vx*DT;p.y+=p.vy*DT;p.vx*=.96;p.vy*=.96;p.life-=DT;
     if(p.life<=0) parts.splice(i,1);
@@ -535,12 +534,12 @@ function ui(){
   setBar('bMass','fMass','vMass',Math.round(P.m),Math.min(100,P.m/MASS_GOAL*100),'nMass',
     P.m<MASS_GOAL?`목표 ${MASS_GOAL}`:'', P.m>=MASS_GOAL);
   setBar('bTemp','fTemp','vTemp',Math.round(P.temp),P.temp,'nTemp',
-    P.temp>80?'너무 뜨겁다 — 대기가 탄다':P.temp>58?'뜨겁다 — 물이 끓는다':'', P.temp<=58);
+    P.temp>72?'많이 뜨겁다 — 생명이 살긴 어렵다':'', P.temp<=58);
   setBar('bGas','fGas','vGas',Math.round(P.gas)+'%',P.gas,'nGas',
-    (P.m<HOLD_MASS&&P.gas>0)?`중력 부족 — 질량 ${HOLD_MASS} 필요`:(P.temp>80&&P.gas>0?'열로 날아간다':''),
+    (P.m<HOLD_MASS&&P.gas>0)?`중력 부족 — 질량 ${HOLD_MASS} 필요`:'',
     P.gas>=100);
   setBar('bWater','fWater','vWater',Math.round(P.water)+'%',P.water,'nWater',
-    P.temp>58?'끓어서 증발한다':(P.gas<45&&P.water>0?'대기가 얇다':''), P.water>=100);
+    (P.gas<45&&P.water>0)?'대기가 얇다':'', P.water>=100);
 }
 /* 폰마다 성능이 다르다. 화면이 뚝뚝 끊기면 떠다니는 개수를 스스로 줄여서
    부드럽게 만든다. 빠른 기기는 100·80·90 그대로 쓴다. */
