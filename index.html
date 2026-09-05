@@ -16,6 +16,32 @@
               radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
         }
 
+        /* ---------- 배경에 떠다니는 정사각형 ---------- */
+        .bg-squares {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;      /* 화면 밖으로 나가도 스크롤이 안 생기게 */
+            pointer-events: none;  /* 누르는 걸 절대 방해하지 않게 */
+            z-index: 0;
+        }
+        .bg-squares i {
+            position: absolute;
+            display: block;
+            border-radius: 22%;
+            opacity: .5;
+            animation: bob ease-in-out infinite alternate;
+        }
+        @keyframes bob {
+            from { transform: translateY(0)     rotate(0deg); }
+            to   { transform: translateY(-26px) rotate(24deg); }
+        }
+        /* 움직임을 싫어하는 설정이면 가만히 떠 있기만 한다 */
+        @media (prefers-reduced-motion: reduce) {
+            .bg-squares i { animation: none; }
+        }
+        /* 글과 카드는 정사각형보다 앞에 */
+        .shelf-head, .map-container, .comment-section { position: relative; z-index: 1; }
+
         /* ---------- 게임 모아둔 곳 ---------- */
         .shelf-head {
             text-align: center;
@@ -225,6 +251,31 @@
     </style>
 </head>
 <body>
+    <div class="bg-squares" aria-hidden="true">
+        <i style="left:83.7%;top:82.8%;width:62px;height:62px;background:#7FB0FF;animation-duration:11.2s;animation-delay:-7.1s"></i>
+        <i style="left:16.3%;top:48.7%;width:28px;height:28px;background:#FF9FB8;animation-duration:10.0s;animation-delay:-2.7s"></i>
+        <i style="left:42.2%;top:12.0%;width:18px;height:18px;background:#FFD27A;animation-duration:9.3s;animation-delay:-1.4s"></i>
+        <i style="left:56.9%;top:37.2%;width:14px;height:14px;background:#8CDCAE;animation-duration:8.6s;animation-delay:-3.4s"></i>
+        <i style="left:59.7%;top:80.3%;width:22px;height:22px;background:#BCA4FF;animation-duration:5.5s;animation-delay:-12.5s"></i>
+        <i style="left:57.4%;top:75.0%;width:28px;height:28px;background:#7FDDE4;animation-duration:7.6s;animation-delay:-5.3s"></i>
+        <i style="left:49.4%;top:61.4%;width:28px;height:28px;background:#7FB0FF;animation-duration:9.0s;animation-delay:-4.4s"></i>
+        <i style="left:62.8%;top:38.3%;width:62px;height:62px;background:#FF9FB8;animation-duration:9.4s;animation-delay:-0.9s"></i>
+        <i style="left:68.1%;top:29.2%;width:18px;height:18px;background:#FFD27A;animation-duration:6.8s;animation-delay:-9.2s"></i>
+        <i style="left:53.8%;top:8.7%;width:18px;height:18px;background:#8CDCAE;animation-duration:5.9s;animation-delay:-9.2s"></i>
+        <i style="left:92.8%;top:81.9%;width:18px;height:18px;background:#BCA4FF;animation-duration:5.0s;animation-delay:-10.3s"></i>
+        <i style="left:44.5%;top:95.1%;width:14px;height:14px;background:#7FDDE4;animation-duration:8.2s;animation-delay:-12.1s"></i>
+        <i style="left:75.1%;top:24.7%;width:28px;height:28px;background:#7FB0FF;animation-duration:5.7s;animation-delay:-8.7s"></i>
+        <i style="left:73.0%;top:9.7%;width:52px;height:52px;background:#FF9FB8;animation-duration:7.0s;animation-delay:-11.7s"></i>
+        <i style="left:44.0%;top:46.2%;width:14px;height:14px;background:#FFD27A;animation-duration:10.5s;animation-delay:-10.6s"></i>
+        <i style="left:95.5%;top:74.2%;width:28px;height:28px;background:#8CDCAE;animation-duration:8.4s;animation-delay:-8.0s"></i>
+        <i style="left:39.7%;top:19.1%;width:52px;height:52px;background:#BCA4FF;animation-duration:7.2s;animation-delay:-0.4s"></i>
+        <i style="left:96.8%;top:-0.1%;width:34px;height:34px;background:#7FDDE4;animation-duration:6.5s;animation-delay:-0.1s"></i>
+        <i style="left:2.2%;top:12.5%;width:18px;height:18px;background:#7FB0FF;animation-duration:8.5s;animation-delay:-12.9s"></i>
+        <i style="left:80.2%;top:36.2%;width:42px;height:42px;background:#FF9FB8;animation-duration:5.6s;animation-delay:-10.3s"></i>
+        <i style="left:-0.5%;top:34.5%;width:28px;height:28px;background:#FFD27A;animation-duration:10.0s;animation-delay:-11.3s"></i>
+        <i style="left:80.4%;top:11.4%;width:62px;height:62px;background:#8CDCAE;animation-duration:8.1s;animation-delay:-4.8s"></i>
+    </div>
+
     <div class="shelf-head">
         <h1>🎮 게임 모음</h1>
         <p>곽재후가 만든 게임 <span id="gameCount"></span></p>
