@@ -25,16 +25,18 @@
   canvas{display:block;width:100%;height:auto;border-radius:16px;background:#eef1fa;
     border:1px solid var(--line);box-shadow:0 10px 28px rgba(70,85,150,.10);touch-action:none}
 
+  /* 규칙만 스크롤되고, 시작 버튼은 늘 맨 아래에 보이게 붙여 둔다 */
   .intro{position:absolute;inset:0;border-radius:16px;background:rgba(243,245,252,.96);
-    display:flex;flex-direction:column;justify-content:center;padding:5% 7%;gap:11px;overflow:auto}
+    display:flex;flex-direction:column;justify-content:flex-start;padding:5% 7%;gap:11px;overflow:hidden}
   .intro.hide{display:none}
-  .intro h2{font-size:clamp(16px,2.6vw,23px)}
-  .intro ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .intro h2{flex:none;font-size:clamp(16px,2.6vw,23px)}
+  .intro ul{flex:1 1 auto;min-height:0;overflow:auto;
+    list-style:none;display:flex;flex-direction:column;gap:8px}
   .intro li{display:flex;gap:11px;font-size:clamp(11.5px,1.6vw,14px);line-height:1.5;color:#3a4166}
   .intro li b{flex:none;width:15px;height:15px;border-radius:4px;margin-top:2px}
   .intro em{font-style:normal;font-weight:700;color:var(--ink)}
-  .intro button{align-self:flex-start;margin-top:4px;background:var(--me);color:#fff;border:0;
-    border-radius:10px;padding:11px 26px;font-size:14px;font-weight:700;cursor:pointer}
+  .intro button{flex:none;align-self:stretch;margin-top:0;background:var(--me);color:#fff;border:0;
+    border-radius:10px;padding:13px 26px;font-size:15px;font-weight:700;cursor:pointer}
 
   .pad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
     gap:7px;justify-content:center;margin-top:12px}
