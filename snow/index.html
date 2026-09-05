@@ -38,6 +38,8 @@
       pointer-events: none;
     }
     #ui > * { pointer-events: auto; }
+    /* 보여 주기만 하는 표시들은 터치를 가로채면 안 된다 */
+    #hud, #phaseIndicator, #progressBar { pointer-events: none; }
     
     .screen {
       position: absolute;
@@ -312,7 +314,7 @@ const game = {
   dustParticles: [],
   windForce: 0,
   keys: { left: false, right: false, up: false, down: false },
-  touch: { startX: 0, currentX: 0, active: false },
+  touch: { startX: 0, currentX: 0, startY: 0, currentY: 0, active: false },
   phaseStartTime: 0,
   animationId: null,
 };
@@ -458,6 +460,8 @@ function handleTouchStart(e) {
   const touch = e.touches[0];
   game.touch.startX = touch.clientX;
   game.touch.currentX = touch.clientX;
+  game.touch.startY = touch.clientY;
+  game.touch.currentY = touch.clientY;
   game.touch.active = true;
 }
 
@@ -465,6 +469,7 @@ function handleTouchMove(e) {
   e.preventDefault();
   if (game.touch.active) {
     game.touch.currentX = e.touches[0].clientX;
+    game.touch.currentY = e.touches[0].clientY;
   }
 }
 
@@ -476,12 +481,15 @@ function handleTouchEnd(e) {
 function handleMouseDown(e) {
   game.touch.startX = e.clientX;
   game.touch.currentX = e.clientX;
+  game.touch.startY = e.clientY;
+  game.touch.currentY = e.clientY;
   game.touch.active = true;
 }
 
 function handleMouseMove(e) {
   if (game.touch.active) {
     game.touch.currentX = e.clientX;
+    game.touch.currentY = e.clientY;
   }
 }
 
@@ -669,7 +677,10 @@ function update() {
   if (game.keys.up) moveY = -5;
   if (game.keys.down) moveY = 5;
   if (game.touch.active) {
-    moveX = (game.touch.currentX - game.touch.startX) * 0.1;
+    // 손가락을 끈 만큼 그 방향으로 간다. 폰에는 방향키가 없으니 위아래도 여기서 준다.
+    const cap = v => Math.max(-6, Math.min(6, v));
+    moveX = cap((game.touch.currentX - game.touch.startX) * 0.1);
+    moveY = cap((game.touch.currentY - game.touch.startY) * 0.1);
   }
   
   game.player.x += moveX + game.windForce;
