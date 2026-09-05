@@ -202,12 +202,24 @@ async function storageSet(k,v){
 
 /* ---------- flowers ---------- */
 // growMin: 다 자라는 데 걸리는 시간(분)
+// petals: 꽃잎 수 — 종류마다 달라서 모양이 구분된다. 자라는 시간 순서대로.
 const FLOWERS = [
-  {id:'dandelion', name:'민들레',   growMin:2,    color:'#FFD93D', center:'#E8A200', desc:'금방 피어요'},
-  {id:'tulip',     name:'튤립',     growMin:15,   color:'#FF7BAC', center:'#E84A8A', desc:'15분'},
-  {id:'sunflower', name:'해바라기', growMin:60,   color:'#FFC43D', center:'#7A4A1D', desc:'1시간'},
-  {id:'morning',   name:'나팔꽃',   growMin:240,  color:'#8E7CF0', center:'#5B47C7', desc:'4시간'},
-  {id:'rainbow',   name:'무지개꽃', growMin:720,  color:'rainbow', center:'#fff',    desc:'12시간 · 아주 귀한 꽃!'},
+  {id:'dandelion', name:'민들레',   growMin:2,    petals:12, color:'#FFD93D', center:'#E8A200', desc:'금방 피어요'},
+  {id:'portulaca', name:'채송화',   growMin:5,    petals:5,  color:'#FF9A3C', center:'#E8630A', desc:'5분'},
+  {id:'tulip',     name:'튤립',     growMin:15,   petals:6,  color:'#FF7BAC', center:'#E84A8A', desc:'15분'},
+  {id:'daisy',     name:'데이지',   growMin:30,   petals:10, color:'#FFFFFF', center:'#FFD23D', desc:'30분'},
+  {id:'cosmos',    name:'코스모스', growMin:45,   petals:8,  color:'#FFB3D1', center:'#FFD23D', desc:'45분'},
+  {id:'sunflower', name:'해바라기', growMin:60,   petals:14, color:'#FFC43D', center:'#7A4A1D', desc:'1시간'},
+  {id:'carnation', name:'카네이션', growMin:90,   petals:7,  color:'#FF5C7A', center:'#C9264A', desc:'1시간 30분'},
+  {id:'rose',      name:'장미',     growMin:120,  petals:6,  color:'#E23B4E', center:'#8E1226', desc:'2시간'},
+  {id:'hydrangea', name:'수국',     growMin:180,  petals:5,  color:'#7FB3E8', center:'#4A7FC1', desc:'3시간'},
+  {id:'morning',   name:'나팔꽃',   growMin:240,  petals:5,  color:'#8E7CF0', center:'#5B47C7', desc:'4시간'},
+  {id:'lily',      name:'백합',     growMin:300,  petals:6,  color:'#FFF8EE', center:'#E8B84A', desc:'5시간'},
+  {id:'cherry',    name:'벚꽃',     growMin:360,  petals:5,  color:'#FFD6E3', center:'#FF8FB1', desc:'6시간'},
+  {id:'lavender',  name:'라벤더',   growMin:480,  petals:7,  color:'#B79CE8', center:'#7A5EC4', desc:'8시간'},
+  {id:'lotus',     name:'연꽃',     growMin:600,  petals:10, color:'#FFC2D6', center:'#F7E07A', desc:'10시간'},
+  {id:'rainbow',   name:'무지개꽃', growMin:720,  petals:6,  color:'rainbow', center:'#fff',    desc:'12시간 · 아주 귀한 꽃!'},
+  {id:'golden',    name:'황금꽃',   growMin:1440, petals:8,  color:'#FFD24A', center:'#B8860B', desc:'24시간 · 전설의 꽃!'},
 ];
 const MOIST_HOURS = 5; // 물 가득 → 마름까지 5시간
 
@@ -237,7 +249,7 @@ function svgPlot(state){
     inner += `<ellipse cx="50" cy="32" rx="9" ry="12" fill="${c}"/><path d="M44 36 Q50 26 56 36" fill="#6BA368"/>`;
   }
   if(state.stage === 4 && f){
-    inner += petals(50, 30, 13, f.color);
+    inner += petals(50, 30, 13, f.color, f.petals || 6);
     inner += `<circle cx="50" cy="30" r="8" fill="${f.center}"/>`;
     inner += `<text x="72" y="24" font-size="12">✨</text>`;
   }
@@ -248,7 +260,7 @@ function svgPlot(state){
   </svg>`;
 }
 function svgFlowerIcon(f){
-  return `<svg viewBox="0 0 100 100">${petals(50,50,16,f.color)}<circle cx="50" cy="50" r="10" fill="${f.center}"/></svg>`;
+  return `<svg viewBox="0 0 100 100">${petals(50,50,16,f.color,f.petals||6)}<circle cx="50" cy="50" r="10" fill="${f.center}"/></svg>`;
 }
 
 /* ---------- state ---------- */
