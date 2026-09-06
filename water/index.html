@@ -46,14 +46,19 @@
 
   .overlay{
     position:absolute; inset:0;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    display:flex; flex-direction:column; align-items:center;
     background:rgba(10,45,60,.88);
     color:#F0FBFF;
     text-align:center;
     padding:24px; z-index:5;
+    overflow-y:auto;
   }
-  .overlay h1{font-size:2.1rem; margin-bottom:10px;}
-  .overlay p{font-size:1.05rem; line-height:1.8;}
+  /* 내용이 짧으면 가운데, 길면 스크롤 */
+  .overlay > :first-child{margin-top:auto;}
+  .overlay > :last-child{margin-bottom:auto;}
+  .overlay h1{font-size:1.9rem; margin-bottom:8px;}
+  .overlay p{font-size:.95rem; line-height:1.65;}
+  #start .big-btn{margin-bottom:10px;}
   .big-btn{
     margin-top:18px;
     font-family:inherit;
@@ -77,26 +82,42 @@
     cursor:pointer;
   }
   .pick-btn.sel{border-color:#7BDFF2; background:rgba(123,223,242,.25);}
+  .mode-btn{
+    font-family:inherit; color:inherit;
+    font-size:1rem; font-weight:900;
+    background:rgba(255,255,255,.12);
+    border:3px solid transparent;
+    border-radius:14px;
+    padding:10px 16px;
+    cursor:pointer;
+  }
+  .mode-btn.sel{border-color:#7BDFF2; background:rgba(123,223,242,.25);}
   .skill-pick{
     display:flex; flex-direction:column; gap:8px;
     margin:10px 0 4px;
     width:min(320px, 86vw);
   }
   .skill-item{
-    display:flex; align-items:center; gap:12px;
+    display:flex; align-items:center; gap:10px;
     background:rgba(255,255,255,.1);
     border:3px solid transparent;
-    border-radius:14px;
-    padding:10px 14px;
+    border-radius:12px;
+    padding:7px 12px;
     cursor:pointer;
     font-family:inherit; color:inherit;
     text-align:left;
   }
   .skill-item.sel{border-color:#FFD166; background:rgba(255,209,102,.2);}
-  .skill-item .ic{font-size:1.9rem;}
-  .skill-item .nm{font-weight:900; font-size:1.05rem;}
-  .skill-item .ds{font-size:.85rem; opacity:.8;}
+  .skill-item .ic{font-size:1.6rem;}
+  .skill-item .nm{font-weight:900; font-size:1rem;}
+  .skill-item .ds{font-size:.8rem; opacity:.8;}
   .result-big{font-size:3rem; font-weight:900; margin:8px 0; color:#FFD166;}
+  #t-body h1{font-size:1.7rem; margin-bottom:10px;}
+  #t-body p{
+    font-size:1rem; line-height:1.75; margin:8px 0;
+    background:rgba(255,255,255,.08);
+    border-radius:12px; padding:10px 16px;
+  }
   #rec-name{
     font-family:inherit; font-size:1.1rem; font-weight:800;
     text-align:center;
@@ -128,12 +149,19 @@
 
   <div class="overlay" id="start">
     <h1>💦 물총놀이</h1>
-    <p>친구 3명과 물총 대결!<br>흠뻑 젖으면 탈락, <b>마지막까지 마른 사람이 승리!</b><br>손가락 끄는 대로 움직이고, 물총은 자동 발사 🔫</p>
+    <p>흠뻑 젖으면 탈락! 손가락 끄는 대로 움직이고, 물총은 자동 발사 🔫<br><b>🥊 4인 대결</b>: 마지막까지 마른 사람이 승리!<br><b>🤝 2:2 팀전</b>: 봇 친구와 한 팀이 되어 상대 팀을 전멸시키자!<br><b>🏆 토너먼트</b>: 32개 조 128명! 조별리그부터 결승까지, 정식 대회!</p>
+    <p style="margin-top:12px; font-weight:800">게임 모드</p>
+    <div class="pick-row" id="mode-row"></div>
     <p style="margin-top:12px; font-weight:800">내 캐릭터</p>
     <div class="pick-row" id="char-row"></div>
     <p style="margin-top:10px; font-weight:800">스킬 하나 고르기</p>
     <div class="skill-pick" id="skill-pick"></div>
     <button class="big-btn" onclick="startGame(event)">물놀이 시작!</button>
+  </div>
+
+  <div class="overlay hidden" id="tourney">
+    <div id="t-body"></div>
+    <button class="big-btn" id="t-btn">다음</button>
   </div>
 
   <div class="overlay hidden" id="over">
@@ -178,21 +206,56 @@ resize();
 /* ---------- config ---------- */
 const CHARS = ['🐰','🐱','🦄','🐶','🦝','🐧'];
 const BOTS = [
-  {name:'상어', ch:'🦈'},
-  {name:'문어', ch:'🐙'},
-  {name:'오리', ch:'🦆'},
+  {name:'상어', ch:'🦈', sk:'dash'},
+  {name:'문어', ch:'🐙', sk:'bomb'},
+  {name:'오리', ch:'🦆', sk:'brella'},
+  {name:'거북', ch:'🐢', sk:'shell', baseSp:0.75, tough:0.65}, // 느리지만 물이 잘 안 스며듦!
+  {name:'홍학', ch:'🦩', sk:'dash', baseSp:1.15},              // 다리가 길어서 빠름
+  {name:'개구리', ch:'🐸', sk:'hop', tough:0.85},              // 물이 익숙함 + 폴짝 점프
+  {name:'게', ch:'🦀', sk:'guard'},                            // 위험하면 집게 방어
 ];
+// 토너먼트 참가자 128명을 채우는 의성어 봇 생성기!
+const SYL = ['뿌','뽀','빠','쿵','쾅','촉','찰','팡','퐁','둥','띠','뚜','냠','꽉','휙','슝','쓱','붕','빙','좍','톡','땅','뎅','철','촥','핑','뿡','짭','꿀','헐','샥','둠','촐','랑','꽁'];
+const BOT_EMO = ['🐟','🦑','🦐','🦞','🐳','🦭','🐊','🦎','🐍','🦉','🦅','🦜','🐝','🐞','🦋','🐌','🐬','🐡','🦈','🐻','🦊','🐺','🐯','🦁','🐮','🐷','🐭','🐨','🐼','🦔','🦦','🦥','🐿️','🦚','🦢'];
+const BOT_SKILLS = ['dash','bomb','brella','hop','guard','none'];
+function genBot(){
+  const r = Math.random();
+  let name;
+  const s = () => SYL[Math.floor(Math.random()*SYL.length)];
+  if(r < 0.4){ const a = s(); name = a+a+a; }          // 촉촉촉 스타일
+  else if(r < 0.7){ name = s()+s()+s(); }              // 뿌쾅톡 스타일
+  else { const a=s(), b=s(); name = a+b+a+b; }         // 팡퐁팡퐁 스타일
+  return {
+    name, ch: BOT_EMO[Math.floor(Math.random()*BOT_EMO.length)],
+    sk: BOT_SKILLS[Math.floor(Math.random()*BOT_SKILLS.length)],
+    baseSp: 0.9 + Math.random()*0.25,
+    tough: 0.85 + Math.random()*0.15,
+  };
+}
 const SKILLS = [
   {id:'bomb',  ic:'💣', nm:'물폭탄',  ds:'주변 모두에게 물벼락! (7초마다)', cd:7},
   {id:'brella',ic:'☂️', nm:'우산',    ds:'3초 동안 하나도 안 젖음 (10초마다)', cd:10},
   {id:'dash',  ic:'⚡', nm:'번개발',  ds:'2.5초 동안 엄청 빨라짐 (7초마다)', cd:7},
+  {id:'tp',    ic:'🌀', nm:'순간이동', ds:'위험할 때 슝! 딴 데로 이동 (8초마다)', cd:8},
+  {id:'clone', ic:'👥', nm:'분신',    ds:'가짜 나를 만들어 4초간 시선 끌기 (12초마다)', cd:12},
 ];
 
 let myChar = '🐰';
 let mySkillId = 'bomb';
+let teamMode = false;
+let gameMode = 'solo'; // solo | team | tour
+let decoy = null;
+let tour = null;       // 토너먼트 진행 상태
 let streak = 0, bestStreak = 0;
 
 /* ---------- state ---------- */
+let lastStage = '';   // 이번 판에서 어디까지 갔는지 (기록용)
+const STAGE_RANK = {'우승':7,'결승':6,'준결승':5,'8강':4,'16강':3,'32강':2,'조별리그':1};
+function stageRank(s){
+  if(!s) return 0;
+  for(const k in STAGE_RANK) if(String(s).includes(k)) return STAGE_RANK[k];
+  return 0;
+}
 let running = false;
 let players = [];     // [{name,ch,x,y,wet,out,isMe,tx,ty,fireT,shield,speedM,outRank}]
 let shots = [];       // [{x,y,vx,vy,from}]
@@ -203,18 +266,40 @@ let lastT = 0, outCount = 0;
 
 function startGame(e){
   if(e) e.stopPropagation();
+  if(gameMode === 'tour'){ startTournament(); return; }
+  teamMode = (gameMode === 'team');
+  tour = null;
   document.getElementById('start').classList.add('hidden');
   document.getElementById('over').classList.add('hidden');
   document.getElementById('skill-btn').style.display = 'flex';
   document.getElementById('skill-ic').textContent = SKILLS.find(s=>s.id===mySkillId).ic;
 
   const pad = 70;
-  players = [
-    {name:'나', ch:myChar, x:W/2, y:H-140, wet:0, out:false, isMe:true, fireT:0, shield:0, speedM:1, outRank:0},
-    {name:BOTS[0].name, ch:BOTS[0].ch, x:pad, y:pad+40, wet:0, out:false, isMe:false, tx:pad, ty:pad, fireT:Math.random(), shield:0, speedM:1, outRank:0, skillCd:3+Math.random()*3},
-    {name:BOTS[1].name, ch:BOTS[1].ch, x:W-pad, y:pad+40, wet:0, out:false, isMe:false, tx:W-pad, ty:pad, fireT:Math.random(), shield:0, speedM:1, outRank:0, skillCd:3+Math.random()*3},
-    {name:BOTS[2].name, ch:BOTS[2].ch, x:W/2, y:H/2-60, wet:0, out:false, isMe:false, tx:W/2, ty:H/2, fireT:Math.random(), shield:0, speedM:1, outRank:0, skillCd:3+Math.random()*3},
-  ];
+  const mk = (bot, x, y, team) => ({
+    name:bot.name, ch:bot.ch, sk:bot.sk, x, y, tx:x, ty:y, team,
+    wet:0, out:false, isMe:false, fireT:Math.random(), shield:0,
+    speedM:1, baseSp:bot.baseSp||1, tough:bot.tough||1,
+    outRank:0, skillCd:3+Math.random()*3
+  });
+  const pool = [...BOTS].sort(()=>Math.random()-0.5); // 봇 4명 중 3명 랜덤 출전
+  if(teamMode){
+    // 2:2 — 나+아군봇(파랑) vs 적군봇 둘(빨강)
+    players = [
+      {name:'나', ch:myChar, x:W/2-60, y:H-140, wet:0, out:false, isMe:true, fireT:0, shield:0, speedM:1, baseSp:1, tough:1, outRank:0, team:0},
+      mk(pool[0], W/2+60, H-140, 0),
+      mk(pool[1], pad, pad+40, 1),
+      mk(pool[2], W-pad, pad+40, 1),
+    ];
+  }else{
+    // 배틀로얄 — 전원 다른 팀
+    players = [
+      {name:'나', ch:myChar, x:W/2, y:H-140, wet:0, out:false, isMe:true, fireT:0, shield:0, speedM:1, baseSp:1, tough:1, outRank:0, team:0},
+      mk(pool[0], pad, pad+40, 1),
+      mk(pool[1], W-pad, pad+40, 2),
+      mk(pool[2], W/2, H/2-60, 3),
+    ];
+  }
+  decoy = null;
   shots = []; splashes = [];
   skillCd = 0; skillActiveT = 0;
   outCount = 0;
@@ -256,7 +341,7 @@ function useSkill(){
   if(mySkillId === 'bomb'){
     splashes.push({x:me.x, y:me.y, r:0, maxR:150, life:0.5, big:true});
     for(const p of players){
-      if(p===me || p.out) continue;
+      if(p.team === me.team || p.out) continue; // 같은 팀은 안 젖음!
       const d = Math.hypot(p.x-me.x, p.y-me.y);
       if(d < 150) addWet(p, 35);
     }
@@ -268,12 +353,32 @@ function useSkill(){
     me.speedM = 2.2;
     skillActiveT = 2.5;
     setTimeout(()=>{ me.speedM = 1; }, 2500);
+  }else if(mySkillId === 'tp'){
+    // 순간이동: 적들에게서 제일 먼 곳으로 슝!
+    splashes.push({x:me.x, y:me.y, r:0, maxR:50, life:0.4});
+    let bx=me.x, by=me.y, bd=-1;
+    for(let i=0;i<14;i++){
+      const cx = 50 + Math.random()*(W-100);
+      const cy = 60 + Math.random()*(H-200);
+      let dMin = 1e9;
+      for(const p of players){
+        if(p.team === me.team || p.out) continue;
+        dMin = Math.min(dMin, Math.hypot(p.x-cx, p.y-cy));
+      }
+      if(dMin > bd){ bd = dMin; bx = cx; by = cy; }
+    }
+    me.x = bx; me.y = by;
+    splashes.push({x:me.x, y:me.y, r:0, maxR:50, life:0.4});
+    navigator.vibrate && navigator.vibrate(50);
+  }else if(mySkillId === 'clone'){
+    // 분신: 내 자리에 가짜 나를 남김. 적들이 4초 동안 분신을 노림!
+    decoy = {x:me.x, y:me.y, ch:myChar, team:me.team, life:4};
   }
 }
 
 function addWet(p, n){
   if(p.shield > 0) return;
-  p.wet = Math.min(100, p.wet + n);
+  p.wet = Math.min(100, p.wet + n * (p.tough || 1));
   if(p.wet >= 100 && !p.out){
     p.out = true;
     outCount++;
@@ -283,10 +388,187 @@ function addWet(p, n){
   }
 }
 
+/* ---------- tournament ---------- */
+function showTourney(bodyHtml, btnText, fn){
+  document.getElementById('t-body').innerHTML = bodyHtml;
+  const btn = document.getElementById('t-btn');
+  btn.textContent = btnText;
+  btn.onclick = fn;
+  document.getElementById('tourney').classList.remove('hidden');
+}
+function hideTourney(){
+  document.getElementById('tourney').classList.add('hidden');
+}
+// 임의 인원(2명 또는 4명) 경기 시작 — 전원 다른 팀
+function startMatch(list){
+  document.getElementById('skill-btn').style.display = 'flex';
+  document.getElementById('skill-ic').textContent = SKILLS.find(s=>s.id===mySkillId).ic;
+  const pad = 70;
+  const pos4 = [[W/2,H-140],[pad,pad+40],[W-pad,pad+40],[W/2,H/2-60]];
+  const pos3 = [[W/2,H-140],[pad+10,pad+50],[W-pad-10,pad+50]];
+  const pos2 = [[W/2,H-140],[W/2,pad+70]];
+  const pos = list.length === 2 ? pos2 : list.length === 3 ? pos3 : pos4;
+  players = list.map((d,i)=>{
+    const [x,y] = pos[i];
+    if(d.me) return {name:'나',ch:myChar,x,y,wet:0,out:false,isMe:true,fireT:0,shield:0,speedM:1,baseSp:1,tough:1,outRank:0,team:i};
+    return {name:d.name,ch:d.ch,sk:d.sk,x,y,tx:x,ty:y,team:i,wet:0,out:false,isMe:false,fireT:Math.random(),shield:0,speedM:1,baseSp:d.baseSp||1,tough:d.tough||1,outRank:0,skillCd:3+Math.random()*3};
+  });
+  decoy = null; shots = []; splashes = [];
+  skillCd = 0; skillActiveT = 0; outCount = 0;
+  running = true; lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+const MEDAL = ['🥇','🥈','🥉','4위'];
+// 32개 조 × 4명 = 128명 메가 토너먼트!
+// 조별리그 → 32강 → 16강 → 8강 → 준결승 → 결승
+const ROUNDS = [
+  {key:'group', label:'조별리그', size:4, desc:'1조 경기! 오직 1위만 진출!'},
+  {key:'r32',  label:'32강', size:2, desc:'조 1위들의 1:1 대결! 이기면 진출'},
+  {key:'r16',  label:'16강', size:2, desc:'1:1 대결! 이기면 진출'},
+  {key:'r8',   label:'8강',  size:2, desc:'1:1 대결! 이제 진짜 강자들만 남았다'},
+  {key:'semi', label:'준결승', size:2, desc:'이기면 결승! 지면... 아쉽지만 4강까지!'},
+  {key:'final',label:'결승', size:2, desc:'128명 중 마지막 둘. 이기는 사람이 챔피언!'},
+];
+function startTournament(){
+  teamMode = false;
+  document.getElementById('start').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  const pool = [...BOTS].sort(()=>Math.random()-0.5);
+  tour = {
+    round: 0,
+    myGroup: pool.slice(0,3), // 1조는 아는 봇들과!
+  };
+  showTourney(`<h1>🏆 물총 메가 토너먼트</h1>
+    <p><b>참가자 128명 · 32개 조!</b><br>조별리그 → 32강 → 16강 → 8강 → 준결승 → 결승</p>
+    <p>나는 <b>1조</b>! 같은 조: ${tour.myGroup.map(b=>b.ch+b.name).join(', ')}</p>
+    <p>각 조에서 <b>오직 1위만</b> 32강 진출!<br>(2등? 탈락입니다. 냉정한 대회거든요)</p>`,
+    '조별리그 시작!',
+    ()=>{ hideTourney(); startMatch([{me:true}, ...tour.myGroup]); });
+}
+function roundOpponents(r){
+  // 이번 라운드 상대 (size-1명): 랜덤 생성 봇들
+  const n = ROUNDS[r].size - 1;
+  const list = [];
+  for(let i=0;i<n;i++) list.push(genBot());
+  return list;
+}
+function remainText(r){
+  const remain = [128,32,16,8,4,2][r+1] || 0;
+  return remain ? `살아남은 사람: <b>${remain}명</b>` : '';
+}
+function tourneyMatchEnd(){
+  const me = players[0];
+  const r = tour.round;
+  const round = ROUNDS[r];
+  const advanced = me.finalRank === 1; // 오직 1위만!
+  const order = [...players].sort((a,b)=>a.finalRank-b.finalRank);
+  const rankHtml = order.map((p,i)=>`${MEDAL[i]||''} ${p.ch} ${p.name}${i===0?' <b>(진출!)</b>':''}`).join('<br>');
+
+  if(round.key === 'final'){
+    if(me.finalRank === 1) endTournament(true, '');
+    else endTournament(false, '준우승! 🥈 128명 중 2등, 은메달!', '결승');
+    return;
+  }
+  if(!advanced){
+    if(round.key === 'group'){
+      endTournament(false, `조별리그 ${me.finalRank}등... 1위만 진출이라 탈락 💦 (냉정한 대회)`, '조별리그');
+    }else if(round.key === 'semi'){
+      endTournament(false, '준결승 탈락... 그래도 128명 중 4강! 대단해! 💪', '준결승');
+    }else{
+      const total = [128,32,16,8][r];
+      endTournament(false, `${round.label} 탈락... (128명 중 ${total}강까지 진출!) 💦`, round.label);
+    }
+    return;
+  }
+  // 다음 라운드로!
+  tour.round++;
+  const next = ROUNDS[tour.round];
+  tour.opps = roundOpponents(tour.round);
+  const vs = tour.opps.map(b=>b.ch+b.name).join(' vs ');
+  const extra = next.key === 'semi' ? '<p>준결승이다! 여기서 이기면 결승 무대!<br>모두가 지켜보고 있다 👀</p>' :
+               next.key === 'final' ? '<p>128명 중 마지막 둘...!<br>이번 대회는 숫자가 딱딱 맞아떨어졌다. 기적이다.</p>' : '';
+  showTourney(`<h1>${round.label} 통과! 🎉</h1>
+    <p>${rankHtml}</p>
+    <p>${remainText(r)}</p>
+    ${extra}
+    <p>🔥 ${next.label}: <b>나 vs ${vs}</b><br>${next.desc}</p>`,
+    next.label + ' 시작!',
+    ()=>{ hideTourney(); startMatch([{me:true}, ...tour.opps]); });
+}
+function endTournament(champion, sub, stage){
+  tour = null;
+  const title = document.getElementById('result-title');
+  const rk = document.getElementById('result-rank');
+  if(champion){
+    streak++;
+    title.textContent = '🏆 메가 토너먼트 우승!!';
+    rk.textContent = '128명 중 1등!! 🎉';
+    lastStage = '🏆 우승';
+  }else{
+    streak = 0;
+    title.textContent = '🏁 토너먼트 끝!';
+    rk.textContent = sub;
+    lastStage = '🏆 ' + (stage || '조별리그');
+  }
+  bestStreak = Math.max(bestStreak, streak);
+  storageSet(KEY+'-streak', String(bestStreak));
+  document.getElementById('streak-line').textContent =
+    streak > 1 ? `🔥 ${streak}연승 중! (최고 ${bestStreak}연승)` : `최고 기록: ${bestStreak}연승`;
+  // 토너먼트는 어디까지 갔든 기록 남길 수 있음!
+  document.getElementById('record-form').style.display = 'block';
+  renderBoard(-1);
+  document.getElementById('over').classList.remove('hidden');
+}
+
 /* ---------- game end ---------- */
 function checkEnd(){
   const alive = players.filter(p=>!p.out);
   const me = players[0];
+  if(tour){
+    // 토너먼트 경기: 순위 계산 후 대진표로
+    const matchOver = me.out || alive.length <= 1;
+    if(!matchOver) return;
+    running = false;
+    document.getElementById('skill-btn').style.display = 'none';
+    const N = players.length;
+    const aliveShuffled = players.filter(p=>!p.out).sort(()=>Math.random()-0.5);
+    aliveShuffled.forEach((p,i)=>{ p.finalRank = i+1; });
+    players.filter(p=>p.out).forEach(p=>{ p.finalRank = N - p.outRank + 1; });
+    setTimeout(tourneyMatchEnd, 800);
+    return;
+  }
+  if(teamMode){
+    // 팀전: 한 팀이 전멸해야 끝! (내가 젖어도 아군이 남으면 계속)
+    const blueAlive = players.some(p=>p.team===0 && !p.out);
+    const redAlive  = players.some(p=>p.team===1 && !p.out);
+    if(blueAlive && redAlive) return;
+    running = false;
+    document.getElementById('skill-btn').style.display = 'none';
+    const win = blueAlive;
+    const title = document.getElementById('result-title');
+    const rk = document.getElementById('result-rank');
+    if(win){
+      streak++;
+      title.textContent = '🏆 우리 팀 승리!';
+      rk.textContent = me.out ? '아군이 해냈다!! 🤝' : '팀 승리! 🤝';
+      lastStage = '🤝 팀전 승리';
+    }else{
+      streak = 0;
+      title.textContent = '💦 우리 팀 패배...';
+      rk.textContent = '다음 판엔 이기자!';
+      lastStage = '🤝 팀전 패배';
+    }
+    bestStreak = Math.max(bestStreak, streak);
+    storageSet(KEY+'-streak', String(bestStreak));
+    document.getElementById('streak-line').textContent =
+      streak > 1 ? `🔥 ${streak}연승 중! (최고 ${bestStreak}연승)` : `최고 기록: ${bestStreak}연승`;
+    document.getElementById('record-form').style.display = win ? 'block' : 'none';
+    renderBoard(-1);
+    setTimeout(()=>{
+      document.getElementById('over').classList.remove('hidden');
+    }, 800);
+    return;
+  }
   if(me.out || alive.length <= 1){
     running = false;
     document.getElementById('skill-btn').style.display = 'none';
@@ -299,10 +581,12 @@ function checkEnd(){
       streak++;
       title.textContent = '🏆 승리!';
       rk.textContent = '1등! 뽀송뽀송 🌞';
+      lastStage = '🥊 대결 승리';
     }else{
       streak = 0;
       title.textContent = '💦 흠뻑 젖었다!';
       rk.textContent = rank + '등...';
+      lastStage = '🥊 ' + rank + '등';
     }
     bestStreak = Math.max(bestStreak, streak);
     storageSet(KEY+'-streak', String(bestStreak));
@@ -328,14 +612,16 @@ async function loadBoard(){
 async function saveRecord(){
   const name = document.getElementById('rec-name').value.trim() || '이름없음';
   storageSet(KEY+'-name', name);
-  // 같은 이름은 최고 연승만 유지
+  // 같은 이름은 최고 기록만 유지 (연승 우선, 같으면 더 높이 간 기록)
   const exist = boardData.find(r => r.name === name);
   if(exist){
-    if(streak > exist.streak){ exist.streak = streak; exist.ts = Date.now(); }
+    if(streak > exist.streak || (streak === exist.streak && stageRank(lastStage) > stageRank(exist.stage))){
+      exist.streak = streak; exist.stage = lastStage; exist.ts = Date.now();
+    }
   }else{
-    boardData.push({name, streak, ts: Date.now()});
+    boardData.push({name, streak, stage: lastStage, ts: Date.now()});
   }
-  boardData.sort((a,b)=> b.streak - a.streak || a.ts - b.ts);
+  boardData.sort((a,b)=> b.streak - a.streak || stageRank(b.stage) - stageRank(a.stage) || a.ts - b.ts);
   boardData = boardData.slice(0, 10);
   storageSet(KEY+'-board', JSON.stringify(boardData));
   const myIdx = boardData.findIndex(r => r.name === name);
@@ -350,51 +636,68 @@ function renderBoard(myIdx){
     <div class="board-row ${i===myIdx?'me':''}">
       <span class="rk">${medals[i] || (i+1)+'위'}</span>
       <span class="nm">${String(r.name).replace(/[<>&"]/g,'')}</span>
-      <span>${r.streak}연승</span>
+      <span>${r.streak}연승${r.stage ? ' · ' + String(r.stage).replace(/[<>&"]/g,'') : ''}</span>
     </div>`).join('');
 }
 
 /* ---------- shooting ---------- */
+function enemiesOf(p){
+  return players.filter(q => q !== p && !q.out && q.team !== p.team);
+}
 function nearestTarget(p){
   let best = null, bd = 1e9;
-  for(const q of players){
-    if(q===p || q.out) continue;
+  for(const q of enemiesOf(p)){
     const d = Math.hypot(q.x-p.x, q.y-p.y);
     if(d < bd){ bd = d; best = q; }
   }
   return best;
 }
-// 제일 안 젖은 사람(=현재 1등)을 노림. 가끔은 그냥 가까운 사람
+// 제일 안 젖은 적(=현재 1등)을 노림. 가끔은 그냥 가까운 적.
+// 분신이 떠 있으면 적들은 분신에 홀딱 속는다!
 function leaderTarget(p){
+  if(decoy && decoy.life > 0 && decoy.team !== p.team && Math.random() < 0.8) return decoy;
   if(Math.random() < 0.3) return nearestTarget(p);
   let best = null, bw = 1e9;
-  for(const q of players){
-    if(q===p || q.out) continue;
+  for(const q of enemiesOf(p)){
     if(q.wet < bw){ bw = q.wet; best = q; }
   }
   return best;
 }
-// 봇 스킬: 상어=번개발, 문어=물폭탄, 오리=우산
+// 봇 스킬: 타입별 (이름이 아니라 sk 속성으로 — 생성된 봇도 스킬 사용!)
 function botUseSkill(p){
-  if(p.name === '상어'){
-    p.speedM = 2.2;
+  const sk = p.sk || 'none';
+  if(sk === 'dash'){
+    p.speedM = 2.1;
     p.skillCd = 8;
-    setTimeout(()=>{ p.speedM = 1; }, 2000);
-  }else if(p.name === '문어'){
-    // 가까이 있는 사람 있을 때만 터뜨림
-    const near = players.some(q => q!==p && !q.out && Math.hypot(q.x-p.x,q.y-p.y) < 140);
+    setTimeout(()=>{ p.speedM = 1; }, 1900);
+  }else if(sk === 'bomb'){
+    const near = enemiesOf(p).some(q => Math.hypot(q.x-p.x,q.y-p.y) < 140);
     if(!near){ p.skillCd = 0.5; return; }
     splashes.push({x:p.x, y:p.y, r:0, maxR:150, life:0.5, big:true});
-    for(const q of players){
-      if(q===p || q.out) continue;
+    for(const q of enemiesOf(p)){
       if(Math.hypot(q.x-p.x, q.y-p.y) < 150) addWet(q, 35);
     }
     p.skillCd = 9;
-  }else if(p.name === '오리'){
-    // 많이 젖었을 때만 우산 폄
+  }else if(sk === 'brella'){
     if(p.wet < 45){ p.skillCd = 0.5; return; }
     p.shield = 3;
     p.skillCd = 11;
+  }else if(sk === 'shell'){
+    if(p.wet < 50){ p.skillCd = 0.5; return; }
+    p.shield = 4;
+    p.skillCd = 12;
+  }else if(sk === 'hop'){
+    splashes.push({x:p.x, y:p.y, r:0, maxR:40, life:0.35});
+    const nx = Math.max(40, Math.min(W-40, p.x + (Math.random()-0.5)*260));
+    const ny = Math.max(50, Math.min(H-160, p.y + (Math.random()-0.5)*260));
+    p.x = nx; p.y = ny; p.tx = nx; p.ty = ny;
+    p.skillCd = 6;
+  }else if(sk === 'guard'){
+    if(p.wet < 40){ p.skillCd = 0.5; return; }
+    p.shield = 2;
+    p.skillCd = 9;
+  }else{
+    p.skillCd = 6;
   }
 }
 function shoot(p, target, accuracy){
@@ -437,7 +740,7 @@ function loop(t){
     }
     const dx = p.tx-p.x, dy = p.ty-p.y, d = Math.hypot(dx,dy);
     if(d > 4){
-      const sp = 150 * (p.speedM||1);
+      const sp = 150 * (p.speedM||1) * (p.baseSp||1);
       p.x += dx/d*sp*dt; p.y += dy/d*sp*dt;
     }
     // 봇 스킬 사용
@@ -465,6 +768,12 @@ function loop(t){
     }
   }
 
+  // 분신 타이머
+  if(decoy){
+    decoy.life -= dt;
+    if(decoy.life <= 0) decoy = null;
+  }
+
   // 물줄기 이동/명중
   for(let i=shots.length-1;i>=0;i--){
     const s = shots[i];
@@ -473,12 +782,18 @@ function loop(t){
     let hit = false;
     for(const p of players){
       if(p===s.from || p.out) continue;
+      if(p.team === s.from.team) continue; // 같은 팀 물줄기는 통과!
       if(Math.hypot(p.x-s.x, p.y-s.y) < 26){
         addWet(p, 8);
         splashes.push({x:s.x, y:s.y, r:0, maxR:26, life:0.3});
         hit = true;
         break;
       }
+    }
+    // 분신에 맞으면 첨벙! (분신은 안 젖음, 시간만 낭비)
+    if(!hit && decoy && s.from.team !== decoy.team && Math.hypot(decoy.x-s.x, decoy.y-s.y) < 26){
+      splashes.push({x:s.x, y:s.y, r:0, maxR:26, life:0.3});
+      hit = true;
     }
     if(hit) shots.splice(i,1);
   }
@@ -537,10 +852,30 @@ function render(){
     ctx.stroke();
   }
 
+  // 분신 (반투명한 가짜 나)
+  if(decoy){
+    ctx.save();
+    ctx.translate(decoy.x, decoy.y);
+    ctx.globalAlpha = 0.55;
+    ctx.font = '40px sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(decoy.ch, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.font = '16px sans-serif';
+    ctx.fillText('👥', 0, -32);
+    ctx.restore();
+  }
+
   // 플레이어
   for(const p of players){
     ctx.save();
     ctx.translate(p.x, p.y);
+    // 팀전: 팀 색깔 링 표시
+    if(teamMode && !p.out){
+      ctx.strokeStyle = p.team === 0 ? 'rgba(43,108,255,.75)' : 'rgba(231,76,60,.75)';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.ellipse(0, 24, 22, 8, 0, 0, Math.PI*2); ctx.stroke();
+    }
     if(p.out){
       ctx.globalAlpha = 0.45;
       ctx.font = '40px sans-serif';
@@ -586,6 +921,10 @@ function render(){
 
 /* ---------- pickers ---------- */
 function buildPickers(){
+  document.getElementById('mode-row').innerHTML = `
+    <button class="mode-btn ${gameMode==='solo'?'sel':''}" onclick="pickMode('solo', this)">🥊 4인 대결</button>
+    <button class="mode-btn ${gameMode==='team'?'sel':''}" onclick="pickMode('team', this)">🤝 2:2 팀전</button>
+    <button class="mode-btn ${gameMode==='tour'?'sel':''}" onclick="pickMode('tour', this)">🏆 토너먼트</button>`;
   document.getElementById('char-row').innerHTML = CHARS.map(c =>
     `<button class="pick-btn ${c===myChar?'sel':''}" onclick="pickChar('${c}', this)">${c}</button>`
   ).join('');
@@ -594,6 +933,12 @@ function buildPickers(){
       <span class="ic">${s.ic}</span>
       <span><span class="nm">${s.nm}</span><br><span class="ds">${s.ds}</span></span>
     </button>`).join('');
+}
+function pickMode(m, btn){
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  storageSet(KEY+'-mode', m);
 }
 function pickChar(c, btn){
   myChar = c;
@@ -614,6 +959,8 @@ function pickSkill(id, btn){
   if(c && CHARS.includes(c)) myChar = c;
   const sk = await storageGet(KEY+'-skill');
   if(sk && SKILLS.some(s=>s.id===sk)) mySkillId = sk;
+  const md = await storageGet(KEY+'-mode');
+  if(md === 'solo' || md === 'team' || md === 'tour') gameMode = md;
   const st = await storageGet(KEY+'-streak');
   if(st) bestStreak = parseInt(st)||0;
   await loadBoard();
