@@ -171,13 +171,16 @@ function loadSave(){
   try{
     const s=JSON.parse(localStorage.getItem(SKEY));
     if(!s || s.v!==1) return null;
-    const p=s.P;
-    // 저장한 게 망가져 있으면 없던 걸로 친다
-    for(const k of ['x','y','m','vx','vy','gas','water','temp','spin'])
-      if(typeof p?.[k] !== 'number' || !isFinite(p[k])) return null;
-    if(typeof s.tLeft !== 'number' || !isFinite(s.tLeft)) return null;
     return s;
   }catch(e){ return null; }
+}
+// 이어서 할 수 있는 판인지 (도감과 따로 본다 — 판이 없어도 도감은 남아야 한다)
+function runOf(s){
+  if(!s || !s.P || s.won) return null;
+  for(const k of ['x','y','m','vx','vy','gas','water','temp','spin'])
+    if(typeof s.P[k] !== 'number' || !isFinite(s.P[k])) return null;
+  if(typeof s.tLeft !== 'number' || !isFinite(s.tLeft) || s.tLeft<=1) return null;
+  return s;
 }
 function clearRun(){                     // 도감은 남기고 하던 판만 지운다
   try{
@@ -187,7 +190,7 @@ function clearRun(){                     // 도감은 남기고 하던 판만 �
 const saved=loadSave();
 if(saved && Array.isArray(saved.found)) saved.found.forEach(k=>found.add(k));
 // 아직 안 끝난 판이 남아 있으면 이어서 할 수 있다
-const pending = (saved && saved.P && !saved.won && saved.tLeft>1) ? saved : null;
+const pending = runOf(saved);
 
 function evaluate(){
   const m=P.m,g=P.gas,w=P.water,t=P.temp;
