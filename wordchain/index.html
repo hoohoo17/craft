@@ -92,6 +92,13 @@
     cursor:pointer;
   }
   #give-up-btn:active{transform:scale(.94);}
+  #give-up-btn.armed{
+    background:#E74C3C; color:#fff;
+    border-color:#E74C3C;
+    font-size:.95rem; font-weight:900;
+    animation:pulse .5s infinite alternate;
+  }
+  @keyframes pulse{to{transform:scale(1.08);}}
   #send-btn{
     flex:none;
     font-family:inherit; font-size:1.1rem; font-weight:900;
@@ -264,8 +271,9 @@ function submitWord(){
   if(!w) return;
   inp.value = '';
 
-  // 항복 선언 (타자로도 가능)
+  // 항복 선언 (타자로도 가능 — 직접 쓴 거니까 바로 항복)
   if(w === '항복'){
+    surrenderArmed = true;
     surrender();
     return;
   }
@@ -305,22 +313,27 @@ function submitWord(){
   acceptMyWord(w, true);
 }
 
-// 폰에서는 confirm 창이 안 뜨는 일이 있어서, 대화창 안에서 직접 물어본다
+// 실수로 눌러서 지지 않게, 두 번 눌러야 항복된다
+let surrenderArmed = false;
+let surrenderTimer = null;
 function surrender(){
   if(gameOver) return;
-  if(document.querySelector('.choice-row[data-giveup]')) return;
-  const btns = document.createElement('div');
-  btns.className = 'choice-row';
-  btns.dataset.giveup = '1';
-  btns.innerHTML = `
-    <button class="choice-btn primary" onclick="doSurrender()">네, 항복할래요 🏳️</button>
-    <button class="choice-btn" onclick="removeChoices()">아니요, 더 할래요!</button>`;
-  addBubble('sys', '정말 항복할까요? 연승이 0이 돼요');
-  chat.appendChild(btns);
-  chat.scrollTop = chat.scrollHeight;
-}
-function doSurrender(){
-  if(gameOver) return;
+  const btn = document.getElementById('give-up-btn');
+  if(!surrenderArmed){
+    // 1차: 버튼만 '진짜?' 로 바꾸고 3초 기다린다
+    surrenderArmed = true;
+    if(btn){ btn.textContent = '진짜?'; btn.classList.add('armed'); }
+    clearTimeout(surrenderTimer);
+    surrenderTimer = setTimeout(()=>{
+      surrenderArmed = false;
+      if(btn){ btn.textContent = '🏳️'; btn.classList.remove('armed'); }
+    }, 3000);
+    return;
+  }
+  // 2차: 항복 확정
+  clearTimeout(surrenderTimer);
+  surrenderArmed = false;
+  if(btn){ btn.textContent = '🏳️'; btn.classList.remove('armed'); }
   removeChoices();
   pendingWord = null;
   addBubble('bubble me-b', '항복 🏳️');
