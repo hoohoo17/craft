@@ -102,8 +102,31 @@
             word-break: keep-all;
         }
 
+        /* 대화방으로 바로 가는 단추 */
+        .chat-jump {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #2C3560;
+            text-decoration: none;
+            background: #fff;
+            border-radius: 999px;
+            box-shadow: 0 3px 10px rgba(80,100,160,.14);
+            transition: transform .12s, box-shadow .12s;
+        }
+        .chat-jump:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(80,100,160,.20);
+        }
+        .chat-jump:active { transform: translateY(0); }
+
         /* ---------- 대화방 ---------- */
         .comment-section {
+            scroll-margin-top: 16px;
             margin-top: 24px;
             background: linear-gradient(160deg, #EAF3FF 0%, #F7ECFF 100%);
             border-radius: 18px;
@@ -279,6 +302,7 @@
     <div class="shelf-head">
         <h1>🎮 게임 모음</h1>
         <p>곽재후가 만든 게임 <span id="gameCount"></span></p>
+        <a class="chat-jump" href="#chat">💬 대화방 가기</a>
     </div>
     <div class="map-container">
         <a href="https://hoohoo17.github.io/craft/guinness">
@@ -415,7 +439,7 @@
         </a>
     </div>
 
-    <div class="comment-section">
+    <div class="comment-section" id="chat">
         <h3>💬 대화방</h3>
         <div class="comment-notice">쓰면 바로 올라가요. 이름 8자, 메시지 60자까지.</div>
         <form class="comment-form" id="commentForm">
@@ -553,6 +577,21 @@
             clearTimeout(showSuccess._t);
             showSuccess._t = setTimeout(() => el.classList.remove('show'), 4000);
         }
+
+        // 앵커(#chat)는 미리보기 같은 곳에서 막히기도 해서, 직접 굴려서 내려간다
+        document.querySelector('.chat-jump').addEventListener('click', (e) => {
+            e.preventDefault();
+            const chat = document.getElementById('chat');
+            const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const before = window.scrollY;
+            chat.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
+            // 부드럽게 굴러가지 않는 곳이면 그냥 바로 데려다 준다
+            setTimeout(() => {
+                if (window.scrollY === before) {
+                    chat.scrollIntoView({ behavior: 'auto', block: 'start' });
+                }
+            }, 400);
+        });
 
         document.getElementById('commentForm').addEventListener('submit', async (e) => {
             e.preventDefault();
