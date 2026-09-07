@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#141d19">
+<title>오목</title>
+<style>
+  :root{
+    --ink:#141d19;
+    --ink-2:#1d2a24;
+    --paper:#f2ede1;
+    --board-1:#e2bb84;
+    --board-2:#d3a666;
+    --grid:#7c5730;
+    --seal:#b3352f;
+    --muted:#9aa8a0;
+    --line:#2c3a33;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    display:flex;justify-content:center;
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom));
+    overscroll-behavior:none;
+  }
+  main{width:100%;max-width:460px;display:flex;flex-direction:column;gap:14px}
+
+  header{display:flex;align-items:baseline;gap:10px}
+  h1{
+    margin:0;font-size:30px;font-weight:800;letter-spacing:.22em;
+    text-indent:.22em;
+  }
+  header p{margin:0;font-size:13px;color:var(--muted)}
+
+  .controls{display:flex;flex-direction:column;gap:8px}
+  .seg{display:flex;background:var(--ink-2);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px}
+  .seg button{
+    flex:1;appearance:none;border:0;background:transparent;color:var(--muted);
+    font:inherit;font-size:14px;font-weight:600;padding:9px 0;border-radius:8px;cursor:pointer;
+  }
+  .seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+  .seg button:focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+  #levelRow[hidden]{display:none}
+
+  .status{
+    display:flex;align-items:center;gap:9px;min-height:26px;
+    font-size:15px;font-weight:600;
+  }
+  .dot{width:15px;height:15px;border-radius:50%;flex:none;box-shadow:0 1px 2px rgba(0,0,0,.5)}
+  .dot.black{background:radial-gradient(circle at 33% 30%,#5c5c5c,#050505 70%)}
+  .dot.white{background:radial-gradient(circle at 33% 30%,#fff,#c3bcae 75%)}
+
+  .boardwrap{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.45)}
+  canvas{display:block;width:100%;height:auto;touch-action:manipulation}
+
+  .overlay{
+    position:absolute;inset:0;display:none;place-items:center;
+    background:rgba(12,18,15,.72);backdrop-filter:blur(2px);
+  }
+  .overlay.show{display:grid}
+  .result{text-align:center;padding:22px 26px}
+  .result strong{display:block;font-size:26px;margin-bottom:4px}
+  .result span{display:block;font-size:14px;color:var(--muted);margin-bottom:16px}
+
+  .actions{display:flex;gap:9px}
+  .btn{
+    flex:1;appearance:none;font:inherit;font-size:15px;font-weight:600;
+    padding:13px 0;border-radius:11px;cursor:pointer;
+    background:var(--ink-2);color:var(--paper);border:1px solid var(--line);
+  }
+  .btn.primary{background:var(--seal);border-color:var(--seal);color:#fff}
+  .btn:disabled{opacity:.4;cursor:default}
+  .btn:focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+
+  footer{font-size:12.5px;color:var(--muted);line-height:1.6}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>오목</h1>
+    <p>먼저 다섯 줄</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" id="modeRow">
+      <button data-mode="ai" aria-pressed="true">혼자</button>
+      <button data-mode="pvp" aria-pressed="false">둘이</button>
+    </div>
+    <div class="seg" id="levelRow">
+      <button data-level="1" aria-pressed="false">쉬움</button>
+      <button data-level="2" aria-pressed="true">보통</button>
+      <button data-level="3" aria-pressed="false">어려움</button>
+    </div>
+  </div>
+
+  <p class="status"><span class="dot black" id="turnDot"></span><span id="turnText">흑 차례예요</span></p>
+
+  <div class="boardwrap">
+    <canvas id="board"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="result">
+        <strong id="resultTitle">흑 승</strong>
+        <span id="resultSub">다섯 줄이 이어졌어요</span>
+        <button class="btn primary" id="againBtn">한 판 더</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="undoBtn" disabled>무르기</button>
+    <button class="btn" id="newBtn">새 판</button>
+  </div>
+
+  <footer>흑이 먼저 둡니다. 혼자 하기에서는 당신이 흑, 컴퓨터가 백이에요.</footer>
+</main>
+
+<script>
+(() => {
+  const N = 15, EMPTY = 0, BLACK = 1, WHITE = 2;
+  const cv = document.getElementById('board');
+  const ctx = cv.getContext('2d');
+
+  let grid, moves, turn, over, winCells, mode = 'ai', level = 2, thinking = false;
+  let cell = 24, off = 12, size = 360;
+
+  /* ---------- 판 그리기 ---------- */
+  function layout() {
+    const w = Math.min(cv.parentElement.clientWidth, 460);
+    const dpr = window.devicePixelRatio || 1;
+    size = w; cell = w / N; off = cell / 2;
+    cv.width = w * dpr; cv.height = w * dpr;
+    cv.style.height = w + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+  const xy = i => off + i * cell;
+
+  function draw() {
+    const g = ctx.createLinearGradient(0, 0, size, size);
+    g.addColorStop(0, getVar('--board-1')); g.addColorStop(1, getVar('--board-2'));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+
+    ctx.strokeStyle = getVar('--grid'); ctx.lineWidth = Math.max(1, cell * .035);
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      ctx.moveTo(xy(0), xy(i)); ctx.lineTo(xy(N - 1), xy(i));
+      ctx.moveTo(xy(i), xy(0)); ctx.lineTo(xy(i), xy(N - 1));
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = getVar('--grid');
+    for (const [r, c] of [[3,3],[3,11],[11,3],[11,11],[7,7]]) {
+      ctx.beginPath(); ctx.arc(xy(c), xy(r), cell * .11, 0, 7); ctx.fill();
+    }
+
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++)
+      if (grid[r][c]) stone(r, c, grid[r][c]);
+
+    const last = moves[moves.length - 1];
+    if (last && !winCells) {
+      ctx.strokeStyle = getVar('--seal'); ctx.lineWidth = Math.max(1.5, cell * .07);
+      ctx.beginPath(); ctx.arc(xy(last.c), xy(last.r), cell * .2, 0, 7); ctx.stroke();
+    }
+    if (winCells) {
+      const a = winCells[0], b = winCells[winCells.length - 1];
+      ctx.strokeStyle = 'rgba(179,53,47,.85)';
+      ctx.lineWidth = cell * .13; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(xy(a.c), xy(a.r)); ctx.lineTo(xy(b.c), xy(b.r)); ctx.stroke();
+    }
+  }
+
+  function stone(r, c, p) {
+    const x = xy(c), y = xy(r), rad = cell * .44;
+    ctx.beginPath(); ctx.arc(x, y + cell * .04, rad, 0, 7);
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fill();
+    const s = ctx.createRadialGradient(x - rad * .35, y - rad * .38, rad * .1, x, y, rad);
+    if (p === BLACK) { s.addColorStop(0, '#6b6b6b'); s.addColorStop(1, '#0a0a0a'); }
+    else { s.addColorStop(0, '#ffffff'); s.addColorStop(1, '#c2bbad'); }
+    ctx.beginPath(); ctx.arc(x, y, rad, 0, 7); ctx.fillStyle = s; ctx.fill();
+  }
+  const getVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  /* ---------- 규칙 ---------- */
+  const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+  const inside = (r, c) => r >= 0 && r < N && c >= 0 && c < N;
+
+  function winLine(r, c, p) {
+    for (const [dr, dc] of DIRS) {
+      const line = [{r, c}];
+      for (const s of [1, -1]) {
+        let i = r + dr * s, j = c + dc * s;
+        while (inside(i, j) && grid[i][j] === p) {
+          s === 1 ? line.push({r: i, c: j}) : line.unshift({r: i, c: j});
+          i += dr * s; j += dc * s;
+        }
+      }
+      if (line.length >= 5) return line;
+    }
+    return null;
+  }
+
+  /* ---------- 컴퓨터 ---------- */
+  function window9(r, c, dr, dc, p) {
+    let s = '';
+    for (let k = -4; k <= 4; k++) {
+      if (k === 0) { s += 'm'; continue; }
+      const i = r + dr * k, j = c + dc * k;
+      if (!inside(i, j)) { s += 'o'; continue; }
+      const v = grid[i][j];
+      s += v === EMPTY ? '.' : (v === p ? 'm' : 'o');
+    }
+    return s;
+  }
+  function lineScore(s) {
+    if (s.includes('mmmmm')) return 1e8;
+    if (s.includes('.mmmm.')) return 5e6;
+    if (s.includes('mmmm.') || s.includes('.mmmm') || s.includes('mmm.m') ||
+        s.includes('m.mmm') || s.includes('mm.mm')) return 1e5;
+    if (s.includes('.mmm.') || s.includes('.mm.m.') || s.includes('.m.mm.')) return 1.2e4;
+    if (s.includes('mmm') || s.includes('mm.m') || s.includes('m.mm')) return 900;
+    if (s.includes('.mm.')) return 400;
+    if (s.includes('.m.m.')) return 220;
+    if (s.includes('mm')) return 140;
+    return 15;
+  }
+  const cellScore = (r, c, p) =>
+    DIRS.reduce((sum, [dr, dc]) => sum + lineScore(window9(r, c, dr, dc, p)), 0);
+
+  function candidates() {
+    const out = [], seen = new Set();
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      if (!grid[r][c]) continue;
+      for (let i = r - 2; i <= r + 2; i++) for (let j = c - 2; j <= c + 2; j++) {
+        if (inside(i, j) && !grid[i][j] && !seen.has(i * N + j)) {
+          seen.add(i * N + j); out.push({r: i, c: j});
+        }
+      }
+    }
+    return out;
+  }
+
+  function aiMove(me) {
+    const you = me === BLACK ? WHITE : BLACK;
+    const list = candidates();
+    if (!list.length) return {r: 7, c: 7};
+
+    const scored = list.map(m => ({
+      ...m,
+      atk: cellScore(m.r, m.c, me),
+      def: cellScore(m.r, m.c, you)
+    }));
+    scored.forEach(m => m.base = m.atk + m.def * (level === 3 ? 0.95 : 0.7));
+    scored.sort((a, b) => b.base - a.base);
+
+    const win = scored.find(m => m.atk >= 1e8);
+    if (win) return win;                                  // 이길 수 있으면 어느 난이도든 둠
+
+    if (level === 1) {                                    // 쉬움: 위협을 자주 못 보고 지나감
+      if (Math.random() < 0.2) return list[Math.floor(Math.random() * list.length)];
+      const dw = Math.random() < 0.7 ? 0 : 0.25;          // 대개 수비를 아예 안 봄
+      const easy = scored
+        .map(m => ({...m, v: m.atk * 0.8 + m.def * dw + Math.random() * 4000}))
+        .sort((a, b) => b.v - a.v);
+      return easy[Math.floor(Math.random() * Math.min(5, easy.length))];
+    }
+
+    if (scored[0].def >= 1e8) return scored[0];           // 오목 완성은 무조건 막음
+    if (level === 2) {                                    // 보통: 3은 자주 놓치고 가끔 딴 데 둠
+      if (Math.random() < 0.1) return list[Math.floor(Math.random() * list.length)];
+      const dw = Math.random() < 0.7 ? 0 : 0.6;
+      const mid = scored
+        .map(m => ({...m, v: m.atk + m.def * dw + Math.random() * 6000}))
+        .sort((a, b) => b.v - a.v);
+      return mid[Math.floor(Math.random() * Math.min(5, mid.length))];
+    }
+
+    let best = scored[0], bestVal = -Infinity;                // 어려움: 상대 응수까지 한 수 더
+    for (const m of scored.slice(0, 8)) {
+      grid[m.r][m.c] = me;
+      let reply = 0;
+      for (const o of candidates().slice(0, 40)) {
+        const v = cellScore(o.r, o.c, you) + cellScore(o.r, o.c, me) * 0.9;
+        if (v > reply) reply = v;
+      }
+      grid[m.r][m.c] = EMPTY;
+      const val = m.base - reply * 0.85;
+      if (val > bestVal) { bestVal = val; best = m; }
+    }
+    return best;
+  }
+
+  /* ---------- 진행 ---------- */
+  function reset() {
+    grid = Array.from({length: N}, () => Array(N).fill(EMPTY));
+    moves = []; turn = BLACK; over = false; winCells = null; thinking = false;
+    document.getElementById('overlay').classList.remove('show');
+    update(); draw();
+  }
+
+  function place(r, c) {
+    grid[r][c] = turn;
+    moves.push({r, c, p: turn});
+    const line = winLine(r, c, turn);
+    if (line) { winCells = line; over = true; finish(turn); }
+    else if (moves.length === N * N) { over = true; finish(0); }
+    else turn = turn === BLACK ? WHITE : BLACK;
+    update(); draw();
+    if (!over && mode === 'ai' && turn === WHITE) runAI();
+  }
+
+  function runAI() {
+    thinking = true; update();
+    setTimeout(() => {
+      const m = aiMove(WHITE);
+      thinking = false;
+      place(m.r, m.c);
+    }, 240);
+  }
+
+  function finish(winner) {
+    const t = document.getElementById('resultTitle'), s = document.getElementById('resultSub');
+    if (!winner) { t.textContent = '무승부'; s.textContent = '판이 다 찼어요'; }
+    else if (mode === 'ai') {
+      t.textContent = winner === BLACK ? '이겼어요' : '졌어요';
+      s.textContent = winner === BLACK ? '다섯 줄을 먼저 이었어요' : '컴퓨터가 다섯 줄을 이었어요';
+    } else {
+      t.textContent = (winner === BLACK ? '흑' : '백') + ' 승';
+      s.textContent = '다섯 줄이 이어졌어요';
+    }
+    setTimeout(() => document.getElementById('overlay').classList.add('show'), 550);
+  }
+
+  function undo() {
+    if (thinking || !moves.length) return;
+    const back = (mode === 'ai' && !over) ? 2 : 1;
+    for (let k = 0; k < back && moves.length; k++) {
+      const m = moves.pop(); grid[m.r][m.c] = EMPTY; turn = m.p;
+    }
+    over = false; winCells = null;
+    document.getElementById('overlay').classList.remove('show');
+    update(); draw();
+  }
+
+  function update() {
+    const dot = document.getElementById('turnDot'), txt = document.getElementById('turnText');
+    dot.className = 'dot ' + (turn === BLACK ? 'black' : 'white');
+    txt.textContent = over ? '판이 끝났어요'
+      : thinking ? '컴퓨터가 생각 중'
+      : mode === 'ai' ? (turn === BLACK ? '당신 차례예요' : '컴퓨터 차례예요')
+      : (turn === BLACK ? '흑 차례예요' : '백 차례예요');
+    document.getElementById('undoBtn').disabled = !moves.length || thinking;
+  }
+
+  /* ---------- 입력 ---------- */
+  cv.addEventListener('pointerdown', e => {
+    if (over || thinking) return;
+    if (mode === 'ai' && turn !== BLACK) return;
+    const b = cv.getBoundingClientRect();
+    const c = Math.round((e.clientX - b.left - off) / cell);
+    const r = Math.round((e.clientY - b.top - off) / cell);
+    if (!inside(r, c) || grid[r][c]) return;
+    place(r, c);
+  });
+
+  document.getElementById('modeRow').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    mode = b.dataset.mode;
+    [...e.currentTarget.children].forEach(x => x.setAttribute('aria-pressed', x === b));
+    document.getElementById('levelRow').hidden = mode !== 'ai';
+    reset();
+  });
+  document.getElementById('levelRow').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    level = +b.dataset.level;
+    [...e.currentTarget.children].forEach(x => x.setAttribute('aria-pressed', x === b));
+  });
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('newBtn').addEventListener('click', reset);
+  document.getElementById('againBtn').addEventListener('click', reset);
+  window.addEventListener('resize', layout);
+
+  reset(); layout();
+})();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
