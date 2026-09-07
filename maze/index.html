@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌀 미로 탈출</title>
+<style>
+  body {
+    margin: 0; padding: 16px;
+    background: #1a1a2e;
+    color: #fff;
+    font-family: sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  h1 { font-size: 22px; margin: 6px 0; }
+  #info { font-size: 15px; margin-bottom: 8px; color: #ffd93d; }
+  canvas {
+    background: #16213e;
+    border-radius: 10px;
+    max-width: 100%;
+    height: auto;
+    touch-action: none;
+  }
+  #pad {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, 60px);
+    grid-template-rows: repeat(2, 60px);
+    gap: 8px;
+    justify-content: center;
+  }
+  #pad button {
+    font-size: 24px;
+    border: none;
+    border-radius: 12px;
+    background: #0f3460;
+    color: #fff;
+  }
+  #pad button:active { background: #e94560; }
+  #pad button:focus-visible { outline: 3px solid #ffd93d; }
+  #pad .gap { background: none; }      /* 빈칸은 버튼처럼 보이지 않게 */
+  #newBtn {
+    margin-top: 14px; padding: 10px 22px;
+    font-size: 16px; border: none; border-radius: 10px;
+    background: #e94560; color: #fff;
+  }
+  #win {
+    display: none;
+    margin-top: 12px;
+    font-size: 20px;
+    color: #6bcB77;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<h1>🌀 미로 탈출</h1>
+<div id="info">레벨 <span id="lv">1</span> · 걸음 <span id="steps">0</span></div>
+<canvas id="cv"></canvas>
+<div id="win">🎉 친구 만났다!</div>
+
+<div id="pad">
+  <span class="gap"></span>
+  <button data-d="up">⬆️</button>
+  <span class="gap"></span>
+  <button data-d="left">⬅️</button>
+  <button data-d="down">⬇️</button>
+  <button data-d="right">➡️</button>
+</div>
+
+<button id="newBtn">새 미로</button>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+let level = 1, cols, rows, cell, grid, px, py, steps, cleared;
+
+const INK = '#141414';
+
+/* ---------- 그리기 도구 ---------- */
+
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+
+// 검은 테두리 있는 팔다리
+function limb(x1, y1, x2, y2, color, s) {
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = Math.max(2.2, s * 0.16);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1.1, s * 0.09);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+}
+
+function blob(x, y, rx, ry, color, s) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = Math.max(0.8, s * 0.035); ctx.stroke();
+}
+
+// 큰 까만 눈 + 웃는 입
+function bigFace(cx, cy, s, eyeGap, eyeR) {
+  ctx.fillStyle = INK;
+  ctx.beginPath(); ctx.ellipse(cx - eyeGap, cy, eyeR * 0.72, eyeR, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + eyeGap, cy, eyeR * 0.72, eyeR, 0, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = Math.max(0.9, s * 0.035);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(cx, cy + eyeR * 0.7, eyeGap * 0.85, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.stroke();
+}
+
+/* ---------- 노란 친구 (내가 조종) ---------- */
+function drawYellow(cx, cy, s) {
+  const YEL = '#FFD91C';
+  const W = s * 0.46, H = s * 0.70;
+  const top = cy - H * 0.42;
+
+  // 발
+  blob(cx - W * 0.34, cy + H * 0.46, W * 0.20, H * 0.09, YEL, s);
+  blob(cx + W * 0.26, cy + H * 0.48, W * 0.20, H * 0.09, YEL, s);
+
+  // 왼팔은 번쩍, 오른팔은 허리에
+  limb(cx - W * 0.40, cy - H * 0.10, cx - W * 0.82, top - H * 0.10, YEL, s);
+  limb(cx + W * 0.40, cy - H * 0.05, cx + W * 0.72, cy + H * 0.14, YEL, s);
+
+  // 몸
+  rr(cx - W / 2, top, W, H * 0.86, W * 0.42);
+  ctx.fillStyle = YEL; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1.1, s * 0.05); ctx.stroke();
+
+  // 배에 붙은 하얀 네모
+  rr(cx - W * 0.20, cy + H * 0.06, W * 0.40, H * 0.24, s * 0.05);
+  ctx.fillStyle = '#FFFFFF'; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = Math.max(0.7, s * 0.03); ctx.stroke();
+
+  bigFace(cx, cy - H * 0.20, s, W * 0.21, H * 0.12);
+}
+
+/* ---------- 무지개 친구 (미로 끝에서 기다림) ---------- */
+function drawRainbow(cx, cy, s) {
+  const W = s * 0.36, H = s * 0.58;
+  const top = cy - H * 0.22;
+  const RAINBOW = ['#6A3FB5', '#2B6FD4', '#2FA84A', '#FFD400', '#F58220', '#E03131'];
+
+  // 다리 + 보라 신발
+  limb(cx - W * 0.28, cy + H * 0.78, cx - W * 0.28, cy + H * 1.00, '#FFFFFF', s);
+  limb(cx + W * 0.28, cy + H * 0.78, cx + W * 0.28, cy + H * 1.00, '#FFFFFF', s);
+  blob(cx - W * 0.34, cy + H * 1.05, W * 0.26, H * 0.11, '#6A3FB5', s);
+  blob(cx + W * 0.34, cy + H * 1.05, W * 0.26, H * 0.11, '#6A3FB5', s);
+
+  // 만세 팔
+  limb(cx - W * 0.45, top + H * 0.10, cx - W * 1.15, top - H * 0.18, '#FFFFFF', s);
+  limb(cx + W * 0.45, top + H * 0.10, cx + W * 1.15, top - H * 0.18, '#FFFFFF', s);
+
+  // 무지개 몸
+  rr(cx - W / 2, top, W, H * 0.80, s * 0.03);
+  ctx.save();
+  ctx.clip();
+  const bw = W / RAINBOW.length;
+  for (let i = 0; i < RAINBOW.length; i++) {
+    ctx.fillStyle = RAINBOW[i];
+    ctx.fillRect(cx - W / 2 + bw * i, top, bw + 0.6, H * 0.80);
+  }
+  ctx.restore();
+  rr(cx - W / 2, top, W, H * 0.80, s * 0.03);
+  ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1.1, s * 0.05); ctx.stroke();
+
+  // 하얀 얼굴
+  rr(cx - W * 0.62, top - H * 0.44, W * 1.24, H * 0.50, W * 0.40);
+  ctx.fillStyle = '#FFFFFF'; ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1.1, s * 0.05); ctx.stroke();
+
+  bigFace(cx, top - H * 0.24, s, W * 0.28, H * 0.13);
+}
+
+/* ---------- 미로 ---------- */
+
+function makeMaze() {
+  cols = 7 + (level - 1) * 2;
+  rows = cols;
+  if (cols > 21) { cols = 21; rows = 21; }
+
+  grid = [];
+  for (let y = 0; y < rows; y++) grid.push(new Array(cols).fill(1));
+
+  const stack = [[0, 0]];
+  grid[0][0] = 0;
+  const dirs = [[0,-2],[0,2],[-2,0],[2,0]];
+
+  while (stack.length) {
+    const [cx, cy] = stack[stack.length - 1];
+    const next = [];
+    for (const [dx, dy] of dirs) {
+      const nx = cx + dx, ny = cy + dy;
+      if (nx >= 0 && ny >= 0 && nx < cols && ny < rows && grid[ny][nx] === 1) {
+        next.push([nx, ny, cx + dx / 2, cy + dy / 2]);
+      }
+    }
+    if (next.length === 0) { stack.pop(); continue; }
+    const [nx, ny, wx, wy] = next[Math.floor(Math.random() * next.length)];
+    grid[wy][wx] = 0;
+    grid[ny][nx] = 0;
+    stack.push([nx, ny]);
+  }
+
+  px = 0; py = 0;
+  steps = 0;
+  cleared = false;
+  grid[rows - 1][cols - 1] = 0;
+
+  cell = Math.min(Math.floor(360 / cols), 46);
+  cv.width = cols * cell;
+  cv.height = rows * cell;
+
+  document.getElementById('lv').textContent = level;
+  document.getElementById('steps').textContent = steps;
+  document.getElementById('win').style.display = 'none';
+  saveProgress();
+  draw();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+
+  ctx.fillStyle = '#0f3460';
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (grid[y][x] === 1) ctx.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+
+  drawRainbow((cols - 0.5) * cell, (rows - 0.5) * cell, cell);
+  drawYellow((px + 0.5) * cell, (py + 0.5) * cell, cell);
+}
+
+function move(dir) {
+  if (cleared) return;
+  let nx = px, ny = py;
+  if (dir === 'up') ny--;
+  if (dir === 'down') ny++;
+  if (dir === 'left') nx--;
+  if (dir === 'right') nx++;
+
+  if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) return;
+  if (grid[ny][nx] === 1) return;
+
+  px = nx; py = ny;
+  steps++;
+  document.getElementById('steps').textContent = steps;
+  draw();
+
+  if (px === cols - 1 && py === rows - 1) {
+    cleared = true;
+    document.getElementById('win').style.display = 'block';
+    setTimeout(() => { level++; makeMaze(); }, 1200);
+  }
+}
+
+/* ---------- 레벨 저장 (앱 나갔다 와도 이어서) ---------- */
+const LKEY = 'maze-level-v1';
+function saveProgress() {
+  try { localStorage.setItem(LKEY, String(level)); } catch (e) {}
+}
+function loadProgress() {
+  try {
+    const n = parseInt(localStorage.getItem(LKEY), 10);
+    if (n >= 1 && n <= 999) level = n;
+  } catch (e) {}
+}
+
+document.querySelectorAll('#pad button[data-d]').forEach(b => {
+  b.addEventListener('click', () => move(b.dataset.d));
+});
+
+document.addEventListener('keydown', e => {
+  const map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+  if (map[e.key]) { e.preventDefault(); move(map[e.key]); }
+});
+
+let sx = 0, sy = 0;
+cv.addEventListener('touchstart', e => {
+  sx = e.touches[0].clientX;
+  sy = e.touches[0].clientY;
+}, { passive: true });
+
+cv.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - sx;
+  const dy = e.changedTouches[0].clientY - sy;
+  if (Math.abs(dx) < 25 && Math.abs(dy) < 25) return;
+  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
+  else move(dy > 0 ? 'down' : 'up');
+});
+
+document.getElementById('newBtn').addEventListener('click', () => makeMaze());
+
+loadProgress();
+makeMaze();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
