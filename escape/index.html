@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🚪 방 탈출 10단계</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --lamp:#FFC978; --brass:#D9A441; --paper:#F3E7CB;
+  --text:#EFE2C8; --dim:#94A3AC; --bad:#E0705F; --panel:#22303A; --deep:#162026;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;overflow:hidden}
+body{background:#1B252C;color:var(--text);
+  font-family:'Gowun Dodum',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  display:flex;justify-content:center;touch-action:manipulation;user-select:none}
+#app{width:100%;max-width:440px;height:100%;position:relative;display:flex;flex-direction:column}
+button{font-family:inherit}
+
+/* ===== home ===== */
+#home{position:absolute;inset:0;display:flex;flex-direction:column;overflow-y:auto;
+  padding:26px 20px calc(26px + env(safe-area-inset-bottom));
+  padding-top:calc(26px + env(safe-area-inset-top));background:#1B252C}
+#home h1{font-size:27px;margin:0 0 5px;font-weight:400}
+#home .sub{color:var(--dim);font-size:14px;margin:0 0 22px;line-height:1.65}
+#grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.card{position:relative;text-align:left;padding:14px 14px 12px;border:none;border-radius:14px;
+  background:var(--panel);color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.card:active{background:#2B3B47}
+.card .n{font-size:12px;color:var(--brass)}
+.card .t{font-size:15.5px}
+.card .meta{font-size:11.5px;color:var(--dim);margin-top:3px;min-height:15px}
+.card.lk{background:#1F2A32;color:#5C6E79;cursor:not-allowed}
+.card.lk .n,.card.lk .meta{color:#4C5C66}
+.card .star{position:absolute;top:11px;right:12px;font-size:13px}
+#wipe{margin:20px auto 0;background:none;border:none;color:#516069;font-size:12.5px;cursor:pointer;padding:8px}
+#wipe.armed{color:var(--bad)}
+
+/* ===== game ===== */
+#game{position:absolute;inset:0;display:none;flex-direction:column;background:#1B252C}
+#game.on{display:flex}
+#bar{display:flex;align-items:center;gap:9px;padding:10px 12px;
+  padding-top:calc(10px + env(safe-area-inset-top));background:var(--deep);
+  border-bottom:1px solid #0E161B;flex:0 0 auto}
+#bar .ttl{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#bar .lv{font-size:12px;color:var(--brass)}
+#clock{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--dim);font-size:14px}
+.ic{background:none;border:none;color:var(--dim);font-size:16px;padding:5px;cursor:pointer;border-radius:8px}
+.ic:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+#stage{flex:1 1 auto;min-height:0;position:relative}
+#room{width:100%;height:100%;display:block}
+.hot{cursor:pointer;fill:transparent}
+.hot:active + .glow,.hot:focus-visible + .glow{opacity:1}
+.glow{opacity:0;pointer-events:none;transition:opacity .12s}
+#tray{flex:0 0 auto;display:flex;gap:7px;padding:8px 10px;
+  padding-bottom:calc(8px + env(safe-area-inset-bottom));
+  background:var(--deep);border-top:1px solid #0E161B}
+.slot{width:42px;height:42px;flex:0 0 auto;border-radius:11px;background:#202D35;
+  border:1px dashed #33454F;display:flex;align-items:center;justify-content:center;
+  font-size:21px;filter:grayscale(1);opacity:.3}
+.slot.on{filter:none;opacity:1;border:1px solid var(--brass);background:#2A3A44}
+#memo{flex:1;min-width:0;background:#202D35;border-radius:11px;padding:5px 10px;
+  display:flex;flex-direction:column;justify-content:center;gap:2px}
+#memo div{font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#memo b{color:var(--lamp);font-weight:400}
+
+/* ===== sheet ===== */
+#veil{position:absolute;inset:0;background:rgba(10,16,20,.72);opacity:0;pointer-events:none;transition:opacity .2s}
+#veil.show{opacity:1;pointer-events:auto}
+#sheet{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:20px 20px 0 0;
+  padding:18px 20px calc(20px + env(safe-area-inset-bottom));transform:translateY(105%);
+  transition:transform .26s cubic-bezier(.22,1,.36,1);max-height:90%;overflow-y:auto}
+#sheet.show{transform:translateY(0)}
+#sheet h2{margin:0 0 12px;font-size:18px;font-weight:400}
+#sheet p{margin:11px 0 0;font-size:14.5px;line-height:1.65;color:#DCCFB5}
+.art{display:block;margin:0 auto;max-width:220px;width:100%}
+.note{font-family:'Gaegu','Gowun Dodum',cursive;font-size:19px;color:var(--lamp)}
+#close{margin-top:16px;width:100%;padding:13px;border:none;border-radius:12px;
+  background:#33454F;color:var(--text);font-size:15px;cursor:pointer}
+#close:active{background:#3D525E}
+@media (prefers-reduced-motion:reduce){#sheet,#veil{transition:none}}
+
+/* ===== lock ===== */
+#slots{display:flex;justify-content:center;gap:9px;margin:2px 0 14px;flex-wrap:wrap}
+.dslot{width:48px;height:58px;border-radius:10px;background:#16212A;border:2px solid #33454F;
+  display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--lamp);
+  font-variant-numeric:tabular-nums}
+.dslot.fill{border-color:var(--brass)}
+#slots.no{animation:shake .38s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}
+  40%{transform:translateX(9px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+#pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#pad.g4{grid-template-columns:repeat(4,1fr)}
+#pad.g5{grid-template-columns:repeat(5,1fr)}
+#pad button{padding:14px 0;font-size:20px;border:none;border-radius:12px;background:#33454F;
+  color:var(--text);cursor:pointer;font-variant-numeric:tabular-nums}
+#pad button:active{background:#42596A}
+#pad .sm{font-size:14px}
+#hintline{text-align:center;font-size:13px;color:var(--dim);min-height:19px;margin:11px 0 0}
+#hintline.no{color:var(--bad)}
+#doornote{text-align:center;font-size:13.5px;color:var(--lamp);margin:0 0 12px}
+
+/* ===== clear ===== */
+#clear{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:26px;gap:5px;color:#3A2E22;
+  background:radial-gradient(circle at 50% 40%,#FFE6AE,#FFC978 38%,#8C6A34 100%)}
+#clear.show{display:flex;animation:bloom .6s ease-out}
+@keyframes bloom{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+#clear .big{font-size:54px}
+#clear h2{margin:5px 0 0;font-size:26px;font-weight:400}
+#clear p{margin:1px 0;font-size:15.5px}
+#cbtns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center}
+#cbtns button{padding:12px 24px;border:none;border-radius:999px;font-size:15px;cursor:pointer}
+#next{background:#3A2E22;color:var(--paper)}
+#backhome{background:rgba(58,46,34,.16);color:#3A2E22}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="home">
+    <h1>🚪 방 탈출</h1>
+    <p class="sub">방 안의 물건을 하나씩 눌러보세요.<br>단서를 모아 문을 열면 다음 방으로 갑니다.</p>
+    <div id="grid"></div>
+    <button id="wipe">기록 지우기</button>
+  </div>
+
+  <div id="game">
+    <div id="bar">
+      <button class="ic" id="back" aria-label="단계 선택으로">‹</button>
+      <span class="lv" id="lvNo"></span>
+      <span class="ttl" id="lvName"></span>
+      <span id="clock">0:00</span>
+      <button class="ic" id="sound" aria-label="소리 끄기">🔊</button>
+      <button class="ic" id="redo" aria-label="이 방 다시">↺</button>
+    </div>
+    <div id="stage"><svg id="room" viewBox="0 0 360 470" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div id="tray">
+      <div class="slot" id="sKey">🔑</div>
+      <div class="slot" id="sLight">🔦</div>
+      <div id="memo"><div id="m1"></div><div id="m2"></div></div>
+    </div>
+    <div id="veil"></div>
+    <div id="sheet" role="dialog" aria-modal="true">
+      <h2 id="sTitle"></h2>
+      <div id="sBody"></div>
+      <button id="close">닫기</button>
+    </div>
+    <div id="clear">
+      <div class="big">🚪✨</div>
+      <h2 id="cHead">탈출 성공!</h2>
+      <p id="cTime"></p><p id="cTry"></p>
+      <div id="cbtns">
+        <button id="next">다음 방으로</button>
+        <button id="backhome">단계 선택</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+var $ = function(s){ return document.querySelector(s); };
+var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+/* ===== save ===== */
+var SAVE_KEY = 'escape10';
+var save = { best:{} };
+try { var raw = localStorage.getItem(SAVE_KEY); if (raw) save = JSON.parse(raw); } catch(e){}
+function store(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
+function cleared(n){ return save.best[n] !== undefined; }
+function unlocked(n){ return n === 1 || cleared(n-1); }
+
+/* ===== audio ===== */
+var AC = null, muted = false;
+function beep(f,d,t){
+  if (muted) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    var o = AC.createOscillator(), g = AC.createGain();
+    o.type = t || 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(.0001, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.13, AC.currentTime + .01);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + d);
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + d + .02);
+  }catch(e){}
+}
+function sTap(){ beep(430,.07,'triangle'); }
+function sGet(){ beep(660,.1); setTimeout(function(){ beep(880,.16); },90); }
+function sNo(){ beep(150,.22,'square'); }
+function sYes(){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){ beep(f,.24); }, i*110); }); }
+
+/* ===== places ===== */
+var PLACE = {
+  door:{ko:'문',ic:'🚪'}, frame:{ko:'액자',ic:'🖼️'}, clock:{ko:'시계',ic:'🕐'},
+  dresser:{ko:'서랍',ic:'🗄️'}, bed:{ko:'침대 밑',ic:'🛏️'},
+  pot:{ko:'화분',ic:'🪴'}, rug:{ko:'양탄자',ic:'🧶'}
+};
+var SPOT = {
+  door:[22,104,86,214,5], frame:[140,120,74,58,3], clock:[238,118,68,68,34],
+  dresser:[224,230,120,90,4], bed:[18,330,150,96,7], pot:[282,346,48,80,6],
+  rug:[140,430,150,36,14]
+};
+
+/* ===== levels ===== */
+var COLORS  = ['🔴','🟡','🟢','🔵'];
+var SYMBOLS = ['⭐','🌙','☀️','❄️','🍀'];
+
+var LEVELS = [
+{ n:1, title:'열쇠 하나', lock:{t:'key'},
+  objs:[{id:'pot',give:'key'},
+        {id:'clock',flavor:'2시 40분에서 멈춰 있어요.'},
+        {id:'dresser',flavor:'서랍은 텅 비어 있어요.'}],
+  tip:'방 안의 물건을 눌러서 열쇠를 찾아보세요.' },
+
+{ n:2, title:'숫자 세 개', lock:{t:'digits',mode:'plain'},
+  objs:[{id:'clock',num:0},{id:'frame',num:1},{id:'dresser',num:2},
+        {id:'pot',flavor:'흙만 들어 있어요.'}],
+  tip:'숫자 세 개를 찾아 문 자물쇠에 넣으세요. 순서는 자물쇠에 적혀 있어요.' },
+
+{ n:3, title:'잠긴 서랍', lock:{t:'digits',mode:'plain'},
+  objs:[{id:'pot',give:'key'},{id:'dresser',need:'key',num:0},
+        {id:'clock',num:1},{id:'bed',num:2}] },
+
+{ n:4, title:'순서를 찾아라', lock:{t:'digits',mode:'order'},
+  objs:[{id:'pot',give:'key'},{id:'dresser',need:'key',num:0},
+        {id:'clock',num:1},{id:'bed',num:2},{id:'frame',order:true}],
+  tip:'이번엔 넣을 순서도 숨어 있어요.' },
+
+{ n:5, title:'어둠 속에서', lock:{t:'digits',mode:'order'},
+  objs:[{id:'pot',give:'key'},{id:'dresser',need:'key',give:'light',num:0},
+        {id:'bed',need:'light',num:1},{id:'clock',num:2},{id:'rug',order:true}] },
+
+{ n:6, title:'색깔 자물쇠', lock:{t:'seq',set:'color'},
+  objs:[{id:'pot',give:'key'},{id:'dresser',need:'key',give:'light'},
+        {id:'frame',seq:[0,1]},{id:'bed',need:'light',seq:[2,3]},
+        {id:'clock',flavor:'평범한 시계예요. 색깔은 없네요.'}],
+  tip:'이번 자물쇠는 숫자가 아니라 색깔 순서예요.' },
+
+{ n:7, title:'반쪽 열쇠', lock:{t:'digits',mode:'order'},
+  objs:[{id:'pot',give:'piece1'},{id:'rug',give:'piece2'},
+        {id:'dresser',need:'key',give:'light',num:0},
+        {id:'bed',need:'light',num:1},{id:'clock',num:2},{id:'frame',order:true}],
+  tip:'열쇠가 부러져 있어요. 두 조각을 다 찾아야 해요.' },
+
+{ n:8, title:'더하기 자물쇠', lock:{t:'digits',mode:'sum'},
+  objs:[{id:'pot',give:'key'},{id:'dresser',need:'key',give:'light',num:0},
+        {id:'bed',need:'light',num:1},{id:'clock',num:2},
+        {id:'frame',flavor:'그림 밑에 작게 적혀 있어요. “모두 더하면 열린다”'}],
+  tip:'찾은 숫자를 전부 더한 값이 자물쇠 번호예요.' },
+
+{ n:9, title:'큰 것부터', lock:{t:'digits',mode:'desc'},
+  objs:[{id:'pot',give:'key'},{id:'dresser',need:'key',give:'light',num:0},
+        {id:'bed',need:'light',num:1},{id:'clock',num:2},{id:'frame',num:3},
+        {id:'rug',flavor:'양탄자 밑은 깨끗한 마룻바닥이에요.'}],
+  tip:'숫자 네 개를 큰 것부터 차례로 넣으세요.' },
+
+{ n:10, title:'마지막 방', lock:{t:'seq',set:'symbol'},
+  objs:[{id:'pot',give:'piece1'},{id:'clock',give:'piece2'},
+        {id:'dresser',need:'key',give:'light',seq:[0,1]},
+        {id:'bed',need:'light',seq:[2,3]},{id:'rug',need:'light',seq:[4]},
+        {id:'frame',flavor:'밤하늘 그림이에요. 별, 달, 해, 눈송이, 네잎클로버가 흩어져 있어요.'}],
+  tip:'마지막 방이에요. 그림 다섯 개의 순서를 전부 찾아야 열립니다.' }
+];
+
+/* ===== state ===== */
+var S = null;
+
+function rndDigits(k, minSum){
+  for(;;){
+    var p = [];
+    while (p.length < k){
+      var n = Math.floor(Math.random()*10);
+      if (p.indexOf(n) === -1) p.push(n);
+    }
+    if (!minSum || p.reduce(function(a,b){return a+b;},0) >= minSum) return p;
+  }
+}
+function shuffle(a){
+  a = a.slice();
+  for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
+
+function startLevel(n){
+  var L = LEVELS[n-1];
+  var numObjs = L.objs.filter(function(o){ return o.num !== undefined; })
+                      .sort(function(a,b){ return a.num - b.num; });
+  var nums = numObjs.length ? rndDigits(numObjs.length, L.lock.mode==='sum' ? 10 : 0) : [];
+  var glyphs = L.lock.t==='seq' ? (L.lock.set==='color' ? COLORS : SYMBOLS) : null;
+
+  S = {
+    lv:n, L:L, nums:nums, glyphs:glyphs,
+    owner: numObjs.map(function(o){ return o.id; }),
+    order: nums.map(function(_,i){ return i; }),
+    code: glyphs ? shuffle(glyphs.map(function(_,i){ return i; })) : null,
+    seen:{}, gotNum:{}, gotOrder:false, gotSeq:{},
+    items:{}, entry:[], tries:0, start:Date.now(), done:false
+  };
+  if (L.lock.mode === 'order') S.order = shuffle(S.order);
+  S.answer = buildAnswer();
+
+  $('#lvNo').textContent = n + '단계';
+  $('#lvName').textContent = L.title;
+  $('#clear').classList.remove('show');
+  closeSheet();
+  drawRoom(); paintTray();
+  $('#home').style.display = 'none';
+  $('#game').classList.add('on');
+  if (L.tip) openSheet('안내', '<p>' + L.tip + '</p>');
+}
+function buildAnswer(){
+  var L = S.L;
+  if (L.lock.t === 'key') return null;
+  if (L.lock.t === 'seq') return S.code.slice();
+  if (L.lock.mode === 'sum')
+    return String(S.nums.reduce(function(a,b){return a+b;},0)).split('').map(Number);
+  if (L.lock.mode === 'desc')
+    return S.nums.slice().sort(function(a,b){ return b-a; });
+  return S.order.map(function(i){ return S.nums[i]; });
+}
+
+/* ===== timer ===== */
+setInterval(function(){
+  if (!S || S.done || !$('#game').classList.contains('on')) return;
+  var t = Math.floor((Date.now()-S.start)/1000);
+  $('#clock').textContent = Math.floor(t/60) + ':' + String(t%60).padStart(2,'0');
+}, 500);
+
+/* ===== room art ===== */
+var ART = {
+  door: function(){ return ''
+    + '<rect x="22" y="104" width="86" height="214" rx="5" fill="#5B4230"/>'
+    + '<rect x="29" y="112" width="72" height="198" rx="3" fill="#6B4E35"/>'
+    + '<rect x="37" y="124" width="56" height="76" rx="3" fill="#57402E"/>'
+    + '<rect x="37" y="214" width="56" height="80" rx="3" fill="#57402E"/>'
+    + '<circle cx="97" cy="212" r="5" fill="#D9A441"/>'
+    + '<rect x="60" y="196" width="34" height="30" rx="5" fill="#26333B" stroke="#D9A441" stroke-width="2"/>'
+    + '<text x="77" y="217" text-anchor="middle" font-size="15" fill="#FFC978">?</text>'; },
+  frame: function(){ return ''
+    + '<rect x="140" y="120" width="74" height="58" rx="3" fill="#D9A441"/>'
+    + '<rect x="146" y="126" width="62" height="46" rx="2" fill="#7FA8B8"/>'
+    + '<path d="M146 158 L166 140 L182 158 L196 148 L208 160 L208 172 L146 172 Z" fill="#4E7A62"/>'
+    + '<circle cx="192" cy="136" r="6" fill="#FFE9B4"/>'; },
+  clock: function(){ return ''
+    + '<circle cx="272" cy="152" r="34" fill="#5B4230"/>'
+    + '<circle cx="272" cy="152" r="28" fill="#F3E7CB"/>'
+    + '<circle cx="272" cy="152" r="2.6" fill="#3A2E22"/>'
+    + '<path d="M272 152 L272 133" stroke="#3A2E22" stroke-width="3" stroke-linecap="round"/>'
+    + '<path d="M272 152 L288 160" stroke="#3A2E22" stroke-width="2.4" stroke-linecap="round"/>'; },
+  dresser: function(open){ return ''
+    + '<rect x="228" y="238" width="112" height="82" rx="4" fill="#6B4E35"/>'
+    + '<rect x="224" y="230" width="120" height="10" rx="3" fill="#7D5C40"/>'
+    + (open
+      ? '<rect x="238" y="250" width="92" height="28" rx="3" fill="#241B14"/>'
+        + '<rect x="238" y="286" width="92" height="26" rx="3" fill="#4A3527"/>'
+        + '<circle cx="284" cy="299" r="3.4" fill="#D9A441"/>'
+      : '<rect x="238" y="250" width="92" height="28" rx="3" fill="#4A3527"/>'
+        + '<circle cx="284" cy="264" r="3.4" fill="#D9A441"/>'
+        + '<rect x="238" y="286" width="92" height="26" rx="3" fill="#4A3527"/>'
+        + '<circle cx="284" cy="299" r="3.4" fill="#D9A441"/>'); },
+  bed: function(){ return ''
+    + '<rect x="18" y="352" width="150" height="52" rx="7" fill="#6B4E35"/>'
+    + '<rect x="18" y="336" width="150" height="24" rx="8" fill="#8E5F6B"/>'
+    + '<rect x="26" y="330" width="46" height="22" rx="8" fill="#F3E7CB"/>'
+    + '<rect x="18" y="404" width="150" height="10" rx="3" fill="#4A3527"/>'
+    + '<rect x="26" y="414" width="9" height="12" fill="#4A3527"/>'
+    + '<rect x="151" y="414" width="9" height="12" fill="#4A3527"/>'
+    + '<rect x="30" y="410" width="126" height="16" fill="#20180F" opacity=".85"/>'; },
+  pot: function(tip){ return ''
+    + '<g transform="' + (tip ? 'rotate(-22 306 420)' : '') + '">'
+    + '<path d="M292 394 L320 394 L316 424 L296 424 Z" fill="#B5654A"/>'
+    + '<rect x="289" y="388" width="34" height="9" rx="3" fill="#C97757"/>'
+    + '<path d="M306 388 C300 368 288 364 286 352 C296 356 304 366 306 376 '
+    + 'C308 364 316 354 326 350 C324 364 314 370 306 388 Z" fill="#4E7A62"/></g>'; },
+  rug: function(moved){ return ''
+    + '<g transform="' + (moved ? 'translate(24,0) rotate(-6 215 448)' : '') + '">'
+    + '<rect x="140" y="430" width="150" height="36" rx="14" fill="#8E5F6B"/>'
+    + '<rect x="150" y="438" width="130" height="20" rx="9" fill="#A0707C"/>'
+    + '<path d="M175 448 h80" stroke="#8E5F6B" stroke-width="3"/></g>'; }
+};
+function hotspot(id, label){
+  var s = SPOT[id];
+  return '<g><rect class="hot" x="'+s[0]+'" y="'+s[1]+'" width="'+s[2]+'" height="'+s[3]+'" rx="'+s[4]+'"'
+    + ' data-o="'+id+'" tabindex="0" role="button" aria-label="'+label+'"></rect>'
+    + '<rect class="glow" x="'+s[0]+'" y="'+s[1]+'" width="'+s[2]+'" height="'+s[3]+'" rx="'+s[4]+'"'
+    + ' fill="none" stroke="#FFC978" stroke-width="3"></rect></g>';
+}
+function drawRoom(){
+  var ids = S.L.objs.map(function(o){ return o.id; });
+  var b = ''
+    + '<defs>'
+    + '<radialGradient id="wallg" cx="50%" cy="0%" r="85%">'
+    + '<stop offset="0%" stop-color="#5A7484"/><stop offset="100%" stop-color="#2E3F4A"/></radialGradient>'
+    + '<linearGradient id="flg" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0%" stop-color="#4E3D2E"/><stop offset="100%" stop-color="#382C21"/></linearGradient>'
+    + '</defs>'
+    + '<rect x="0" y="0" width="360" height="470" fill="url(#wallg)"/>'
+    + '<path d="M0 318 L360 318 L360 470 L0 470 Z" fill="url(#flg)"/>'
+    + '<g stroke="#2E241B" stroke-width="1.5" opacity=".55">'
+    + '<path d="M0 350 L360 350"/><path d="M0 390 L360 390"/><path d="M0 430 L360 430"/></g>'
+    + '<rect x="0" y="14" width="360" height="14" fill="#3A2E22" opacity=".7"/>'
+    + '<path d="M180 28 L180 52" stroke="#1D262C" stroke-width="2"/>'
+    + '<circle cx="180" cy="60" r="20" fill="#FFC978" opacity=".16"/>'
+    + '<circle cx="180" cy="60" r="9" fill="#FFC978"/>';
+
+  b += ART.door() + hotspot('door','문');
+  if (ids.indexOf('rug') > -1)     b += ART.rug(!!S.seen.rug) + hotspot('rug','양탄자');
+  if (ids.indexOf('frame') > -1)   b += ART.frame() + hotspot('frame','액자');
+  if (ids.indexOf('clock') > -1)   b += ART.clock() + hotspot('clock','벽시계');
+  if (ids.indexOf('dresser') > -1) b += ART.dresser(!!S.seen.dresser) + hotspot('dresser','서랍장');
+  if (ids.indexOf('bed') > -1)     b += ART.bed() + hotspot('bed','침대');
+  if (ids.indexOf('pot') > -1)     b += ART.pot(!!S.seen.pot) + hotspot('pot','화분');
+
+  $('#room').innerHTML = b;
+  $$('#room .hot').forEach(function(el){
+    el.addEventListener('click', function(){ inspect(el.getAttribute('data-o')); });
+    el.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); inspect(el.getAttribute('data-o')); }
+    });
+  });
+}
+
+/* ===== tray / memo ===== */
+function paintTray(){
+  $('#sKey').classList.toggle('on', !!S.items.key);
+  $('#sLight').classList.toggle('on', !!S.items.light);
+  var usesLight = S.L.objs.some(function(o){ return o.give === 'light' || o.need === 'light'; });
+  $('#sLight').style.display = usesLight ? '' : 'none';
+
+  var L = S.L, a = '', b = '';
+  if (L.lock.t === 'key'){
+    a = S.items.key ? '열쇠를 찾았어요' : '열쇠가 어딘가에 있어요';
+    b = '문을 눌러보세요';
+  } else if (L.lock.t === 'seq'){
+    a = S.code.map(function(g,i){ return S.gotSeq[i] ? S.glyphs[g] : '·'; }).join(' ');
+    b = Object.keys(S.gotSeq).length ? '자물쇠에 넣을 순서' : '그림 순서를 찾아보세요';
+  } else {
+    var got = [];
+    S.nums.forEach(function(v,i){
+      if (S.gotNum[i]) got.push(PLACE[S.owner[i]].ko + ' <b>' + v + '</b>');
+    });
+    a = got.length ? got.join(' · ') : '숫자를 아직 못 찾았어요';
+    if (L.lock.mode === 'order')
+      b = S.gotOrder ? '순서 ' + S.order.map(function(i){ return PLACE[S.owner[i]].ko; }).join(' → ')
+                     : '넣을 순서를 모르겠어요';
+    else if (L.lock.mode === 'desc') b = '큰 숫자부터 넣기';
+    else if (L.lock.mode === 'sum')  b = '찾은 숫자를 모두 더하기';
+    else b = '순서 ' + S.owner.map(function(id){ return PLACE[id].ko; }).join(' → ');
+  }
+  $('#m1').innerHTML = a; $('#m2').innerHTML = b;
+}
+
+/* ===== sheet ===== */
+function openSheet(t, html){
+  $('#sTitle').textContent = t; $('#sBody').innerHTML = html;
+  $('#veil').classList.add('show'); $('#sheet').classList.add('show');
+}
+function closeSheet(){ $('#veil').classList.remove('show'); $('#sheet').classList.remove('show'); }
+$('#close').addEventListener('click', function(){ sTap(); closeSheet(); });
+$('#veil').addEventListener('click', closeSheet);
+
+/* ===== cards ===== */
+function cardNum(n){
+  return '<svg class="art" viewBox="0 0 200 128">'
+    + '<rect x="14" y="10" width="172" height="108" rx="4" fill="#F3E7CB" transform="rotate(-2 100 64)"/>'
+    + '<text x="100" y="86" text-anchor="middle" font-size="52" fill="#B5654A"'
+    + ' font-family="Gaegu, sans-serif" transform="rotate(-2 100 64)">' + n + '</text></svg>';
+}
+function cardDark(n){
+  return '<svg class="art" viewBox="0 0 200 124"><rect width="200" height="124" fill="#1A130C"/>'
+    + '<ellipse cx="100" cy="66" rx="74" ry="46" fill="#FFC978" opacity=".26"/>'
+    + '<ellipse cx="100" cy="66" rx="44" ry="27" fill="#FFC978" opacity=".26"/>'
+    + '<text x="100" y="84" text-anchor="middle" font-size="50" fill="#FFE9B4"'
+    + ' font-family="Gaegu, sans-serif">' + n + '</text></svg>';
+}
+function cardOrder(ord){
+  var w = 24 + ord.length * 62;
+  var inner = ord.map(function(idx,k){
+    var x = 44 + k*62;
+    return '<text x="'+x+'" y="64" text-anchor="middle" font-size="32">'+PLACE[S.owner[idx]].ic+'</text>'
+      + '<text x="'+x+'" y="87" text-anchor="middle" font-size="11" fill="#94A3AC"'
+      + ' font-family="Gowun Dodum, sans-serif">'+(k+1)+'번째</text>';
+  }).join('');
+  return '<svg class="art" viewBox="0 0 '+w+' 110">'
+    + '<rect x="4" y="6" width="'+(w-8)+'" height="98" rx="5" fill="#D9A441"/>'
+    + '<rect x="12" y="14" width="'+(w-24)+'" height="82" rx="3" fill="#26333B"/>'
+    + inner + '</svg>';
+}
+function cardSeq(pos){
+  var len = S.code.length, w = 230;
+  var inner = S.code.map(function(g,i){
+    var x = 30 + i * ((w-60) / Math.max(1, len-1));
+    var on = pos.indexOf(i) > -1;
+    return '<text x="'+x+'" y="58" text-anchor="middle" font-size="'+(on?28:22)+'"'
+      + ' opacity="'+(on?1:.2)+'">' + (on ? S.glyphs[g] : '⬜') + '</text>'
+      + '<text x="'+x+'" y="80" text-anchor="middle" font-size="10" fill="#94A3AC"'
+      + ' font-family="Gowun Dodum, sans-serif">'+(i+1)+'</text>';
+  }).join('');
+  return '<svg class="art" viewBox="0 0 '+w+' 100" style="max-width:250px">'
+    + '<rect x="4" y="6" width="'+(w-8)+'" height="88" rx="6" fill="#33454F"/>' + inner + '</svg>';
+}
+var cardKey = '<svg class="art" viewBox="0 0 200 100">'
+  + '<path d="M42 56 L128 56" stroke="#D9A441" stroke-width="9" stroke-linecap="round"/>'
+  + '<path d="M118 56 L118 74 M104 56 L104 70" stroke="#D9A441" stroke-width="8" stroke-linecap="round"/>'
+  + '<circle cx="40" cy="56" r="20" fill="none" stroke="#D9A441" stroke-width="9"/></svg>';
+function cardHalf(side){
+  return '<svg class="art" viewBox="0 0 200 100">'
+    + (side === 1
+      ? '<circle cx="70" cy="56" r="20" fill="none" stroke="#D9A441" stroke-width="9"/>'
+        + '<path d="M72 56 L128 56" stroke="#D9A441" stroke-width="9" stroke-linecap="round"/>'
+      : '<path d="M72 56 L128 56" stroke="#D9A441" stroke-width="9" stroke-linecap="round"/>'
+        + '<path d="M118 56 L118 74 M104 56 L104 70" stroke="#D9A441" stroke-width="8" stroke-linecap="round"/>')
+    + '<path d="M100 24 L100 88" stroke="#22303A" stroke-width="4" stroke-dasharray="5 5"/></svg>';
+}
+var cardLock = '<svg class="art" viewBox="0 0 200 110">'
+  + '<rect x="62" y="54" width="76" height="52" rx="8" fill="#D9A441"/>'
+  + '<path d="M78 54 v-13 a22 22 0 0 1 44 0 v13" fill="none" stroke="#D9A441" stroke-width="9"/>'
+  + '<circle cx="100" cy="78" r="7" fill="#4A3527"/></svg>';
+
+/* ===== inspect ===== */
+var OPENLINE = {
+  pot:'화분을 기울여 봤어요.', rug:'양탄자를 걷어 봤어요.',
+  dresser:'서랍을 열었어요.', clock:'시계를 떼어 뒤집어 봤어요.',
+  frame:'액자를 내려 뒤판을 봤어요.', bed:'침대 밑을 들여다봤어요.'
+};
+
+function inspect(id){
+  if (!S || S.done) return;
+  sTap();
+  if (id === 'door') return openLock();
+
+  var o = null;
+  S.L.objs.forEach(function(x){ if (x.id === id) o = x; });
+  if (!o) return openSheet(PLACE[id].ko, '<p>특별한 건 없어요.</p>');
+  var P = PLACE[id];
+
+  if (o.need && !S.items[o.need]){
+    if (o.need === 'light')
+      return openSheet(P.ko, '<p>' + OPENLINE[id] + ' 뭔가 있는 것 같은데 너무 어두워서 안 보여요. 불빛이 필요해요.</p>');
+    return openSheet(P.ko, cardLock + '<p>자물쇠가 걸려 있어요. 열쇠를 먼저 찾아야 해요.</p>');
+  }
+
+  var first = !S.seen[id];
+  S.seen[id] = true;
+  var art = '', txt = OPENLINE[id] || '';
+
+  if (o.give){
+    if (first){
+      S.items[o.give] = true;
+      if (S.items.piece1 && S.items.piece2) S.items.key = true;
+      sGet();
+    }
+    if (o.give === 'key'){ art = cardKey; txt += ' 밑에서 작은 열쇠가 나왔어요.'; }
+    else if (o.give === 'light'){ txt += ' 손전등이 들어 있었어요.'; }
+    else {
+      art = cardHalf(o.give === 'piece1' ? 1 : 2);
+      txt += ' 부러진 열쇠 ' + (o.give === 'piece1' ? '윗' : '아랫') + '부분이 있어요.';
+      txt += S.items.key ? ' 두 조각을 맞추니 열쇠가 됐어요!' : ' 나머지 반쪽을 찾아야 해요.';
+    }
+  }
+
+  if (o.num !== undefined){
+    if (first){ S.gotNum[o.num] = true; sGet(); }
+    var v = S.nums[o.num];
+    art = (o.need === 'light' ? cardDark(v) : cardNum(v)) + art;
+    txt += ' 숫자가 하나 적혀 있어요.';
+    txt += '</p><p class="note">' + P.ko + '의 숫자는 ' + v;
+  }
+
+  if (o.order){
+    if (first){ S.gotOrder = true; sGet(); }
+    art = cardOrder(S.order);
+    txt += ' 작은 그림들이 순서대로 그려져 있어요. 자물쇠에 넣을 순서예요.';
+    txt += '</p><p class="note">' + S.order.map(function(i){ return PLACE[S.owner[i]].ko; }).join(' → ');
+  }
+
+  if (o.seq){
+    if (first){ o.seq.forEach(function(i){ S.gotSeq[i] = true; }); sGet(); }
+    art = cardSeq(o.seq);
+    txt += ' 자물쇠 그림 중 ' + o.seq.map(function(i){ return i+1; }).join('번, ') + '번째가 그려져 있어요.';
+    txt += '</p><p class="note">'
+      + o.seq.map(function(i){ return (i+1) + '번째 ' + S.glyphs[S.code[i]]; }).join('　');
+  }
+
+  if (!o.give && o.num === undefined && !o.order && !o.seq)
+    txt = o.flavor || '특별한 건 없어요.';
+
+  drawRoom(); paintTray();
+  openSheet(P.ko, art + '<p>' + txt + '</p>');
+}
+
+/* ===== lock ===== */
+function openLock(){
+  var L = S.L;
+  if (L.lock.t === 'key'){
+    if (S.items.key) return winLevel();
+    sNo();
+    return openSheet('문', cardLock + '<p>문이 잠겨 있어요. 열쇠를 찾아야 해요.</p>');
+  }
+  S.entry = [];
+  var isSeq = L.lock.t === 'seq';
+  var len = isSeq ? S.code.length : S.answer.length;
+
+  var note = '';
+  if (isSeq) note = '그림을 순서대로 눌러보세요';
+  else if (L.lock.mode === 'plain')
+    note = S.owner.map(function(id){ return PLACE[id].ko; }).join(' → ') + ' 순서로';
+  else if (L.lock.mode === 'order') note = '숨어 있던 순서대로';
+  else if (L.lock.mode === 'desc')  note = '큰 숫자부터 차례로';
+  else if (L.lock.mode === 'sum')   note = '찾은 숫자를 모두 더한 값';
+
+  var pad;
+  if (isSeq){
+    pad = S.glyphs.map(function(g,i){ return '<button data-v="'+i+'">'+g+'</button>'; }).join('')
+      + '<button class="sm" data-a="del">지우기</button>'
+      + '<button class="sm" data-a="ok">확인</button>';
+  } else {
+    pad = [1,2,3,4,5,6,7,8,9].map(function(n){ return '<button data-v="'+n+'">'+n+'</button>'; }).join('')
+      + '<button class="sm" data-a="del">지우기</button>'
+      + '<button data-v="0">0</button>'
+      + '<button class="sm" data-a="ok">확인</button>';
+  }
+  var cls = isSeq ? (S.glyphs.length === 5 ? 'g5' : 'g4') : '';
+
+  openSheet('문 자물쇠',
+    '<p id="doornote">' + note + '</p>'
+    + '<div id="slots">' + new Array(len+1).join('<div class="dslot"></div>') + '</div>'
+    + '<div id="pad" class="' + cls + '">' + pad + '</div>'
+    + '<p id="hintline"></p>');
+
+  $$('#pad button').forEach(function(b){
+    b.addEventListener('click', function(){
+      if (b.getAttribute('data-a') === 'del'){ sTap(); S.entry.pop(); return paintSlots(); }
+      if (b.getAttribute('data-a') === 'ok') return submit();
+      if (S.entry.length < len){
+        var v = Number(b.getAttribute('data-v'));
+        beep(520 + v*26, .06, 'triangle');
+        S.entry.push(v); paintSlots();
+      }
+    });
+  });
+  paintSlots();
+}
+function paintSlots(){
+  var isSeq = S.L.lock.t === 'seq';
+  $$('.dslot').forEach(function(el,i){
+    var v = S.entry[i];
+    el.textContent = (v === undefined) ? '' : (isSeq ? S.glyphs[v] : v);
+    el.classList.toggle('fill', v !== undefined);
+  });
+}
+function submit(){
+  var need = S.answer.length;
+  if (S.entry.length < need){
+    $('#hintline').textContent = '아직 ' + need + '칸을 다 안 채웠어요';
+    $('#hintline').classList.add('no'); sNo(); return;
+  }
+  S.tries++;
+  if (S.entry.join(',') === S.answer.join(',')) return winLevel();
+  sNo();
+  var sl = $('#slots');
+  sl.classList.remove('no'); void sl.offsetWidth; sl.classList.add('no');
+  $('#hintline').classList.add('no');
+  $('#hintline').textContent = '자물쇠가 꿈쩍도 안 해요';
+  S.entry = [];
+  setTimeout(paintSlots, 260);
+}
+
+/* ===== clear ===== */
+function winLevel(){
+  S.done = true; sYes(); closeSheet();
+  var t = Math.floor((Date.now()-S.start)/1000);
+  var prev = save.best[S.lv];
+  if (prev === undefined || t < prev){ save.best[S.lv] = t; store(); }
+  var last = S.lv === LEVELS.length;
+  $('#cHead').textContent = last ? '전부 탈출!' : '탈출 성공!';
+  $('#cTime').textContent = '걸린 시간 ' + Math.floor(t/60) + '분 ' + (t%60) + '초';
+  $('#cTry').textContent = (S.L.lock.t === 'key') ? '' : '자물쇠 시도 ' + S.tries + '번';
+  $('#next').style.display = last ? 'none' : '';
+  setTimeout(function(){ $('#clear').classList.add('show'); }, 200);
+  buildHome();
+}
+
+/* ===== home ===== */
+function buildHome(){
+  $('#grid').innerHTML = LEVELS.map(function(L){
+    var ok = unlocked(L.n), done = cleared(L.n), b = save.best[L.n];
+    var meta = done ? ('최고 ' + Math.floor(b/60) + '분 ' + (b%60) + '초')
+                    : (ok ? '아직 안 풀었어요' : '앞 단계를 먼저');
+    var star = done ? '<span class="star">⭐</span>' : (ok ? '' : '<span class="star">🔒</span>');
+    return '<button class="card ' + (ok ? '' : 'lk') + '" data-lv="' + L.n + '"' + (ok ? '' : ' disabled') + '>'
+      + star + '<span class="n">' + L.n + '단계</span><span class="t">' + L.title + '</span>'
+      + '<span class="meta">' + meta + '</span></button>';
+  }).join('');
+  $$('#grid .card').forEach(function(b){
+    if (b.disabled) return;
+    b.addEventListener('click', function(){ sTap(); startLevel(Number(b.getAttribute('data-lv'))); });
+  });
+}
+function goHome(){
+  $('#game').classList.remove('on');
+  $('#clear').classList.remove('show');
+  $('#home').style.display = 'flex';
+  disarmWipe();
+  buildHome();
+}
+
+/* ===== controls ===== */
+$('#back').addEventListener('click', function(){ sTap(); goHome(); });
+$('#backhome').addEventListener('click', function(){ sTap(); goHome(); });
+$('#redo').addEventListener('click', function(){ sTap(); startLevel(S.lv); });
+$('#next').addEventListener('click', function(){ sTap(); startLevel(S.lv + 1); });
+$('#sound').addEventListener('click', function(){
+  muted = !muted;
+  $('#sound').textContent = muted ? '🔇' : '🔊';
+  $('#sound').setAttribute('aria-label', muted ? '소리 켜기' : '소리 끄기');
+  if (!muted) sTap();
+});
+
+/* 기록 지우기는 되돌릴 수 없으니 두 번 눌러야 지워진다 */
+var wipeArmed = 0;
+function disarmWipe(){
+  wipeArmed = 0;
+  $('#wipe').textContent = '기록 지우기';
+  $('#wipe').classList.remove('armed');
+}
+$('#wipe').addEventListener('click', function(){
+  sTap();
+  if (!wipeArmed){
+    wipeArmed = 1;
+    $('#wipe').textContent = '정말 다 지울까요? 한 번 더 누르면 지워져요';
+    $('#wipe').classList.add('armed');
+    clearTimeout($('#wipe')._t);
+    $('#wipe')._t = setTimeout(disarmWipe, 4000);
+    return;
+  }
+  clearTimeout($('#wipe')._t);
+  save = { best:{} }; store(); buildHome(); disarmWipe();
+});
+
+buildHome();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
