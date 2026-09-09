@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<title>🔢 2048</title>
+<style>
+  :root {
+    --gap: clamp(6px, 2.3vw, 10px);
+    --bg: #1a1a2e;
+    --board: #16213e;
+    --hole: #223154;
+    --line: #2b3c66;
+    --gold: #ffd93d;
+    --pink: #e94560;
+    --muted: #9aa8c8;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    color: #fff;
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 난이도 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--board);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 10px;
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 14px; font-weight: 700;
+    border: none; border-radius: 9px;
+    padding: 9px 0;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: #fff; color: #16213e; }
+
+  #hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; min-height: 18px; }
+  #hint b { color: var(--gold); font-weight: 800; }
+
+  /* ---------- 점수판 ---------- */
+  .scores { display: flex; gap: 8px; margin-bottom: 12px; }
+  .score {
+    flex: 1;
+    position: relative;
+    background: var(--board);
+    border-radius: 12px;
+    padding: 8px 6px 9px;
+  }
+  .score b { display: block; font-size: 11px; font-weight: 700; color: #8d9ac0; letter-spacing: .06em; }
+  .score span { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  /* 점수가 오르면 위로 떠오르는 숫자 */
+  .pop {
+    position: absolute; left: 0; right: 0; top: 4px;
+    font-size: 17px; font-weight: 800; color: var(--gold);
+    pointer-events: none; opacity: 0;
+  }
+  .pop.go { animation: rise .7s ease-out; }
+  @keyframes rise {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-26px); }
+  }
+
+  /* ---------- 판 ---------- */
+  #board {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: var(--board);
+    border-radius: 14px;
+    padding: var(--gap);
+    touch-action: none;
+    font-size: 30px;          /* 칸 크기에 맞춰 자바스크립트가 다시 정한다 */
+  }
+  #holes {
+    position: absolute; inset: var(--gap);
+    display: grid;
+    grid-template-columns: repeat(var(--n), 1fr);
+    grid-template-rows: repeat(var(--n), 1fr);
+    gap: var(--gap);
+  }
+  #holes i { background: var(--hole); border-radius: 9px; }
+
+  .tile {
+    /* 자리를 잡는 기준이 판의 안쪽 여백까지 포함한 크기라 여백 두 칸을 더 뺀다 */
+    --size: calc((100% - (var(--n) + 1) * var(--gap)) / var(--n));
+    position: absolute;
+    left: var(--gap); top: var(--gap);
+    width: var(--size); height: var(--size);
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 9px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    background: #ede0c8; color: #4a4238;
+    transform: translate(calc(var(--c) * (100% + var(--gap))), calc(var(--r) * (100% + var(--gap))));
+    transition: transform .13s ease-out;
+    will-change: transform;
+  }
+  .tile.n4    { background: #eece9f; }
+  .tile.n8    { background: #f2b179; color: #fff; }
+  .tile.n16   { background: #f59563; color: #fff; }
+  .tile.n32   { background: #f67c5f; color: #fff; }
+  .tile.n64   { background: #f65e3b; color: #fff; }
+  .tile.n128  { background: #edcf72; color: #fff; }
+  .tile.n256  { background: #edcc61; color: #fff; }
+  .tile.n512  { background: #edc850; color: #fff; }
+  .tile.n1024 { background: #edc53f; color: #fff; }
+  .tile.n2048 { background: #edc22e; color: #fff; box-shadow: 0 0 18px rgba(237,194,46,.55); }
+  .tile.big   { background: #3c3a32; color: #fff; }
+  .tile.d4 { font-size: .78em; }
+  .tile.d5 { font-size: .62em; }
+
+  .tile.born { animation: born .16s ease-out; }
+  @keyframes born { from { transform: translate(calc(var(--c) * (100% + var(--gap))), calc(var(--r) * (100% + var(--gap)))) scale(.3); } }
+  .tile.grew { animation: grew .16s ease-out .04s; }
+  @keyframes grew {
+    50% { transform: translate(calc(var(--c) * (100% + var(--gap))), calc(var(--r) * (100% + var(--gap)))) scale(1.16); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tile { transition: none; }
+    .tile.born, .tile.grew { animation: none; }
+  }
+
+  /* ---------- 끝났을 때 덮는 화면 ---------- */
+  #cover {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    background: rgba(22,33,62,.9);
+    border-radius: 14px;
+  }
+  #cover.on { display: flex; }
+  #cover p { margin: 0; font-size: 23px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 11px;
+    padding: 11px 18px;
+    background: #0f3460; color: #fff;
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: .4; }
+  button.warm { background: var(--pink); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .row button { flex: 1; max-width: 160px; }
+
+  /* ---------- 방향 버튼(손가락으로 밀기 어려울 때) ---------- */
+  #pad {
+    margin: 14px auto 0;
+    display: grid;
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(2, 52px);
+    gap: 7px;
+    justify-content: center;
+  }
+  #pad button { font-size: 21px; padding: 0; }
+  #pad .blank { background: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🔢 2048</h1>
+
+  <div class="seg" id="levelRow" role="group" aria-label="난이도">
+    <button data-n="6">아주 쉬움</button>
+    <button data-n="5">쉬움</button>
+    <button data-n="4">보통</button>
+  </div>
+
+  <p id="hint">밀어서 같은 숫자를 합치자</p>
+
+  <div class="scores">
+    <div class="score"><b>점수</b><span id="score">0</span><div class="pop" id="pop"></div></div>
+    <div class="score"><b>최고</b><span id="best">0</span></div>
+  </div>
+
+  <div id="board">
+    <div id="holes"></div>
+    <div id="cover">
+      <p id="coverMsg"></p>
+      <div class="row" style="margin:0">
+        <button id="coverBtn" class="warm"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <button id="undoBtn">↩️ 되돌리기</button>
+    <button id="newBtn" class="warm">🔄 새 게임</button>
+  </div>
+
+  <div id="pad">
+    <span class="blank"></span>
+    <button data-d="up" aria-label="위로">⬆️</button>
+    <span class="blank"></span>
+    <button data-d="left" aria-label="왼쪽으로">⬅️</button>
+    <button data-d="down" aria-label="아래로">⬇️</button>
+    <button data-d="right" aria-label="오른쪽으로">➡️</button>
+  </div>
+</main>
+
+<script>
+/* 난이도는 판 크기로 정한다.
+   판이 넓으면 빈칸이 많아서 실수해도 금방 막히지 않는다.
+   쉬운 쪽은 새로 나오는 숫자가 늘 2라서 계획한 대로 합쳐지고,
+   되돌리기도 여러 번 할 수 있다.
+   rescues는 판이 꽉 찼을 때 끝내지 않고 살려 주는 횟수다. */
+const LEVELS = {
+  6: { n: 6, name: '아주 쉬움', undos: 999, rescues: 999, onlyTwo: true,  start: 3 },
+  5: { n: 5, name: '쉬움',      undos: 10,  rescues: 3,   onlyTwo: true,  start: 2 },
+  4: { n: 4, name: '보통',      undos: 1,   rescues: 0,   onlyTwo: false, start: 2 }
+};
+const KEY_LEVEL = 'craft-2048-level';
+const KEY_BEST  = 'craft-2048-best';        // 판 크기마다 따로 센다
+
+const boardEl = document.getElementById('board');
+const holesEl = document.getElementById('holes');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const scoreEl = document.getElementById('score');
+const bestEl  = document.getElementById('best');
+const popEl   = document.getElementById('pop');
+const hintEl  = document.getElementById('hint');
+const undoBtn = document.getElementById('undoBtn');
+const levelRow = document.getElementById('levelRow');
+
+let lv;          // 지금 난이도
+let N;           // 한 줄에 몇 칸인지
+let grid;        // N x N, 칸마다 타일이 있거나 비어 있다
+let tiles;       // id -> 타일 {id, r, c, v, el}
+let nextId;
+let score, best, won, dead;
+let past;        // 되돌리기용으로 지나온 판들을 쌓아 둔다
+let rescues;     // 꽉 찼을 때 살려 줄 수 있는 남은 횟수
+let busy = false;
+let timer = null;   // 미끄러지는 중에 판을 새로 짜면 이 예약을 취소한다
+
+/* ---------- 타일 하나 만들고 지우기 ---------- */
+
+function classFor(v) {
+  const digits = String(v).length;
+  const name = v <= 2048 ? 'n' + v : 'big';
+  return 'tile ' + name + (digits >= 5 ? ' d5' : digits === 4 ? ' d4' : '');
+}
+
+function place(t) {
+  t.el.style.setProperty('--r', t.r);
+  t.el.style.setProperty('--c', t.c);
+}
+
+function addTile(r, c, v, born) {
+  const el = document.createElement('div');
+  el.className = classFor(v) + (born ? ' born' : '');
+  el.textContent = v;
+  const t = { id: nextId++, r, c, v, el };
+  place(t);
+  boardEl.appendChild(el);
+  grid[r][c] = t;
+  tiles.set(t.id, t);
+  return t;
+}
+
+function removeTile(t) {
+  tiles.delete(t.id);
+  t.el.remove();
+}
+
+function emptyCells() {
+  const out = [];
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++)
+      if (!grid[r][c]) out.push([r, c]);
+  return out;
+}
+
+function sprout() {
+  const free = emptyCells();
+  if (!free.length) return;
+  const [r, c] = free[Math.floor(Math.random() * free.length)];
+  const v = lv.onlyTwo ? 2 : (Math.random() < 0.9 ? 2 : 4);
+  addTile(r, c, v, true);
+}
+
+/* ---------- 점수와 다음 목표 ---------- */
+
+function bestKey() { return KEY_BEST + '-' + N; }
+
+function setScore(v, gained) {
+  score = v;
+  scoreEl.textContent = score;
+  if (score > best) {
+    best = score;
+    bestEl.textContent = best;
+    try { localStorage.setItem(bestKey(), String(best)); } catch (e) {}
+  }
+  if (gained > 0) {
+    popEl.textContent = '+' + gained;
+    popEl.classList.remove('go');
+    void popEl.offsetWidth;          // 애니메이션을 처음부터 다시 돌리려고 한 번 재운다
+    popEl.classList.add('go');
+  }
+}
+
+// 2048은 너무 멀어 보이니 바로 다음에 만들 숫자를 알려 준다
+function showHint() {
+  let top = 0;
+  tiles.forEach(t => { if (t.v > top) top = t.v; });
+  if (top >= 2048) hintEl.innerHTML = '가장 큰 수 <b>' + top + '</b> · 계속 더 크게!';
+  else hintEl.innerHTML = '가장 큰 수 <b>' + top + '</b> · 다음 목표 <b>' + (top * 2) + '</b>';
+}
+
+function showUndo() {
+  undoBtn.disabled = past.length === 0;
+  undoBtn.textContent = past.length > 1 ? '↩️ 되돌리기 ' + past.length : '↩️ 되돌리기';
+}
+
+/* ---------- 새 게임 ---------- */
+
+// 미끄러지는 애니메이션이 끝나기를 기다리던 예약을 지운다.
+// 안 지우면 새로 짠 판에 예약이 뒤늦게 끼어들어 숫자가 하나 더 생긴다.
+function cancelPending() {
+  if (timer !== null) { clearTimeout(timer); timer = null; }
+  busy = false;
+}
+
+function reset() {
+  cancelPending();
+  tiles?.forEach(t => t.el.remove());
+  grid = Array.from({ length: N }, () => Array(N).fill(null));
+  tiles = new Map();
+  nextId = 1;
+  won = false; dead = false; past = [];
+  rescues = lv.rescues;
+  showUndo();
+  coverEl.classList.remove('on');
+  setScore(0, 0);
+  for (let i = 0; i < lv.start; i++) sprout();
+  showHint();
+  fitFont();
+}
+
+function setLevel(n, fresh) {
+  lv = LEVELS[n];
+  N = lv.n;
+  boardEl.style.setProperty('--n', N);
+  holesEl.innerHTML = '';
+  for (let i = 0; i < N * N; i++) holesEl.appendChild(document.createElement('i'));
+  [...levelRow.children].forEach(b => {
+    b.setAttribute('aria-pressed', String(Number(b.dataset.n) === N));
+  });
+  try {
+    localStorage.setItem(KEY_LEVEL, String(N));
+    best = parseInt(localStorage.getItem(bestKey()), 10) || 0;
+  } catch (e) { best = 0; }
+  bestEl.textContent = best;
+  if (fresh) reset();
+}
+
+/* ---------- 되돌리기 ---------- */
+
+function snapshot() {
+  return {
+    cells: grid.map(row => row.map(t => (t ? t.v : 0))),
+    score, won
+  };
+}
+
+function restore(snap) {
+  cancelPending();
+  tiles.forEach(t => t.el.remove());
+  grid = Array.from({ length: N }, () => Array(N).fill(null));
+  tiles = new Map();
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++)
+      if (snap.cells[r][c]) addTile(r, c, snap.cells[r][c], false);
+  score = snap.score;
+  scoreEl.textContent = score;
+  won = snap.won;
+  dead = false;
+  coverEl.classList.remove('on');
+  showHint();
+  fitFont();
+}
+
+/* ---------- 미는 방향마다 훑는 순서 ---------- */
+
+// 미는 쪽 칸부터 차례로 본다. 그래야 앞에 있는 것이 먼저 벽에 붙는다.
+function lineCells(dir, i) {
+  const out = [];
+  for (let k = 0; k < N; k++) {
+    if (dir === 'left')  out.push([i, k]);
+    if (dir === 'right') out.push([i, N - 1 - k]);
+    if (dir === 'up')    out.push([k, i]);
+    if (dir === 'down')  out.push([N - 1 - k, i]);
+  }
+  return out;
+}
+
+function move(dir) {
+  if (busy || dead) return;
+
+  const before = snapshot();
+  const gone = [];        // 합쳐져서 사라질 타일
+  let gained = 0;
+  let moved = false;
+
+  for (let i = 0; i < N; i++) {
+    const cells = lineCells(dir, i);
+    const line = cells.map(([r, c]) => grid[r][c]).filter(Boolean);
+
+    // 앞에서부터 같은 값끼리 한 번씩만 합친다
+    const result = [];
+    for (let k = 0; k < line.length; k++) {
+      const t = line[k];
+      const next = line[k + 1];
+      if (next && next.v === t.v) {
+        result.push({ keep: t, eaten: next });
+        k++;
+      } else {
+        result.push({ keep: t });
+      }
+    }
+
+    // 밀린 자리에 다시 놓는다
+    cells.forEach(([r, c]) => { grid[r][c] = null; });
+    result.forEach((slot, k) => {
+      const [r, c] = cells[k];
+      const t = slot.keep;
+      if (t.r !== r || t.c !== c) moved = true;
+      t.r = r; t.c = c;
+      place(t);
+      grid[r][c] = t;
+
+      if (slot.eaten) {
+        moved = true;
+        // 먹힌 타일도 같은 자리까지 미끄러진 다음 사라진다
+        slot.eaten.r = r; slot.eaten.c = c;
+        place(slot.eaten);
+        gone.push(slot.eaten);
+        t.v *= 2;
+        gained += t.v;
+      }
+    });
+  }
+
+  if (!moved) return;
+
+  busy = true;
+  setScore(score + gained, gained);
+  past.push(before);
+  if (past.length > lv.undos) past.shift();
+  showUndo();
+
+  // 미끄러지는 동안 기다렸다가 합친 결과를 보여 준다
+  timer = setTimeout(() => {
+    timer = null;
+    gone.forEach(removeTile);
+    tiles.forEach(t => {
+      if (t.el.textContent !== String(t.v)) {
+        t.el.textContent = t.v;
+        t.el.className = classFor(t.v) + ' grew';
+      }
+    });
+    sprout();
+    showHint();
+    fitFont();
+    busy = false;
+
+    if (!won && [...tiles.values()].some(t => t.v >= 2048)) {
+      won = true;
+      show('🎉 2048 완성!', '더 큰 숫자에 도전해 볼까?', '계속하기', () => coverEl.classList.remove('on'));
+      return;
+    }
+    if (stuck()) {
+      dead = true;
+      // 쉬운 난이도에서는 꽉 차도 몇 번은 한 수 물러서게 해 준다
+      if (rescues > 0 && past.length) {
+        const left = rescues > 99 ? '언제든 물러설 수 있어요' : '물러서기 ' + rescues + '번 남음';
+        show('😵 꽉 찼어요', left, '한 수 물러서기', () => { rescues--; undo(); });
+      } else {
+        past = [];              // 여기서 끝. 되돌리기로 빠져나갈 수 없게 한다
+        showUndo();
+        show('😵 더 움직일 수 없어요', '점수 ' + score + '점', '다시 하기', reset);
+      }
+    }
+  }, 140);
+}
+
+function stuck() {
+  if (emptyCells().length) return false;
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++) {
+      const v = grid[r][c].v;
+      if (c + 1 < N && grid[r][c + 1].v === v) return false;
+      if (r + 1 < N && grid[r + 1][c].v === v) return false;
+    }
+  return true;
+}
+
+function show(msg, sub, btn, onClick) {
+  coverMsg.innerHTML = msg + '<small>' + sub + '</small>';
+  coverBtn.textContent = btn;
+  coverBtn.onclick = onClick;
+  coverEl.classList.add('on');
+}
+
+function undo() {
+  if (busy || !past.length) return;
+  restore(past.pop());
+  showUndo();
+}
+
+/* ---------- 칸 크기에 글씨 맞추기 ---------- */
+
+function fitFont() {
+  const w = boardEl.clientWidth;
+  if (w) boardEl.style.fontSize = Math.round(w * 0.62 / N) + 'px';
+}
+window.addEventListener('resize', fitFont);
+window.addEventListener('orientationchange', () => setTimeout(fitFont, 200));
+
+/* ---------- 조작 ---------- */
+
+const KEYS = {
+  ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+  w: 'up', s: 'down', a: 'left', d: 'right',
+  W: 'up', S: 'down', A: 'left', D: 'right'
+};
+document.addEventListener('keydown', e => {
+  const dir = KEYS[e.key];
+  if (!dir) return;
+  e.preventDefault();
+  move(dir);
+});
+
+document.querySelectorAll('#pad button').forEach(b => {
+  b.addEventListener('click', () => move(b.dataset.d));
+});
+
+let sx = 0, sy = 0, swiping = false;
+boardEl.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) return;
+  sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  swiping = true;
+}, { passive: true });
+boardEl.addEventListener('touchmove', e => { if (swiping) e.preventDefault(); }, { passive: false });
+boardEl.addEventListener('touchend', e => {
+  if (!swiping) return;
+  swiping = false;
+  const dx = e.changedTouches[0].clientX - sx;
+  const dy = e.changedTouches[0].clientY - sy;
+  if (Math.abs(dx) < 22 && Math.abs(dy) < 22) return;
+  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
+  else move(dy > 0 ? 'down' : 'up');
+});
+
+// 마우스로도 끌어서 밀 수 있게
+let mx = 0, my = 0, dragging = false;
+boardEl.addEventListener('mousedown', e => { mx = e.clientX; my = e.clientY; dragging = true; });
+window.addEventListener('mouseup', e => {
+  if (!dragging) return;
+  dragging = false;
+  const dx = e.clientX - mx, dy = e.clientY - my;
+  if (Math.abs(dx) < 22 && Math.abs(dy) < 22) return;
+  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 'right' : 'left');
+  else move(dy > 0 ? 'down' : 'up');
+});
+
+undoBtn.addEventListener('click', undo);
+document.getElementById('newBtn').addEventListener('click', reset);
+
+levelRow.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const n = Number(b.dataset.n);
+  if (n === N) { reset(); return; }
+  setLevel(n, true);
+});
+
+let startN;
+try { startN = parseInt(localStorage.getItem(KEY_LEVEL), 10); } catch (e) {}
+setLevel(LEVELS[startN] ? startN : 5, true);      // 처음 오면 쉬움부터
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
