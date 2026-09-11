@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>🐍 뱀 게임</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 난이도 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 10px;
+    padding: 9px 2px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+
+  /* ---------- 점수 ---------- */
+  .bars { display: flex; gap: 8px; margin-bottom: 10px; }
+  .bar {
+    flex: 1;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 8px 6px 9px;
+    box-shadow: var(--shadow);
+  }
+  .bar b { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; white-space: nowrap; }
+  .bar span { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  #hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; min-height: 18px; }
+  #hint b { color: #23883C; font-weight: 800; }
+
+  /* ---------- 판 ---------- */
+  #boardwrap { position: relative; }
+  canvas {
+    display: block;
+    width: 100%;
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    touch-action: none;
+  }
+
+  /* ---------- 덮는 화면 ---------- */
+  #cover {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    background: rgba(255,255,255,.93);
+    border-radius: 14px;
+  }
+  #cover.on { display: flex; }
+  #cover p { margin: 0; font-size: 23px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 12px;
+    padding: 11px 18px;
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.warm { background: var(--pink); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .row button { flex: 1; max-width: 200px; }
+  #pauseBtn { background: var(--card); color: var(--ink); }
+
+  /* ---------- 방향 버튼 ---------- */
+  #pad {
+    margin: 12px auto 0;
+    display: grid;
+    grid-template-columns: repeat(3, 58px);
+    grid-template-rows: repeat(2, 52px);
+    gap: 7px;
+    justify-content: center;
+  }
+  #pad button { font-size: 21px; padding: 0; background: var(--card); color: var(--ink); }
+  #pad .blank { background: none; box-shadow: none; }
+  #tip { margin: 12px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🐍 뱀 게임</h1>
+
+  <div class="seg" id="levelRow" role="group" aria-label="난이도">
+    <button data-k="easy">쉬움</button>
+    <button data-k="normal">보통</button>
+    <button data-k="hard">어려움</button>
+  </div>
+
+  <div class="bars">
+    <div class="bar"><b>먹은 사과</b><span id="score">0</span></div>
+    <div class="bar"><b>길이</b><span id="len">3</span></div>
+    <div class="bar"><b>최고 점수</b><span id="best">0</span></div>
+  </div>
+
+  <p id="hint">아무 방향이나 눌러서 시작</p>
+
+  <div id="boardwrap">
+    <canvas id="cv"></canvas>
+    <div id="cover">
+      <p id="coverMsg"></p>
+      <div class="row" style="margin:0">
+        <button id="coverBtn" class="warm"></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pad">
+    <span class="blank"></span>
+    <button data-d="up" aria-label="위로">⬆️</button>
+    <span class="blank"></span>
+    <button data-d="left" aria-label="왼쪽으로">⬅️</button>
+    <button data-d="down" aria-label="아래로">⬇️</button>
+    <button data-d="right" aria-label="오른쪽으로">➡️</button>
+  </div>
+
+  <div class="row">
+    <button id="pauseBtn">⏸ 잠깐 멈춤</button>
+    <button id="newBtn" class="warm">🔄 새 게임</button>
+  </div>
+
+  <p id="tip">화면을 손가락으로 밀거나 방향 버튼을 눌러 조종한다<br>벽에도 몸에도 막히기만 한다 · 갇히면 꼬리가 줄었다가 빠져나오면 도로 자란다<br>길이가 20을 넘으면 사과는 네 모서리에만 생긴다</p>
+</main>
+
+<script>
+/* 벽에도 자기 몸에도 막히기만 한다. 지는 일이 없다.
+   막히면 그 자리에 서서 기다리고, 방향만 바꾸면 다시 간다.
+   난이도는 뱀이 움직이는 속도로만 갈린다. */
+const LEVELS = {
+  easy:   { name: '쉬움',   ms: 230 },
+  normal: { name: '보통',   ms: 150 },
+  hard:   { name: '어려움', ms: 100 }
+};
+const N = 13;                      // 한 줄에 열세 칸
+const CORNER_AT = 20;              // 이만큼 길어지면 사과는 네 모서리에만 생긴다
+const KEY_LEVEL = 'craft-snake-level';
+const KEY_BEST  = 'craft-snake-best';
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrapEl = document.getElementById('boardwrap');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const scoreEl = document.getElementById('score');
+const lenEl = document.getElementById('len');
+const bestEl = document.getElementById('best');
+const hintEl = document.getElementById('hint');
+const pauseBtn = document.getElementById('pauseBtn');
+const levelRow = document.getElementById('levelRow');
+
+let key, lv;
+let snake, dir, queue, food, score, best;
+let started, dead, paused;
+let timer = null, cell = 24;
+let debt = 0;         // 갇혔을 때 잘린 꼬리. 빠져나오면 이만큼 도로 자란다
+let bump = 0;         // 막힌 걸 보여 주려고 잠깐 굵게 그린다
+let bumpAt = null;    // 몸에 막혔으면 그 칸, 벽에 막혔으면 null
+
+const DIRS = {
+  up:    { x: 0, y: -1 },
+  down:  { x: 0, y: 1 },
+  left:  { x: -1, y: 0 },
+  right: { x: 1, y: 0 }
+};
+
+/* ---------- 새 게임 ---------- */
+
+function newGame() {
+  stopLoop();
+  const mid = Math.floor(N / 2);
+  snake = [{ x: mid, y: mid }, { x: mid - 1, y: mid }, { x: mid - 2, y: mid }];
+  dir = DIRS.right;
+  queue = [];
+  score = 0;
+  started = false; dead = false; paused = false;
+  debt = 0;
+  bump = 0; bumpAt = null;
+  placeFood();
+  coverEl.classList.remove('on');
+  pauseBtn.textContent = '⏸ 잠깐 멈춤';
+  hintEl.textContent = '아무 방향이나 눌러서 시작';
+  showScore();
+  draw();
+}
+
+function isCornerCell(c) {
+  return (c.x === 0 || c.x === N - 1) && (c.y === 0 || c.y === N - 1);
+}
+
+/* 사과를 놓은 뒤에 뱀이 자라는 일이 있다.
+   갇혔다 빠져나와 꼬리가 도로 자랄 때가 그렇다.
+   그래서 길이가 기준을 넘는 순간 가운데에 있던 사과는 모서리로 옮겨 준다. */
+function fixFood() {
+  if (!food || snake.length <= CORNER_AT || isCornerCell(food)) return;
+  placeFood();
+  if (food && isCornerCell(food)) {
+    hintEl.innerHTML = '길어졌다! 사과가 <b>모서리로</b> 옮겨 갔다';
+  }
+}
+
+function placeFood() {
+  const free = [];
+  for (let y = 0; y < N; y++)
+    for (let x = 0; x < N; x++)
+      if (!snake.some(s => s.x === x && s.y === y)) free.push({ x, y });
+  if (!free.length) { food = null; return; }
+
+  // 뱀이 길어지면 사과는 네 모서리에만 생긴다.
+  // 다만 네 모서리가 모두 뱀에 덮였으면 아무 데나 생기게 해서 길이 막히지 않게 한다.
+  if (snake.length > CORNER_AT) {
+    const corners = free.filter(isCornerCell);
+    if (corners.length) {
+      food = corners[Math.floor(Math.random() * corners.length)];
+      return;
+    }
+  }
+  food = free[Math.floor(Math.random() * free.length)];
+}
+
+function showScore() {
+  scoreEl.textContent = score;
+  lenEl.textContent = snake.length;
+  if (score > best) {
+    best = score;
+    try { localStorage.setItem(KEY_BEST + '-' + key, String(best)); } catch (e) {}
+  }
+  bestEl.textContent = best;
+}
+
+/* ---------- 한 칸 움직이기 ---------- */
+
+function step() {
+  if (dead || paused) return;
+
+  // 한 박자에 한 번만 꺾이게 차례로 꺼내 쓴다
+  if (queue.length) dir = queue.shift();
+
+  const nx = snake[0].x + dir.x, ny = snake[0].y + dir.y;
+
+  if (nx < 0 || ny < 0 || nx >= N || ny >= N) return blocked(null, '벽에 막혔어요');
+
+  const eating = food && nx === food.x && ny === food.y;
+  // 꼬리 끝은 이번 박자에 비켜 주니까 막힘에서 뺀다.
+  // 다만 사과를 먹거나 꼬리가 자라는 중이면 꼬리는 그대로 있는다.
+  const body = (eating || debt > 0) ? snake : snake.slice(0, -1);
+  if (body.some(s => s.x === nx && s.y === ny)) return blocked({ x: nx, y: ny }, '자기 몸에 막혔어요');
+
+  snake.unshift({ x: nx, y: ny });
+  if (eating) {
+    score++;
+    placeFood();
+    if (!food) return winAll();
+    if (snake.length > CORNER_AT) {
+      hintEl.innerHTML = '길어졌다! 이제 사과는 <b>모서리에만</b> 생긴다';
+    }
+  } else if (debt > 0) {
+    debt--;                                  // 꼬리를 그대로 두면 한 칸 길어진다
+    hintEl.innerHTML = debt > 0
+      ? '빠져나왔다! 꼬리가 <b>다시 자라는 중</b>'
+      : '꼬리가 <b>다 자랐다</b>';
+  } else {
+    snake.pop();
+  }
+  fixFood();
+  showScore();
+  draw();
+}
+
+/* 막혔을 때. 죽지 않고 그 자리에 서서 기다린다.
+   그런데 사방이 다 막혀 버리면 기다려도 소용이 없다.
+   그럴 때만 꼬리가 한 칸씩 줄어들면서 스스로 길을 낸다.
+   길이는 줄어도 먹은 사과는 그대로다. */
+function blocked(at, why) {
+  bump = 4;
+  bumpAt = at;
+
+  if (boxedIn() && snake.length > 3) {
+    snake.pop();
+    debt++;                                  // 잘린 만큼 기억해 두었다가 나중에 되돌린다
+    showScore();
+    hintEl.innerHTML = '갇혔다! <b>꼬리가 줄면서</b> 길이 열린다 · 빠져나오면 도로 자란다';
+  } else {
+    hintEl.textContent = why + ' · 방향을 바꾸자';
+  }
+  draw();
+}
+
+// 어느 쪽으로도 갈 데가 없는지 (되돌아가기는 원래 안 되니 빼고 센다)
+function boxedIn() {
+  return ['up', 'down', 'left', 'right'].every(name => {
+    const d = DIRS[name];
+    if (d.x === -dir.x && d.y === -dir.y) return true;
+    const nx = snake[0].x + d.x, ny = snake[0].y + d.y;
+    if (nx < 0 || ny < 0 || nx >= N || ny >= N) return true;
+    const eating = food && nx === food.x && ny === food.y;
+    const body = (eating || debt > 0) ? snake : snake.slice(0, -1);
+    return body.some(s => s.x === nx && s.y === ny);
+  });
+}
+
+function winAll() {
+  dead = true;
+  stopLoop();
+  draw();
+  show('🏆 판을 다 채웠다!', '더 갈 데가 없어요', '한 번 더', newGame);
+}
+
+function show(msg, sub, btn, onClick) {
+  coverMsg.innerHTML = msg + '<small>' + sub + '</small>';
+  coverBtn.textContent = btn;
+  coverBtn.onclick = onClick;
+  coverEl.classList.add('on');
+}
+
+/* ---------- 시계 ---------- */
+
+function startLoop() {
+  stopLoop();
+  timer = setInterval(step, lv.ms);
+}
+function stopLoop() {
+  if (timer !== null) { clearInterval(timer); timer = null; }
+}
+
+/* ---------- 그리기 ---------- */
+
+function fit() {
+  const css = wrapEl.clientWidth;
+  if (!css) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.style.height = css + 'px';
+  cv.width = Math.round(css * dpr);
+  cv.height = Math.round(css * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cell = css / N;
+  draw();
+}
+window.addEventListener('resize', fit);
+window.addEventListener('orientationchange', () => setTimeout(fit, 200));
+
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+
+function draw() {
+  const size = cell * N;
+  ctx.clearRect(0, 0, size, size);
+
+  // 바탕 격자
+  ctx.fillStyle = '#F7F9FF';
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = '#E9EEFB';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < N; i++) {
+    ctx.beginPath();
+    ctx.moveTo(Math.round(i * cell) + .5, 0);
+    ctx.lineTo(Math.round(i * cell) + .5, size);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, Math.round(i * cell) + .5);
+    ctx.lineTo(size, Math.round(i * cell) + .5);
+    ctx.stroke();
+  }
+
+  // 테두리가 벽이다. 벽에 막혔을 때는 잠깐 굵고 진하게 그려서 알려 준다.
+  const wallHit = bump > 0 && !bumpAt;
+  ctx.strokeStyle = wallHit ? '#FF6B8A' : '#C9D6F4';
+  ctx.lineWidth = wallHit ? 7 : 4;
+  const m = ctx.lineWidth / 2;
+  rr(m, m, size - m * 2, size - m * 2, 12);
+  ctx.stroke();
+
+  // 사과
+  if (food) {
+    ctx.font = Math.round(cell * .74) + 'px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🍎', (food.x + .5) * cell, (food.y + .56) * cell);
+  }
+
+  // 몸통은 꼬리로 갈수록 조금씩 연해진다
+  const pad = Math.max(1.5, cell * .09);
+  for (let i = snake.length - 1; i >= 1; i--) {
+    const s = snake[i];
+    const t = i / snake.length;
+    ctx.fillStyle = dead ? '#C8CEDE' : 'rgb(' + Math.round(63 + t * 70) + ',' + Math.round(164 + t * 50) + ',' + Math.round(91 + t * 50) + ')';
+    rr(s.x * cell + pad, s.y * cell + pad, cell - pad * 2, cell - pad * 2, cell * .3);
+    ctx.fill();
+  }
+
+  // 머리
+  const h = snake[0];
+  ctx.fillStyle = dead ? '#9AA3B8' : '#2F8F4E';
+  rr(h.x * cell + pad * .6, h.y * cell + pad * .6, cell - pad * 1.2, cell - pad * 1.2, cell * .32);
+  ctx.fill();
+
+  // 눈은 가는 쪽을 본다
+  const ex = dir.x, ey = dir.y;
+  const cx = (h.x + .5) * cell, cy = (h.y + .5) * cell;
+  const fwd = cell * .13;                        // 앞쪽으로 나온 정도
+  const side = cell * .19;                       // 좌우로 벌어진 정도
+  const er = Math.max(2.4, cell * .13);
+  const px = -ey, py = ex;                       // 진행 방향의 옆쪽
+  [-1, 1].forEach(sgn => {
+    const x = cx + ex * fwd + px * side * sgn;
+    const y = cy + ey * fwd + py * side * sgn;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(x, y, er, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1B2340';
+    ctx.beginPath(); ctx.arc(x + ex * er * .4, y + ey * er * .4, er * .5, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // 몸에 막혔으면 막은 칸에 동그란 표시를 해 준다
+  if (bump > 0 && bumpAt) {
+    ctx.strokeStyle = '#FF6B8A';
+    ctx.lineWidth = Math.max(2.5, cell * .1);
+    rr(bumpAt.x * cell + 2, bumpAt.y * cell + 2, cell - 4, cell - 4, cell * .3);
+    ctx.stroke();
+  }
+  if (bump > 0) bump--;
+}
+
+/* ---------- 조작 ---------- */
+
+function turn(name) {
+  if (dead) return;
+
+  // 이미 가고 있는 쪽을 눌러도 게임은 시작되어야 한다
+  if (!started) {
+    started = true;
+    paused = false;
+    hintEl.innerHTML = '사과를 먹으면 <b>길어진다</b> · 막히면 방향을 바꾸자';
+    startLoop();
+  }
+
+  const d = DIRS[name];
+  const last = queue.length ? queue[queue.length - 1] : dir;
+  if (last.x === -d.x && last.y === -d.y) return;      // 오던 길로 되돌아갈 수는 없다
+  if (last.x === d.x && last.y === d.y) return;        // 가던 쪽을 또 누른 것
+  if (queue.length < 2) queue.push(d);
+}
+
+const KEYS = {
+  ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+  w: 'up', s: 'down', a: 'left', d: 'right',
+  W: 'up', S: 'down', A: 'left', D: 'right'
+};
+document.addEventListener('keydown', e => {
+  if (e.key === ' ') { e.preventDefault(); togglePause(); return; }
+  const name = KEYS[e.key];
+  if (!name) return;
+  e.preventDefault();
+  turn(name);
+});
+
+document.querySelectorAll('#pad button').forEach(b => {
+  b.addEventListener('click', () => turn(b.dataset.d));
+});
+
+let sx = 0, sy = 0, swiping = false;
+cv.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) return;
+  sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  swiping = true;
+}, { passive: true });
+cv.addEventListener('touchmove', e => { if (swiping) e.preventDefault(); }, { passive: false });
+cv.addEventListener('touchend', e => {
+  if (!swiping) return;
+  swiping = false;
+  const dx = e.changedTouches[0].clientX - sx;
+  const dy = e.changedTouches[0].clientY - sy;
+  if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
+  if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? 'right' : 'left');
+  else turn(dy > 0 ? 'down' : 'up');
+});
+
+function togglePause() {
+  if (!started || dead) return;
+  paused = !paused;
+  pauseBtn.textContent = paused ? '▶️ 다시 하기' : '⏸ 잠깐 멈춤';
+  hintEl.textContent = paused ? '잠깐 멈췄어요' : '';
+}
+pauseBtn.addEventListener('click', togglePause);
+document.getElementById('newBtn').addEventListener('click', newGame);
+
+// 화면을 덮거나 다른 앱으로 가면 알아서 멈춘다
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && started && !dead && !paused) togglePause();
+});
+
+levelRow.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) setLevel(b.dataset.k);
+});
+
+function setLevel(k) {
+  key = LEVELS[k] ? k : 'easy';
+  lv = LEVELS[key];
+  [...levelRow.children].forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.k === key));
+  });
+  try {
+    localStorage.setItem(KEY_LEVEL, key);
+    best = parseInt(localStorage.getItem(KEY_BEST + '-' + key), 10) || 0;
+  } catch (e) { best = 0; }
+  bestEl.textContent = best;
+  bump = 0; bumpAt = null;
+  newGame();
+  fit();
+}
+
+let startKey = 'easy';
+try { startKey = localStorage.getItem(KEY_LEVEL) || 'easy'; } catch (e) {}
+setLevel(startKey);
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
