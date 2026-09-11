@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>💣 지뢰 찾기</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --closed-1: #DCE6FB;      /* 아직 안 연 칸 */
+    --closed-2: #C6D4F4;
+    --open: #F7F9FF;          /* 연 칸 */
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 난이도 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 10px;
+    padding: 9px 2px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+
+  /* ---------- 남은 지뢰 · 시간 ---------- */
+  .bars { display: flex; gap: 8px; margin-bottom: 10px; }
+  .bar {
+    flex: 1;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 8px 6px 9px;
+    box-shadow: var(--shadow);
+  }
+  .bar b { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; white-space: nowrap; }
+  .bar span { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  #hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; min-height: 18px; }
+  #hint b { color: #E0483F; font-weight: 800; }
+
+  /* ---------- 판 ---------- */
+  #boardwrap { position: relative; }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(var(--n), 1fr);
+    gap: 3px;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 7px;
+    box-shadow: var(--shadow);
+    touch-action: manipulation;
+    font-size: 20px;          /* 칸 크기에 맞춰 자바스크립트가 다시 정한다 */
+  }
+  .cell {
+    aspect-ratio: 1 / 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(180deg, var(--closed-1), var(--closed-2));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .cell:active { filter: brightness(.94); }
+  .cell.open {
+    background: var(--open);
+    box-shadow: inset 0 0 0 1px var(--line);
+    cursor: default;
+  }
+  /* 열린 칸 숫자는 흔히 쓰는 색 그대로 */
+  .cell.n1 { color: #1E64D6; }
+  .cell.n2 { color: #23883C; }
+  .cell.n3 { color: #E0483F; }
+  .cell.n4 { color: #6B3FB5; }
+  .cell.n5 { color: #B45A12; }
+  .cell.n6 { color: #0E8C85; }
+  .cell.n7 { color: #2C3560; }
+  .cell.n8 { color: #8A93AB; }
+  .cell.boom  { background: #FF6B6B; }
+  .cell.wrong { background: #FFDCE5; }
+  .cell.hot   { filter: brightness(.9); }      /* 한꺼번에 열 때 눌리는 느낌 */
+
+  /* 힌트로 짚어 준 칸과, 그 근거가 된 숫자 */
+  .cell.hinted {
+    background: #FFF0B8;
+    box-shadow: inset 0 0 0 2px var(--gold);
+    animation: blink 1s ease-in-out infinite;
+  }
+  .cell.hintsrc { box-shadow: inset 0 0 0 2px var(--blue); }
+  @keyframes blink { 50% { background: #FFD97A; } }
+  @media (prefers-reduced-motion: reduce) {
+    .cell.hinted { animation: none; }
+  }
+
+  /* ---------- 끝났을 때 덮는 화면 ---------- */
+  #cover {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    background: rgba(255,255,255,.93);
+    border-radius: 14px;
+  }
+  #cover.on { display: flex; }
+  #cover p { margin: 0; font-size: 23px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 12px;
+    padding: 11px 18px;
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.warm { background: var(--pink); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .row button { flex: 1; max-width: 200px; }
+  #hintBtn { background: var(--gold); color: var(--ink); }
+  #flagBtn { background: var(--card); color: var(--ink); }
+  #flagBtn[aria-pressed="true"] { background: var(--gold); color: var(--ink); }
+  #tip { margin: 12px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>💣 지뢰 찾기</h1>
+
+  <div class="seg" id="levelRow" role="group" aria-label="난이도">
+    <button data-k="baby">아주 쉬움</button>
+    <button data-k="easy">쉬움</button>
+    <button data-k="normal">보통</button>
+    <button data-k="hard">어려움</button>
+  </div>
+
+  <div class="bars">
+    <div class="bar"><b>남은 지뢰</b><span id="left">0</span></div>
+    <div class="bar"><b>시간</b><span id="time">0:00</span></div>
+    <div class="bar"><b>최고 기록</b><span id="best">-</span></div>
+  </div>
+
+  <p id="hint">칸을 눌러 열자 · 첫 칸은 절대 지뢰가 아니다</p>
+
+  <div id="boardwrap">
+    <div id="grid"></div>
+    <div id="cover">
+      <p id="coverMsg"></p>
+      <div class="row" style="margin:0">
+        <button id="coverBtn" class="warm"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <button id="hintBtn">💡 힌트</button>
+    <button id="flagBtn" aria-pressed="false">🚩 깃발 모드</button>
+  </div>
+  <div class="row">
+    <button id="newBtn" class="warm">🔄 새 게임</button>
+  </div>
+
+  <p id="tip">길게 누르면 깃발이 꽂힌다 · 숫자를 누르면 그 숫자만큼 깃발을 꽂았을 때 둘레가 한꺼번에 열린다<br>찍지 않고 끝까지 풀리는 판만 나온다 · 막히면 💡 힌트를 누르자</p>
+</main>
+
+<script>
+/* 난이도는 판 크기와 지뢰 수로 정한다. */
+const LEVELS = {
+  baby:   { name: '아주 쉬움', n: 6,  mines: 4 },
+  easy:   { name: '쉬움',      n: 8,  mines: 8 },
+  normal: { name: '보통',      n: 10, mines: 15 },
+  hard:   { name: '어려움',    n: 12, mines: 28 }
+};
+const KEY_LEVEL = 'craft-mine-level';
+const KEY_BEST  = 'craft-mine-best';      // 난이도마다 따로 센다
+
+const gridEl  = document.getElementById('grid');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const leftEl  = document.getElementById('left');
+const timeEl  = document.getElementById('time');
+const bestEl  = document.getElementById('best');
+const hintEl  = document.getElementById('hint');
+const flagBtn = document.getElementById('flagBtn');
+const hintBtn = document.getElementById('hintBtn');
+const levelRow = document.getElementById('levelRow');
+
+let key, lv, N, MINES;
+let mine, adj, open, flag, els;
+let NB;          // 칸마다 둘레 여덟 칸을 미리 담아 둔다
+let started, ended, openCount;
+let flagMode = false;
+let tick = null, seconds = 0;
+
+/* ---------- 판 만들기 ---------- */
+
+function idx(r, c) { return r * N + c; }
+
+// 둘레 여덟 칸
+function around(i) {
+  const r = Math.floor(i / N), c = i % N, out = [];
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < N && nc >= 0 && nc < N) out.push(idx(nr, nc));
+    }
+  return out;
+}
+
+function newGame() {
+  stopClock();
+  NB = [];
+  for (let i = 0; i < N * N; i++) NB.push(around(i));
+  seconds = 0;
+  started = false; ended = false; openCount = 0;
+  mine = new Array(N * N).fill(false);
+  adj  = new Array(N * N).fill(0);
+  open = new Array(N * N).fill(false);
+  flag = new Array(N * N).fill(false);
+
+  gridEl.style.setProperty('--n', N);
+  gridEl.innerHTML = '';
+  els = [];
+  for (let i = 0; i < N * N; i++) {
+    const b = document.createElement('button');
+    b.className = 'cell';
+    b.dataset.i = i;
+    b.setAttribute('aria-label', '닫힌 칸');
+    gridEl.appendChild(b);
+    els.push(b);
+  }
+  coverEl.classList.remove('on');
+  hintEl.textContent = '칸을 눌러 열자 · 첫 칸은 절대 지뢰가 아니다';
+  showTime();
+  showLeft();
+  clearHint();
+  fitFont();
+}
+
+// 지뢰를 한 판 깐다.
+// 처음 누른 칸과 그 둘레는 비워 두어서 첫 수에 넓게 열리게 한다.
+function deal(firstIdx) {
+  const safe = new Set([firstIdx, ...NB[firstIdx]]);
+  const spots = [];
+  for (let i = 0; i < N * N; i++) if (!safe.has(i)) spots.push(i);
+  // 둘레까지 비우면 자리가 모자란 경우에는 첫 칸만 지킨다
+  const pool = spots.length >= MINES ? spots
+             : Array.from({ length: N * N }, (_, i) => i).filter(i => i !== firstIdx);
+  for (let k = pool.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    [pool[k], pool[j]] = [pool[j], pool[k]];
+  }
+  const m = new Array(N * N).fill(false);
+  pool.slice(0, MINES).forEach(i => { m[i] = true; });
+  const a = new Array(N * N);
+  for (let i = 0; i < N * N; i++) a[i] = NB[i].filter(j => m[j]).length;
+  return { m, a };
+}
+
+/* 이 판이 '찍지 않고' 풀리는지 확인한다.
+   쓰는 규칙은 사람이 쓰는 두 가지뿐이다.
+     1) 숫자 - 꽂은 깃발 = 남은 닫힌 칸 수  →  그 닫힌 칸은 전부 지뢰
+     2) 숫자 = 꽂은 깃발 수                →  나머지 둘레는 전부 안전
+   이 둘만으로 끝까지 열리면 운에 맡길 자리가 없는 판이다. */
+function solvable(m, a, firstIdx) {
+  const op = new Array(N * N).fill(false), fl = new Array(N * N).fill(false);
+  let count = 0;
+  const stack = [firstIdx];
+  const reveal = i => {
+    if (op[i] || fl[i]) return;
+    op[i] = true; count++;
+    if (a[i] === 0) NB[i].forEach(reveal);
+  };
+  reveal(stack[0]);
+
+  let moved = true;
+  while (moved) {
+    moved = false;
+    for (let i = 0; i < N * N; i++) {
+      if (!op[i] || !a[i]) continue;
+      const closed = NB[i].filter(j => !op[j] && !fl[j]);
+      if (!closed.length) continue;
+      const flags = NB[i].filter(j => fl[j]).length;
+      if (a[i] - flags === closed.length) { closed.forEach(j => { fl[j] = true; }); moved = true; }
+      else if (a[i] === flags) { closed.forEach(reveal); moved = true; }
+    }
+  }
+  return count === N * N - MINES;
+}
+
+// 풀리는 판이 나올 때까지 다시 깐다. 오래 붙잡고 있지 않도록 시간과 횟수를 정해 둔다.
+function layMines(firstIdx) {
+  const t0 = Date.now();
+  let fallback = null;
+  for (let tries = 0; tries < 800; tries++) {
+    const cand = deal(firstIdx);
+    if (solvable(cand.m, cand.a, firstIdx)) { mine = cand.m; adj = cand.a; return; }
+    if (!fallback) fallback = cand;
+    if (Date.now() - t0 > 600) break;
+  }
+  mine = fallback.m; adj = fallback.a;     // 정 못 찾으면 아무 판이라도 준다
+}
+
+/* ---------- 보여 주기 ---------- */
+
+function paint(i) {
+  const b = els[i];
+  if (open[i]) {
+    b.className = 'cell open' + (adj[i] ? ' n' + adj[i] : '');
+    b.textContent = mine[i] ? '💣' : (adj[i] || '');
+    b.setAttribute('aria-label', mine[i] ? '지뢰' : '열린 칸 ' + adj[i]);
+  } else if (flag[i]) {
+    b.className = 'cell flag';
+    b.textContent = '🚩';
+    b.setAttribute('aria-label', '깃발');
+  } else {
+    b.className = 'cell';
+    b.textContent = '';
+    b.setAttribute('aria-label', '닫힌 칸');
+  }
+}
+
+function showLeft() {
+  const used = flag.reduce((a, f) => a + (f ? 1 : 0), 0);
+  leftEl.textContent = MINES - used;
+}
+
+function showTime() {
+  const m = Math.floor(seconds / 60), s = seconds % 60;
+  timeEl.textContent = m + ':' + String(s).padStart(2, '0');
+}
+
+function fmt(sec) {
+  return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+}
+
+// 기록이 없는 것과 0초는 다르다. 없으면 null 을 돌려준다.
+function showBest() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY_BEST + '-' + key); } catch (e) {}
+  const v = raw === null ? NaN : parseInt(raw, 10);
+  const has = !isNaN(v);
+  bestEl.textContent = has ? fmt(v) : '-';
+  return has ? v : null;
+}
+
+/* ---------- 시계 ---------- */
+
+function startClock() {
+  stopClock();
+  tick = setInterval(() => { seconds++; showTime(); }, 1000);
+}
+function stopClock() {
+  if (tick !== null) { clearInterval(tick); tick = null; }
+}
+
+/* ---------- 칸 열기 ---------- */
+
+function reveal(i) {
+  if (open[i] || flag[i]) return;
+  open[i] = true;
+  openCount++;
+  paint(i);
+  // 둘레에 지뢰가 없으면 이어진 빈 칸까지 쭉 열어 준다
+  if (adj[i] === 0 && !mine[i]) NB[i].forEach(reveal);
+}
+
+function tap(i) {
+  if (ended || !(i >= 0 && i < N * N)) return;
+  clearHint();
+  if (flagMode) { toggleFlag(i); return; }
+  if (flag[i]) return;
+
+  if (!started) {
+    layMines(i);
+    started = true;
+    startClock();
+  }
+
+  if (open[i]) { chord(i); return; }
+
+  if (mine[i]) { lose(i); return; }
+
+  reveal(i);
+  checkWin();
+}
+
+// 숫자만큼 깃발을 꽂아 두었으면 둘레를 한꺼번에 연다
+function chord(i) {
+  if (!adj[i]) return;
+  const near = NB[i];
+  const flags = near.filter(j => flag[j]).length;
+  if (flags !== adj[i]) {
+    els[i].classList.add('hot');
+    setTimeout(() => els[i].classList.remove('hot'), 140);
+    return;
+  }
+  const boom = near.find(j => !flag[j] && mine[j]);
+  if (boom !== undefined) { lose(boom); return; }
+  near.forEach(j => { if (!flag[j]) reveal(j); });
+  checkWin();
+}
+
+function toggleFlag(i) {
+  if (ended || open[i] || !(i >= 0 && i < N * N)) return;
+  flag[i] = !flag[i];
+  paint(i);
+  showLeft();
+}
+
+/* ---------- 끝 ---------- */
+
+function lose(boomIdx) {
+  ended = true;
+  stopClock();
+  open[boomIdx] = true;
+  for (let i = 0; i < N * N; i++) {
+    if (mine[i] && !flag[i]) { open[i] = true; paint(i); }
+    else if (flag[i] && !mine[i]) {          // 잘못 꽂은 깃발을 알려 준다
+      els[i].className = 'cell wrong';
+      els[i].textContent = '❌';
+    }
+  }
+  els[boomIdx].classList.add('boom');
+  hintEl.innerHTML = '지뢰를 밟았다 · 다시 해 보자';
+  show('💥 펑!', '지뢰는 ' + MINES + '개였다', '다시 하기', newGame);
+}
+
+function checkWin() {
+  if (openCount !== N * N - MINES) return;
+  ended = true;
+  stopClock();
+  // 남은 칸은 모두 지뢰니까 깃발을 대신 꽂아 준다
+  for (let i = 0; i < N * N; i++) if (!open[i] && !flag[i]) { flag[i] = true; paint(i); }
+  showLeft();
+
+  const prev = showBest();
+  let line = '걸린 시간 ' + fmt(seconds);
+  if (prev === null || seconds < prev) {
+    try { localStorage.setItem(KEY_BEST + '-' + key, String(seconds)); } catch (e) {}
+    line = '최고 기록! ' + fmt(seconds);
+  }
+  showBest();
+  clearHint();
+  hintEl.innerHTML = '지뢰를 모두 찾았다 🎉';
+  show('🎉 다 찾았다!', line, '한 번 더', newGame);
+}
+
+/* 힌트는 '내가 연 칸'만 근거로 삼아 다시 따져 본다.
+   깃발을 잘못 꽂아 두었어도 엉뚱한 칸을 안전하다고 말하지 않게 하려고 그렇게 한다. */
+function findHint() {
+  const fl = new Array(N * N).fill(false);      // 따져서 알아낸 지뢰
+  let moved = true;
+  while (moved) {
+    moved = false;
+    for (let i = 0; i < N * N; i++) {
+      if (!open[i] || !adj[i]) continue;
+      const closed = NB[i].filter(j => !open[j] && !fl[j]);
+      if (!closed.length) continue;
+      const flags = NB[i].filter(j => fl[j]).length;
+      if (adj[i] - flags === closed.length) {
+        const fresh = closed.find(j => !flag[j]);        // 아직 내가 깃발을 안 꽂은 칸
+        if (fresh !== undefined) return { kind: 'mine', from: i, cell: fresh, count: closed.length };
+        closed.forEach(j => { fl[j] = true; });
+        moved = true;
+      } else if (adj[i] === flags) {
+        return { kind: 'safe', from: i, cell: closed[0] };
+      }
+    }
+  }
+  return null;
+}
+
+function clearHint() {
+  document.querySelectorAll('.hinted, .hintsrc').forEach(el => el.classList.remove('hinted', 'hintsrc'));
+}
+
+function askHint() {
+  if (ended) return;
+  clearHint();
+  if (!started) { hintEl.textContent = '먼저 아무 칸이나 눌러 보자 · 첫 칸은 절대 지뢰가 아니다'; return; }
+  const h = findHint();
+  if (!h) { hintEl.textContent = '지금은 알려 줄 게 없어요 · 새 게임을 눌러 보자'; return; }
+  els[h.from].classList.add('hintsrc');
+  els[h.cell].classList.add('hinted');
+  hintEl.innerHTML = h.kind === 'mine'
+    ? '<b>' + adj[h.from] + '</b> 둘레에 닫힌 칸이 딱 ' + h.count + '개 → 반짝이는 칸은 <b>지뢰</b>예요'
+    : '<b>' + adj[h.from] + '</b> 둘레 지뢰를 이미 다 찾았으니 → 반짝이는 칸은 <b>안전</b>해요';
+}
+
+function show(msg, sub, btn, onClick) {
+  coverMsg.innerHTML = msg + '<small>' + sub + '</small>';
+  coverBtn.textContent = btn;
+  coverBtn.onclick = onClick;
+  coverEl.classList.add('on');
+}
+
+/* ---------- 칸 크기에 글씨 맞추기 ---------- */
+
+function fitFont() {
+  const w = gridEl.clientWidth;
+  if (w) gridEl.style.fontSize = Math.round(w * 0.52 / N) + 'px';
+}
+window.addEventListener('resize', fitFont);
+window.addEventListener('orientationchange', () => setTimeout(fitFont, 200));
+
+/* ---------- 조작 ---------- */
+
+// 길게 누르면 깃발. 손가락을 뗀 뒤 따라오는 클릭은 무시한다.
+let pressTimer = null, pressed = -1, longPressed = false, lastTouch = 0;
+
+function cellIndexFrom(target) {
+  const b = target.closest ? target.closest('.cell') : null;
+  return b ? Number(b.dataset.i) : -1;
+}
+
+gridEl.addEventListener('touchstart', e => {
+  const i = cellIndexFrom(e.target);
+  if (i < 0) return;
+  pressed = i; longPressed = false;
+  pressTimer = setTimeout(() => {
+    longPressed = true;
+    toggleFlag(i);
+  }, 450);
+}, { passive: true });
+
+gridEl.addEventListener('touchmove', () => {
+  clearTimeout(pressTimer); pressed = -1;
+}, { passive: true });
+
+gridEl.addEventListener('touchend', e => {
+  clearTimeout(pressTimer);
+  lastTouch = Date.now();
+  const i = cellIndexFrom(e.target);
+  if (i >= 0 && i === pressed && !longPressed) { e.preventDefault(); tap(i); }
+  pressed = -1;
+});
+
+gridEl.addEventListener('click', e => {
+  if (Date.now() - lastTouch < 700) return;      // 손가락으로 이미 처리한 것
+  const i = cellIndexFrom(e.target);
+  if (i >= 0) tap(i);
+});
+
+// 마우스 오른쪽 단추로도 깃발
+gridEl.addEventListener('contextmenu', e => {
+  const i = cellIndexFrom(e.target);
+  if (i < 0) return;
+  e.preventDefault();
+  toggleFlag(i);
+});
+
+flagBtn.addEventListener('click', () => {
+  flagMode = !flagMode;
+  flagBtn.setAttribute('aria-pressed', String(flagMode));
+  flagBtn.textContent = flagMode ? '🚩 깃발 모드 켜짐' : '🚩 깃발 모드';
+});
+
+hintBtn.addEventListener('click', askHint);
+document.getElementById('newBtn').addEventListener('click', newGame);
+
+levelRow.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) setLevel(b.dataset.k);
+});
+
+function setLevel(k) {
+  key = LEVELS[k] ? k : 'baby';
+  lv = LEVELS[key];
+  N = lv.n; MINES = lv.mines;
+  [...levelRow.children].forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.k === key));
+  });
+  try { localStorage.setItem(KEY_LEVEL, key); } catch (e) {}
+  showBest();
+  newGame();
+}
+
+let startKey = 'baby';                       // 처음 오면 제일 쉬운 것부터
+try { startKey = localStorage.getItem(KEY_LEVEL) || 'baby'; } catch (e) {}
+setLevel(startKey);
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
