@@ -58,6 +58,19 @@
             font-size: 13px;
             color: #7C86A8;
         }
+        .shelf-head .ver {
+            display: inline-block;
+            vertical-align: 4px;
+            margin-left: 6px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: #EEF3FF;
+            border: 1px solid #E3E9F6;
+            color: #7C86A8;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .5px;
+        }
         .map-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -300,7 +313,7 @@
     </div>
 
     <div class="shelf-head">
-        <h1>🎮 게임 모음</h1>
+        <h1>🎮 게임 모음 <span class="ver" id="gameVersion"></span></h1>
         <p>곽재후가 만든 게임 <span id="gameCount"></span></p>
         <a class="chat-jump" href="#chat">💬 대화방 가기</a>
     </div>
@@ -550,8 +563,10 @@
         }
 
         // 게임이 몇 개인지 세어서 머리말에 보여 준다
-        document.getElementById('gameCount').textContent =
-            document.querySelectorAll('.map-container a').length + '개';
+        // 버전은 게임 개수를 그대로 쓴다 (게임 40개 = v40)
+        const gameTotal = document.querySelectorAll('.map-container a').length;
+        document.getElementById('gameCount').textContent = gameTotal + '개';
+        document.getElementById('gameVersion').textContent = 'v' + gameTotal;
 
         // 같은 이름이면 늘 같은 얼굴과 색이 나오게 이름으로 번호를 만든다
         const FACES = ['\u{1F436}','\u{1F431}','\u{1F438}','\u{1F435}','\u{1F43C}','\u{1F981}','\u{1F984}','\u{1F427}',
