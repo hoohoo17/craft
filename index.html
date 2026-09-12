@@ -136,6 +136,51 @@
             box-shadow: 0 8px 18px rgba(80,100,160,.20);
         }
         .chat-jump:active { transform: translateY(0); }
+        .video-open {
+            border: 0;
+            cursor: pointer;
+            font-family: inherit;
+            margin-left: 6px;
+        }
+
+        /* ---------- 소개 영상 ---------- */
+        .video-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(28,34,64,.72);
+        }
+        .video-overlay[hidden] { display: none; }
+        .video-box { position: relative; }
+        .video-box video {
+            display: block;
+            width: 100%;
+            max-width: min(92vw, 400px);
+            max-height: 84vh;
+            border-radius: 18px;
+            background: #000;
+            box-shadow: 0 18px 50px rgba(20,26,60,.45);
+        }
+        .video-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255,255,255,.92);
+            color: #2C3560;
+            font-size: 15px;
+            font-weight: 800;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(20,26,60,.3);
+        }
 
         /* ---------- 대화방 ---------- */
         .comment-section {
@@ -316,6 +361,15 @@
         <h1>🎮 게임 모음 <span class="ver" id="gameVersion"></span></h1>
         <p>곽재후가 만든 게임 <span id="gameCount"></span></p>
         <a class="chat-jump" href="#chat">💬 대화방 가기</a>
+        <button class="chat-jump video-open" id="videoOpen" type="button">🎬 소개 영상 보기</button>
+    </div>
+
+    <div class="video-overlay" id="videoOverlay" hidden>
+        <div class="video-box">
+            <video id="trailerVideo" src="trailer/craft-trailer.mp4" poster="trailer/poster.jpg"
+                   controls playsinline preload="none"></video>
+            <button class="video-close" id="videoClose" type="button" aria-label="닫기">✕</button>
+        </div>
     </div>
     <div class="map-container">
         <a href="https://hoohoo17.github.io/craft/story10">
@@ -567,6 +621,26 @@
         const gameTotal = document.querySelectorAll('.map-container a').length;
         document.getElementById('gameCount').textContent = gameTotal + '개';
         document.getElementById('gameVersion').textContent = 'v' + gameTotal;
+
+        // 소개 영상은 눌렀을 때만 받아 오고, 닫으면 멈춘다
+        const videoOverlay = document.getElementById('videoOverlay');
+        const trailerVideo = document.getElementById('trailerVideo');
+        function openVideo() {
+            videoOverlay.hidden = false;
+            trailerVideo.play().catch(() => {});
+        }
+        function closeVideo() {
+            trailerVideo.pause();
+            videoOverlay.hidden = true;
+        }
+        document.getElementById('videoOpen').addEventListener('click', openVideo);
+        document.getElementById('videoClose').addEventListener('click', closeVideo);
+        videoOverlay.addEventListener('click', (e) => {
+            if (e.target === videoOverlay) closeVideo();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !videoOverlay.hidden) closeVideo();
+        });
 
         // 같은 이름이면 늘 같은 얼굴과 색이 나오게 이름으로 번호를 만든다
         const FACES = ['\u{1F436}','\u{1F431}','\u{1F438}','\u{1F435}','\u{1F43C}','\u{1F981}','\u{1F984}','\u{1F427}',
