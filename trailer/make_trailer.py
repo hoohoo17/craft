@@ -53,8 +53,9 @@ def paste_emoji(img, ch, size, cx, cy, alpha=1.0, scale=1.0):
 
 def games():
     h = open(SRC, encoding="utf-8").read()
+    # 카드에 data-cat 같은 다른 속성이 붙어도 읽히게 한다
     return re.findall(
-        r'<a href="https://hoohoo17\.github\.io/craft/[^"]+">\s*'
+        r'<a [^>]*href="https://hoohoo17\.github\.io/craft/[^"]+"[^>]*>\s*'
         r'<span class="ico">([^<]*)</span>\s*<span class="title">([^<]*)</span>', h)
 
 
