@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>⚾ 숫자 야구</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --green: #2E9E5B;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 14px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 12px; letter-spacing: .04em; }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 16px 14px;
+    margin-bottom: 12px;
+  }
+  [hidden] { display: none !important; }
+
+  /* ---------- 시작 화면 ---------- */
+  .how { font-size: 14px; line-height: 1.8; color: var(--muted); margin: 0 0 14px; }
+  .how b { color: var(--ink); }
+  .how .s, .exam .s { color: var(--green); font-weight: 800; }
+  .how .b, .exam .b { color: var(--blue); font-weight: 800; }
+  .exam {
+    background: #FFF7E3; border: 2px solid #FFE6AE; border-radius: 14px;
+    padding: 12px 12px 10px; margin: 0 0 14px; text-align: left;
+    font-size: 13px; line-height: 1.7; color: var(--ink);
+  }
+  .exam .t { font-weight: 800; margin-bottom: 6px; text-align: center; }
+  .exam .t em { font-style: normal; font-size: 17px; letter-spacing: .16em; }
+  .exam .row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .exam .g { font-size: 16px; font-weight: 800; letter-spacing: .16em; width: 74px; }
+  .exam .r { flex: 1; color: var(--muted); }
+  .exam .r b { color: var(--ink); }
+  details.rules { margin-top: 12px; text-align: left; }
+  details.rules summary {
+    font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer;
+    list-style: none; padding: 6px 0;
+  }
+  details.rules summary::-webkit-details-marker { display: none; }
+  details.rules .how { margin: 6px 0 0; font-size: 13px; }
+  .seg { display: flex; gap: 6px; margin-bottom: 14px; }
+  .seg button {
+    flex: 1; font: inherit; font-size: 14px; font-weight: 700;
+    padding: 10px 0; border: 2px solid var(--line); border-radius: 12px;
+    background: #fff; color: var(--muted); cursor: pointer;
+  }
+  .seg button.on { border-color: var(--blue); color: var(--blue); background: #F2F6FF; }
+  .big {
+    font: inherit; font-size: 18px; font-weight: 800; width: 100%;
+    padding: 14px 0; border: 0; border-radius: 14px;
+    background: var(--blue); color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(108,139,255,.35);
+  }
+  .big:active { transform: translateY(1px); }
+
+  /* ---------- 입력칸 ---------- */
+  .slots { display: flex; justify-content: center; gap: 8px; margin-bottom: 4px; }
+  .slots i {
+    width: 54px; height: 62px; line-height: 62px; font-style: normal;
+    font-size: 30px; font-weight: 800; border-radius: 14px;
+    background: #F2F6FF; border: 2px solid var(--line); color: var(--ink);
+  }
+  .slots i.empty { color: #C7D0E8; }
+  .slots i.on { border-color: var(--blue); }
+  .left { font-size: 13px; color: var(--muted); margin: 8px 0 10px; }
+  .left b { color: var(--pink); }
+
+  /* ---------- 키패드 ---------- */
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pad button {
+    font: inherit; font-size: 22px; font-weight: 800; padding: 14px 0;
+    border: 2px solid var(--line); border-radius: 12px;
+    background: #fff; color: var(--ink); cursor: pointer;
+  }
+  .pad button:disabled { color: #C7D0E8; background: #F7F9FF; cursor: default; }
+  .pad button.out { color: #E3B0BE; background: #FFF4F6; border-color: #FFDDE5; text-decoration: line-through; }
+  .pad .act { grid-column: span 3; display: flex; gap: 8px; }
+  .pad .act button { flex: 1; font-size: 16px; }
+  .pad .act .go { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .pad .act .go:disabled { background: #DDE4F8; border-color: #DDE4F8; color: #fff; }
+
+  /* ---------- 시도 목록 ---------- */
+  .tries { margin-top: 12px; text-align: left; }
+  .tries h3 { font-size: 14px; margin: 0 0 6px; color: var(--muted); font-weight: 700; }
+  .tries ol { list-style: none; margin: 0; padding: 0; }
+  .tries li { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid var(--line); }
+  .tries .no { width: 22px; color: var(--muted); font-size: 13px; }
+  .tries .num { font-size: 19px; font-weight: 800; letter-spacing: .18em; flex: 1; }
+  .tries .tag { font-size: 14px; font-weight: 800; }
+  .tries .tag .s { color: var(--green); }
+  .tries .tag .b { color: var(--blue); }
+  .tries .tag .o { color: var(--muted); }
+  .tries .empty { color: var(--muted); font-size: 13px; padding: 6px 0; }
+
+  /* ---------- 기록 ---------- */
+  .records { text-align: left; }
+  .records .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .records h3 { font-size: 16px; margin: 0; }
+  .records .cnt { font-size: 12px; color: var(--muted); }
+  .records .refresh {
+    margin-left: auto; font: inherit; font-size: 12px; padding: 5px 10px;
+    border: 0; border-radius: 8px; background: #EEF3FF; color: var(--ink); cursor: pointer;
+  }
+  .records ol { list-style: none; margin: 0; padding: 0; font-size: 15px; line-height: 1.9; }
+  .records li { display: flex; align-items: center; gap: 8px; }
+  .records .no { width: 22px; text-align: center; color: var(--muted); }
+  .records .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .records .sc { font-weight: 800; }
+  .records .empty { color: var(--muted); }
+  .records .fresh { color: var(--pink); font-weight: 800; }
+  .records .note { font-size: 12px; margin-top: 6px; min-height: 16px; color: var(--muted); }
+  .records .note.warn { color: var(--pink); }
+
+  /* ---------- 끝 화면 ---------- */
+  .msg { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(28,34,64,.55); padding: 20px; z-index: 20; }
+  .msg.show { display: flex; }
+  .box { background: #fff; border-radius: 18px; padding: 22px 18px; width: 100%; max-width: 340px; }
+  .box h2 { font-size: 24px; margin: 0 0 6px; }
+  .box p { font-size: 15px; color: var(--muted); margin: 0 0 14px; }
+  .box .ans { font-size: 30px; font-weight: 800; letter-spacing: .2em; color: var(--ink); margin: 0 0 14px; }
+  .box input {
+    font: inherit; font-size: 16px; padding: 10px 12px; width: 150px; text-align: center;
+    border: 2px solid var(--line); border-radius: 10px; color: var(--ink);
+  }
+  .box button {
+    font: inherit; font-size: 15px; font-weight: 700; margin: 4px 2px;
+    padding: 10px 18px; border: 0; border-radius: 10px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+  .box .save { background: var(--green); }
+  .box .again { background: var(--pink); }
+  .copied { margin: 10px 0 0; font-size: 13px; color: var(--green); min-height: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>⚾ 숫자 야구</h1>
+
+  <!-- ---------- 시작 ---------- -->
+  <section class="card" id="startCard">
+    <p class="how">
+      1부터 9까지 중에서 <b>서로 다른 숫자</b>를 몰래 골라 놨어.<br>
+      숫자도 자리도 맞으면 <span class="s">스트라이크</span>,<br>
+      숫자만 있고 자리가 다르면 <span class="b">볼</span>,<br>
+      하나도 없으면 <b>아웃</b>이야.<br>
+      적게 물어볼수록 좋은 기록이야!
+    </p>
+    <div class="exam">
+      <p class="t">답이 <em>3 7 1</em> 이라면?</p>
+      <div class="row"><span class="g">3 1 5</span>
+        <span class="r"><b><span class="s">1스트라이크</span> <span class="b">1볼</span></b> · 3은 자리까지 맞고, 1은 있지만 자리가 달라</span></div>
+      <div class="row"><span class="g">7 1 3</span>
+        <span class="r"><b><span class="b">3볼</span></b> · 숫자는 다 맞는데 자리가 전부 달라</span></div>
+      <div class="row"><span class="g">2 4 6</span>
+        <span class="r"><b>아웃</b> · 하나도 없어</span></div>
+      <div class="row"><span class="g">3 7 1</span>
+        <span class="r"><b><span class="s">3스트라이크</span></b> · 끝! 🎉</span></div>
+    </div>
+    <p class="how" style="margin-bottom:10px">
+      아웃이 나온 숫자는 버튼에 <b>줄이 그어져서</b> 다시 헷갈리지 않아.<br>
+      같은 숫자는 두 번 들어가지 않으니 안심하고 눌러도 돼.
+    </p>
+    <div class="seg" id="seg">
+      <button data-key="3" data-len="3" data-max="9">세 자리<br>9번 기회</button>
+      <button data-key="4" data-len="4" data-max="11">네 자리<br>11번 기회</button>
+    </div>
+    <button class="big" id="startBtn">시작하기</button>
+  </section>
+
+  <!-- ---------- 게임 ---------- -->
+  <section class="card" id="playCard" hidden>
+    <div class="slots" id="slots"></div>
+    <p class="left">남은 기회 <b id="leftText">9</b>번</p>
+    <div class="pad" id="pad">
+      <div class="act">
+        <button id="delBtn">← 지우기</button>
+        <button class="go" id="goBtn" disabled>확인!</button>
+      </div>
+    </div>
+    <details class="rules">
+      <summary>❓ 규칙 다시 보기</summary>
+      <p class="how">
+        숫자도 자리도 맞으면 <span class="s">스트라이크</span>,
+        숫자만 있고 자리가 다르면 <span class="b">볼</span>,
+        하나도 없으면 <b>아웃</b>.<br>
+        답이 <b>3 7 1</b>일 때 <b>3 1 5</b>를 물어보면
+        <span class="s">1스트라이크</span> <span class="b">1볼</span>이야.
+      </p>
+    </details>
+    <div class="tries">
+      <h3>물어본 것</h3>
+      <ol id="tryList"><li class="empty">아직 없어</li></ol>
+    </div>
+  </section>
+
+  <!-- ---------- 기록 ---------- -->
+  <section class="card records">
+    <div class="head">
+      <h3>🏅 기록</h3>
+      <span class="cnt" id="recCount"></span>
+      <button class="refresh" id="refreshBtn">새로고침</button>
+    </div>
+    <ol id="recList"><li class="empty">불러오는 중…</li></ol>
+    <div class="note" id="recNote"></div>
+  </section>
+</main>
+
+<div class="msg" id="msg">
+  <div class="box">
+    <h2 id="msgTitle">🎉 맞혔다!</h2>
+    <p id="msgText"></p>
+    <p class="ans" id="msgAns"></p>
+    <div id="saveRow">
+      <input id="nameInput" maxlength="6" placeholder="이름 쓰기">
+      <button class="save" id="saveBtn">기록하기</button>
+    </div>
+    <div style="margin-top:8px">
+      <button id="shareBtn">📤 자랑하기</button>
+      <button class="again" id="againBtn">다시 하기</button>
+    </div>
+    <p class="copied" id="copied"></p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const slotsBox = $('slots'), padBox = $('pad'), tryList = $('tryList');
+
+let LEN = 3, MAXTRY = 9;
+let secret = [], input = [], tries = 0, playing = false, dead = new Set();
+
+/* ---------- 난이도 ---------- */
+const KEY_LEVEL = 'baseball-level';
+let levelKey = '3';
+function setLevel(key) {
+  const btn = [...$('seg').children].find(b => b.dataset.key === key) || $('seg').children[0];
+  levelKey = btn.dataset.key;
+  LEN = +btn.dataset.len;
+  MAXTRY = +btn.dataset.max;
+  [...$('seg').children].forEach(b => b.classList.toggle('on', b === btn));
+  try { localStorage.setItem(KEY_LEVEL, levelKey); } catch (e) {}
+  loadRecords();
+}
+$('seg').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b && !playing) setLevel(b.dataset.key);
+});
+
+/* ---------- 화면 그리기 ---------- */
+function drawSlots() {
+  slotsBox.innerHTML = '';
+  for (let i = 0; i < LEN; i++) {
+    const el = document.createElement('i');
+    if (input[i] === undefined) { el.textContent = '?'; el.className = 'empty'; }
+    else el.textContent = input[i];
+    if (i === input.length) el.classList.add('on');
+    slotsBox.appendChild(el);
+  }
+  $('goBtn').disabled = input.length !== LEN;
+}
+function buildPad() {
+  [...padBox.querySelectorAll('.num')].forEach(b => b.remove());
+  const act = padBox.querySelector('.act');
+  for (let n = 1; n <= 9; n++) {
+    const b = document.createElement('button');
+    b.className = 'num';
+    b.textContent = n;
+    b.addEventListener('click', () => press(n));
+    padBox.insertBefore(b, act);
+  }
+  refreshPad();
+}
+function refreshPad() {
+  [...padBox.querySelectorAll('.num')].forEach(b => {
+    const n = +b.textContent;
+    const used = input.indexOf(n) >= 0;
+    const out = dead.has(n);
+    b.classList.toggle('out', out && !used);
+    b.disabled = used || input.length >= LEN;
+  });
+}
+function press(n) {
+  if (!playing || input.length >= LEN || input.indexOf(n) >= 0) return;
+  input.push(n);
+  drawSlots();
+  refreshPad();
+}
+$('delBtn').addEventListener('click', () => {
+  if (!playing || !input.length) return;
+  input.pop();
+  drawSlots();
+  refreshPad();
+});
+
+/* ---------- 판정 ---------- */
+function judge(guess) {
+  let s = 0, b = 0;
+  guess.forEach((n, i) => {
+    const at = secret.indexOf(n);
+    if (at === i) s++;
+    else if (at >= 0) b++;
+  });
+  return { s, b };
+}
+function drawTries(list) {
+  if (!list.length) { tryList.innerHTML = '<li class="empty">아직 없어</li>'; return; }
+  tryList.innerHTML = list.map((t, i) => {
+    const tag = t.s === 0 && t.b === 0
+      ? '<span class="o">아웃</span>'
+      : (t.s ? '<span class="s">' + t.s + '스트라이크</span> ' : '') +
+        (t.b ? '<span class="b">' + t.b + '볼</span>' : '');
+    return '<li><span class="no">' + (i + 1) + '</span>' +
+           '<span class="num">' + t.num.join('') + '</span>' +
+           '<span class="tag">' + tag + '</span></li>';
+  }).reverse().join('');
+}
+let history = [];
+$('goBtn').addEventListener('click', () => {
+  if (!playing || input.length !== LEN) return;
+  const guess = input.slice();
+  const r = judge(guess);
+  tries++;
+  history.push({ num: guess, s: r.s, b: r.b });
+  // 아웃이면 그 숫자들은 확실히 답에 없으니 키패드에 표시해 둔다
+  if (r.s === 0 && r.b === 0) guess.forEach(n => dead.add(n));
+  input = [];
+  drawTries(history);
+  drawSlots();
+  refreshPad();
+  $('leftText').textContent = Math.max(0, MAXTRY - tries);
+  if (r.s === LEN) { endGame(true); return; }
+  if (tries >= MAXTRY) endGame(false);
+});
+
+/* ---------- 시작과 끝 ---------- */
+function startGame() {
+  const pool = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  secret = [];
+  for (let i = 0; i < LEN; i++) {
+    secret.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  input = []; tries = 0; history = []; dead = new Set();
+  playing = true;
+  $('startCard').hidden = true;
+  $('playCard').hidden = false;
+  $('msg').classList.remove('show');
+  $('leftText').textContent = MAXTRY;
+  drawTries(history);
+  buildPad();
+  drawSlots();
+}
+function endGame(won) {
+  playing = false;
+  recorded = false;
+  $('nameInput').value = '';
+  $('copied').textContent = '';
+  $('msgTitle').textContent = won ? '🎉 맞혔다!' : '😢 아쉬워…';
+  $('msgText').textContent = won
+    ? tries + '번 만에 맞혔어'
+    : MAXTRY + '번 안에 못 맞혔어. 정답은';
+  $('msgAns').textContent = secret.join(' ');
+  $('saveRow').hidden = !won;
+  $('msg').classList.add('show');
+}
+$('startBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', () => {
+  playing = false;            // 판을 확실히 접어야 자릿수를 다시 고를 수 있다
+  $('msg').classList.remove('show');
+  $('playCard').hidden = true;
+  $('startCard').hidden = false;
+});
+
+/* ---------- 기록 (댓글 서버를 그대로 쓴다) ----------
+   그 서버는 승인 전 글의 내용은 감추고 '이름'만 공개하니까,
+   기록을 이름 칸에 '이름|횟수'로 담아 둔다. 자릿수마다 방을 따로 쓴다.
+   횟수는 적을수록 좋은 기록이라 작은 수가 위로 온다. */
+const RKEY = () => 'baseball:ranking:' + levelKey;
+const API = () => 'https://craft-comments.jaehoo.workers.dev?page=baseball-rank' + levelKey + '-v1';
+const TOP = 5;
+let records = [], recorded = false, rankBusy = false;
+
+const recList = $('recList'), recNote = $('recNote'), recCount = $('recCount');
+const sortRank = list => list.sort((a, b) => a.sc - b.sc).slice(0, TOP);
+function sane(list) {
+  return Array.isArray(list)
+    ? list.filter(r => r && typeof r.name === 'string' && Number.isFinite(+r.sc))
+          .map(r => ({ name: r.name, sc: +r.sc })).slice(0, TOP)
+    : [];
+}
+function renderRecords(freshIdx = -1) {
+  recCount.textContent = records.length ? levelKey + '자리 TOP ' + TOP : levelKey + '자리';
+  if (!records.length) { recList.innerHTML = '<li class="empty">아직 기록이 없어요</li>'; return; }
+  const MEDAL = ['🥇', '🥈', '🥉'];
+  recList.innerHTML = records.map((r, i) =>
+    '<li class="' + (i === freshIdx ? 'fresh' : '') + '">' +
+    '<span class="no">' + (MEDAL[i] || (i + 1)) + '</span>' +
+    '<span class="nm">' + String(r.name).replace(/[<>&]/g, '') + '</span>' +
+    '<span class="sc">' + r.sc + '번</span></li>').join('');
+}
+function note(msg, warn) {
+  recNote.textContent = msg || '';
+  recNote.classList.toggle('warn', !!warn);
+}
+function readLocal() {
+  try { return sane(JSON.parse(localStorage.getItem(RKEY()))); } catch (e) { return []; }
+}
+function writeLocal() {
+  try { localStorage.setItem(RKEY(), JSON.stringify(records)); } catch (e) {}
+}
+const encodeRank = r => (r.name.split('|').join('') + '|' + r.sc).slice(0, 20);
+function decodeRank(name) {
+  const m = /^(.*)\|(\d+)$/.exec(String(name || ''));
+  return m && m[1] ? { name: m[1], sc: +m[2] } : null;
+}
+async function fetchBoard() {
+  const res = await fetch(API(), { cache: 'no-store' });
+  if (!res.ok) throw new Error('http ' + res.status);
+  const rows = await res.json();
+  if (!Array.isArray(rows)) throw new Error('bad payload');
+  return sortRank(rows.map(c => decodeRank(c && c.name)).filter(Boolean));
+}
+async function loadRecords() {
+  if (rankBusy) return;
+  rankBusy = true;
+  const want = levelKey;
+  try {
+    records = readLocal(); renderRecords();
+    const fresh = await fetchBoard();
+    if (want !== levelKey) { rankBusy = false; return; }   // 그새 자릿수를 바꿨으면 버린다
+    records = fresh;
+    writeLocal();
+    note('');
+  } catch (e) {
+    records = readLocal();
+    note('오프라인 · 이 기기 기록만 보여요', true);
+  }
+  renderRecords();
+  rankBusy = false;
+}
+async function saveRecord() {
+  if (recorded || rankBusy) return;
+  const name = ($('nameInput').value || '').trim().slice(0, 6) || '이름없음';
+  const rec = { name, sc: tries };
+  recorded = true;
+  rankBusy = true;
+  $('copied').textContent = '기록했어! 🏅';
+
+  records = sortRank(records.concat([rec]));
+  writeLocal();
+  renderRecords(records.indexOf(rec));
+
+  try {
+    const res = await fetch(API(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: encodeRank(rec), message: rec.sc + '번' }),
+    });
+    if (!res.ok) throw new Error('http ' + res.status);
+    records = await fetchBoard();
+    writeLocal();
+    note('');
+    renderRecords(records.findIndex(r => r.name === rec.name && r.sc === rec.sc));
+  } catch (e) {
+    note('저장 실패 · 이 기기에만 기록됐어', true);
+  }
+  rankBusy = false;
+}
+async function share() {
+  const text = '⚾ 숫자 야구 ' + LEN + '자리를 ' + tries + '번 만에 맞혔어! 너는 몇 번?';
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) {} }
+  try {
+    await navigator.clipboard.writeText(text);
+    $('copied').textContent = '복사됐어! 친구한테 붙여넣기 해봐 ✅';
+  } catch (e) { $('copied').textContent = text; }
+}
+$('saveBtn').addEventListener('click', saveRecord);
+$('shareBtn').addEventListener('click', share);
+$('refreshBtn').addEventListener('click', loadRecords);
+
+let saved = '3';
+try { saved = localStorage.getItem(KEY_LEVEL) || '3'; } catch (e) {}
+setLevel(saved);
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
