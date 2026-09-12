@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>10강의 비밀</title>
+<style>
+  :root{
+    --paper:#F3F7EE; --ink:#33402E;
+    --accent:#5C8D4E;
+    --quote:#4E6B42;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',serif;
+    background:#DCE5D2;
+    color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:16px 12px;
+    user-select:none;
+  }
+  .book{
+    position:relative;
+    width:100%; max-width:520px;
+    height:min(78dvh, 680px);
+    perspective:1600px;
+  }
+  .page{
+    position:absolute; inset:0;
+    background:var(--paper);
+    border-radius:8px;
+    box-shadow:0 10px 40px rgba(51,64,46,.25);
+    padding:38px 28px;
+    background-image:repeating-linear-gradient(transparent, transparent 35px, rgba(51,64,46,.05) 36px);
+    overflow-y:auto;
+    transform-origin:left center;
+    transition:transform .45s ease, opacity .45s ease;
+    display:flex; flex-direction:column;
+    cursor:pointer;
+  }
+  .pg-inner{margin:auto 0;}
+  .page.flip-out{transform:rotateY(-80deg); opacity:0;}
+  .page.flip-in-prep{transform:rotateY(60deg); opacity:0; transition:none;}
+
+  .series{
+    text-align:center;
+    font-size:.85rem; font-weight:800;
+    letter-spacing:.35em;
+    color:var(--accent);
+    margin-bottom:10px;
+  }
+  h1{
+    text-align:center;
+    font-size:2rem;
+    letter-spacing:.03em;
+    margin-bottom:10px;
+  }
+  .author{
+    text-align:center;
+    font-size:1.05rem;
+    font-weight:800;
+    color:var(--quote);
+    letter-spacing:.15em;
+    margin-bottom:6px;
+  }
+  .deco{
+    text-align:center;
+    font-size:1.1rem;
+    letter-spacing:.6em;
+    color:var(--accent);
+    margin:14px 0;
+  }
+  .hintline{
+    text-align:center;
+    font-size:.95rem;
+    color:var(--quote);
+    margin-top:26px;
+    animation:breath 2s infinite;
+  }
+  @keyframes breath{50%{opacity:.4}}
+  p{
+    font-size:1.1rem;
+    line-height:1.95;
+    margin-bottom:14px;
+    word-break:keep-all;
+  }
+  p.quote{
+    color:var(--quote);
+    font-weight:700;
+    padding-left:14px;
+    border-left:4px solid var(--accent);
+  }
+  p.turn{
+    text-align:center;
+    font-weight:900;
+    font-size:1.6rem;
+    color:var(--accent);
+    letter-spacing:.1em;
+    margin:18px 0;
+  }
+  p.list{
+    font-size:1.02rem;
+    line-height:1.8;
+    margin-bottom:8px;
+  }
+  .chapter{
+    text-align:center;
+    font-size:.85rem; font-weight:900;
+    letter-spacing:.3em;
+    color:var(--accent);
+    margin-bottom:16px;
+  }
+  .goal{
+    text-align:center;
+    font-weight:900;
+    font-size:1.5rem;
+    color:var(--accent);
+    margin:16px 0;
+  }
+  .ending{
+    text-align:center;
+    font-weight:900;
+    font-size:1.5rem;
+    letter-spacing:.5em;
+    margin-top:30px;
+  }
+
+  .nav{
+    display:flex; align-items:center; gap:16px;
+    margin-top:14px;
+  }
+  .nav button{
+    font-family:inherit;
+    font-size:1.1rem; font-weight:900;
+    background:var(--paper); color:var(--ink);
+    border:none; border-radius:12px;
+    padding:10px 20px;
+    box-shadow:0 3px 10px rgba(51,64,46,.2);
+    cursor:pointer;
+  }
+  .nav button:disabled{opacity:.35; cursor:default;}
+  .nav button:not(:disabled):active{transform:translateY(2px);}
+  .page-num{
+    font-weight:900; font-size:1rem;
+    color:var(--quote);
+    min-width:64px; text-align:center;
+  }
+  .toc-bg{
+    position:fixed; inset:0;
+    background:rgba(51,64,46,.5);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:20;
+    padding:20px;
+  }
+  .toc-bg.show{display:flex;}
+  .toc{
+    background:var(--paper);
+    border-radius:16px;
+    padding:24px 20px;
+    width:100%; max-width:380px;
+    max-height:70dvh;
+    overflow-y:auto;
+    box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .toc h2{text-align:center; margin-bottom:14px; font-size:1.2rem;}
+  .toc-item{
+    display:flex; justify-content:space-between; gap:8px;
+    width:100%;
+    font-family:inherit; font-size:1.05rem; font-weight:800;
+    background:none; border:none;
+    border-bottom:1px dashed rgba(51,64,46,.2);
+    color:var(--ink);
+    padding:11px 6px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .toc-item:active{background:rgba(92,141,78,.1);}
+  .toc-item .pg{color:var(--accent); font-size:.9rem;}
+  .toc-close{
+    margin-top:14px; width:100%;
+    font-family:inherit; font-size:1rem; font-weight:800;
+    background:rgba(0,0,0,.07); color:var(--ink);
+    border:none; border-radius:10px;
+    padding:11px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="book">
+  <div class="page" id="page" onclick="tapPage(event)"></div>
+</div>
+<div class="nav">
+  <button id="prev-btn" onclick="go(-1)">◀</button>
+  <div class="page-num" id="page-num"></div>
+  <button onclick="openToc()">📑 차례</button>
+  <button id="next-btn" onclick="go(1)">▶</button>
+</div>
+
+<div class="toc-bg" id="toc-bg" onclick="if(event.target===this) closeToc()">
+  <div class="toc">
+    <h2>📑 차례</h2>
+    <div id="toc-list"></div>
+    <button class="toc-close" onclick="closeToc()">닫기</button>
+  </div>
+</div>
+
+<script>
+const PAGES = [
+  `<div class="series">나의 이야기 · 두 번째</div>
+   <h1>10강의 비밀</h1>
+   <div class="deco">✦ ✦ ✦</div>
+   <div class="hintline">화면을 탭해서 책장을 넘겨 보세요 👉</div>`,
+
+  `<p>윷놀이 대회가 끝난 다음 날이었다.</p>
+   <p>촤르릅은 아직도 어제 일이 믿기지 않았다.</p>
+   <p>간장 종지, CCTV, 적외선, 그리고 갑자기 10강.</p>`,
+
+  `<p>어제 일을 다시 떠올려 보면 이랬다.</p>
+   <p>설날에 윷놀이를 했고,</p>
+   <p>윷 하나가 간장 종지에 빠졌고,</p>
+   <p>그 뒤로 모든 것이 이상해졌다.</p>`,
+
+  `<p>촤르릅은 식탁에 앉았다.</p>
+   <p>식탁 위에는 어제 쓴 대진표가 그대로 놓여 있었다.</p>
+   <p>종이 귀퉁이가 조금 젖어 있었다.</p>`,
+
+  `<div class="chapter">이상한 대진표</div>
+   <p>대진표에는 이렇게 적혀 있었다.</p>
+   <p class="list">조 1등 — 뽀파뽀프, 빠푸뽀푸, 추루룹, 촤르릅,</p>
+   <p class="list">초추초추, 우당탕, 부릉부, 꼬르륵</p>`,
+
+  `<p>촤르릅은 손가락으로 짚어 가며 세었다.</p>
+   <p>하나, 둘, 셋, 넷, 다섯, 여섯, 일곱, 여덟.</p>
+   <p class="turn">여덟 명.</p>
+   <p>그런데 어제 심판은 분명히 열 명이라고 했다.</p>`,
+
+  `<p class="quote">"조 1등이 10명인데 왜 8명만 올라갑니까!"</p>
+   <p>어제 누가 그렇게 소리쳤다.</p>
+   <p>그래서 대회는 10강이 되었다.</p>
+   <p>그런데 지금 종이에는 여덟 명뿐이었다.</p>`,
+
+  `<p>촤르릅은 종이를 뒤집어 보았다.</p>
+   <p>뒷면 구석에 아주 작은 글씨가 있었다.</p>
+   <p class="list">차추초추, 초차초츠</p>
+   <p class="quote">"이 두 사람은 왜 뒤에 적혀 있지?"</p>`,
+
+  `<p>글씨가 작아도 너무 작았다.</p>
+   <p>촤르릅은 돋보기를 가져왔다.</p>
+   <p>돋보기로 보니 글씨 옆에 이런 말이 있었다.</p>
+   <p class="quote">"자리가 모자라서 여기 적음."</p>`,
+
+  `<p class="quote">"자리가 모자라면 종이를 한 장 더 쓰면 되잖아요."</p>
+   <p>촤르릅이 혼잣말을 했다.</p>
+   <p>그런데 종이 아래에 또 한 줄이 있었다.</p>
+   <p class="quote">"종이가 한 장뿐이었음."</p>`,
+
+  `<div class="chapter">3조의 세 사람</div>
+   <p>촤르릅은 조별 점수표를 꺼냈다.</p>
+   <p>1조부터 8조까지 있었다.</p>
+   <p>다른 조는 1등이 한 명씩인데,</p>
+   <p>3조만 1등이 세 명이었다.</p>`,
+
+  `<p class="list">차추초추 12점</p>
+   <p class="list">초차초츠 12점</p>
+   <p class="list">꼬르륵 12점</p>
+   <p class="quote">"어떻게 세 명이 딱 같은 점수가 나와요?"</p>`,
+
+  `<p>보통은 이럴 때 다시 겨루면 된다.</p>
+   <p>그런데 점수표 옆에 이렇게 적혀 있었다.</p>
+   <p class="quote">"다시 하기 없음. 배고픔."</p>
+   <p>심판 초추초추의 글씨였다.</p>`,
+
+  `<p>촤르릅은 점수를 어떻게 셌는지 보려고</p>
+   <p>규칙표를 찾아 펼쳤다.</p>
+   <p>그리고 맨 아래 한 줄에서 굳어 버렸다.</p>`,
+
+  `<p class="quote">"점수는 간장 종지 개수로 센다."</p>
+   <p class="turn">간장 종지?</p>
+   <p>윷을 잘 던질 때마다 종지를 하나씩 놓아 준 것이었다.</p>
+   <p>종지가 많은 사람이 1등이었다.</p>`,
+
+  `<p>왜 하필 종지였을까.</p>
+   <p>이유는 규칙표 맨 아래 또 적혀 있었다.</p>
+   <p class="quote">"연필이 없었음. 종지는 많았음."</p>
+   <p>추루룹 씨가 간장 공장 공장장이라 그랬다.</p>`,
+
+  `<p>집에 종지가 백 개쯤 있었다.</p>
+   <p>연필은 한 자루도 없었다.</p>
+   <p>그래서 점수는 종지로 세게 되었다.</p>
+   <p>여기까지는 그래도 괜찮았다.</p>`,
+
+  `<div class="chapter">움직이는 점수</div>
+   <p>문제는 종지를 식탁 위에 놓았다는 것이었다.</p>
+   <p>그리고 식탁 위에는 간장이 흘러 있었다.</p>`,
+
+  `<p>간장 위에 놓인 종지는 가만히 있지 않았다.</p>
+   <p>아주 천천히, 아무도 모르게,</p>
+   <p>스르륵 미끄러지고 있었다.</p>
+   <p class="turn">점수가 움직인 것이다!</p>`,
+
+  `<p>촤르릅은 지금도 종지 하나가 움직이는 걸 보았다.</p>
+   <p>차추초추 자리에서 출발한 종지가</p>
+   <p>초차초츠 자리로 천천히 건너가고 있었다.</p>
+   <p class="quote">"지금도 점수가 옮겨 가고 있잖아!"</p>`,
+
+  `<div class="chapter">간장 자국</div>
+   <p>촤르릅은 식탁에 얼굴을 바짝 붙였다.</p>
+   <p>간장 자국이 길게 한 줄 나 있었다.</p>
+   <p>종지가 밀려간 자국이었다.</p>`,
+
+  `<p>자국은 한 줄이 아니었다.</p>
+   <p>자세히 보니 열 줄도 넘었다.</p>
+   <p>사방에서 종지가 움직인 것이다.</p>
+   <p class="quote">"그럼 점수표는 전부 엉터리잖아요!"</p>`,
+
+  `<p>촤르릅은 아빠를 불렀다.</p>
+   <p class="quote">"아빠, 이것 좀 보세요."</p>
+   <p>추루룹 씨가 와서 식탁을 보더니 말했다.</p>
+   <p class="quote">"음. 간장이 아주 잘 퍼졌구나."</p>`,
+
+  `<p class="quote">"그게 중요한 게 아니라요!"</p>
+   <p class="quote">"점수가 다 뒤섞였다고요!"</p>
+   <p>추루룹 씨는 잠시 생각하더니 말했다.</p>
+   <p class="quote">"그럼 CCTV를 보자."</p>`,
+
+  `<div class="chapter">CCTV를 또</div>
+   <p class="quote">"CCTV 확인하겠습니다!"</p>
+   <p>어제도 들은 말이었다.</p>
+   <p class="quote">"왜 또 CCTV가 있나요?"</p>
+   <p class="quote">"어제 전력 수리를 또 했거든요."</p>`,
+
+  `<p>전력 수리를 하면 왜 CCTV가 생기는지</p>
+   <p>아무도 설명하지 못했다.</p>
+   <p>하지만 아무도 묻지 않았다.</p>
+   <p>어제도 그냥 넘어갔기 때문이다.</p>`,
+
+  `<p>화면에는 어제 저녁이 나왔다.</p>
+   <p>사람들이 윷을 던지고 있었다.</p>
+   <p>빠푸뽀푸가 던질 때마다 소감을 말했다.</p>
+   <p class="quote">"이번 윷은 제 인생에서 가장 무거웠습니다."</p>`,
+
+  `<p>화면을 빨리 감았다.</p>
+   <p>소감이 너무 길어서 그냥 볼 수가 없었다.</p>
+   <p>여섯 배속으로 감아도 소감이 끝나지 않았다.</p>`,
+
+  `<p>그러다 화면이 조용해지는 순간이 왔다.</p>
+   <p>모두 밥을 먹으러 간 사이였다.</p>
+   <p>식탁 위에는 종지들만 남아 있었다.</p>`,
+
+  `<p>그때 손 하나가 쓱 들어왔다.</p>
+   <p>손은 종지 하나를 살짝 밀었다.</p>
+   <p>그리고 조용히 사라졌다.</p>
+   <p class="turn">범인이다!</p>`,
+
+  `<p>촤르릅은 화면을 멈췄다.</p>
+   <p>손목이 화면에 딱 걸려 있었다.</p>
+   <p>손목에는 간장이 묻어 있었다.</p>`,
+
+  `<p>간장이 손목까지 묻는 사람은 딱 한 명이었다.</p>
+   <p class="turn">간장 공장 공장장.</p>
+   <p>추루룹 씨였다.</p>
+   <p class="quote">"아빠?!"</p>`,
+
+  `<div class="chapter">아빠의 이유</div>
+   <p>추루룹 씨는 한참 말이 없었다.</p>
+   <p>그러다 아주 작게 말했다.</p>
+   <p class="quote">"...내가 옮긴 게 아니야."</p>`,
+
+  `<p class="quote">"화면에 손이 딱 나왔는데요?"</p>
+   <p class="quote">"그건 내 손이 맞아."</p>
+   <p class="quote">"그럼 옮긴 거잖아요!"</p>
+   <p class="quote">"닦은 거야."</p>`,
+
+  `<p>추루룹 씨는 흘린 간장을 닦으려고 했던 것이다.</p>
+   <p>그런데 행주가 없었다.</p>
+   <p>그래서 손으로 닦았다.</p>
+   <p>닦다가 종지가 같이 밀려갔다.</p>`,
+
+  `<p class="quote">"왜 행주가 없어요?"</p>
+   <p class="quote">"어제 행주로 윷을 닦았거든."</p>
+   <p class="quote">"윷은 왜 닦았는데요?"</p>
+   <p class="quote">"간장에 빠져서."</p>`,
+
+  `<p>촤르릅은 잠깐 눈을 감았다.</p>
+   <p>모든 것이 간장으로 이어져 있었다.</p>
+   <p class="turn">전부 간장 때문이었다.</p>`,
+
+  `<p>그래서 3조 점수가 엉켰고,</p>
+   <p>1등이 세 명이 되었고,</p>
+   <p>조 1등이 열 명이 되었고,</p>
+   <p>8강이 10강이 된 것이었다.</p>`,
+
+  `<div class="chapter">다시 세어 보기</div>
+   <p class="quote">"그럼 다시 세면 되잖아요!"</p>
+   <p>온 가족이 식탁에 둘러앉았다.</p>
+   <p>종지를 하나씩 세기로 했다.</p>`,
+
+  `<p>하나, 둘, 셋......</p>
+   <p>그런데 세는 사람마다 개수가 달랐다.</p>
+   <p class="list">추루룹 — 열두 개</p>
+   <p class="list">촤르릅 — 열세 개</p>
+   <p class="list">빠푸뽀푸 — 스물네 개</p>`,
+
+  `<p class="quote">"빠푸뽀푸 씨, 왜 스물네 개예요?"</p>
+   <p class="quote">"두 번 세었습니다. 정확하게 하려고요."</p>
+   <p class="quote">"두 번 세면 두 배가 되는데요."</p>
+   <p class="quote">"...아."</p>`,
+
+  `<p>다시 세기로 했다.</p>
+   <p>이번에는 한 사람만 세기로 했다.</p>
+   <p>심판 초추초추가 세기로 했다.</p>
+   <p>세는 동안 아무도 말을 하지 않기로 했다.</p>`,
+
+  `<p>초추초추가 세기 시작했다.</p>
+   <p>하나, 둘, 셋, 넷......</p>
+   <p>스물세 개에서 멈췄다.</p>
+   <p class="quote">"누가 숨 쉬었어요?"</p>`,
+
+  `<p>다시 처음부터 세었다.</p>
+   <p>하나, 둘, 셋......</p>
+   <p>이번에는 열아홉 개에서 멈췄다.</p>
+   <p class="quote">"방금 종지가 하나 움직였어요."</p>`,
+
+  `<p>움직이는 걸 세는 건 어려웠다.</p>
+   <p>그래서 종지를 다 들어서 접시에 옮기기로 했다.</p>
+   <p>그러자 누구 점수인지 알 수 없게 되었다.</p>
+   <p class="turn">점수가 통째로 사라졌다.</p>`,
+
+  `<div class="chapter">진짜 범인</div>
+   <p>그때 꼬르륵이 조용히 손을 들었다.</p>
+   <p class="quote">"저기... 제가 아까 종지에 든 거 마셨는데요."</p>
+   <p class="turn">마셨다고?</p>
+   <p class="quote">"맛있어 보여서요."</p>`,
+
+  `<p>꼬르륵은 이름 그대로 늘 배가 고픈 아이였다.</p>
+   <p>대회 중에도 계속 뭔가를 먹고 있었다.</p>
+   <p>간장 종지도 그중 하나였다.</p>`,
+
+  `<p>간장이 사라지자 종지는 가벼워졌다.</p>
+   <p>가벼워진 종지는 더 잘 미끄러졌다.</p>
+   <p>더 잘 미끄러진 종지는 옆 사람 점수가 되었다.</p>`,
+
+  `<p class="quote">"그러니까 제 점수가 자꾸 늘었군요!"</p>
+   <p>우당탕이 신나서 말했다.</p>
+   <p>그러다 모두가 쳐다보자 조용해졌다.</p>
+   <p class="quote">"...아니에요."</p>`,
+
+  `<div class="chapter">심판의 결론</div>
+   <p>심판 초추초추가 손뼉을 쳤다.</p>
+   <p class="quote">"정리하겠습니다."</p>
+   <p>모두 조용해졌다.</p>`,
+
+  `<p class="list">하나. 간장이 흘렀다.</p>
+   <p class="list">둘. 종지가 움직였다.</p>
+   <p class="list">셋. 점수가 엉켰다.</p>
+   <p class="list">넷. 10강이 되었다.</p>`,
+
+  `<p class="quote">"그러므로 아무도 잘못이 없습니다."</p>
+   <p class="quote">"간장이 잘못했습니다."</p>
+   <p>추루룹 씨가 조용히 고개를 끄덕였다.</p>
+   <p>간장 공장 공장장인데도 그랬다.</p>`,
+
+  `<p class="quote">"그럼 10강은 그대로 하나요?"</p>
+   <p class="quote">"그대로 합니다."</p>
+   <p class="quote">"왜요?"</p>
+   <p class="quote">"다시 열면 커피를 또 사야 하니까요."</p>`,
+
+  `<div class="chapter">10강 시작</div>
+   <p>그래서 10강이 시작되었다.</p>
+   <p>열 명이 남았고, 한 명씩 짝을 지어야 했다.</p>
+   <p>열 명이면 다섯 판이었다.</p>`,
+
+  `<p>그런데 짝을 짓다가 문제가 생겼다.</p>
+   <p>차추초추와 초차초츠는 부부였다.</p>
+   <p>부부끼리 붙으면 집에 가서 싸운다고 했다.</p>
+   <p class="quote">"그건 저녁 식사에 영향을 줍니다."</p>`,
+
+  `<p>초추초추와 차추초추는 엄마와 아들이었다.</p>
+   <p>엄마와 아들이 붙어도 저녁 식사에 영향을 주었다.</p>
+   <p>추루룹과 촤르릅도 아빠와 딸이었다.</p>
+   <p>붙이면 안 되는 짝이 너무 많았다.</p>`,
+
+  `<p>심판은 한참 종이를 들여다보다가 말했다.</p>
+   <p class="quote">"가족은 붙이지 않겠습니다."</p>
+   <p class="quote">"그럼 누가 누구랑 해요?"</p>
+   <p class="quote">"...다시 생각하겠습니다."</p>`,
+
+  `<p>다시 생각한 결과는 이랬다.</p>
+   <p class="list">1경기 뽀파뽀프 — 우당탕</p>
+   <p class="list">2경기 빠푸뽀푸 — 부릉부</p>
+   <p class="list">3경기 추루룹 — 꼬르륵</p>
+   <p class="list">4경기 촤르릅 — 차추초추</p>
+   <p class="list">5경기 초추초추 — 초차초츠</p>`,
+
+  `<p class="quote">"잠깐만요."</p>
+   <p>촤르릅이 손을 들었다.</p>
+   <p class="quote">"5경기는 부부잖아요."</p>
+   <p>심판 초추초추의 남편이 초차초츠였다.</p>`,
+
+  `<p>심판은 잠시 침묵했다.</p>
+   <p class="quote">"저는 심판이라 가족이 아닙니다."</p>
+   <p class="quote">"심판일 때는 아무하고도 가족이 아닙니다."</p>
+   <p>아무도 반박하지 못했다.</p>`,
+
+  `<div class="chapter">1경기</div>
+   <p>뽀파뽀프와 우당탕이 마주 앉았다.</p>
+   <p>우당탕은 이름 그대로 우당탕거리는 사람이었다.</p>
+   <p>윷을 던질 때마다 뭔가가 넘어졌다.</p>`,
+
+  `<p>첫 판에 우당탕이 윷을 던졌다.</p>
+   <p>윷이 하늘로 올라갔다.</p>
+   <p>그리고 전등에 맞았다.</p>
+   <p>전등이 흔들렸다.</p>`,
+
+  `<p>흔들린 전등 아래에서 그림자가 흔들렸다.</p>
+   <p>그림자가 흔들리니 윷이 어떻게 놓였는지</p>
+   <p>보는 사람마다 다르게 보였다.</p>
+   <p class="quote">"걸입니다." "개인데요?" "윷 아니에요?"</p>`,
+
+  `<p>심판이 전등을 잡았다.</p>
+   <p>그리고 선언했다.</p>
+   <p class="quote">"전등이 흔들리는 동안 나온 것은 무효."</p>
+   <p>우당탕은 다시 던졌다.</p>`,
+
+  `<p>다시 던진 윷은 전등에 또 맞았다.</p>
+   <p>세 번째도 맞았다.</p>
+   <p>네 번째에 드디어 안 맞았는데,</p>
+   <p>대신 간장 종지에 빠졌다.</p>`,
+
+  `<p class="turn">또 간장이다.</p>
+   <p class="quote">"낙이므로 무효! 다시 던지세요!"</p>
+   <p>어제 들었던 말이 또 나왔다.</p>
+   <p>우당탕은 다섯 번째로 던졌다.</p>`,
+
+  `<p>다섯 번째 윷은 아주 얌전히 굴러가</p>
+   <p>모가 나왔다.</p>
+   <p class="quote">"모다!! 한 번 더!!"</p>
+   <p>우당탕이 소리쳤다.</p>`,
+
+  `<p>한 번 더 던졌더니 또 모가 나왔다.</p>
+   <p>또 던졌더니 또 모였다.</p>
+   <p>모가 다섯 번 연속으로 나왔다.</p>
+   <p>사람들이 조용해졌다.</p>`,
+
+  `<p class="quote">"우당탕 씨, 윷 좀 보여 주세요."</p>
+   <p>심판이 윷을 가져가 뒤집어 보았다.</p>
+   <p>윷 네 개 중 하나가 양쪽 다 평평했다.</p>
+   <p class="turn">늘 엎어지는 윷이었다.</p>`,
+
+  `<p class="quote">"이건 어제 간장에 빠진 윷입니다."</p>
+   <p class="quote">"간장에 불어서 모양이 변했어요."</p>
+   <p>우당탕은 억울해했다.</p>
+   <p class="quote">"제가 만든 게 아닌데요!"</p>`,
+
+  `<p>사실이었다. 우당탕 잘못이 아니었다.</p>
+   <p>하지만 모 다섯 번은 취소되었다.</p>
+   <p>우당탕은 처음부터 다시 시작했다.</p>
+   <p>그리고 1경기는 뽀파뽀프가 이겼다.</p>`,
+
+  `<div class="chapter">2경기</div>
+   <p>빠푸뽀푸와 부릉부의 경기였다.</p>
+   <p>빠푸뽀푸는 던질 때마다 소감을 말하는 사람이었다.</p>
+   <p>부릉부는 말이 아주 빠른 사람이었다.</p>`,
+
+  `<p>빠푸뽀푸가 윷을 들고 말했다.</p>
+   <p class="quote">"이 윷을 던지기까지 참 많은 일이 있었습니다."</p>
+   <p>아직 던지지 않았다.</p>`,
+
+  `<p class="quote">"제가 어릴 적 처음 윷을 잡았을 때는..."</p>
+   <p>부릉부가 끼어들었다.</p>
+   <p class="quote">"던지세요던지세요던지세요."</p>
+   <p>말이 너무 빨라서 한 단어처럼 들렸다.</p>`,
+
+  `<p>빠푸뽀푸는 소감을 계속했다.</p>
+   <p>부릉부는 계속 재촉했다.</p>
+   <p>둘 다 멈추지 않았다.</p>
+   <p>경기가 삼십 분째 시작되지 않았다.</p>`,
+
+  `<p>심판이 새 규칙을 만들었다.</p>
+   <p class="quote">"소감은 열 글자까지."</p>
+   <p>빠푸뽀푸는 잠시 고민하더니 말했다.</p>
+   <p class="quote">"음... 던지겠습니다."</p>`,
+
+  `<p>정확히 여섯 글자였다.</p>
+   <p>사람들이 박수를 쳤다.</p>
+   <p>빠푸뽀푸는 감동해서 소감을 말하려다 참았다.</p>`,
+
+  `<p>경기는 빠르게 끝났다.</p>
+   <p>부릉부가 이겼다.</p>
+   <p>부릉부는 소감을 말했다.</p>
+   <p class="quote">"이겼습니다감사합니다안녕히계세요."</p>`,
+
+  `<div class="chapter">3경기</div>
+   <p>추루룹과 꼬르륵의 경기였다.</p>
+   <p>꼬르륵은 배가 고팠다.</p>
+   <p>사실 꼬르륵은 늘 배가 고팠다.</p>`,
+
+  `<p>경기 중에 꼬르륵의 배에서 소리가 났다.</p>
+   <p class="turn">꼬르륵.</p>
+   <p>그 소리에 놀라 추루룹 씨가 윷을 놓쳤다.</p>
+   <p>윷은 떨어져서 도가 나왔다.</p>`,
+
+  `<p class="quote">"방해입니다!"</p>
+   <p>추루룹 씨가 항의했다.</p>
+   <p class="quote">"배에서 나는 소리는 방해가 아닙니다."</p>
+   <p>심판이 말했다.</p>`,
+
+  `<p class="quote">"그럼 밥을 주면 되잖아요."</p>
+   <p class="quote">"경기 중에는 밥을 줄 수 없습니다."</p>
+   <p class="quote">"왜요?"</p>
+   <p class="quote">"밥을 먹으면 경기가 또 길어집니다."</p>`,
+
+  `<p>그래서 꼬르륵은 배고픈 채로 경기를 했다.</p>
+   <p>배에서는 계속 소리가 났다.</p>
+   <p>꼬르륵. 꼬르륵. 꼬르륵.</p>
+   <p>이상하게도 그 소리는 박자가 있었다.</p>`,
+
+  `<p>추루룹 씨는 그 박자에 맞춰 윷을 던졌다.</p>
+   <p>그러자 신기하게도 잘 나왔다.</p>
+   <p>걸, 윷, 모.</p>
+   <p class="quote">"이거 되게 잘 맞네요."</p>`,
+
+  `<p>꼬르륵이 눈을 가늘게 떴다.</p>
+   <p class="quote">"제 배로 이기시는 거예요?"</p>
+   <p class="quote">"...미안하다."</p>
+   <p>추루룹 씨가 사과했다.</p>`,
+
+  `<p>결국 3경기는 추루룹 씨가 이겼다.</p>
+   <p>이기고 나서 추루룹 씨는 꼬르륵에게 김밥을 사 줬다.</p>
+   <p>꼬르륵은 김밥을 먹으며 말했다.</p>
+   <p class="quote">"이기셔도 됩니다."</p>`,
+
+  `<div class="chapter">4경기</div>
+   <p>촤르릅과 차추초추의 경기였다.</p>
+   <p>촤르릅은 이번 대회에서 가장 조용한 사람이었다.</p>
+   <p>차추초추는 가장 시끄러운 사람이었다.</p>`,
+
+  `<p>차추초추는 윷을 던지기 전에 항상 외쳤다.</p>
+   <p class="quote">"모 나와라!!!"</p>
+   <p>그러면 이상하게 도가 나왔다.</p>`,
+
+  `<p>그래서 차추초추는 반대로 외쳐 보기로 했다.</p>
+   <p class="quote">"도 나와라!!!"</p>
+   <p>그러자 도가 나왔다.</p>
+   <p class="turn">소용이 없었다.</p>`,
+
+  `<p>촤르릅은 아무 말 없이 윷을 던졌다.</p>
+   <p>걸이 나왔다.</p>
+   <p>또 던졌다. 걸이 나왔다.</p>
+   <p>또 던졌다. 또 걸이었다.</p>`,
+
+  `<p>걸이 일곱 번 연속으로 나왔다.</p>
+   <p>사람들이 웅성거렸다.</p>
+   <p class="quote">"또 이상한 윷 아니에요?"</p>
+   <p>심판이 윷을 검사했다.</p>`,
+
+  `<p>윷은 멀쩡했다.</p>
+   <p>간장도 묻지 않았다.</p>
+   <p>모양도 정상이었다.</p>
+   <p class="quote">"그냥 잘 던지는 겁니다."</p>`,
+
+  `<p>촤르릅은 조용히 말했다.</p>
+   <p class="quote">"저는 그냥 똑같이 던져요."</p>
+   <p class="quote">"손 높이도, 힘도, 각도도요."</p>
+   <p>그게 비법이었다.</p>`,
+
+  `<p>차추초추는 그 말을 듣고 따라 했다.</p>
+   <p>손 높이를 맞추고, 힘을 맞추고, 각도를 맞췄다.</p>
+   <p>그리고 던졌다.</p>
+   <p>윷이 간장 종지에 빠졌다.</p>`,
+
+  `<p class="turn">또!</p>
+   <p class="quote">"낙이므로 무효!"</p>
+   <p>이번 대회에서 이 말이 열 번째로 나왔다.</p>
+   <p>누군가 벽에 정(正) 자를 그리기 시작했다.</p>`,
+
+  `<p>4경기는 촤르릅이 이겼다.</p>
+   <p>차추초추는 분해서 말했다.</p>
+   <p class="quote">"다음엔 종지를 치우고 하겠습니다!"</p>
+   <p>아무도 왜 아직 안 치웠는지 말하지 않았다.</p>`,
+
+  `<div class="chapter">5경기</div>
+   <p>마지막 경기는 초추초추와 초차초츠였다.</p>
+   <p>심판과 그 남편의 경기였다.</p>
+   <p>그러니까 심판이 경기에 나온 것이다.</p>`,
+
+  `<p class="quote">"심판이 경기를 하면 누가 심판을 봐요?"</p>
+   <p>촤르릅이 물었다.</p>
+   <p class="quote">"제가 봅니다."</p>
+   <p class="quote">"경기를 하면서요?"</p>`,
+
+  `<p class="quote">"저는 공정합니다."</p>
+   <p>초추초추가 말했다.</p>
+   <p>그리고 첫 판에서 자기가 던진 도를 걸이라고 선언했다.</p>`,
+
+  `<p class="quote">"방금 도였는데요!"</p>
+   <p>초차초츠가 소리쳤다.</p>
+   <p class="quote">"각도에 따라 다르게 보입니다."</p>
+   <p class="quote">"제 각도에서는 걸입니다."</p>`,
+
+  `<p>사람들이 전부 일어나서</p>
+   <p>심판의 각도에 서 보았다.</p>
+   <p>그 각도에서도 도였다.</p>
+   <p class="quote">"...걸입니다."</p>`,
+
+  `<p>결국 관람객 투표를 하기로 했다.</p>
+   <p>관람객은 뿌파뿌포와 추르릅 두 명이었다.</p>
+   <p>투표 결과는 1대 1이었다.</p>
+   <p class="turn">또 동점이다.</p>`,
+
+  `<p>동점이면 심판이 정한다고 했다.</p>
+   <p>그런데 심판이 경기 중이었다.</p>
+   <p>그래서 심판이 정했다.</p>
+   <p class="quote">"걸입니다."</p>`,
+
+  `<p>초차초츠는 아무 말도 하지 않았다.</p>
+   <p>대신 조용히 손가락 신호를 보냈다.</p>
+   <p>어제 하지 말라고 했던 그 신호였다.</p>`,
+
+  `<p class="quote">"여보, 신호 보내면 실격이라고 했잖아요."</p>
+   <p class="quote">"우리 팀이어도 실격이라고요."</p>
+   <p class="quote">"...우리는 지금 같은 팀이 아닌데요."</p>
+   <p>말문이 막혔다.</p>`,
+
+  `<p>심판은 규칙표를 다시 읽었다.</p>
+   <p>규칙표에는 이렇게 적혀 있었다.</p>
+   <p class="quote">"같은 팀에게 신호를 보내면 실격."</p>
+   <p>다른 팀에게 보내는 건 안 적혀 있었다.</p>`,
+
+  `<p class="quote">"그러면 봐주겠습니다."</p>
+   <p>심판이 말했다.</p>
+   <p>그런데 초차초츠가 보낸 신호는</p>
+   <p>사실 아무 뜻도 없는 신호였다.</p>`,
+
+  `<p class="quote">"저건 그냥 손가락 운동입니다."</p>
+   <p class="quote">"손이 저려서요."</p>
+   <p>경기는 다시 시작되었다.</p>
+   <p>5경기는 초추초추가 이겼다.</p>`,
+
+  `<div class="chapter">8강이 되었다</div>
+   <p>10강이 끝나자 다섯 명이 남았다.</p>
+   <p class="list">뽀파뽀프, 부릉부, 추루룹, 촤르릅, 초추초추</p>
+   <p>다섯 명이었다.</p>`,
+
+  `<p class="quote">"잠깐만요."</p>
+   <p>촤르릅이 또 손을 들었다.</p>
+   <p class="quote">"다음은 8강인데요."</p>
+   <p class="quote">"우리 다섯 명인데요."</p>`,
+
+  `<p class="turn">8강인데 다섯 명.</p>
+   <p>어제 준결승에 다섯 명이 올라갔던 것과</p>
+   <p>똑같은 일이 또 벌어진 것이었다.</p>`,
+
+  `<p>심판은 종이를 한참 보았다.</p>
+   <p class="quote">"10강 다음은 8강이 아닙니다."</p>
+   <p class="quote">"그럼 뭔데요?"</p>
+   <p class="quote">"5강입니다."</p>`,
+
+  `<p>5강이라는 말은 처음 들어 봤다.</p>
+   <p>하지만 계산은 맞았다.</p>
+   <p>다섯 명이니까 5강이었다.</p>
+   <p>아무도 반박하지 못했다.</p>`,
+
+  `<p>그런데 다섯 명이면 또 짝이 안 맞았다.</p>
+   <p>두 명씩 붙으면 한 명이 남았다.</p>
+   <p class="quote">"남는 사람은 어떻게 해요?"</p>`,
+
+  `<p class="quote">"남는 사람은 그냥 올라갑니다."</p>
+   <p class="quote">"그게 되나요?"</p>
+   <p class="quote">"됩니다. 부전승이라고 합니다."</p>
+   <p>부전승이라는 말은 다들 알고 있었다.</p>`,
+
+  `<p class="quote">"그럼 누가 부전승이에요?"</p>
+   <p>모두가 손을 들었다.</p>
+   <p>다섯 명 전부 손을 들었다.</p>
+   <p class="turn">전원 부전승.</p>`,
+
+  `<p class="quote">"전원 부전승이면 경기를 안 하는데요."</p>
+   <p class="quote">"그러면 결승에 다섯 명이 갑니다."</p>
+   <p class="quote">"결승은 두 명인데요."</p>
+   <p class="quote">"...다시 생각하겠습니다."</p>`,
+
+  `<div class="chapter">제비뽑기</div>
+   <p>심판은 제비뽑기를 하기로 했다.</p>
+   <p>종이에 이름을 적어서 뽑기로 했다.</p>
+   <p>그런데 종이가 없었다.</p>
+   <p>아까 말했듯이 종이는 한 장뿐이었다.</p>`,
+
+  `<p>그래서 간장 종지를 쓰기로 했다.</p>
+   <p class="turn">또 종지다.</p>
+   <p>종지 다섯 개 중 하나에만 간장을 담기로 했다.</p>
+   <p>간장이 든 종지를 고른 사람이 부전승이었다.</p>`,
+
+  `<p>다섯 명이 종지를 하나씩 골랐다.</p>
+   <p>그리고 동시에 들었다.</p>
+   <p>다섯 개 전부 간장이 들어 있었다.</p>
+   <p class="quote">"이거 누가 준비했어요?"</p>`,
+
+  `<p>꼬르륵이 손을 들었다.</p>
+   <p class="quote">"제가 준비했는데요."</p>
+   <p class="quote">"왜 다 넣었어요?"</p>
+   <p class="quote">"하나만 넣으면 아까워서요."</p>`,
+
+  `<p>꼬르륵의 논리는 이상했지만</p>
+   <p>이상하지 않기도 했다.</p>
+   <p>간장은 많았고, 종지도 많았다.</p>
+   <p>아까울 이유는 없었는데 아까웠던 것이다.</p>`,
+
+  `<p>제비뽑기는 실패했다.</p>
+   <p>심판은 다른 방법을 생각했다.</p>
+   <p class="quote">"나이가 가장 많은 사람이 부전승."</p>
+   <p>그러자 뿌파뿌포가 손을 들었다.</p>`,
+
+  `<p class="quote">"저는 관람객인데요."</p>
+   <p class="quote">"그래도 나이는 제일 많습니다."</p>
+   <p class="quote">"그럼 제가 부전승인가요?"</p>
+   <p class="quote">"...아닙니다."</p>`,
+
+  `<p>결국 가위바위보를 하기로 했다.</p>
+   <p>다섯 명이 동시에 냈다.</p>
+   <p>가위 둘, 바위 둘, 보 하나였다.</p>
+   <p class="turn">아무도 이기지 못했다.</p>`,
+
+  `<p>다시 냈다.</p>
+   <p>이번엔 가위 하나, 바위 둘, 보 둘.</p>
+   <p>또 아무도 이기지 못했다.</p>
+   <p>열두 번을 했는데 계속 그랬다.</p>`,
+
+  `<p>열세 번째에 드디어 결판이 났다.</p>
+   <p>네 명이 가위를 내고 촤르릅만 바위를 냈다.</p>
+   <p class="quote">"촤르릅 부전승!"</p>
+   <p>촤르릅은 손을 들지도 않았는데 올라갔다.</p>`,
+
+  `<div class="chapter">5강 1경기</div>
+   <p>뽀파뽀프와 부릉부가 붙었다.</p>
+   <p>부릉부는 말이 빠른 만큼 윷도 빨리 던졌다.</p>
+   <p>너무 빨라서 심판이 못 봤다.</p>`,
+
+  `<p class="quote">"다시 던지세요. 못 봤습니다."</p>
+   <p>부릉부가 다시 던졌다.</p>
+   <p class="quote">"또 못 봤습니다."</p>
+   <p>세 번 더 못 봤다.</p>`,
+
+  `<p>그래서 규칙이 또 생겼다.</p>
+   <p class="quote">"윷은 천천히 던질 것."</p>
+   <p>부릉부는 아주 천천히 던졌다.</p>
+   <p>윷이 공중에서 멈춘 것처럼 보였다.</p>`,
+
+  `<p>천천히 던진 윷은 굴러가지 않았다.</p>
+   <p>그냥 툭 떨어져서 그대로 있었다.</p>
+   <p>네 개 다 엎어졌다.</p>
+   <p class="turn">모다!</p>`,
+
+  `<p class="quote">"천천히 던지면 모가 나오는군요!"</p>
+   <p>부릉부가 신나서 말했다.</p>
+   <p>그 뒤로 부릉부는 계속 천천히 던졌다.</p>
+   <p>모가 계속 나왔다.</p>`,
+
+  `<p>뽀파뽀프가 항의했다.</p>
+   <p class="quote">"저건 던지는 게 아니라 놓는 거예요!"</p>
+   <p>심판이 규칙표를 봤다.</p>
+   <p>'놓으면 안 된다'는 말은 없었다.</p>`,
+
+  `<p class="quote">"규칙에 없으므로 괜찮습니다."</p>
+   <p>그래서 뽀파뽀프도 놓기 시작했다.</p>
+   <p>둘 다 놓으니까 둘 다 모가 나왔다.</p>
+   <p>경기가 끝나지 않았다.</p>`,
+
+  `<p>모가 나오면 한 번 더 던진다.</p>
+   <p>둘 다 계속 모가 나오니까</p>
+   <p>둘 다 계속 던졌다.</p>
+   <p>한 시간이 지났다.</p>`,
+
+  `<p>결국 심판이 규칙을 하나 더 만들었다.</p>
+   <p class="quote">"윷은 30센티 위에서 던질 것."</p>
+   <p>그런데 자가 없어서 30센티를 잴 수 없었다.</p>`,
+
+  `<p>그래서 간장 종지를 쌓아서 쟀다.</p>
+   <p class="turn">또 종지다.</p>
+   <p>종지 다섯 개를 쌓으니 대충 30센티였다.</p>
+   <p>실제로는 12센티였지만 아무도 재지 않았다.</p>`,
+
+  `<p>그 높이에서 던지자 경기는 금방 끝났다.</p>
+   <p>뽀파뽀프가 이겼다.</p>
+   <p>부릉부는 소감을 말했다.</p>
+   <p class="quote">"졌습니다괜찮습니다배고픕니다."</p>`,
+
+  `<div class="chapter">5강 2경기</div>
+   <p>추루룹과 초추초추의 경기였다.</p>
+   <p>간장 공장 공장장과 심판의 대결이었다.</p>
+   <p>둘 다 이번 사건의 중심에 있던 사람이었다.</p>`,
+
+  `<p>경기 전에 촤르릅이 말했다.</p>
+   <p class="quote">"이번엔 식탁을 닦고 하죠."</p>
+   <p>모두가 놀랐다.</p>
+   <p>아무도 그 생각을 못 했던 것이다.</p>`,
+
+  `<p>식탁을 닦자 종지가 움직이지 않았다.</p>
+   <p>점수가 그대로 있었다.</p>
+   <p class="quote">"이렇게 편한 거였어요?"</p>
+   <p>추루룹 씨가 감동했다.</p>`,
+
+  `<p>경기는 아주 깔끔하게 진행되었다.</p>
+   <p>점수 다툼도 없었고</p>
+   <p>무효도 없었고</p>
+   <p>CCTV도 안 봤다.</p>`,
+
+  `<p>그런데 이상하게 재미가 없었다.</p>
+   <p>관람객 두 명이 하품을 했다.</p>
+   <p class="quote">"원래 이런 게임이었나요?"</p>
+   <p class="quote">"...그런 것 같네요."</p>`,
+
+  `<p>5강 2경기는 초추초추가 이겼다.</p>
+   <p>심판이 이겼으므로</p>
+   <p>심판이 결승에 올라갔다.</p>
+   <p>아무도 문제를 제기하지 않았다.</p>`,
+
+  `<div class="chapter">결승 전날 밤</div>
+   <p>결승에 오른 사람은 세 명이었다.</p>
+   <p class="list">뽀파뽀프, 초추초추, 그리고 부전승 촤르릅</p>
+   <p class="turn">결승인데 세 명.</p>`,
+
+  `<p>촤르릅은 그날 밤 잠이 오지 않았다.</p>
+   <p>대진표를 펼쳐 놓고 계속 세어 보았다.</p>
+   <p>몇 번을 세어도 세 명이었다.</p>`,
+
+  `<p>그러다 촤르릅은 문득 이상한 걸 느꼈다.</p>
+   <p>이 대회에서는 이상한 일이 생길 때마다</p>
+   <p>사람 수가 항상 <b>한 명씩 늘어나 있었다.</b></p>`,
+
+  `<p class="list">8강이어야 하는데 10명</p>
+   <p class="list">준결승 4명이어야 하는데 5명</p>
+   <p class="list">결승 2명이어야 하는데 3명</p>
+   <p class="turn">전부 한 명 많다.</p>`,
+
+  `<p>촤르릅은 벌떡 일어났다.</p>
+   <p>이건 계산 실수가 아니었다.</p>
+   <p>누군가 계속 한 명씩 끼워 넣고 있었던 것이다.</p>`,
+
+  `<div class="chapter">한 명이 더 있다</div>
+   <p>촤르릅은 참가자 명단을 처음부터 세었다.</p>
+   <p>처음에 모인 사람은 여섯 명이었다.</p>
+   <p class="list">추루룹, 촤르릅, 초차초츠, 차추초추, 뽀파뽀프, 빠푸뽀푸</p>`,
+
+  `<p>관람객이 둘, 심판이 하나였다.</p>
+   <p class="list">뿌파뿌포, 추르릅, 초추초추</p>
+   <p>다 합쳐서 아홉 명이었다.</p>`,
+
+  `<p>그런데 대진표에는 이런 이름이 있었다.</p>
+   <p class="list">우당탕, 부릉부, 꼬르륵</p>
+   <p class="turn">이 세 명은 누구지?</p>`,
+
+  `<p>촤르릅은 등이 서늘해졌다.</p>
+   <p>설날에 이 집에 온 사람은 아홉 명이었다.</p>
+   <p>그런데 대회에는 열두 명이 있었다.</p>`,
+
+  `<p>촤르릅은 조용히 거실로 나갔다.</p>
+   <p>거실에는 우당탕이 앉아 있었다.</p>
+   <p>우당탕은 윷을 닦고 있었다.</p>
+   <p class="quote">"안 자니?"</p>`,
+
+  `<p class="quote">"...아저씨는 누구세요?"</p>
+   <p>촤르릅이 물었다.</p>
+   <p>우당탕은 잠시 손을 멈추더니 웃었다.</p>
+   <p class="quote">"드디어 묻는구나."</p>`,
+
+  `<div class="chapter">옆집 사람들</div>
+   <p class="quote">"우리는 옆집에 살아."</p>
+   <p>우당탕이 말했다.</p>
+   <p class="quote">"너희 집에서 어제부터 소리가 나서 와 봤어."</p>`,
+
+  `<p class="quote">"그냥 오신 거예요?"</p>
+   <p class="quote">"문이 열려 있었단다."</p>
+   <p class="quote">"그래서 그냥 들어오셨어요?"</p>
+   <p class="quote">"윷놀이를 하고 있었잖니."</p>`,
+
+  `<p>그게 이유의 전부였다.</p>
+   <p>윷놀이를 하고 있으면 들어가도 된다고</p>
+   <p>우당탕은 믿고 있었다.</p>
+   <p>이상하게도 아무도 막지 않았다.</p>`,
+
+  `<p class="quote">"그럼 부릉부 아저씨랑 꼬르륵도요?"</p>
+   <p class="quote">"내 동생이랑 내 아들이야."</p>
+   <p class="quote">"셋 다 옆집이요?"</p>
+   <p class="quote">"응. 셋 다."</p>`,
+
+  `<p>촤르릅은 머리가 하얘졌다.</p>
+   <p>대회가 이상했던 이유가 전부 설명되었다.</p>
+   <p>사람이 세 명 많았으니</p>
+   <p>숫자가 맞을 리가 없었다.</p>`,
+
+  `<p class="quote">"그럼 왜 아무도 몰랐어요?"</p>
+   <p>우당탕이 윷을 내려놓고 말했다.</p>
+   <p class="quote">"다들 자기 팀만 세고 있었거든."</p>`,
+
+  `<p>사실이었다.</p>
+   <p>추루룹 씨는 자기 팀 두 명만 세었고,</p>
+   <p>뽀파뽀프도 자기 팀 두 명만 세었고,</p>
+   <p>심판은 종지만 세고 있었다.</p>`,
+
+  `<p>전체를 센 사람이 아무도 없었다.</p>
+   <p>그래서 세 명이 늘어도 몰랐던 것이다.</p>
+   <p class="turn">아무도 전체를 보지 않았다.</p>`,
+
+  `<div class="chapter">결승 날 아침</div>
+   <p>아침이 되자 촤르릅은 모두를 불러 모았다.</p>
+   <p>그리고 대진표를 식탁 가운데에 놓았다.</p>
+   <p>식탁은 어제 닦아서 깨끗했다.</p>`,
+
+  `<p class="quote">"제가 비밀을 알아냈어요."</p>
+   <p>모두가 촤르릅을 봤다.</p>
+   <p class="quote">"10강이 된 이유요."</p>`,
+
+  `<p class="quote">"간장 때문 아니었나요?"</p>
+   <p>추루룹 씨가 물었다.</p>
+   <p class="quote">"간장도 맞아요. 근데 그게 다가 아니에요."</p>`,
+
+  `<p>촤르릅은 명단을 읽었다.</p>
+   <p class="quote">"이 집에 온 사람은 아홉 명이에요."</p>
+   <p class="quote">"그런데 대회에는 열두 명이 있었어요."</p>
+   <p class="turn">세 명이 더 있었다.</p>`,
+
+  `<p>사람들이 서로를 둘러보았다.</p>
+   <p>하나, 둘, 셋, 넷......</p>
+   <p>이번에는 전체를 세었다.</p>
+   <p>정말 열두 명이었다.</p>`,
+
+  `<p class="quote">"우당탕 씨는 누구 가족이에요?"</p>
+   <p>뽀파뽀프가 물었다.</p>
+   <p class="quote">"저는 옆집입니다."</p>
+   <p class="quote">"...옆집이요?"</p>`,
+
+  `<p>사람들은 놀라지 않았다.</p>
+   <p>놀라기에는 어제 놀랄 일이 너무 많았다.</p>
+   <p class="quote">"아, 옆집이시구나."</p>
+   <p class="quote">"네, 옆집입니다."</p>`,
+
+  `<p>그게 끝이었다.</p>
+   <p>아무도 나가라고 하지 않았다.</p>
+   <p>아무도 화내지 않았다.</p>
+   <p>이 집은 원래 그런 집이었다.</p>`,
+
+  `<div class="chapter">그러면 결승은</div>
+   <p>심판이 손뼉을 쳤다.</p>
+   <p class="quote">"정리하겠습니다."</p>
+   <p class="list">하나. 사람이 세 명 많았다.</p>
+   <p class="list">둘. 그래서 숫자가 다 틀렸다.</p>`,
+
+  `<p class="list">셋. 그래도 경기는 다 했다.</p>
+   <p class="list">넷. 그러므로 결과는 유효하다.</p>
+   <p class="quote">"이상입니다."</p>`,
+
+  `<p class="quote">"그게 되나요?"</p>
+   <p class="quote">"됩니다."</p>
+   <p class="quote">"왜요?"</p>
+   <p class="quote">"다시 하면 커피를 또 사야 합니다."</p>`,
+
+  `<p>이 대회의 모든 결정은</p>
+   <p>결국 커피로 정해지고 있었다.</p>
+   <p>아무도 그 점을 이상하게 여기지 않았다.</p>`,
+
+  `<div class="chapter">진짜 결승</div>
+   <p>결승에는 세 명이 나왔다.</p>
+   <p class="list">뽀파뽀프, 초추초추, 촤르릅</p>
+   <p>세 명이 동시에 하기로 했다.</p>`,
+
+  `<p>규칙은 간단했다.</p>
+   <p class="quote">"한 번씩 던져서 제일 잘 나온 사람이 우승."</p>
+   <p class="quote">"딱 한 번만요?"</p>
+   <p class="quote">"딱 한 번."</p>`,
+
+  `<p>이번만큼은 아무도 토를 달지 않았다.</p>
+   <p>모두 지쳐 있었기 때문이다.</p>
+   <p>대회는 이틀째였다.</p>`,
+
+  `<p>첫 번째는 뽀파뽀프였다.</p>
+   <p>뽀파뽀프는 눈을 감고 던졌다.</p>
+   <p>윷이 굴렀다.</p>
+   <p class="turn">윷!</p>`,
+
+  `<p>두 번째는 초추초추였다.</p>
+   <p>심판이자 선수였다.</p>
+   <p>던지기 전에 스스로에게 말했다.</p>
+   <p class="quote">"공정하게 하겠습니다."</p>`,
+
+  `<p>초추초추가 던졌다.</p>
+   <p>윷이 빙글빙글 돌다가 멈췄다.</p>
+   <p class="turn">모!</p>
+   <p>사람들이 박수를 쳤다.</p>`,
+
+  `<p>이제 촤르릅 차례였다.</p>
+   <p>모보다 잘 나오려면 모가 나와야 했다.</p>
+   <p>그리고 모가 나와도 동점이었다.</p>`,
+
+  `<p>촤르릅은 윷을 들었다.</p>
+   <p>손 높이를 맞추고, 힘을 맞추고, 각도를 맞췄다.</p>
+   <p>늘 하던 대로였다.</p>`,
+
+  `<p>그리고 던졌다.</p>
+   <p>윷가락이 천천히 올라갔다.</p>
+   <p>모두가 숨을 참았다.</p>
+   <p>어제도 이런 순간이 있었다.</p>`,
+
+  `<p>윷이 떨어졌다.</p>
+   <p>하나, 둘, 셋은 엎어졌다.</p>
+   <p>마지막 하나가 데구루루 굴러갔다.</p>`,
+
+  `<p>그리고 식탁 끝에서 멈췄다.</p>
+   <p>간장 종지 바로 앞이었다.</p>
+   <p>종지에 닿을락 말락 했다.</p>`,
+
+  `<p>모두가 그 윷을 쳐다봤다.</p>
+   <p>아무도 숨을 쉬지 않았다.</p>
+   <p>그때 꼬르륵의 배에서 소리가 났다.</p>
+   <p class="turn">꼬르륵.</p>`,
+
+  `<p>그 소리에 식탁이 아주 살짝 흔들렸다.</p>
+   <p>윷이 데구루루 한 바퀴 더 굴렀다.</p>
+   <p>그리고 엎어졌다.</p>
+   <p class="turn">모!</p>`,
+
+  `<p class="quote">"동점입니다!"</p>
+   <p>심판이 선언했다.</p>
+   <p>심판 자신과 촤르릅이 동점이었다.</p>`,
+
+  `<div class="chapter">마지막 판정</div>
+   <p class="quote">"동점이면 심판이 정합니다."</p>
+   <p class="quote">"그런데 심판이 당사자인데요."</p>
+   <p class="quote">"...그렇네요."</p>`,
+
+  `<p>심판은 오랫동안 생각했다.</p>
+   <p>어제부터 이 대회에서 심판은</p>
+   <p>수십 번 규칙을 만들었다.</p>
+   <p>이번에는 쉽게 만들어지지 않았다.</p>`,
+
+  `<p>그러다 초추초추가 말했다.</p>
+   <p class="quote">"촤르릅이 우승입니다."</p>
+   <p class="quote">"왜요?"</p>
+   <p class="quote">"이 대회에서 유일하게 전체를 센 사람이니까요."</p>`,
+
+  `<p>그 말에 아무도 반박하지 않았다.</p>
+   <p>사실 그게 이 대회에서 가장 어려운 일이었다.</p>
+   <p>윷을 잘 던지는 것보다 어려웠다.</p>`,
+
+  `<p class="turn">우승 — 촤르릅</p>
+   <p>사람들이 박수를 쳤다.</p>
+   <p>꼬르륵이 제일 크게 쳤다.</p>
+   <p>배가 고픈데도 크게 쳤다.</p>`,
+
+  `<div class="chapter">커피 쏘기</div>
+   <p>이제 남은 것은 커피였다.</p>
+   <p>진 사람이 커피를 사기로 했었다.</p>
+   <p>그런데 진 사람이 열한 명이었다.</p>`,
+
+  `<p>커피를 사야 하는 사람은 열한 명,</p>
+   <p>커피를 마시는 사람은 한 명이었다.</p>
+   <p class="quote">"열한 잔을 저 혼자요?"</p>
+   <p>촤르릅이 물었다.</p>`,
+
+  `<p class="quote">"규칙입니다."</p>
+   <p>커피 열한 잔이 식탁에 놓였다.</p>
+   <p>식탁은 깨끗했으므로 컵은 움직이지 않았다.</p>
+   <p>그건 다행이었다.</p>`,
+
+  `<div class="chapter">그날 밤</div>
+   <p>모두가 동시에 웃었다.</p>
+   <p>이 집에서는 늘 한 명이 많았다.</p>
+   <p>그게 이 집이 시끄러운 이유였다.</p>`,
+
+  `<p>촤르릅은 대진표를 곱게 접어 서랍에 넣었다.</p>
+   <p>그리고 식탁을 한 번 더 닦았다.</p>
+   <p>간장은 한 방울도 없었다.</p>
+   <p>내일은 조용할 것 같았다.</p>`,
+
+  `<p>그때 초인종이 울렸다.</p>
+   <p>문 앞에는 처음 보는 사람이 서 있었다.</p>
+   <p class="quote">"저 옆옆집인데요, 윷놀이 하신다고 해서요."</p>
+   <p class="turn">또 한 명이 늘었다.</p>
+   <div class="ending">— 끝 —</div>`
+];
+
+let cur = 0;
+let animating = false;
+const pageEl = document.getElementById('page');
+const POS_KEY = 'sipgang-book-pos';
+try{
+  const saved = parseInt(localStorage.getItem(POS_KEY));
+  if(!isNaN(saved) && saved >= 0 && saved < PAGES.length) cur = saved;
+}catch(e){}
+
+function renderPage(){
+  pageEl.innerHTML = '<div class="pg-inner">' + PAGES[cur] + '</div>';
+  pageEl.scrollTop = 0;
+  try{ localStorage.setItem(POS_KEY, cur); }catch(e){}
+  document.getElementById('page-num').textContent = (cur+1) + ' / ' + PAGES.length;
+  document.getElementById('prev-btn').disabled = cur === 0;
+  document.getElementById('next-btn').disabled = cur === PAGES.length-1;
+}
+
+function go(dir){
+  if(animating) return;
+  const next = cur + dir;
+  if(next < 0 || next >= PAGES.length) return;
+  animating = true;
+  pageEl.classList.add('flip-out');
+  setTimeout(()=>{
+    cur = next;
+    renderPage();
+    pageEl.classList.remove('flip-out');
+    pageEl.classList.add('flip-in-prep');
+    void pageEl.offsetWidth;
+    pageEl.classList.remove('flip-in-prep');
+    setTimeout(()=>{ animating = false; }, 450);
+  }, 420);
+}
+
+function tapPage(e){
+  const rect = pageEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  if(x < 0.3) go(-1);
+  else go(1);
+}
+
+window.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if(e.key === 'ArrowLeft') go(-1);
+});
+
+function openToc(){
+  const list = document.getElementById('toc-list');
+  let items = '<button class="toc-item" onclick="jumpTo(0)"><span>📕 표지</span><span class="pg">1쪽</span></button>';
+  PAGES.forEach((p, i)=>{
+    const m = p.match(/<div class="chapter">(.*?)<\/div>/);
+    if(m){
+      items += `<button class="toc-item" onclick="jumpTo(${i})"><span>${m[1]}</span><span class="pg">${i+1}쪽</span></button>`;
+    }
+  });
+  list.innerHTML = items;
+  document.getElementById('toc-bg').classList.add('show');
+}
+function closeToc(){
+  document.getElementById('toc-bg').classList.remove('show');
+}
+function jumpTo(i){
+  closeToc();
+  cur = i;
+  renderPage();
+}
+
+renderPage();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
