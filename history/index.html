@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>🏛️ 역사 술래잡기</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --green: #2E9E5B;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 14px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 2px; letter-spacing: .04em; }
+  .by { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 16px 14px;
+    margin-bottom: 12px;
+  }
+  [hidden] { display: none !important; }
+
+  /* ---------- 시작 화면 ---------- */
+  .how { font-size: 14px; line-height: 1.8; color: var(--muted); margin: 0 0 14px; }
+  .how b { color: var(--ink); }
+  .seg { display: flex; gap: 6px; margin-bottom: 14px; }
+  .seg button {
+    flex: 1; font: inherit; font-size: 14px; font-weight: 700;
+    padding: 10px 0; border: 2px solid var(--line); border-radius: 12px;
+    background: #fff; color: var(--muted); cursor: pointer;
+  }
+  .seg button.on { border-color: var(--blue); color: var(--blue); background: #F2F6FF; }
+  .big {
+    font: inherit; font-size: 18px; font-weight: 800; width: 100%;
+    padding: 14px 0; border: 0; border-radius: 14px;
+    background: var(--blue); color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(108,139,255,.35);
+  }
+  .big:active { transform: translateY(1px); }
+
+  /* ---------- 술래 ---------- */
+  .lane {
+    position: relative; height: 62px; margin: 2px 0 10px;
+    border-radius: 14px; background: linear-gradient(180deg, #EEF3FF, #E4ECFF);
+    overflow: hidden;
+  }
+  .lane .ground { position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: #D9E4FB; }
+  .lane span { position: absolute; bottom: 8px; font-size: 34px; line-height: 1; }
+  .lane .it { transition: left .35s ease; }
+  .lane .me { right: 10px; }
+  .lane .it.near { animation: shake .4s infinite; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+  .gap { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .gap b { color: var(--pink); }
+
+  /* ---------- 시간 막대 ---------- */
+  .bar { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; margin-bottom: 12px; }
+  .bar i { display: block; height: 100%; width: 100%; background: var(--blue); border-radius: 999px; }
+  .bar i.warn { background: var(--pink); }
+
+  .hud { display: flex; justify-content: center; gap: 18px; font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+  .hud b { color: var(--ink); font-size: 16px; }
+
+  /* ---------- 문제 ---------- */
+  .bubble {
+    position: relative; background: #FFF7E3; border: 2px solid #FFE6AE;
+    border-radius: 14px; padding: 14px 12px; font-size: 17px; font-weight: 700;
+    line-height: 1.5; margin-bottom: 12px; min-height: 74px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .choices { display: grid; gap: 8px; }
+  .choices button {
+    font: inherit; font-size: 16px; font-weight: 700;
+    padding: 14px 8px; border: 2px solid var(--line); border-radius: 12px;
+    background: #fff; color: var(--ink); cursor: pointer;
+  }
+  .choices button:disabled { cursor: default; }
+  .choices button.right { border-color: var(--green); background: #E7F6EC; color: var(--green); }
+  .choices button.wrong { border-color: var(--pink); background: #FFEDF1; color: var(--pink); }
+  .fb { font-size: 14px; line-height: 1.6; color: var(--muted); margin-top: 10px; min-height: 40px; }
+  .fb b { color: var(--ink); }
+
+  /* ---------- 기록 ---------- */
+  .records { text-align: left; }
+  .records .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .records h3 { font-size: 16px; margin: 0; }
+  .records .cnt { font-size: 12px; color: var(--muted); }
+  .records .refresh {
+    margin-left: auto; font: inherit; font-size: 12px; padding: 5px 10px;
+    border: 0; border-radius: 8px; background: #EEF3FF; color: var(--ink); cursor: pointer;
+  }
+  .records ol { list-style: none; margin: 0; padding: 0; font-size: 15px; line-height: 1.9; }
+  .records li { display: flex; align-items: center; gap: 8px; }
+  .records .no { width: 22px; text-align: center; color: var(--muted); }
+  .records .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .records .sc { font-weight: 800; }
+  .records .empty { color: var(--muted); }
+  .records .fresh { color: var(--pink); font-weight: 800; }
+  .records .note { font-size: 12px; margin-top: 6px; min-height: 16px; color: var(--muted); }
+  .records .note.warn { color: var(--pink); }
+
+  /* ---------- 끝 화면 ---------- */
+  .msg { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(28,34,64,.55); padding: 20px; z-index: 20; }
+  .msg.show { display: flex; }
+  .box { background: #fff; border-radius: 18px; padding: 22px 18px; width: 100%; max-width: 340px; }
+  .box h2 { font-size: 24px; margin: 0 0 6px; }
+  .box p { font-size: 15px; color: var(--muted); margin: 0 0 14px; }
+  .box input {
+    font: inherit; font-size: 16px; padding: 10px 12px; width: 150px; text-align: center;
+    border: 2px solid var(--line); border-radius: 10px; color: var(--ink);
+  }
+  .box button {
+    font: inherit; font-size: 15px; font-weight: 700; margin: 4px 2px;
+    padding: 10px 18px; border: 0; border-radius: 10px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+  .box .save { background: var(--green); }
+  .box .again { background: var(--pink); }
+  .copied { margin: 10px 0 0; font-size: 13px; color: var(--green); min-height: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🏛️ 역사 술래잡기</h1>
+  <p class="by">이유리의 아이디어 💡</p>
+
+  <!-- ---------- 시작 ---------- -->
+  <section class="card" id="startCard">
+    <p class="how">
+      술래가 <b>역사 문제</b>를 내면 답을 말해야 해.<br>
+      맞히면 술래가 <b>물러나고</b>, 틀리거나 시간이 다 가면 <b>다가와</b>.<br>
+      술래한테 잡히기 전까지 몇 개나 맞힐 수 있을까?
+    </p>
+    <div class="seg" id="seg">
+      <button data-key="easy" data-sec="14">느긋하게<br>14초</button>
+      <button data-key="normal" data-sec="10">보통<br>10초</button>
+      <button data-key="hard" data-sec="7">빠르게<br>7초</button>
+    </div>
+    <button class="big" id="startBtn">술래잡기 시작!</button>
+  </section>
+
+  <!-- ---------- 게임 ---------- -->
+  <section class="card" id="playCard" hidden>
+    <div class="lane">
+      <div class="ground"></div>
+      <span class="it" id="itFace">👹</span>
+      <span class="me">🧒</span>
+    </div>
+    <p class="gap" id="gapText">술래가 <b>여섯 걸음</b> 떨어져 있어</p>
+    <div class="bar"><i id="timerFill"></i></div>
+    <div class="hud">
+      <span>맞힌 문제 <b id="scoreText">0</b></span>
+      <span>연속 <b id="comboText">0</b></span>
+    </div>
+    <div class="bubble" id="qText">문제를 가져오는 중…</div>
+    <div class="choices" id="choices"></div>
+    <p class="fb" id="fb"></p>
+  </section>
+
+  <!-- ---------- 기록 ---------- -->
+  <section class="card records">
+    <div class="head">
+      <h3>🏅 기록</h3>
+      <span class="cnt" id="recCount"></span>
+      <button class="refresh" id="refreshBtn">새로고침</button>
+    </div>
+    <ol id="recList"><li class="empty">불러오는 중…</li></ol>
+    <div class="note" id="recNote"></div>
+  </section>
+</main>
+
+<div class="msg" id="msg">
+  <div class="box">
+    <h2 id="msgTitle">😱 잡혔다!</h2>
+    <p id="msgText"></p>
+    <div>
+      <input id="nameInput" maxlength="6" placeholder="이름 쓰기">
+      <button class="save" id="saveBtn">기록하기</button>
+    </div>
+    <div style="margin-top:8px">
+      <button id="shareBtn">📤 자랑하기</button>
+      <button class="again" id="againBtn">다시 하기</button>
+    </div>
+    <p class="copied" id="copied"></p>
+  </div>
+</div>
+
+<script>
+/* ---------- 문제 ----------
+   [문제, 정답, 오답, 오답, 오답, 한 줄 풀이] */
+const QUIZ = [
+  ['우리나라에 가장 먼저 세워진 나라는?', '고조선', '신라', '고구려', '발해', '고조선은 우리 역사에서 가장 오래된 나라야.'],
+  ['고조선을 세웠다고 전해지는 사람은?', '단군왕검', '주몽', '박혁거세', '온조', '단군 이야기는 삼국유사에 실려 있어.'],
+  ['훈민정음을 만든 임금은?', '세종대왕', '태조', '정조', '영조', '백성이 글자를 몰라 답답해하는 걸 안타까워했대.'],
+  ['훈민정음을 지금은 뭐라고 부를까?', '한글', '한자', '이두', '가나', '"한글"이라는 이름은 나중에 붙은 이름이야.'],
+  ['거북선을 이끌고 왜군을 무찌른 장군은?', '이순신', '강감찬', '김유신', '을지문덕', '한 번도 지지 않은 장군으로 유명해.'],
+  ['울돌목에서 적은 배로 왜군을 크게 이긴 싸움은?', '명량 대첩', '귀주 대첩', '살수 대첩', '행주 대첩', '좁은 물길의 빠른 물살을 이용했어.'],
+  ['삼국을 하나로 통일한 나라는?', '신라', '고구려', '백제', '가야', '당나라와 손잡고 백제와 고구려를 무너뜨렸어.'],
+  ['고구려를 세운 사람은?', '주몽', '왕건', '온조', '박혁거세', '활을 잘 쏘아 주몽이라 불렸대.'],
+  ['백제를 세운 사람은?', '온조', '주몽', '단군', '김수로', '주몽의 아들이 남쪽으로 내려와 세웠다고 해.'],
+  ['신라를 세운 사람은?', '박혁거세', '온조', '주몽', '대조영', '알에서 태어났다는 이야기가 전해져.'],
+  ['발해를 세운 사람은?', '대조영', '왕건', '이성계', '궁예', '고구려가 무너진 뒤 그 땅에 세운 나라야.'],
+  ['고려를 세운 사람은?', '왕건', '이성계', '주몽', '견훤', '후삼국을 다시 하나로 합쳤어.'],
+  ['조선을 세운 사람은?', '이성계', '왕건', '정몽주', '최영', '위화도에서 군대를 돌려 권력을 잡았어.'],
+  ['조선의 수도는 어디였을까?', '한양', '개경', '평양', '경주', '한양이 지금의 서울이야.'],
+  ['고려의 수도는 어디였을까?', '개경', '한양', '금성', '사비', '개경은 지금의 개성이야.'],
+  ['신라의 수도였던 곳은?', '경주', '평양', '공주', '부여', '지금도 신라의 흔적이 많이 남아 있어.'],
+  ['별을 보려고 신라에서 쌓은 건물은?', '첨성대', '석굴암', '다보탑', '경복궁', '선덕여왕 때 만들었다고 전해져.'],
+  ['불국사와 석굴암이 있는 도시는?', '경주', '서울', '전주', '강릉', '둘 다 세계 문화유산이야.'],
+  ['수나라 군대를 살수에서 무찌른 사람은?', '을지문덕', '강감찬', '서희', '김유신', '거짓으로 물러나는 척해서 적을 끌어들였어.'],
+  ['거란을 귀주에서 크게 무찌른 사람은?', '강감찬', '을지문덕', '이순신', '권율', '고려를 지켜낸 큰 승리였어.'],
+  ['말로 거란과 담판해 강동 6주를 얻은 사람은?', '서희', '강감찬', '김부식', '정도전', '싸우지 않고 땅을 얻은 것으로 유명해.'],
+  ['몽골이 쳐들어왔을 때 고려가 만든 것은?', '팔만대장경', '직지심체요절', '삼국사기', '훈민정음', '부처의 힘으로 나라를 지키려 했어.'],
+  ['푸른 빛깔로 이름난 고려의 그릇은?', '고려청자', '백자', '옹기', '분청사기', '그 빛깔을 비색이라고 불러.'],
+  ['삼국사기를 쓴 사람은?', '김부식', '일연', '김정호', '정약용', '고려 때 임금의 명을 받아 지었어.'],
+  ['삼국유사를 쓴 사람은?', '일연', '김부식', '허준', '이이', '스님이 쓴 책이라 옛이야기가 많이 실려 있어.'],
+  ['세종 때 만든, 빗물의 양을 재는 기구는?', '측우기', '거중기', '금속활자', '화포', '농사에 큰 도움이 됐어.'],
+  ['세종 때 만든 해시계의 이름은?', '앙부일구', '자격루', '측우기', '혼천의', '솥처럼 오목하게 생겨서 붙은 이름이야.'],
+  ['스스로 시각을 알려 주던 세종 때 물시계는?', '자격루', '앙부일구', '측우기', '거중기', '장영실이 만들었어.'],
+  ['노비 출신으로 세종 때 여러 기구를 만든 과학자는?', '장영실', '정약용', '최무선', '김정호', '재주를 알아본 세종이 벼슬을 주었어.'],
+  ['임진왜란이 일어난 해는?', '1592년', '1392년', '1910년', '1950년', '7년 동안이나 이어진 큰 전쟁이었어.'],
+  ['행주산성에서 왜군을 물리친 장군은?', '권율', '이순신', '김시민', '곽재우', '백성들도 함께 싸운 싸움이야.'],
+  ['수원 화성을 지은 임금은?', '정조', '세종', '영조', '태종', '아버지를 그리며 만든 성이야.'],
+  ['수원 화성을 지을 때 무거운 돌을 들어올린 기구는?', '거중기', '측우기', '자격루', '물레방아', '덕분에 훨씬 빨리 지을 수 있었어.'],
+  ['거중기를 만든 사람은?', '정약용', '허준', '김정호', '장영실', '책도 많이 쓴 조선의 큰 학자야.'],
+  ['동의보감을 쓴 의원은?', '허준', '정약용', '이황', '유성룡', '지금도 세계가 인정하는 의학책이야.'],
+  ['우리나라 지도 대동여지도를 만든 사람은?', '김정호', '김부식', '정약용', '박지원', '걸어 다니며 땅을 살폈다고 전해져.'],
+  ['고려 말 화약을 만들어 왜구를 무찌른 사람은?', '최무선', '최영', '이성계', '정몽주', '우리나라에서 처음으로 화약을 만들었어.'],
+  ['청해진을 세워 바다를 지킨 신라 사람은?', '장보고', '김유신', '이사부', '원효', '바다의 왕이라고 불려.'],
+  ['삼국 통일에 큰 힘을 보탠 신라의 장군은?', '김유신', '계백', '을지문덕', '연개소문', '가야 왕족의 후손이었어.'],
+  ['황산벌에서 신라군과 맞서 싸운 백제 장군은?', '계백', '김유신', '온달', '관창', '오천 명으로 오만 명과 싸웠대.'],
+  ['고구려의 땅을 크게 넓힌 임금은?', '광개토대왕', '진흥왕', '무령왕', '문무왕', '이름 그대로 땅을 널리 넓혔어.'],
+  ['3·1 운동이 일어난 해는?', '1919년', '1945년', '1950년', '1910년', '온 나라에서 만세 소리가 울렸어.'],
+  ['3·1 운동 때 만세를 부르다 감옥에서 숨진 소녀는?', '유관순', '신사임당', '허난설헌', '김만덕', '천안 아우내 장터에서 만세를 불렀어.'],
+  ['하얼빈에서 이토 히로부미를 쏜 사람은?', '안중근', '윤봉길', '김구', '이봉창', '감옥에서도 글을 남겼어.'],
+  ['상하이 훙커우 공원에서 폭탄을 던진 사람은?', '윤봉길', '안중근', '유관순', '김좌진', '스물다섯 살의 젊은이였어.'],
+  ['청산리에서 일본군을 크게 무찌른 장군은?', '김좌진', '안중근', '김구', '안창호', '독립군이 거둔 가장 큰 승리야.'],
+  ['대한민국 임시 정부가 처음 세워진 도시는?', '상하이', '도쿄', '서울', '베이징', '나라를 빼앗긴 뒤 나라 밖에서 세웠어.'],
+  ['백범이라 불리며 임시 정부를 이끈 사람은?', '김구', '안창호', '이승만', '윤봉길', '평생 나라의 독립을 바랐어.'],
+  ['광복절은 몇 월 며칠일까?', '8월 15일', '3월 1일', '10월 3일', '6월 25일', '1945년에 나라를 다시 찾은 날이야.'],
+  ['한글날은 몇 월 며칠일까?', '10월 9일', '10월 3일', '8월 15일', '5월 5일', '훈민정음을 널리 알린 날을 기려.'],
+  ['개천절은 몇 월 며칠일까?', '10월 3일', '10월 9일', '3월 1일', '1월 1일', '고조선이 세워진 것을 기리는 날이야.'],
+  ['6·25 전쟁이 일어난 해는?', '1950년', '1919년', '1945년', '1592년', '3년 동안 이어졌어.'],
+  ['조선 임금들의 일을 날마다 적은 기록은?', '조선왕조실록', '삼국사기', '동의보감', '목민심서', '임금도 함부로 볼 수 없었대.'],
+  ['세계에서 가장 오래된 금속 활자 인쇄본은?', '직지심체요절', '팔만대장경', '훈민정음', '삼국유사', '지금은 프랑스에 있어.'],
+  ['조선 시대에 관리를 뽑던 시험은?', '과거', '수능', '백일장', '화랑', '아주 어려운 시험이었어.'],
+  ['신라의 젊은이들이 모여 몸과 마음을 닦던 모임은?', '화랑도', '향약', '두레', '서당', '진흥왕 때 크게 키웠어.'],
+  ['오만 원 지폐에 그려진 사람은?', '신사임당', '이이', '유관순', '이황', '그림과 글씨에 뛰어났어.'],
+  ['오천 원 지폐에 그려진 사람은?', '이이', '이황', '세종대왕', '신사임당', '신사임당의 아들이야.'],
+  ['만 원 지폐에 그려진 사람은?', '세종대왕', '이순신', '이황', '김구', '뒷면에는 별자리 그림이 있어.'],
+  ['백 원짜리 동전에 새겨진 사람은?', '이순신', '세종대왕', '이이', '안중근', '주머니 속에서 늘 만나는 장군이야.'],
+  ['경복궁을 다시 지은, 고종의 아버지는?', '흥선대원군', '정조', '영조', '김옥균', '무너진 궁궐을 크게 다시 세웠어.'],
+  ['신라에서 처음으로 여자 임금이 된 사람은?', '선덕여왕', '진성여왕', '문무왕', '선화공주', '첨성대도 이때 세웠다고 전해져.'],
+  ['독도는 어느 도에 속할까?', '경상북도', '강원도', '전라남도', '제주도', '울릉군에 속한 우리 땅이야.'],
+  ['몽골에 맞서 끝까지 싸운 고려의 군대는?', '삼별초', '별무반', '화랑도', '훈련도감', '강화도에서 진도, 제주도까지 옮겨 다녔어.'],
+  ['조선의 궁궐 중 가장 먼저 지어진 것은?', '경복궁', '창덕궁', '덕수궁', '창경궁', '조선을 세운 뒤 바로 지었어.'],
+  ['온달과 결혼했다는 고구려 이야기 속 공주는?', '평강공주', '선화공주', '낙랑공주', '덕혜옹주', '바보 온달 이야기로 유명해.'],
+  ['공주에서 발견된, 백제 임금의 무덤은?', '무령왕릉', '천마총', '석굴암', '장군총', '누구의 무덤인지 알 수 있는 귀한 무덤이야.'],
+  ['우리나라의 첫 번째 대통령은?', '이승만', '박정희', '김구', '윤보선', '1948년에 정부가 세워졌어.']
+];
+
+const STEP_WORD = ['잡혔어', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
+const MAXD = 10, STARTD = 6;
+
+const $ = id => document.getElementById(id);
+const startCard = $('startCard'), playCard = $('playCard');
+const itFace = $('itFace'), gapText = $('gapText'), timerFill = $('timerFill');
+const qText = $('qText'), choicesBox = $('choices'), fb = $('fb');
+
+let deck = [], cur = null, score = 0, combo = 0, dist = STARTD;
+let secs = 10, deadline = 0, raf = 0, playing = false, locked = false;
+let paused = 0, gen = 0;
+
+/* ---------- 난이도 ---------- */
+const KEY_LEVEL = 'history-level';
+let level = 'normal';
+function setLevel(key) {
+  level = key;
+  [...$('seg').children].forEach(b => b.classList.toggle('on', b.dataset.key === key));
+  secs = +[...$('seg').children].find(b => b.dataset.key === key).dataset.sec;
+  try { localStorage.setItem(KEY_LEVEL, key); } catch (e) {}
+}
+$('seg').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) setLevel(b.dataset.key);
+});
+try { setLevel(localStorage.getItem(KEY_LEVEL) || 'normal'); } catch (e) { setLevel('normal'); }
+
+/* ---------- 문제 뽑기 ---------- */
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+function nextQuestion() {
+  if (!deck.length) deck = shuffle(QUIZ.slice());
+  const row = deck.pop();
+  const answers = shuffle([row[1], row[2], row[3], row[4]]);
+  cur = { q: row[0], answer: row[1], answers, tip: row[5] };
+  qText.textContent = cur.q;
+  choicesBox.innerHTML = '';
+  answers.forEach(text => {
+    const b = document.createElement('button');
+    b.textContent = text;
+    b.addEventListener('click', () => answer(text, b));
+    choicesBox.appendChild(b);
+  });
+  fb.textContent = '';
+  locked = false;
+  paused = 0;
+  deadline = performance.now() + secs * 1000;
+  tick();
+}
+
+/* ---------- 시간 막대 ---------- */
+function tick() {
+  cancelAnimationFrame(raf);
+  const step = () => {
+    if (!playing || locked) return;
+    const left = Math.max(0, deadline - performance.now());
+    const ratio = left / (secs * 1000);
+    timerFill.style.width = (ratio * 100) + '%';
+    timerFill.classList.toggle('warn', ratio < 0.34);
+    if (left <= 0) { answer(null, null); return; }
+    raf = requestAnimationFrame(step);
+  };
+  raf = requestAnimationFrame(step);
+}
+
+/* 다른 앱을 보다 돌아와도 시간이 그대로 남아 있게 멈춰 둔다 */
+document.addEventListener('visibilitychange', () => {
+  if (!playing || locked) return;
+  if (document.hidden) {
+    paused = Math.max(0, deadline - performance.now());
+    cancelAnimationFrame(raf);
+  } else if (paused) {
+    deadline = performance.now() + paused;
+    paused = 0;
+    tick();
+  }
+});
+
+/* ---------- 술래 위치 ---------- */
+function drawLane() {
+  const ratio = Math.max(0, Math.min(1, dist / MAXD));
+  itFace.style.left = (6 + (1 - ratio) * 66) + '%';
+  itFace.classList.toggle('near', dist <= 2);
+  itFace.textContent = dist <= 2 ? '😈' : '👹';
+  const word = STEP_WORD[Math.max(0, Math.min(MAXD, dist))];
+  gapText.innerHTML = dist > 0
+    ? '술래가 <b>' + word + ' 걸음</b> 떨어져 있어'
+    : '술래한테 <b>잡혔어</b>!';
+}
+
+/* ---------- 답하기 ---------- */
+function answer(picked, btn) {
+  if (locked || !playing) return;
+  locked = true;
+  cancelAnimationFrame(raf);
+  const right = picked === cur.answer;
+  [...choicesBox.children].forEach(b => {
+    b.disabled = true;
+    if (b.textContent === cur.answer) b.classList.add('right');
+  });
+  if (!right && btn) btn.classList.add('wrong');
+
+  if (right) {
+    score++;
+    combo++;
+    dist = Math.min(MAXD, dist + (combo % 3 === 0 ? 2 : 1));
+    fb.innerHTML = '<b>정답! 술래가 물러났어 🏃</b><br>' + cur.tip;
+  } else {
+    combo = 0;
+    dist -= 2;
+    const head = picked === null ? '시간이 다 갔어! 술래가 다가와 😰' : '아쉬워! 술래가 다가와 😰';
+    fb.innerHTML = '<b>' + head + '</b><br>정답은 ' + cur.answer + ' · ' + cur.tip;
+  }
+  $('scoreText').textContent = score;
+  $('comboText').textContent = combo;
+  drawLane();
+
+  const g = gen;
+  if (dist <= 0) { setTimeout(() => { if (g === gen) endGame(); }, 900); return; }
+  setTimeout(() => { if (playing && g === gen) nextQuestion(); }, right ? 1200 : 2100);
+}
+
+/* ---------- 시작과 끝 ---------- */
+function startGame() {
+  score = 0; combo = 0; dist = STARTD; deck = [];
+  playing = true;
+  gen++;
+  $('scoreText').textContent = '0';
+  $('comboText').textContent = '0';
+  startCard.hidden = true;
+  playCard.hidden = false;
+  $('msg').classList.remove('show');
+  drawLane();
+  nextQuestion();
+}
+function endGame() {
+  playing = false;
+  gen++;
+  cancelAnimationFrame(raf);
+  recorded = false;
+  $('nameInput').value = '';
+  $('copied').textContent = '';
+  $('msgTitle').textContent = score >= 10 ? '🏃 대단해!' : '😱 잡혔다!';
+  $('msgText').textContent = '역사 문제 ' + score + '개를 맞혔어';
+  $('msg').classList.add('show');
+}
+$('startBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', startGame);
+
+/* ---------- 기록 (댓글 서버를 그대로 쓴다) ----------
+   그 서버는 승인 전 글의 내용은 감추고 '이름'만 공개하니까,
+   기록을 이름 칸에 '이름|점수'로 담아 둔다. 그래서 다른 폰에서도 보인다. */
+const RKEY = 'history:ranking:1';
+const API = 'https://craft-comments.jaehoo.workers.dev?page=history-rank-v1';
+const TOP = 5;
+let records = [], recorded = false, rankBusy = false;
+
+const recList = $('recList'), recNote = $('recNote'), recCount = $('recCount');
+const sortRank = list => list.sort((a, b) => b.sc - a.sc).slice(0, TOP);
+function sane(list) {
+  return Array.isArray(list)
+    ? list.filter(r => r && typeof r.name === 'string' && Number.isFinite(+r.sc))
+          .map(r => ({ name: r.name, sc: +r.sc })).slice(0, TOP)
+    : [];
+}
+function renderRecords(freshIdx = -1) {
+  recCount.textContent = records.length ? 'TOP ' + TOP : '';
+  if (!records.length) { recList.innerHTML = '<li class="empty">아직 기록이 없어요</li>'; return; }
+  const MEDAL = ['🥇', '🥈', '🥉'];
+  recList.innerHTML = records.map((r, i) =>
+    '<li class="' + (i === freshIdx ? 'fresh' : '') + '">' +
+    '<span class="no">' + (MEDAL[i] || (i + 1)) + '</span>' +
+    '<span class="nm">' + String(r.name).replace(/[<>&]/g, '') + '</span>' +
+    '<span class="sc">' + r.sc + '개</span></li>').join('');
+}
+function note(msg, warn) {
+  recNote.textContent = msg || '';
+  recNote.classList.toggle('warn', !!warn);
+}
+function readLocal() {
+  try { return sane(JSON.parse(localStorage.getItem(RKEY))); } catch (e) { return []; }
+}
+function writeLocal() {
+  try { localStorage.setItem(RKEY, JSON.stringify(records)); } catch (e) {}
+}
+const encodeRank = r => (r.name.split('|').join('') + '|' + r.sc).slice(0, 20);
+function decodeRank(name) {
+  const m = /^(.*)\|(\d+)$/.exec(String(name || ''));
+  return m && m[1] ? { name: m[1], sc: +m[2] } : null;
+}
+async function fetchBoard() {
+  const res = await fetch(API, { cache: 'no-store' });
+  if (!res.ok) throw new Error('http ' + res.status);
+  const rows = await res.json();
+  if (!Array.isArray(rows)) throw new Error('bad payload');
+  return sortRank(rows.map(c => decodeRank(c && c.name)).filter(Boolean));
+}
+async function loadRecords() {
+  if (rankBusy) return;
+  rankBusy = true;
+  try {
+    if (!records.length) { records = readLocal(); renderRecords(); }
+    records = await fetchBoard();
+    writeLocal();
+    note('');
+  } catch (e) {
+    records = readLocal();
+    note('오프라인 · 이 기기 기록만 보여요', true);
+  }
+  renderRecords();
+  rankBusy = false;
+}
+async function saveRecord() {
+  if (recorded || rankBusy) return;
+  const name = ($('nameInput').value || '').trim().slice(0, 6) || '이름없음';
+  const rec = { name, sc: score };
+  recorded = true;
+  rankBusy = true;
+  $('copied').textContent = '기록했어! 🏅';
+
+  records = sortRank(records.concat([rec]));
+  writeLocal();
+  renderRecords(records.indexOf(rec));
+
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: encodeRank(rec), message: rec.sc + '개' }),
+    });
+    if (!res.ok) throw new Error('http ' + res.status);
+    records = await fetchBoard();
+    writeLocal();
+    note('');
+    renderRecords(records.findIndex(r => r.name === rec.name && r.sc === rec.sc));
+  } catch (e) {
+    note('저장 실패 · 이 기기에만 기록됐어', true);
+  }
+  rankBusy = false;
+}
+async function share() {
+  const text = '🏛️ 역사 술래잡기에서 ' + score + '개 맞혔어! 너는 몇 개?';
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) {} }
+  try {
+    await navigator.clipboard.writeText(text);
+    $('copied').textContent = '복사됐어! 친구한테 붙여넣기 해봐 ✅';
+  } catch (e) { $('copied').textContent = text; }
+}
+$('saveBtn').addEventListener('click', saveRecord);
+$('shareBtn').addEventListener('click', share);
+$('refreshBtn').addEventListener('click', loadRecords);
+loadRecords();
+drawLane();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
