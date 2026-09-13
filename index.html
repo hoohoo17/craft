@@ -162,6 +162,96 @@
             margin-left: 6px;
         }
 
+        /* ---------- 오늘 뭐 하지 룰렛 ---------- */
+        .roul-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(28,34,64,.72);
+        }
+        .roul-overlay[hidden] { display: none; }
+        .roul-box {
+            width: min(92vw, 320px);
+            padding: 22px 20px 20px;
+            border-radius: 22px;
+            background: #fff;
+            text-align: center;
+            box-shadow: 0 18px 50px rgba(20,26,60,.45);
+        }
+        .roul-box h2 {
+            margin: 0 0 14px;
+            font-size: 16px;
+            color: #7C86A8;
+            font-weight: 700;
+        }
+        .roul-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            min-height: 108px;
+            justify-content: center;
+        }
+        .roul-slot .ico {
+            width: 60px; height: 60px;
+            border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px;
+            background: #EEF3FF;
+        }
+        .roul-slot .title {
+            font-size: 19px;
+            font-weight: 800;
+            color: #2C3560;
+            word-break: keep-all;
+        }
+        /* 돌아가는 동안에는 살짝 흐리게 흔들린다 */
+        .roul-box.spinning .roul-slot { opacity: .75; }
+        .roul-box.landed .roul-slot { animation: pop .3s ease-out; }
+        @keyframes pop {
+            0%   { transform: scale(.8); }
+            60%  { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .roul-box.landed .roul-slot { animation: none; }
+        }
+        .roul-acts {
+            display: flex;
+            gap: 8px;
+            margin-top: 18px;
+        }
+        .roul-acts > * {
+            flex: 1;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 11px 0;
+            border: 0;
+            border-radius: 999px;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .roul-acts .go { background: #6C8BFF; color: #fff; }
+        .roul-acts .again { background: #EEF3FF; color: #5B678F; }
+        .roul-acts > *[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+        .roul-dismiss {
+            margin-top: 10px;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            color: #9AA3C0;
+            background: none;
+            border: 0;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
         /* ---------- 소개 영상 ---------- */
         .video-overlay {
             position: fixed;
@@ -381,6 +471,7 @@
         <p>곽재후가 만든 게임 <span id="gameCount"></span></p>
         <a class="chat-jump" href="#chat">💬 대화방 가기</a>
         <button class="chat-jump video-open" id="videoOpen" type="button">🎬 소개 영상 보기</button>
+        <button class="chat-jump video-open" id="roulOpen" type="button">🎲 오늘 뭐 하지</button>
     </div>
 
     <div class="video-overlay" id="videoOverlay" hidden>
@@ -388,6 +479,20 @@
             <video id="trailerVideo" src="trailer/craft-trailer.mp4" poster="trailer/poster.jpg"
                    controls playsinline preload="none"></video>
             <button class="video-close" id="videoClose" type="button" aria-label="닫기">✕</button>
+        </div>
+    </div>
+    <div class="roul-overlay" id="roulOverlay" hidden>
+        <div class="roul-box" id="roulBox">
+            <h2>오늘은 이거 어때요?</h2>
+            <div class="roul-slot">
+                <span class="ico" id="roulIco">🎲</span>
+                <span class="title" id="roulTitle">굴려서 뽑는 중…</span>
+            </div>
+            <div class="roul-acts">
+                <a class="go" id="roulGo" href="#" aria-disabled="true">바로 가기</a>
+                <button class="again" id="roulAgain" type="button" aria-disabled="true">다시 뽑기</button>
+            </div>
+            <button class="roul-dismiss" id="roulClose" type="button">닫기</button>
         </div>
     </div>
     <div class="cats" id="cats" role="group" aria-label="갈래 고르기">
@@ -700,6 +805,70 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && !videoOverlay.hidden) closeVideo();
         });
+
+        // 오늘 뭐 하지 룰렛: 지금 보이는 게임 중에서 하나를 뽑아 준다
+        (function () {
+            const overlay = document.getElementById('roulOverlay');
+            const box = document.getElementById('roulBox');
+            const ico = document.getElementById('roulIco');
+            const title = document.getElementById('roulTitle');
+            const go = document.getElementById('roulGo');
+            const again = document.getElementById('roulAgain');
+            const slow = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            let timer = null;
+
+            // 갈래를 골라 둔 상태라면 그 갈래 안에서만 뽑는다
+            const pool = () => [...document.querySelectorAll('.map-container a:not(.hide)')];
+
+            function paint(card) {
+                ico.textContent = card.querySelector('.ico').textContent;
+                title.textContent = card.querySelector('.title').textContent;
+            }
+            function land(card) {
+                box.classList.remove('spinning');
+                box.classList.add('landed');
+                paint(card);
+                go.href = card.href;
+                go.setAttribute('aria-disabled', 'false');
+                again.setAttribute('aria-disabled', 'false');
+            }
+            function spin() {
+                const cards = pool();
+                if (!cards.length) return;
+                clearTimeout(timer);
+                box.classList.remove('landed');
+                box.classList.add('spinning');
+                go.setAttribute('aria-disabled', 'true');
+                again.setAttribute('aria-disabled', 'true');
+
+                const winner = cards[Math.floor(Math.random() * cards.length)];
+                if (slow || cards.length === 1) { land(winner); return; }
+
+                // 빠르게 돌다가 점점 느려지면서 멈춰 선다
+                let wait = 60;
+                (function tick() {
+                    paint(cards[Math.floor(Math.random() * cards.length)]);
+                    wait = wait * 1.22;
+                    if (wait > 300) { timer = setTimeout(() => land(winner), 260); return; }
+                    timer = setTimeout(tick, wait);
+                })();
+            }
+            function close() {
+                clearTimeout(timer);
+                overlay.hidden = true;
+            }
+
+            document.getElementById('roulOpen').addEventListener('click', () => {
+                overlay.hidden = false;
+                spin();
+            });
+            again.addEventListener('click', spin);
+            document.getElementById('roulClose').addEventListener('click', close);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !overlay.hidden) close();
+            });
+        })();
 
         // 같은 이름이면 늘 같은 얼굴과 색이 나오게 이름으로 번호를 만든다
         const FACES = ['\u{1F436}','\u{1F431}','\u{1F438}','\u{1F435}','\u{1F43C}','\u{1F981}','\u{1F984}','\u{1F427}',
