@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>🎣 낚시왕</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --green: #2E9E5B;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 14px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 14px 12px;
+    margin-bottom: 10px;
+  }
+  .card > .ct {
+    font-size: 12px; font-weight: 800; color: var(--muted);
+    text-align: left; margin: 0 0 8px; letter-spacing: .02em;
+  }
+  [hidden] { display: none !important; }
+  button { font-family: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+
+  .big {
+    display: block; width: 100%; padding: 15px;
+    border-radius: 14px; background: var(--blue); color: #fff;
+    font-size: 17px; font-weight: 800; letter-spacing: .04em;
+    box-shadow: 0 4px 0 #4E6FE0; transition: transform .08s, box-shadow .08s;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 1px 0 #4E6FE0; }
+  .big.ghost {
+    background: #fff; color: var(--blue);
+    border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line);
+  }
+  .big.ghost:active { box-shadow: 0 1px 0 var(--line); }
+  .row2 { display: flex; gap: 8px; }
+  .row2 .big { font-size: 15px; padding: 13px 8px; }
+
+  .wallet {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    background: #FFF7E3; border: 2px solid #FFE6AE; border-radius: 999px;
+    padding: 7px 14px; margin: 0 auto 10px; width: fit-content;
+    font-size: 15px; font-weight: 800;
+  }
+  .wallet .n { color: #9A6E00; font-variant-numeric: tabular-nums; }
+
+  /* ---------- 놀이법 ---------- */
+  .howbox { text-align: left; }
+  .howbox > summary {
+    list-style: none; cursor: pointer; font-size: 13px; font-weight: 800;
+    color: var(--blue); padding: 2px 0;
+  }
+  .howbox > summary::-webkit-details-marker { display: none; }
+  .howbox > summary::before { content: '▸ '; }
+  .howbox[open] > summary::before { content: '▾ '; }
+  .steps { font-size: 13px; line-height: 1.75; margin: 8px 0 0; }
+  .steps .row { display: flex; align-items: flex-start; gap: 9px; padding: 3px 0; }
+  .steps .num {
+    flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--blue); color: #fff; font-size: 12px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px;
+  }
+  .steps .g { color: var(--green); font-weight: 800; }
+  .steps .r { color: var(--pink); font-weight: 800; }
+
+  /* ---------- 가로로 고르는 칸 ---------- */
+  .pick { display: flex; gap: 7px; }
+  .pick button {
+    flex: 1; min-width: 0; padding: 9px 3px; border-radius: 12px;
+    border: 2px solid var(--line); background: #fff;
+    font-size: 12px; font-weight: 800; color: var(--muted);
+    transition: transform .08s;
+  }
+  .pick button .e { display: block; font-size: 21px; line-height: 1.25; }
+  .pick button .sub { display: block; font-size: 10px; font-weight: 700; margin-top: 1px; color: var(--muted); }
+  .pick button[aria-pressed="true"] { border-color: var(--blue); background: #EEF3FF; color: var(--blue); }
+  .pick button[aria-pressed="true"] .sub { color: var(--blue); }
+  .pick button:active { transform: scale(.96); }
+  .pick button[disabled] { opacity: .55; cursor: default; }
+  .pick button[disabled] .e { filter: grayscale(1); }
+  .pick button .lock { display: block; font-size: 10px; font-weight: 800; color: #9A6E00; margin-top: 1px; }
+
+  .best { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .best b { color: var(--gold); font-size: 15px; }
+
+  /* ---------- 게임 ---------- */
+  .hud { display: flex; gap: 7px; margin-bottom: 9px; }
+  .hud .box {
+    flex: 1; background: #fff; border-radius: 12px; box-shadow: var(--shadow); padding: 7px 3px;
+  }
+  .hud .k { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .hud .v { font-size: 18px; font-weight: 800; margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .hud .box.warn .v { color: var(--pink); }
+  .hud .box.hot { background: #FFF1C9; }
+  .hud .box.hot .v, .hud .box.hot .k { color: #C2410C; }
+
+  .sea {
+    position: relative; height: 250px; border-radius: 16px; overflow: hidden;
+    box-shadow: var(--shadow); margin-bottom: 9px; cursor: pointer;
+  }
+  .sea .deco { position: absolute; font-size: 20px; opacity: .92; }
+  .wave {
+    position: absolute; left: 0; right: 0; top: 23%; height: 8px; opacity: .5;
+    background: repeating-linear-gradient(90deg, transparent 0 10px, rgba(255,255,255,.9) 10px 22px);
+    animation: wavemove 3.2s linear infinite;
+  }
+  @keyframes wavemove { from { transform: translateX(0); } to { transform: translateX(-32px); } }
+  .bubble { position: absolute; border-radius: 50%; background: rgba(255,255,255,.26); animation: rise linear infinite; }
+  @keyframes rise {
+    from { transform: translateY(0); opacity: 0; }
+    20% { opacity: .75; }
+    to { transform: translateY(-165px); opacity: 0; }
+  }
+
+  /* 물고기 그림자 */
+  .shadow {
+    position: absolute; transform: translate(-50%, -50%);
+    filter: brightness(0) opacity(.38); pointer-events: none;
+    transition: opacity .25s;
+  }
+  .shadow.flip { transform: translate(-50%, -50%) scaleX(-1); }
+  .shadow.gone { opacity: 0; }
+
+  /* 조준 표시 */
+  .aim {
+    position: absolute; top: 23%; transform: translate(-50%, -50%);
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px dashed rgba(255,255,255,.85); pointer-events: none;
+    animation: aimpop .4s ease-out;
+  }
+  @keyframes aimpop {
+    from { transform: translate(-50%,-50%) scale(1.9); opacity: 0; }
+    to   { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  }
+
+  .float {
+    position: absolute; top: 21%; font-size: 28px;
+    transform: translate(-50%, -50%);
+    transition: top .18s ease-out, left .25s ease-out;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.25));
+    pointer-events: none;
+  }
+  .float.bob { animation: bob 1.9s ease-in-out infinite; }
+  @keyframes bob {
+    0%, 100% { transform: translate(-50%, -50%); }
+    50% { transform: translate(-50%, -40%); }
+  }
+  .float.bite { top: 34%; animation: shake .13s linear infinite; }
+  @keyframes shake {
+    0%, 100% { transform: translate(-50%, -50%) rotate(-9deg); }
+    50% { transform: translate(-50%, -50%) rotate(9deg); }
+  }
+  .line {
+    position: absolute; top: 0; width: 2px; background: rgba(255,255,255,.55);
+    transform: translateX(-50%); transition: height .18s ease-out, left .25s ease-out;
+    pointer-events: none;
+  }
+  .bang {
+    position: absolute; top: 11%; transform: translateX(-50%);
+    font-size: 28px; font-weight: 800; color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,.45);
+    animation: pop .3s ease-out infinite alternate; pointer-events: none;
+  }
+  @keyframes pop {
+    from { transform: translateX(-50%) scale(1); }
+    to { transform: translateX(-50%) scale(1.22); }
+  }
+
+  .catchpop {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    background: rgba(12,30,70,.55); animation: fadein .18s ease-out;
+  }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .catchpop .f { font-size: 62px; animation: jump .5s ease-out; }
+  @keyframes jump {
+    0% { transform: translateY(40px) scale(.4) rotate(-25deg); opacity: 0; }
+    60% { transform: translateY(-10px) scale(1.15) rotate(6deg); opacity: 1; }
+    100% { transform: translateY(0) scale(1) rotate(0); }
+  }
+  .catchpop.miss .f { animation: none; opacity: .8; }
+  .catchpop .n { font-size: 20px; font-weight: 800; color: #fff; }
+  .catchpop .w { font-size: 13px; color: #DCE7FF; font-weight: 700; }
+  .catchpop .p { font-size: 15px; font-weight: 800; color: var(--gold); margin-top: 2px; }
+  .catchpop .tag {
+    margin-top: 4px; font-size: 12px; font-weight: 800; color: #2C3560;
+    background: var(--gold); border-radius: 999px; padding: 3px 10px;
+  }
+  .catchpop .tag.combo { background: #FFD8A8; color: #C2410C; }
+
+  /* 줄다리기 */
+  .fight { margin-bottom: 9px; }
+  .signal {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 17px; font-weight: 800; padding: 9px; border-radius: 12px; margin-bottom: 8px;
+    transition: background .1s, color .1s;
+  }
+  .signal.go { background: #DFF6E7; color: var(--green); }
+  .signal.stop { background: #FFE3E9; color: var(--pink); }
+  .signal .dot { width: 13px; height: 13px; border-radius: 50%; background: currentColor; }
+  .bar { height: 15px; border-radius: 999px; background: var(--line); overflow: hidden; margin-bottom: 5px; }
+  .bar .fill { height: 100%; width: 0; border-radius: 999px; transition: width .08s linear; }
+  .bar.prog .fill { background: linear-gradient(90deg, #7BE0A6, var(--green)); }
+  .bar.tens .fill { background: linear-gradient(90deg, var(--gold), var(--pink)); }
+  .barlab { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+
+  .status { font-size: 15px; font-weight: 700; min-height: 22px; margin-bottom: 9px; }
+  .status .hint { color: var(--muted); font-weight: 600; font-size: 13px; }
+
+  .act {
+    display: block; width: 100%; padding: 18px; border-radius: 16px;
+    background: var(--blue); color: #fff; font-size: 19px; font-weight: 800; letter-spacing: .04em;
+    box-shadow: 0 5px 0 #4E6FE0; transition: transform .06s, box-shadow .06s, background .1s;
+  }
+  .act:active, .act.held { transform: translateY(4px); box-shadow: 0 1px 0 #4E6FE0; }
+  .act.wait { background: #AEBBDD; box-shadow: 0 5px 0 #94A3CC; }
+  .act.hook { background: var(--pink); box-shadow: 0 5px 0 #E04E6E; }
+  .act.hook:active { box-shadow: 0 1px 0 #E04E6E; }
+  .act.pull { background: var(--green); box-shadow: 0 5px 0 #1F7A44; }
+  .act.pull.held { box-shadow: 0 1px 0 #1F7A44; }
+  .act.small { font-size: 15px; padding: 13px; }
+
+  /* ---------- 결과 ---------- */
+  .score-big { font-size: 42px; font-weight: 800; color: var(--gold); line-height: 1.1; }
+  .score-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
+  .newbest {
+    display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 800;
+    color: #7A5A00; background: #FFF1C9; border-radius: 999px; padding: 5px 13px;
+  }
+  .caught { margin: 12px 0 0; text-align: left; }
+  .caught .t { font-size: 13px; font-weight: 800; color: var(--muted); margin-bottom: 4px; }
+  .caught ul { list-style: none; margin: 0; padding: 0; max-height: 176px; overflow-y: auto; }
+  .caught li { display: flex; align-items: center; gap: 8px; padding: 6px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .caught li:last-child { border-bottom: none; }
+  .caught .e { font-size: 21px; }
+  .caught .nm { flex: 1; font-weight: 700; }
+  .caught .wt { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .caught .pt { font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; min-width: 46px; text-align: right; }
+  .empty { color: var(--muted); font-size: 14px; padding: 14px 0; }
+
+  /* ---------- 상점 ---------- */
+  .shop-it { display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .shop-it:last-child { border-bottom: none; }
+  .shop-it .e { font-size: 28px; flex: 0 0 auto; width: 36px; text-align: center; }
+  .shop-it .info { flex: 1; min-width: 0; }
+  .shop-it .nm { font-size: 15px; font-weight: 800; }
+  .shop-it .nm .lv { font-size: 12px; color: var(--blue); margin-left: 4px; }
+  .shop-it .nm .have { font-size: 12px; color: var(--muted); margin-left: 4px; font-weight: 700; }
+  .shop-it .de { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 1px; }
+  .shop-it .dots { font-size: 11px; letter-spacing: .18em; color: var(--gold); margin-top: 2px; }
+  .shop-it .dots .off { color: var(--line); }
+  .shop-it .buy {
+    flex: 0 0 auto; min-width: 74px; padding: 9px 8px; border-radius: 12px;
+    background: var(--blue); color: #fff; font-size: 14px; font-weight: 800; line-height: 1.25;
+    box-shadow: 0 3px 0 #4E6FE0; transition: transform .08s, box-shadow .08s;
+  }
+  .shop-it .buy:active { transform: translateY(2px); box-shadow: 0 1px 0 #4E6FE0; }
+  .shop-it .buy[disabled] { background: #EDF1FB; color: #A9B4D4; box-shadow: none; cursor: default; }
+  .shop-it .buy.max { background: #FFF1C9; color: #9A6E00; box-shadow: none; cursor: default; }
+  .shop-hint { font-size: 12px; color: var(--muted); margin: 10px 0 0; line-height: 1.6; }
+
+  /* ---------- 도감 ---------- */
+  .bookhead { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
+  .bookhead b { color: var(--blue); }
+  .booksec { margin-bottom: 14px; }
+  .booksec:last-child { margin-bottom: 0; }
+  .booksec .st {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 800; margin: 0 2px 7px; color: var(--ink);
+  }
+  .booksec .st .cnt { font-size: 12px; color: var(--muted); }
+  .bookgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .bookgrid .it { background: #F7F9FF; border: 2px solid var(--line); border-radius: 12px; padding: 8px 3px; }
+  .bookgrid .it.got { background: #fff; border-color: #CFE0FF; }
+  .bookgrid .it .e { font-size: 26px; line-height: 1.2; }
+  .bookgrid .it.lock .e { filter: grayscale(1); opacity: .26; }
+  .bookgrid .it .n { font-size: 11px; font-weight: 800; margin-top: 2px; }
+  .bookgrid .it.lock .n { color: var(--muted); }
+  .bookgrid .it .r { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 1px; }
+</style>
+</head>
+<body>
+<main>
+
+<!-- ================= 시작 ================= -->
+<section id="startView">
+  <h1>🎣 낚시왕</h1>
+  <div class="wallet">🪙 <span class="n" id="walletStart">0</span> 포인트</div>
+
+  <div class="card">
+    <details class="howbox">
+      <summary>놀이법 보기</summary>
+      <div class="steps">
+        <div class="row"><span class="num">1</span><span>물 속에 <b>물고기 그림자</b>가 지나다녀. 그림자를 <b>탭</b>해서 찌를 던져.</span></div>
+        <div class="row"><span class="num">2</span><span>찌가 잠기고 <b>❗</b>가 뜨면 <b>챔질!</b>을 딱 누르기.</span></div>
+        <div class="row"><span class="num">3</span><span><span class="g">초록불</span>엔 버튼을 <b>꾹</b>, <span class="r">빨간불</span>엔 <b>손을 떼</b>.</span></div>
+        <div class="row"><span class="num">4</span><span>안 놓치고 <b>3마리</b>를 이어 잡으면 <b>🔥 연속 보너스</b>가 붙어.</span></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <p class="ct">🗺️ 낚시터</p>
+    <div class="pick" id="spotPick"></div>
+    <p class="best" id="spotNote" style="margin-top:8px"></p>
+  </div>
+
+  <div class="card">
+    <p class="ct">🪱 미끼 <span style="font-weight:600">(한 판에 하나씩 써)</span></p>
+    <div class="pick" id="baitPick"></div>
+  </div>
+
+  <div class="card">
+    <p class="ct">⏱️ 난이도</p>
+    <div class="pick" id="levelPick">
+      <button data-lv="e" aria-pressed="false">쉬움<span class="sub">120초</span></button>
+      <button data-lv="n" aria-pressed="true">보통<span class="sub">90초</span></button>
+      <button data-lv="h" aria-pressed="false">어려움<span class="sub">60초</span></button>
+    </div>
+    <p class="best" id="bestLine"></p>
+  </div>
+
+  <button class="big" id="startBtn">낚시 시작</button>
+  <div class="row2" style="margin-top:8px">
+    <button class="big ghost" id="bookBtn">📖 도감</button>
+    <button class="big ghost" id="shopBtn">🛒 상점</button>
+  </div>
+</section>
+
+<!-- ================= 게임 ================= -->
+<section id="gameView" hidden>
+  <div class="hud">
+    <div class="box" id="timeBox"><div class="k">남은 시간</div><div class="v" id="timeV">90</div></div>
+    <div class="box"><div class="k">점수</div><div class="v" id="scoreV">0</div></div>
+    <div class="box" id="comboBox"><div class="k">연속</div><div class="v" id="comboV">0</div></div>
+  </div>
+
+  <div class="sea" id="sea">
+    <div class="wave"></div>
+    <div class="line" id="fishLine"></div>
+    <div class="float" id="floatEl" hidden>🔴</div>
+    <div class="bang" id="bangEl" hidden>❗</div>
+  </div>
+
+  <div class="fight" id="fightBox" hidden>
+    <div class="signal" id="signalEl"><span class="dot"></span><span id="signalTx">당겨!</span></div>
+    <div class="bar prog"><div class="fill" id="progFill"></div></div>
+    <div class="bar tens"><div class="fill" id="tensFill"></div></div>
+    <div class="barlab"><span>🎣 끌어올린 정도</span><span>줄 팽팽함 ⚠️</span></div>
+  </div>
+
+  <div class="status" id="statusEl">그림자를 노려서 탭!</div>
+  <button class="act" id="actBtn">아무 데나 던지기</button>
+</section>
+
+<!-- ================= 결과 ================= -->
+<section id="overView" hidden>
+  <h1>🏁 낚시 끝!</h1>
+  <div class="card">
+    <div class="score-big" id="finalScore">0</div>
+    <div class="score-sub" id="finalSub"></div>
+    <div id="bestBadge"></div>
+    <div class="score-sub" id="earnLine" style="margin-top:8px"></div>
+    <div class="caught">
+      <div class="t" id="caughtTitle">오늘의 조황</div>
+      <ul id="caughtList"></ul>
+      <div class="empty" id="caughtEmpty" hidden>한 마리도 못 잡았네… 다시 도전!</div>
+    </div>
+  </div>
+  <div class="row2">
+    <button class="big" id="againBtn">한 판 더</button>
+    <button class="big ghost" id="toShopBtn">🛒 상점</button>
+  </div>
+  <div class="row2" style="margin-top:8px">
+    <button class="big ghost" id="toBookBtn">📖 도감</button>
+    <button class="big ghost" id="homeBtn">처음으로</button>
+  </div>
+</section>
+
+<!-- ================= 상점 ================= -->
+<section id="shopView" hidden>
+  <h1>🛒 상점</h1>
+  <div class="wallet">🪙 <span class="n" id="walletShop">0</span> 포인트</div>
+  <div class="card">
+    <p class="ct">🎣 장비</p>
+    <div id="shopUpg"></div>
+  </div>
+  <div class="card">
+    <p class="ct">🪱 미끼</p>
+    <div id="shopBait"></div>
+    <p class="shop-hint">미끼는 한 판에 하나씩 들어가. 시작 화면에서 골라 쓰면 돼.</p>
+  </div>
+  <div class="card">
+    <p class="ct">🗺️ 낚시터</p>
+    <div id="shopSpot"></div>
+  </div>
+  <button class="big ghost" id="shopBack">돌아가기</button>
+</section>
+
+<!-- ================= 도감 ================= -->
+<section id="bookView" hidden>
+  <h1>📖 바다 도감</h1>
+  <div class="card">
+    <p class="bookhead" id="bookHead"></p>
+    <div id="bookBody"></div>
+  </div>
+  <button class="big ghost" id="bookBack">돌아가기</button>
+</section>
+
+</main>
+
+<script>
+/* ================= 물고기 등급 =================
+   등급마다 챔질 여유와 줄다리기 성질이 정해져 있다.
+   bite: 입질하고 도망가기까지(ms) — 작을수록 챔질이 어렵다
+   pull: 초록불에 1초 당기면 끌려오는 정도(%)
+   tens: 빨간불에 당길 때 1초에 팽팽해지는 정도(%)
+   stop: 빨간불이 뜨는 비율 */
+const TIER = {
+  1: { bite:1000, pull:74, tens:22, stop:.15 },
+  2: { bite:930,  pull:58, tens:28, stop:.20 },
+  3: { bite:860,  pull:45, tens:35, stop:.23 },
+  4: { bite:780,  pull:36, tens:45, stop:.28 },
+  5: { bite:720,  pull:33, tens:60, stop:.32 },
+  6: { bite:660,  pull:32, tens:72, stop:.36 },
+  7: { bite:600,  pull:28, tens:80, stop:.40 },
+  8: { bite:520,  pull:26, tens:76, stop:.44 },
+  9: { bite:470,  pull:22, tens:88, stop:.48 }
+};
+
+/* ================= 물고기 =================
+   t: 등급, pt: 기본 점수, kg: 무게 범위, w: 흔한 정도
+   같은 이모지를 다른 낚시터에서 다시 쓰긴 해도,
+   한 낚시터 안에서는 겹치지 않게 했다. */
+const FISH = {
+  /* --- 🌅 앞바다 --- */
+  shrimp:  { e:'🦐', n:'새우',        t:1, pt:10,   kg:[0.1,0.4],   w:110 },
+  shell:   { e:'🐚', n:'소라',        t:2, pt:15,   kg:[0.2,1.0],   w:70 },
+  oyster:  { e:'🦪', n:'굴',          t:2, pt:20,   kg:[0.1,0.5],   w:58 },
+  damsel:  { e:'🐠', n:'자리돔',      t:3, pt:25,   kg:[0.2,0.8],   w:80 },
+  mack:    { e:'🐟', n:'고등어',      t:3, pt:30,   kg:[0.3,1.2],   w:100 },
+  crab:    { e:'🦀', n:'꽃게',        t:4, pt:40,   kg:[0.3,1.5],   w:60 },
+  squid:   { e:'🦑', n:'오징어',      t:4, pt:50,   kg:[0.5,2.0],   w:55 },
+  puffer:  { e:'🐡', n:'복어',        t:5, pt:60,   kg:[0.4,1.8],   w:45 },
+  octopus: { e:'🐙', n:'문어',        t:6, pt:90,   kg:[2,8],       w:26 },
+  lobster: { e:'🦞', n:'랍스터',      t:7, pt:130,  kg:[1,4],       w:14 },
+  shark:   { e:'🦈', n:'상어',        t:8, pt:400,  kg:[30,120],    w:6 },
+  relic:   { e:'🏺', n:'보물 항아리', t:9, pt:1000, kg:[5,25],      w:2 },
+
+  /* --- 🏞️ 시냇가 --- */
+  snail:   { e:'🐌', n:'우렁이',      t:1, pt:8,    kg:[0.05,0.2],  w:105 },
+  cshrimp: { e:'🦐', n:'새뱅이',      t:1, pt:14,   kg:[0.05,0.2],  w:95 },
+  minnow:  { e:'🐟', n:'피라미',      t:2, pt:20,   kg:[0.05,0.3],  w:90 },
+  mandarin:{ e:'🐠', n:'쏘가리',      t:3, pt:38,   kg:[0.3,1.2],   w:62 },
+  cray:    { e:'🦞', n:'가재',        t:4, pt:50,   kg:[0.1,0.4],   w:48 },
+  catfish: { e:'🐡', n:'메기',        t:5, pt:90,   kg:[1,6],       w:34 },
+  carp:    { e:'🎏', n:'잉어',        t:6, pt:150,  kg:[2,9],       w:20 },
+  eel:     { e:'🐍', n:'뱀장어',      t:7, pt:260,  kg:[0.5,3],     w:9 },
+  jar:     { e:'🏺', n:'옛날 항아리', t:8, pt:700,  kg:[1,6],       w:3 },
+
+  /* --- 🌊 먼바다 --- */
+  saury:   { e:'🐟', n:'삼치',        t:4, pt:55,   kg:[1,4],       w:95 },
+  dorado:  { e:'🐠', n:'만새기',      t:5, pt:100,  kg:[3,15],      w:62 },
+  kingcrab:{ e:'🦀', n:'대게',        t:5, pt:125,  kg:[1,4],       w:50 },
+  prawn:   { e:'🦞', n:'닭새우',      t:6, pt:155,  kg:[0.5,2],     w:40 },
+  bigsquid:{ e:'🦑', n:'대왕오징어',  t:6, pt:185,  kg:[5,30],      w:32 },
+  bigocto: { e:'🐙', n:'대문어',      t:7, pt:250,  kg:[8,25],      w:22 },
+  bigshark:{ e:'🦈', n:'청상아리',    t:8, pt:550,  kg:[60,250],    w:9 },
+  chest:   { e:'🏺', n:'보물 상자',   t:9, pt:1250, kg:[10,40],     w:3 },
+
+  /* --- 🧊 얼음낚시 --- */
+  krill:   { e:'🦐', n:'크릴',        t:1, pt:35,   kg:[0.01,0.05], w:85 },
+  smelt:   { e:'🐟', n:'빙어',        t:2, pt:50,   kg:[0.02,0.1],  w:110 },
+  trout:   { e:'🐠', n:'송어',        t:4, pt:180,   kg:[0.5,3],     w:68 },
+  arrow:   { e:'🦑', n:'화살오징어',  t:5, pt:320,  kg:[0.5,3],     w:45 },
+  kcrab:   { e:'🦀', n:'킹크랩',      t:7, pt:720,  kg:[2,8],       w:20 },
+  gem:     { e:'💎', n:'얼음 속 보석', t:9, pt:3800, kg:[0.3,2],    w:2 },
+
+  /* --- 꽝 --- */
+  boot:    { e:'🥾', n:'장화',        t:1, pt:0, kg:[0.5,1.5], w:26, junk:true },
+  can:     { e:'🥫', n:'빈 깡통',     t:1, pt:0, kg:[0.2,0.6], w:22, junk:true },
+  sock:    { e:'🧦', n:'양말 한 짝',  t:1, pt:0, kg:[0.1,0.3], w:24, junk:true },
+  anchor:  { e:'⚓', n:'녹슨 닻',     t:1, pt:0, kg:[3,9],     w:22, junk:true },
+  goggles: { e:'🕶️', n:'물안경',      t:1, pt:0, kg:[0.1,0.4], w:24, junk:true }
+};
+/* 등급표의 값을 물고기마다 펼쳐 둔다 */
+Object.keys(FISH).forEach(function (id) {
+  const f = FISH[id], t = TIER[f.t];
+  f.id = id; f.bite = t.bite; f.pull = t.pull; f.tens = t.tens; f.stop = t.stop;
+});
+
+/* ================= 낚시터 ================= */
+const SPOTS = [
+  { id:'shore', e:'🌅', n:'앞바다', cost:0,
+    sky:'#BFE0FF,#8FC4FF', deep:'#2F6BD8,#1B3F8F',
+    deco:[['☀️',10,8],['☁️',72,12]],
+    tip:'고루고루 나오는 기본 낚시터',
+    fish:['shrimp','shell','oyster','damsel','mack','crab','squid','puffer','octopus','lobster','shark','relic'],
+    junk:['boot','can'] },
+
+  { id:'creek', e:'🏞️', n:'시냇가', cost:1500,
+    sky:'#D8F0D2,#AEDDA6', deep:'#3E9E7A,#1D5F52',
+    deco:[['🌲',6,4],['🌲',86,10],['☁️',48,6]],
+    tip:'작고 빠른 민물고기. 연속 보너스 쌓기 좋아',
+    fish:['snail','cshrimp','minnow','mandarin','cray','catfish','carp','eel','jar'],
+    junk:['can','sock'] },
+
+  { id:'deep', e:'🌊', n:'먼바다', cost:5000,
+    sky:'#9FB8E8,#6E8FD6', deep:'#1E3C7A,#0C1B44',
+    deco:[['☁️',16,10],['☁️',72,5]],
+    tip:'전부 대물. 값은 세지만 줄이 잘 끊어져',
+    fish:['saury','dorado','kingcrab','prawn','bigsquid','bigocto','bigshark','chest'],
+    junk:['boot','anchor'] },
+
+  { id:'ice', e:'🧊', n:'얼음낚시', cost:12000,
+    sky:'#EAF4FF,#C6E2FA', deep:'#3C7EC0,#123A66',
+    deco:[['❄️',12,8],['❄️',82,14],['☁️',50,4]],
+    tip:'빙어는 우수수, 보석은 아주 가끔',
+    fish:['krill','smelt','trout','arrow','kcrab','gem'],
+    junk:['can','goggles'] }
+];
+const SPOT_BY_ID = {};
+SPOTS.forEach(function (s) { SPOT_BY_ID[s.id] = s; });
+
+/* ================= 장비 ================= */
+const UPG = [
+  { id:'rod', e:'🎣', n:'낚싯대', mul:[1,1.12,1.25,1.40,1.60], cost:[200,600,1400,3000],
+    line: function (lv) { return '끌어올리는 힘 +' + Math.round((this.mul[lv]-1)*100) + '%'; } },
+  { id:'luck', e:'🍀', n:'운', rare:[1,1.4,1.9,2.5,3.2], junk:[1,.8,.6,.4,.2], cost:[200,600,1400,3000],
+    line: function (lv) {
+      return '대물 ×' + this.rare[lv].toFixed(1) + ' · 꽝 ' +
+             (lv === 0 ? '그대로' : '−' + Math.round((1-this.junk[lv])*100) + '%');
+    } },
+  { id:'market', e:'🏪', n:'시장', mul:[1,1.15,1.35,1.60,2.00], cost:[200,600,1400,3000],
+    line: function (lv) { return '물고기 값 +' + Math.round((this.mul[lv]-1)*100) + '%'; } }
+];
+const UPG_BY_ID = {};
+UPG.forEach(function (u) { UPG_BY_ID[u.id] = u; });
+const MAX_LV = 5;
+
+/* ================= 미끼 ================= */
+const BAITS = [
+  { id:'worm', e:'🪱', n:'지렁이', cost:120, pack:5,
+    tip:'입질이 두 배 빨라지고 챔질도 넉넉해져',
+    waitMul:0.5, biteMul:1.3, rare:1,   junk:1 },
+  { id:'bshrimp', e:'🦐', n:'새우', cost:280, pack:5,
+    tip:'큰 그림자가 훨씬 자주 돌아다녀',
+    waitMul:1,   biteMul:1,   rare:2.2, junk:0.6 },
+  { id:'shiny', e:'✨', n:'반짝이', cost:700, pack:3,
+    tip:'전설급이 걸릴 확률이 확 올라가',
+    waitMul:0.8, biteMul:1.1, rare:4.5, junk:0.2 }
+];
+const BAIT_BY_ID = {};
+BAITS.forEach(function (b) { BAIT_BY_ID[b.id] = b; });
+
+/* ================= 난이도 ================= */
+const LEVELS = {
+  e: { sec:120, biteMul:1.45, rare:0.75, pullMul:1.25, tensMul:0.75 },
+  n: { sec:90,  biteMul:1.00, rare:1.00, pullMul:1.00, tensMul:1.00 },
+  h: { sec:60,  biteMul:0.78, rare:1.45, pullMul:0.88, tensMul:1.25 }
+};
+
+/* ================= 연속 보너스 ================= */
+const COMBO = [ { at:10, mul:2, tag:'🔥🔥🔥' }, { at:6, mul:1.6, tag:'🔥🔥' }, { at:3, mul:1.25, tag:'🔥' } ];
+function comboMul(c) {
+  for (let i = 0; i < COMBO.length; i++) if (c >= COMBO[i].at) return COMBO[i].mul;
+  return 1;
+}
+function comboTag(c) {
+  for (let i = 0; i < COMBO.length; i++) if (c >= COMBO[i].at) return COMBO[i].tag;
+  return '';
+}
+
+/* ================= 저장 ================= */
+const K = {
+  coin:'craft-fishing-coin', upg:'craft-fishing-upg', book:'craft-fishing-book',
+  level:'craft-fishing-level', spot:'craft-fishing-spot',
+  spots:'craft-fishing-spots', bait:'craft-fishing-bait'
+};
+function KEY_BEST() { return 'craft-fishing-best-' + spotId + '-' + level; }
+
+function jget(k, fb) {
+  try { const v = JSON.parse(localStorage.getItem(k)); return (v && typeof v === 'object') ? v : fb; }
+  catch (e) { return fb; }
+}
+function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function nget(k) { try { return parseInt(localStorage.getItem(k), 10) || 0; } catch (e) { return 0; } }
+function nset(k, v) { try { localStorage.setItem(k, String(Math.max(0, Math.round(v)))); } catch (e) {} }
+
+function loadCoin() { return nget(K.coin); }
+function saveCoin(v) { nset(K.coin, v); }
+function loadBook() { return jget(K.book, {}); }
+function saveBook(b) { jset(K.book, b); }
+function loadBest() { return nget(KEY_BEST()); }
+function saveBest(v) { nset(KEY_BEST(), v); }
+
+/* 장비 레벨은 0(=Lv.1)부터 4(=Lv.5)까지의 칸 번호 */
+function loadUpg() {
+  const raw = jget(K.upg, {}), out = {};
+  UPG.forEach(function (u) {
+    let v = parseInt(raw[u.id], 10);
+    if (!(v >= 0 && v <= MAX_LV - 1)) v = 0;
+    out[u.id] = v;
+  });
+  return out;
+}
+function saveUpg(u) { jset(K.upg, u); }
+
+/* 열어 둔 낚시터 */
+function loadSpots() {
+  const raw = jget(K.spots, {}), out = {};
+  SPOTS.forEach(function (s) { out[s.id] = (s.cost === 0) || raw[s.id] === true; });
+  return out;
+}
+function saveSpots(s) { jset(K.spots, s); }
+
+/* 미끼 보유 개수 */
+function loadBait() {
+  const raw = jget(K.bait, {}), out = {};
+  BAITS.forEach(function (b) {
+    const v = parseInt(raw[b.id], 10);
+    out[b.id] = (v > 0) ? v : 0;
+  });
+  return out;
+}
+function saveBait(b) { jset(K.bait, b); }
+
+/* ================= 화면 ================= */
+const $ = function (id) { return document.getElementById(id); };
+const views = {
+  start:$('startView'), game:$('gameView'), over:$('overView'),
+  shop:$('shopView'), book:$('bookView')
+};
+let backFrom = 'start';
+function show(name) {
+  for (const k in views) views[k].hidden = (k !== name);
+  window.scrollTo(0, 0);
+}
+
+/* ================= 상태 ================= */
+let level = 'n', spotId = 'shore', baitId = '';
+let upg = { rod:0, luck:0, market:0 };
+let bait = null;                 // 이번 판에 쓰는 미끼 (없으면 null)
+
+let timeLeft = 0, score = 0, caught = [], combo = 0, bestCombo = 0;
+let phase = 'idle';              // idle | casting | biting | fighting | popup | over
+let timerId = null, castId = null, biteId = null, fightId = null, popupId = null, swimId = null;
+let cur = null, curShadow = null;
+let prog = 0, tens = 0, go = true, goUntil = 0, holding = false, lastTick = 0;
+let floatX = 50;                 // 찌가 떨어진 자리 (%)
+let shadows = [];
+
+function clearTimers() {
+  clearInterval(timerId); clearTimeout(castId); clearTimeout(biteId);
+  clearInterval(fightId); clearTimeout(popupId);
+  timerId = castId = biteId = fightId = popupId = null;
+}
+
+/* ================= 도우미 ================= */
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function fmtKg(kg) { return kg >= 10 ? kg.toFixed(1) : kg.toFixed(2); }
+function spot() { return SPOT_BY_ID[spotId]; }
+
+/* 물고기 하나 뽑기.
+   big  : 큰 물고기 쪽으로 얼마나 기울일지
+   junkM: 꽝이 나올 확률에 곱할 값 (0이면 꽝이 안 나온다) */
+function pickFish(big, junkM) {
+  const U = UPG_BY_ID.luck;
+  const rare = LEVELS[level].rare * U.rare[upg.luck] * (bait ? bait.rare : 1) * (big === undefined ? 1 : big);
+  const junkMul = U.junk[upg.luck] * (bait ? bait.junk : 1) * (junkM === undefined ? 1 : junkM);
+  const ids = spot().fish.concat(spot().junk);
+  let total = 0;
+  const ws = ids.map(function (id) {
+    const f = FISH[id];
+    let w = f.w;
+    if (f.junk) w *= junkMul;
+    else if (f.t >= 6) w *= rare;      // 6등급부터를 대물로 본다
+    total += w;
+    return w;
+  });
+  let r = Math.random() * total;
+  for (let i = 0; i < ids.length; i++) {
+    r -= ws[i];
+    if (r <= 0) return FISH[ids[i]];
+  }
+  return FISH[ids[0]];
+}
+
+/* 무게가 많이 나가면 값을 조금 더 쳐준다 (최대 1.5배) */
+function pointsFor(f, kg) {
+  if (f.junk) return 0;
+  const span = f.kg[1] - f.kg[0];
+  const ratio = span > 0 ? (kg - f.kg[0]) / span : 0;
+  return Math.round(f.pt * (1 + ratio * 0.5) * UPG_BY_ID.market.mul[upg.market]);
+}
+
+/* ================= 물 그림 ================= */
+function paintSea() {
+  const s = spot(), sea = $('sea');
+  const sky = s.sky.split(','), deep = s.deep.split(',');
+  sea.style.background =
+    'linear-gradient(' + sky[0] + ' 0%, ' + sky[1] + ' 22%, ' + deep[0] + ' 23%, ' + deep[1] + ' 100%)';
+
+  // 지난 판에서 남은 것들을 치운다
+  Array.prototype.forEach.call(sea.querySelectorAll('.deco,.bubble,.catchpop,.aim'), function (x) { x.remove(); });
+
+  s.deco.forEach(function (d) {
+    const el = document.createElement('span');
+    el.className = 'deco';
+    el.textContent = d[0];
+    el.style.left = d[1] + '%';
+    el.style.top = d[2] + 'px';
+    sea.appendChild(el);
+  });
+  for (let i = 0; i < 7; i++) {
+    const b = document.createElement('i');
+    const size = rnd(4, 10);
+    b.className = 'bubble';
+    b.style.cssText =
+      'left:' + rnd(6, 94) + '%;bottom:' + rnd(-10, 30) + 'px;' +
+      'width:' + size + 'px;height:' + size + 'px;' +
+      'animation-duration:' + rnd(5, 11) + 's;animation-delay:' + (-rnd(0, 10)) + 's';
+    sea.appendChild(b);
+  }
+}
+
+/* ---------- 헤엄치는 그림자 ---------- */
+function shadowCount() { return spotId === 'ice' ? 3 : 4; }
+function shadowSize(f) { return f.t >= 7 ? 38 : f.t >= 5 ? 28 : f.t >= 3 ? 22 : 16; }
+
+function makeShadow() {
+  const f = pickFish(undefined, 0);   // 그림자에는 꽝이 섞이지 않는다
+  const el = document.createElement('span');
+  el.className = 'shadow';
+  el.textContent = f.e;
+  el.style.fontSize = shadowSize(f) + 'px';
+  $('sea').appendChild(el);
+  const sh = {
+    f: f, el: el,
+    x: rnd(10, 90),
+    y: rnd(38, 86),
+    vx: (Math.random() < .5 ? -1 : 1) * rnd(0.10, 0.30) * (f.t >= 7 ? 0.7 : 1),
+    alive: true
+  };
+  drawShadow(sh);
+  return sh;
+}
+function drawShadow(sh) {
+  sh.el.style.left = sh.x + '%';
+  sh.el.style.top = sh.y + '%';
+  sh.el.className = 'shadow' + (sh.vx < 0 ? ' flip' : '');
+}
+function swimTick() {
+  shadows.forEach(function (sh) {
+    if (!sh.alive) return;
+    sh.x += sh.vx;
+    if (sh.x < 8) { sh.x = 8; sh.vx = -sh.vx; }
+    if (sh.x > 92) { sh.x = 92; sh.vx = -sh.vx; }
+    if (Math.random() < .006) sh.vx = -sh.vx;
+    drawShadow(sh);
+  });
+}
+function startShadows() {
+  stopShadows();
+  for (let i = 0; i < shadowCount(); i++) shadows.push(makeShadow());
+  swimId = setInterval(swimTick, 60);
+}
+function stopShadows() {
+  clearInterval(swimId); swimId = null;
+  shadows.forEach(function (sh) { sh.el.remove(); });
+  shadows = [];
+}
+function removeShadow(sh) {
+  if (!sh || !sh.alive) return;
+  sh.alive = false;
+  sh.el.classList.add('gone');
+  const el = sh.el;
+  setTimeout(function () { el.remove(); }, 260);
+  shadows = shadows.filter(function (x) { return x !== sh; });
+  // 한 마리 빠지면 잠시 뒤 새 그림자가 들어온다
+  setTimeout(function () {
+    if (swimId && shadows.length < shadowCount()) shadows.push(makeShadow());
+  }, 700);
+}
+/* 찌를 던진 자리에서 가장 가까운 그림자 */
+function shadowNear(xPct) {
+  let best = null, bestD = 999;
+  shadows.forEach(function (sh) {
+    if (!sh.alive) return;
+    const d = Math.abs(sh.x - xPct);
+    if (d < bestD) { bestD = d; best = sh; }
+  });
+  return best;
+}
+
+/* ---------- 찌 ---------- */
+function setFloat(state) {
+  const fl = $('floatEl'), ln = $('fishLine');
+  if (state === 'hidden') { fl.hidden = true; ln.style.height = '0'; return; }
+  fl.hidden = false;
+  fl.className = 'float ' + (state === 'bite' ? 'bite' : 'bob');
+  fl.style.left = floatX + '%';
+  ln.style.left = floatX + '%';
+  ln.style.height = (state === 'bite' ? 34 : 21) + '%';
+}
+
+/* ================= 한 판 ================= */
+function startGame() {
+  clearTimers();
+  upg = loadUpg();
+
+  // 미끼 한 개를 꺼내 쓴다
+  bait = null;
+  if (baitId) {
+    const have = loadBait();
+    if (have[baitId] > 0) {
+      have[baitId]--;
+      saveBait(have);
+      bait = BAIT_BY_ID[baitId];
+      if (have[baitId] === 0) baitId = '';     // 다 쓰면 선택을 풀어 준다
+    } else {
+      baitId = '';
+    }
+  }
+
+  timeLeft = LEVELS[level].sec;
+  score = 0; caught = []; combo = 0; bestCombo = 0;
+  cur = null; curShadow = null; holding = false; floatX = 50;
+
+  $('scoreV').textContent = '0';
+  $('timeV').textContent = timeLeft;
+  $('timeBox').classList.remove('warn');
+  $('fightBox').hidden = true;
+  $('bangEl').hidden = true;
+  paintCombo();
+
+  paintSea();
+  startShadows();
+  toIdle();
+  show('game');
+
+  timerId = setInterval(function () {
+    timeLeft--;
+    $('timeV').textContent = Math.max(0, timeLeft);
+    if (timeLeft <= 10) $('timeBox').classList.add('warn');
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+}
+
+function toIdle(msg) {
+  phase = 'idle';
+  cur = null; curShadow = null;
+  $('fightBox').hidden = true;
+  $('bangEl').hidden = true;
+  setFloat('hidden');
+  const b = $('actBtn');
+  b.className = 'act small';
+  b.textContent = '아무 데나 던지기';
+  $('statusEl').innerHTML = msg || '<b>그림자</b>를 노려서 물을 탭!';
+}
+
+/* --- 1. 던지기 --- */
+function cast(xPct) {
+  if (phase !== 'idle') return;
+  phase = 'casting';
+  floatX = Math.max(8, Math.min(92, xPct));
+  setFloat('bob');
+
+  // 조준 표시를 잠깐 띄운다
+  const aim = document.createElement('div');
+  aim.className = 'aim';
+  aim.style.left = floatX + '%';
+  $('sea').appendChild(aim);
+  setTimeout(function () { aim.remove(); }, 430);
+
+  const near = shadowNear(floatX);
+  const hit = near && Math.abs(near.x - floatX) <= 7;
+
+  const b = $('actBtn');
+  b.className = 'act wait';
+  b.textContent = '기다리는 중…';
+  $('statusEl').innerHTML = hit
+    ? '<b>' + near.f.e + ' 그림자를 맞췄다!</b>'
+    : '<span class="hint">빈 물이네… ❗가 뜨면 눌러!</span>';
+
+  const waitMul = bait ? bait.waitMul : 1;
+  if (hit) {
+    curShadow = near;
+    castId = setTimeout(function () { bite(near.f); }, rnd(500, 1100) * waitMul);
+  } else {
+    curShadow = null;
+    // 빈 물에 던지면 오래 기다리고 꽝도 잘 걸린다
+    castId = setTimeout(function () { bite(pickFish(0.5, 2.2)); }, rnd(1600, 3600) * waitMul);
+  }
+}
+
+/* --- 2. 입질 --- */
+function bite(f) {
+  if (phase !== 'casting') return;
+  phase = 'biting';
+  cur = f;
+  setFloat('bite');
+  $('bangEl').hidden = false;
+  $('bangEl').style.left = floatX + '%';
+  const b = $('actBtn');
+  b.className = 'act hook';
+  b.textContent = '챔질!';
+  $('statusEl').textContent = '지금이야!';
+
+  const win = cur.bite * LEVELS[level].biteMul * (bait ? bait.biteMul : 1);
+  biteId = setTimeout(function () {
+    if (phase !== 'biting') return;
+    $('bangEl').hidden = true;
+    breakCombo();
+    popup(cur, 0, 0, '놓쳤다…', null);
+  }, win);
+}
+
+/* --- 3. 챔질 --- */
+function hook() {
+  clearTimeout(biteId);
+  $('bangEl').hidden = true;
+  if (cur.junk) {
+    popup(cur, rnd(cur.kg[0], cur.kg[1]), 0, '이건 물고기가 아닌데?', null);
+    return;
+  }
+  startFight();
+}
+
+function tooEarly() {
+  clearTimeout(castId);
+  phase = 'popup';
+  setFloat('hidden');
+  $('actBtn').className = 'act wait';
+  $('actBtn').textContent = '…';
+  $('statusEl').innerHTML = '헛챔질! <span class="hint">물고기가 놀라 달아났어</span>';
+  breakCombo();
+  popupId = setTimeout(function () {
+    if (timeLeft <= 0) { endGame(); return; }
+    toIdle();
+  }, 850);
+}
+
+/* --- 4. 줄다리기 --- */
+function startFight() {
+  phase = 'fighting';
+  prog = 0; tens = 0; holding = false;
+  go = true; goUntil = performance.now() + rnd(700, 1400);
+  lastTick = performance.now();
+
+  $('fightBox').hidden = false;
+  setFloat('bite');
+  const b = $('actBtn');
+  b.className = 'act pull';
+  b.textContent = '꾹 눌러서 당기기';
+  $('statusEl').innerHTML = '<b>' + cur.e + ' ' + (cur.t >= 7 ? '엄청난 게' : '뭔가') + ' 걸렸다!</b>';
+  drawBars(); drawSignal();
+  fightId = setInterval(fightTick, 40);
+}
+
+function drawBars() {
+  $('progFill').style.width = Math.min(100, prog) + '%';
+  $('tensFill').style.width = Math.min(100, tens) + '%';
+}
+function drawSignal() {
+  $('signalEl').className = 'signal ' + (go ? 'go' : 'stop');
+  $('signalTx').textContent = go ? '당겨!' : '손 떼!';
+}
+
+function fightTick() {
+  const now = performance.now();
+  const dt = Math.min(120, now - lastTick) / 1000;
+  lastTick = now;
+
+  if (now >= goUntil) {
+    go = !go;
+    const sr = cur.stop;
+    goUntil = now + (go ? rnd(850, 1600) * (1 - sr * 0.35)
+                        : rnd(450, 950) * (0.7 + sr * 0.9));
+    drawSignal();
+  }
+
+  const L = LEVELS[level];
+  if (holding) {
+    if (go) {
+      prog += cur.pull * L.pullMul * UPG_BY_ID.rod.mul[upg.rod] * dt;
+      tens -= 11 * dt;
+    } else {
+      tens += cur.tens * L.tensMul * dt;
+      prog += cur.pull * 0.18 * dt;
+    }
+  } else {
+    tens -= 40 * dt;
+    if (go) prog -= 9 * dt;   // 빨간불에 쉬는 건 잘하는 것. 초록불에 놀면 도망간다
+  }
+  if (prog < 0) prog = 0;
+  if (tens < 0) tens = 0;
+  drawBars();
+
+  if (tens >= 100) { loseFight(); return; }
+  if (prog >= 100) { winFight(); return; }
+}
+
+function endFight() {
+  clearInterval(fightId); fightId = null;
+  holding = false;
+  $('actBtn').classList.remove('held');
+}
+
+function winFight() {
+  endFight();
+  const kg = rnd(cur.kg[0], cur.kg[1]);
+  const base = pointsFor(cur, kg);
+
+  combo++;
+  if (combo > bestCombo) bestCombo = combo;
+  const mul = comboMul(combo);
+  const pt = Math.round(base * mul);
+
+  const isNew = recordFish(cur, kg);
+  score += pt;
+  caught.push({ id: cur.id, kg: kg, pt: pt, mul: mul });
+  $('scoreV').textContent = score;
+  paintCombo();
+
+  removeShadow(curShadow);
+  popup(cur, kg, pt, cur.t >= 9 ? '건져 올렸다!' : '잡았다!',
+        isNew ? 'new' : (mul > 1 ? 'combo' : null), mul);
+}
+
+function loseFight() {
+  endFight();
+  breakCombo();
+  popup(cur, 0, 0, '줄이 끊어졌다!', null, 1, '💥');
+}
+
+function breakCombo() {
+  if (combo > 0) { combo = 0; paintCombo(); }
+}
+function paintCombo() {
+  const mul = comboMul(combo);
+  $('comboV').textContent = combo;
+  $('comboBox').classList.toggle('hot', mul > 1);
+  $('comboBox').querySelector('.k').textContent = mul > 1 ? comboTag(combo) + ' ×' + mul : '연속';
+}
+
+/* 도감에 기록 — 처음 잡은 종이면 true */
+function recordFish(f, kg) {
+  if (f.junk) return false;
+  const book = loadBook();
+  const prev = book[f.id];
+  book[f.id] = { c: (prev ? prev.c : 0) + 1, best: Math.max(prev ? prev.best : 0, kg) };
+  saveBook(book);
+  return !prev;
+}
+
+/* --- 결과 잠깐 보여 주기 --- */
+function popup(f, kg, pt, title, tag, mul, overrideEmoji) {
+  phase = 'popup';
+  endFight();
+  $('fightBox').hidden = true;
+  $('bangEl').hidden = true;
+  setFloat('hidden');
+  $('actBtn').className = 'act wait';
+  $('actBtn').textContent = '…';
+  $('statusEl').textContent = title;
+
+  const win = pt > 0 || (kg > 0 && f.junk);
+  const box = document.createElement('div');
+  box.className = 'catchpop' + (win ? '' : ' miss');
+  let html = '<div class="f">' + (overrideEmoji || f.e) + '</div>';
+  html += '<div class="n">' + (win ? f.n : title) + '</div>';
+  if (kg > 0) html += '<div class="w">' + fmtKg(kg) + ' kg</div>';
+  if (pt > 0) html += '<div class="p">+' + pt + '점</div>';
+  if (f.junk && kg > 0) html += '<div class="w">점수는 없어 😅</div>';
+  if (tag === 'new') html += '<div class="tag">✨ 도감 새로 등록!</div>';
+  else if (tag === 'combo') html += '<div class="tag combo">' + comboTag(combo) + ' 연속 ' + combo + '마리 ×' + mul + '</div>';
+  box.innerHTML = html;
+  $('sea').appendChild(box);
+
+  popupId = setTimeout(function () {
+    box.remove();
+    if (timeLeft <= 0) { endGame(); return; }
+    toIdle();
+  }, tag ? 1700 : 1200);
+}
+
+/* ================= 끝 ================= */
+function endGame() {
+  if (phase === 'over') return;
+  // 줄다리기 중에 시간이 다 됐으면 하던 판은 끝까지 하게 둔다
+  if (phase === 'fighting') { clearInterval(timerId); timerId = null; return; }
+
+  phase = 'over';
+  clearTimers();
+  stopShadows();
+  setFloat('hidden');
+
+  const best = loadBest();
+  const isBest = score > best;
+  if (isBest) saveBest(score);
+
+  const wallet = loadCoin() + score;
+  saveCoin(wallet);
+
+  let totalKg = 0;
+  caught.forEach(function (c) { totalKg += c.kg; });
+
+  $('finalScore').textContent = score + '점';
+  $('finalSub').textContent = caught.length > 0
+    ? spot().e + ' ' + spot().n + ' · ' + caught.length + '마리 · 모두 ' + fmtKg(totalKg) + ' kg' +
+      (bestCombo >= 3 ? ' · 최고 연속 ' + bestCombo : '')
+    : '한 마리도 못 잡았어';
+  $('bestBadge').innerHTML = isBest && score > 0
+    ? '<div class="newbest">🏆 최고 기록 경신!</div>'
+    : (best > 0 ? '<div class="score-sub" style="margin-top:6px">최고 기록 ' + best + '점</div>' : '');
+  $('earnLine').innerHTML = score > 0
+    ? '🪙 <b style="color:#9A6E00">+' + score + '</b> 포인트 · 모은 포인트 ' + wallet
+    : '🪙 모은 포인트 ' + wallet;
+
+  const ul = $('caughtList');
+  ul.innerHTML = '';
+  caught.slice().sort(function (a, b) { return b.pt - a.pt; }).forEach(function (c) {
+    const f = FISH[c.id];
+    const li = document.createElement('li');
+    li.innerHTML =
+      '<span class="e">' + f.e + '</span>' +
+      '<span class="nm">' + f.n +
+        (c.mul > 1 ? ' <span style="font-size:11px;color:#C2410C">×' + c.mul + '</span>' : '') + '</span>' +
+      '<span class="wt">' + fmtKg(c.kg) + ' kg</span>' +
+      '<span class="pt">+' + c.pt + '</span>';
+    ul.appendChild(li);
+  });
+  $('caughtEmpty').hidden = caught.length > 0;
+  $('caughtTitle').hidden = caught.length === 0;
+
+  show('over');
+}
+
+/* ================= 시작 화면 ================= */
+function paintStart() {
+  $('walletStart').textContent = loadCoin();
+
+  // 낚시터
+  const open = loadSpots();
+  if (!open[spotId]) spotId = 'shore';
+  const sp = $('spotPick');
+  sp.innerHTML = '';
+  SPOTS.forEach(function (s) {
+    const b = document.createElement('button');
+    const has = open[s.id];
+    b.dataset.spot = s.id;
+    b.setAttribute('aria-pressed', String(has && s.id === spotId));
+    if (!has) b.disabled = true;
+    b.innerHTML = '<span class="e">' + (has ? s.e : '🔒') + '</span>' + s.n +
+                  (has ? '' : '<span class="lock">🪙 ' + s.cost + '</span>');
+    sp.appendChild(b);
+  });
+  $('spotNote').textContent = spot().tip;
+
+  // 미끼
+  const have = loadBait();
+  if (baitId && have[baitId] <= 0) baitId = '';
+  const bp = $('baitPick');
+  bp.innerHTML = '';
+  const none = document.createElement('button');
+  none.dataset.bait = '';
+  none.setAttribute('aria-pressed', String(baitId === ''));
+  none.innerHTML = '<span class="e">🚫</span>안 씀';
+  bp.appendChild(none);
+  BAITS.forEach(function (x) {
+    const b = document.createElement('button');
+    const n = have[x.id];
+    b.dataset.bait = x.id;
+    b.setAttribute('aria-pressed', String(baitId === x.id));
+    if (n <= 0) b.disabled = true;
+    b.innerHTML = '<span class="e">' + x.e + '</span>' + x.n + '<span class="sub">' + n + '개</span>';
+    bp.appendChild(b);
+  });
+
+  // 난이도
+  Array.prototype.forEach.call($('levelPick').querySelectorAll('button'), function (x) {
+    x.setAttribute('aria-pressed', String(x.dataset.lv === level));
+  });
+
+  const best = loadBest();
+  $('bestLine').innerHTML = best > 0
+    ? spot().n + ' 최고 기록 <b>' + best + '점</b>'
+    : '아직 기록이 없어. 첫 기록을 세워 봐!';
+}
+
+/* ================= 상점 ================= */
+function shopRow(e, name, desc, extra, btn) {
+  return '<div class="e">' + e + '</div>' +
+         '<div class="info"><div class="nm">' + name + '</div>' +
+         '<div class="de">' + desc + '</div>' + (extra || '') + '</div>' + btn;
+}
+
+function renderShop() {
+  const coin = loadCoin();
+  $('walletShop').textContent = coin;
+
+  // --- 장비 ---
+  const cur2 = loadUpg();
+  const ub = $('shopUpg');
+  ub.innerHTML = '';
+  UPG.forEach(function (u) {
+    const lv = cur2[u.id];
+    const maxed = lv >= MAX_LV - 1;
+    const cost = maxed ? 0 : u.cost[lv];
+    let dots = '';
+    for (let i = 0; i < MAX_LV; i++) dots += (i <= lv) ? '●' : '<span class="off">●</span>';
+    const next = maxed ? '' : '<br>다음 → <b style="color:var(--blue)">' + u.line(lv + 1) + '</b>';
+    const it = document.createElement('div');
+    it.className = 'shop-it';
+    it.innerHTML = shopRow(
+      u.e, u.n + '<span class="lv">Lv.' + (lv + 1) + '</span>', u.line(lv) + next,
+      '<div class="dots">' + dots + '</div>',
+      maxed ? '<button class="buy max" disabled>최고</button>'
+            : '<button class="buy" data-upg="' + u.id + '"' + (coin >= cost ? '' : ' disabled') + '>🪙 ' + cost + '</button>');
+    ub.appendChild(it);
+  });
+
+  // --- 미끼 ---
+  const have = loadBait();
+  const bb = $('shopBait');
+  bb.innerHTML = '';
+  BAITS.forEach(function (x) {
+    const it = document.createElement('div');
+    it.className = 'shop-it';
+    it.innerHTML = shopRow(
+      x.e, x.n + '<span class="have">' + have[x.id] + '개 있음</span>', x.tip, '',
+      '<button class="buy" data-bait="' + x.id + '"' + (coin >= x.cost ? '' : ' disabled') + '>🪙 ' + x.cost +
+      '<br><span style="font-size:10px">' + x.pack + '개</span></button>');
+    bb.appendChild(it);
+  });
+
+  // --- 낚시터 ---
+  const open = loadSpots();
+  const sb = $('shopSpot');
+  sb.innerHTML = '';
+  SPOTS.forEach(function (s) {
+    if (s.cost === 0) return;
+    const got = open[s.id];
+    const it = document.createElement('div');
+    it.className = 'shop-it';
+    it.innerHTML = shopRow(
+      got ? s.e : '🔒', s.n,
+      s.tip + '<br><span style="color:var(--blue)">' + s.fish.length + '종이 살아</span>', '',
+      got ? '<button class="buy max" disabled>열림</button>'
+          : '<button class="buy" data-spot="' + s.id + '"' + (coin >= s.cost ? '' : ' disabled') + '>🪙 ' + s.cost + '</button>');
+    sb.appendChild(it);
+  });
+
+  show('shop');
+}
+
+function buyUpg(id) {
+  const cur2 = loadUpg(), u = UPG_BY_ID[id], lv = cur2[id];
+  if (lv >= MAX_LV - 1) return;
+  const coin = loadCoin(), cost = u.cost[lv];
+  if (coin < cost) return;
+  saveCoin(coin - cost);
+  cur2[id] = lv + 1;
+  saveUpg(cur2);
+  upg = cur2;
+  renderShop();
+}
+function buyBait(id) {
+  const x = BAIT_BY_ID[id], coin = loadCoin();
+  if (coin < x.cost) return;
+  saveCoin(coin - x.cost);
+  const have = loadBait();
+  have[id] += x.pack;
+  saveBait(have);
+  renderShop();
+}
+function buySpot(id) {
+  const s = SPOT_BY_ID[id], coin = loadCoin(), open = loadSpots();
+  if (open[id] || coin < s.cost) return;
+  saveCoin(coin - s.cost);
+  open[id] = true;
+  saveSpots(open);
+  spotId = id;
+  try { localStorage.setItem(K.spot, spotId); } catch (e) {}
+  renderShop();
+}
+
+/* ================= 도감 ================= */
+function renderBook() {
+  const book = loadBook();
+  let allTotal = 0, allGot = 0;
+  const body = $('bookBody');
+  body.innerHTML = '';
+
+  SPOTS.forEach(function (s) {
+    const got = s.fish.filter(function (id) { return book[id]; }).length;
+    allTotal += s.fish.length;
+    allGot += got;
+
+    const sec = document.createElement('div');
+    sec.className = 'booksec';
+    let html = '<div class="st"><span>' + s.e + ' ' + s.n + '</span>' +
+               '<span class="cnt">' + got + ' / ' + s.fish.length + '</span></div><div class="bookgrid">';
+    s.fish.forEach(function (id) {
+      const f = FISH[id], rec = book[id];
+      html += '<div class="it ' + (rec ? 'got' : 'lock') + '">' +
+              '<div class="e">' + f.e + '</div>' +
+              '<div class="n">' + (rec ? f.n : '???') + '</div>' +
+              '<div class="r">' + (rec ? fmtKg(rec.best) + 'kg · ' + rec.c + '마리' : '아직') + '</div></div>';
+    });
+    sec.innerHTML = html + '</div>';
+    body.appendChild(sec);
+  });
+
+  $('bookHead').innerHTML = '모은 것 <b>' + allGot + ' / ' + allTotal + '</b>';
+  show('book');
+}
+
+/* ================= 버튼 ================= */
+$('spotPick').addEventListener('click', function (ev) {
+  const b = ev.target.closest('button');
+  if (!b || b.disabled) return;
+  spotId = b.dataset.spot;
+  try { localStorage.setItem(K.spot, spotId); } catch (e) {}
+  paintStart();
+});
+$('baitPick').addEventListener('click', function (ev) {
+  const b = ev.target.closest('button');
+  if (!b || b.disabled) return;
+  baitId = b.dataset.bait;
+  paintStart();
+});
+$('levelPick').addEventListener('click', function (ev) {
+  const b = ev.target.closest('button');
+  if (!b) return;
+  level = b.dataset.lv;
+  try { localStorage.setItem(K.level, level); } catch (e) {}
+  paintStart();
+});
+
+$('startBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', startGame);
+$('homeBtn').addEventListener('click', function () { paintStart(); show('start'); });
+$('bookBtn').addEventListener('click', function () { backFrom = 'start'; renderBook(); });
+$('toBookBtn').addEventListener('click', function () { backFrom = 'over'; renderBook(); });
+$('shopBtn').addEventListener('click', function () { backFrom = 'start'; renderShop(); });
+$('toShopBtn').addEventListener('click', function () { backFrom = 'over'; renderShop(); });
+function goBack() {
+  if (backFrom === 'start') paintStart();
+  show(backFrom);
+}
+$('bookBack').addEventListener('click', goBack);
+$('shopBack').addEventListener('click', goBack);
+
+$('shopUpg').addEventListener('click', function (ev) {
+  const b = ev.target.closest('button[data-upg]');
+  if (b) buyUpg(b.dataset.upg);
+});
+$('shopBait').addEventListener('click', function (ev) {
+  const b = ev.target.closest('button[data-bait]');
+  if (b) buyBait(b.dataset.bait);
+});
+$('shopSpot').addEventListener('click', function (ev) {
+  const b = ev.target.closest('button[data-spot]');
+  if (b) buySpot(b.dataset.spot);
+});
+
+/* 물을 탭해서 그 자리에 던진다 */
+$('sea').addEventListener('pointerdown', function (ev) {
+  if (phase !== 'idle') return;
+  const r = this.getBoundingClientRect();
+  cast(((ev.clientX - r.left) / r.width) * 100);
+});
+
+/* 액션 버튼 — 누름과 뗌을 모두 본다 */
+const act = $('actBtn');
+act.addEventListener('pointerdown', function (ev) {
+  if (ev.cancelable) ev.preventDefault();
+  if (phase === 'idle')     { cast(rnd(15, 85)); return; }
+  if (phase === 'casting')  { tooEarly(); return; }
+  if (phase === 'biting')   { hook(); return; }
+  if (phase === 'fighting') { holding = true; act.classList.add('held'); }
+});
+function release() {
+  if (phase === 'fighting' && holding) {
+    holding = false;
+    act.classList.remove('held');
+  }
+}
+act.addEventListener('pointerup', release);
+act.addEventListener('pointercancel', release);
+act.addEventListener('pointerleave', release);
+window.addEventListener('blur', release);
+
+/* 컴퓨터에서는 스페이스바로도 */
+window.addEventListener('keydown', function (ev) {
+  if (ev.code !== 'Space' || ev.repeat || views.game.hidden) return;
+  ev.preventDefault();
+  act.dispatchEvent(new PointerEvent('pointerdown'));
+});
+window.addEventListener('keyup', function (ev) {
+  if (ev.code !== 'Space' || views.game.hidden) return;
+  ev.preventDefault();
+  release();
+});
+
+/* ================= 시작할 때 ================= */
+(function init() {
+  try {
+    const l = localStorage.getItem(K.level);
+    if (LEVELS[l]) level = l;
+    const s = localStorage.getItem(K.spot);
+    if (SPOT_BY_ID[s] && loadSpots()[s]) spotId = s;
+  } catch (e) {}
+  upg = loadUpg();
+  paintStart();
+})();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
