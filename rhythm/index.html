@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>🥁 리듬 두드리기</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 난이도 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 10px;
+    padding: 9px 2px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+
+  /* ---------- 점수 ---------- */
+  .bars { display: flex; gap: 8px; margin-bottom: 10px; }
+  .bar {
+    flex: 1;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 8px 6px 9px;
+    box-shadow: var(--shadow);
+  }
+  .bar b { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; white-space: nowrap; }
+  .bar span { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  #hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; min-height: 18px; }
+  #hint b { color: #23883C; font-weight: 800; }
+
+  /* ---------- 판 ---------- */
+  #boardwrap { position: relative; }
+  canvas {
+    display: block;
+    width: 100%;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    touch-action: none;
+  }
+
+  /* ---------- 덮는 화면 ---------- */
+  #cover {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    background: rgba(255,255,255,.94);
+    border-radius: 16px;
+  }
+  #cover.on { display: flex; }
+  #cover p { margin: 0; font-size: 23px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--muted); line-height: 1.6; }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 12px;
+    padding: 11px 18px;
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.warm { background: var(--pink); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .row button { flex: 1; max-width: 200px; }
+
+  /* ---------- 두드리는 칸 ---------- */
+  #pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 10px; }
+  #pads button {
+    padding: 0; height: 62px;
+    font-size: 13px; font-weight: 800; letter-spacing: .04em;
+    color: #fff;
+  }
+  #pads button[data-l="0"] { background: #6C8BFF; }
+  #pads button[data-l="1"] { background: #55BE8A; }
+  #pads button[data-l="2"] { background: #FFB03A; }
+  #pads button[data-l="3"] { background: #FF6B8A; }
+  #pads button.down { transform: translateY(3px); filter: brightness(1.12); }
+  #tip { margin: 12px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🥁 리듬 두드리기</h1>
+
+  <div class="seg" id="levelRow" role="group" aria-label="난이도">
+    <button data-k="easy">쉬움</button>
+    <button data-k="normal">보통</button>
+    <button data-k="hard">어려움</button>
+  </div>
+
+  <div class="bars">
+    <div class="bar"><b>점수</b><span id="score">0</span></div>
+    <div class="bar"><b>연속</b><span id="combo">0</span></div>
+    <div class="bar"><b>최고 점수</b><span id="best">0</span></div>
+  </div>
+
+  <p id="hint">시작을 누르면 노래가 흐른다</p>
+
+  <div id="boardwrap">
+    <canvas id="cv"></canvas>
+    <div id="cover">
+      <p id="coverMsg"></p>
+      <div class="row" style="margin:0">
+        <button id="coverBtn" class="warm">▶ 시작</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pads" role="group" aria-label="두드리는 칸"></div>
+
+  <div class="row">
+    <button id="newBtn" class="warm">🔄 새 게임</button>
+  </div>
+
+  <p id="tip">동그라미가 흰 줄에 닿는 순간 그 칸을 두드린다<br>딱 맞으면 퍼펙트, 살짝 어긋나면 굿 · 놓쳐도 깎이지 않는다<br>쉬움은 두 칸, 보통은 세 칸, 어려움은 네 칸이다 · 칸에 적힌 자판으로도 된다</p>
+</main>
+
+<script>
+/* 노래도 판도 그때그때 만들어 낸다. 소리는 웹오디오로 직접 낸다.
+   놓쳐도 줄어드는 건 연속 횟수뿐이다. 지는 일이 없다. */
+const LEVELS = {
+  easy:   { name: '쉬움',   bpm: 72,  half: false, lanes: 2, lead: 2.9, perfect: .145, good: .300, bars: 6 },
+  normal: { name: '보통',   bpm: 88,  half: false, lanes: 3, lead: 2.5, perfect: .115, good: .245 },
+  hard:   { name: '어려움', bpm: 104, half: true,  lanes: 4, lead: 2.1, perfect: .085, good: .180 }
+};
+
+/* 다섯 음 음계. 여덟 단계가 두 옥타브에 걸쳐 있다 */
+const SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+
+/* 여덟 박 한 도막. [박, 음 단계] */
+const PHRASES = {
+  A: [[0,0],[0.5,1],[1,2],[2,4],[2.5,3],[3,2],[4,1],[4.5,2],[5,3],[6,2],[7,0]],
+  B: [[0,4],[1,3],[1.5,2],[2,3],[3,4],[4,5],[4.5,4],[5,3],[6,2],[6.5,1],[7,2]],
+  C: [[0,2],[0.5,3],[1,4],[1.5,5],[2,6],[3,5],[4,4],[4.5,3],[5,2],[6,1],[7,0]],
+  D: [[0,0],[1,2],[2,1],[3,3],[4,2],[5,4],[6,3],[7,4]]
+};
+const SONG = ['A','B','A','C','B','D','A','B'];   // 예순네 박
+
+const LANE_COLOR = ['#6C8BFF', '#55BE8A', '#FFB03A', '#FF6B8A'];
+const PAD_KEYS = { 2: ['F', 'J'], 3: ['D', 'F', 'J'], 4: ['D', 'F', 'J', 'K'] };
+const JAMO = { D: 'ㅇ', F: 'ㄹ', J: 'ㅓ', K: 'ㅏ' };
+const ORD = ['첫째', '둘째', '셋째', '넷째'];
+const KEY_LEVEL = 'craft-rhythm-level';
+const KEY_BEST  = 'craft-rhythm-best';
+
+let lanes = 4;                     // 난이도에 따라 두 칸에서 네 칸까지
+let keyMap = {};                   // 자판 글자 → 칸 번호
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrapEl = document.getElementById('boardwrap');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const scoreEl = document.getElementById('score');
+const comboEl = document.getElementById('combo');
+const bestEl = document.getElementById('best');
+const hintEl = document.getElementById('hint');
+const padsEl = document.getElementById('pads');
+const levelRow = document.getElementById('levelRow');
+
+let key, lv;
+let ac = null;
+let notes = [];          // { t, lane, deg, hit: null|'perfect'|'good'|'miss' }
+let sources = [];        // 예약해 둔 소리. 새 게임이면 전부 끊는다
+let playing = false;
+let songStart = 0, songEnd = 0;
+let score, combo, bestCombo, counts;
+let raf = null;
+let pops = [];           // { lane, text, color, at }
+let glow = [0, 0, 0, 0]; // 두드린 칸이 잠깐 밝아진다
+let W = 360, H = 330, judgeY = 274, laneW = 90;
+
+/* ---------- 판 크기 ---------- */
+
+function fit() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = wrapEl.clientWidth || 360;
+  H = 330;
+  cv.width = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  cv.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  laneW = W / lanes;
+  judgeY = H - 56;
+  draw();
+}
+
+/* ---------- 노래 만들기 ---------- */
+
+function buildChart() {
+  const spb = 60 / lv.bpm;
+  const out = [];
+  const song = SONG.slice(0, lv.bars || SONG.length);
+  song.forEach((name, i) => {
+    PHRASES[name].forEach(([b, deg]) => {
+      if (!lv.half && b % 1 !== 0) return;       // 쉬움은 정박만 남긴다
+      out.push({ beat: i * 8 + b, deg });
+    });
+  });
+  out.sort((a, b) => a.beat - b.beat);
+  return out.map(n => ({
+    t: n.beat * spb,
+    lane: n.deg % lanes,
+    deg: n.deg,
+    hit: null
+  }));
+}
+
+/* ---------- 소리 ---------- */
+
+function ensureAudio() {
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) ac = new AC();
+  }
+  if (ac && ac.state === 'suspended') ac.resume();
+  return ac;
+}
+
+function tone(at, freq, dur, type, vol) {
+  if (!ac) return;
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(at);
+  o.stop(at + dur + 0.05);
+  sources.push(o);
+}
+
+function scheduleSong() {
+  const spb = 60 / lv.bpm;
+  notes.forEach(n => tone(songStart + n.t, SCALE[n.deg], spb * 0.8, 'triangle', 0.16));
+  // 두 박마다 낮은 음을 깔아 준다
+  const beats = (lv.bars || SONG.length) * 8;
+  for (let b = 0; b < beats; b += 2) {
+    tone(songStart + b * spb, (b / 2) % 2 ? 98.00 : 130.81, spb * 0.9, 'sine', 0.22);
+  }
+}
+
+function clap(good) {
+  if (!ac) return;
+  const at = ac.currentTime;
+  tone(at, good ? 1320 : 760, 0.07, 'square', 0.10);
+}
+
+function hush() {
+  sources.forEach(o => { try { o.stop(); } catch (e) {} });
+  sources = [];
+}
+
+/* ---------- 새 게임 ---------- */
+
+function newGame() {
+  stop();
+  hush();
+  notes = buildChart();
+  score = 0; combo = 0; bestCombo = 0;
+  counts = { perfect: 0, good: 0, miss: 0 };
+  pops = [];
+  glow = [0, 0, 0, 0];
+  coverMsg.innerHTML = '준비됐나?<small>동그라미가 흰 줄에 닿을 때 두드린다</small>';
+  coverBtn.textContent = '▶ 시작';
+  coverEl.classList.add('on');
+  hintEl.textContent = '시작을 누르면 노래가 흐른다';
+  paint();
+  draw();
+}
+
+function start() {
+  ensureAudio();
+  hush();
+  notes.forEach(n => { n.hit = null; });
+  score = 0; combo = 0; bestCombo = 0;
+  counts = { perfect: 0, good: 0, miss: 0 };
+  pops = [];
+
+  const spb = 60 / lv.bpm;
+  songStart = (ac ? ac.currentTime : performance.now() / 1000) + lv.lead;
+  songEnd = songStart + notes[notes.length - 1].t + spb * 2;
+  scheduleSong();
+
+  coverEl.classList.remove('on');
+  playing = true;
+  hintEl.textContent = '곧 시작한다';
+  paint();
+  raf = requestAnimationFrame(tick);
+}
+
+function stop() {
+  playing = false;
+  if (raf) cancelAnimationFrame(raf);
+  raf = null;
+}
+
+function now() {
+  return ac ? ac.currentTime : performance.now() / 1000;
+}
+
+/* ---------- 두드리기 ---------- */
+
+function tap(lane) {
+  if (!playing) return;
+  glow[lane] = now();
+  const t = now() - songStart;
+
+  let pick = null, gap = 9;
+  for (const n of notes) {
+    if (n.lane !== lane || n.hit) continue;
+    const d = Math.abs(n.t - t);
+    if (d < gap) { gap = d; pick = n; }
+    if (n.t - t > lv.good) break;
+  }
+
+  if (!pick || gap > lv.good) { clap(false); return; }
+
+  const perfect = gap <= lv.perfect;
+  pick.hit = perfect ? 'perfect' : 'good';
+  counts[pick.hit]++;
+  combo++;
+  bestCombo = Math.max(bestCombo, combo);
+  score += (perfect ? 100 : 50) + Math.min(combo, 30) * 2;
+  pops.push({
+    lane,
+    text: perfect ? '퍼펙트' : '굿',
+    color: perfect ? '#FFB03A' : '#55BE8A',
+    at: now()
+  });
+  clap(true);
+  paint();
+}
+
+function miss(n) {
+  n.hit = 'miss';
+  counts.miss++;
+  combo = 0;
+  pops.push({ lane: n.lane, text: '미스', color: '#B9C2DC', at: now() });
+  paint();
+}
+
+/* ---------- 한 칸 흐르기 ---------- */
+
+function tick() {
+  if (!playing) return;
+  const t = now() - songStart;
+  if (t >= 0 && hintEl.textContent === '곧 시작한다') hintEl.textContent = '박자에 맞춰 두드리자';
+  notes.forEach(n => { if (!n.hit && t - n.t > lv.good) miss(n); });
+  if (now() > songEnd) return finish();
+  draw();
+  raf = requestAnimationFrame(tick);
+}
+
+/* ---------- 그리기 ---------- */
+
+function draw() {
+  const t = now() - songStart;
+  const pxPerSec = (judgeY + 40) / lv.lead;
+  ctx.clearRect(0, 0, W, H);
+
+  // 칸
+  for (let i = 0; i < lanes; i++) {
+    ctx.fillStyle = i % 2 ? '#FAFBFF' : '#F4F6FD';
+    ctx.fillRect(i * laneW, 0, laneW, H);
+    const g = playing ? Math.max(0, 1 - (now() - glow[i]) / 0.22) : 0;
+    if (g > 0) {
+      ctx.globalAlpha = g * 0.3;
+      ctx.fillStyle = LANE_COLOR[i];
+      ctx.fillRect(i * laneW, 0, laneW, H);
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = '#E3E9F8';
+    ctx.fillRect(i * laneW, 0, 1, H);
+  }
+
+  // 판정 줄
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, judgeY - 3, W, 6);
+  ctx.strokeStyle = '#D6E1FF';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < lanes; i++) {
+    ctx.beginPath();
+    ctx.arc(i * laneW + laneW / 2, judgeY, 19, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // 동그라미
+  if (playing) {
+    notes.forEach(n => {
+      if (n.hit === 'perfect' || n.hit === 'good') return;
+      const y = judgeY - (n.t - t) * pxPerSec;
+      if (y < -30 || y > H + 30) return;
+      const x = n.lane * laneW + laneW / 2;
+      ctx.globalAlpha = n.hit === 'miss' ? 0.25 : 1;
+      ctx.fillStyle = LANE_COLOR[n.lane];
+      ctx.beginPath();
+      ctx.arc(x, y, 17, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.beginPath();
+      ctx.arc(x, y - 5, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  // 판정 글씨
+  const tn = now();
+  pops = pops.filter(p => tn - p.at < 0.6);
+  ctx.textAlign = 'center';
+  pops.forEach(p => {
+    const k = (tn - p.at) / 0.6;
+    ctx.globalAlpha = 1 - k;
+    ctx.fillStyle = p.color;
+    ctx.font = '800 16px "Apple SD Gothic Neo", sans-serif';
+    ctx.fillText(p.text, p.lane * laneW + laneW / 2, judgeY - 34 - k * 18);
+    ctx.globalAlpha = 1;
+  });
+
+  // 시작 전 세는 숫자
+  if (playing && t < 0) {
+    ctx.fillStyle = '#2C3560';
+    ctx.font = '800 44px "Apple SD Gothic Neo", sans-serif';
+    ctx.fillText(String(Math.ceil(-t)), W / 2, H / 2);
+  }
+}
+
+/* ---------- 끝 ---------- */
+
+function finish() {
+  stop();
+  hush();
+  const total = counts.perfect + counts.good + counts.miss;
+  const acc = total ? Math.round((counts.perfect + counts.good * 0.5) * 100 / total) : 0;
+
+  const best = loadBest();
+  const isNew = score > best;
+  if (isNew) saveBest(score);
+  paint();
+
+  coverMsg.innerHTML = '노래 끝! 🎉' +
+    '<small>퍼펙트 ' + counts.perfect + ' · 굿 ' + counts.good + ' · 미스 ' + counts.miss + '<br>' +
+    '정확도 ' + acc + '% · 최고 연속 ' + bestCombo + '번<br>' +
+    (isNew ? '새 기록이다!' : '최고 점수는 ' + best + '점') + '</small>';
+  coverBtn.textContent = '🔄 한 판 더';
+  coverEl.classList.add('on');
+  hintEl.innerHTML = '<b>' + score + '점</b> · 정확도 ' + acc + '%';
+  draw();
+}
+
+/* ---------- 기록 ---------- */
+
+function loadBest() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY_BEST + '-' + key); } catch (e) {}
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+function saveBest(n) {
+  try { localStorage.setItem(KEY_BEST + '-' + key, String(n)); } catch (e) {}
+}
+function paint() {
+  scoreEl.textContent = score;
+  comboEl.textContent = combo;
+  bestEl.textContent = loadBest();
+}
+
+/* ---------- 난이도 ---------- */
+
+function buildPads() {
+  const letters = PAD_KEYS[lanes];
+  keyMap = {};
+  padsEl.style.gridTemplateColumns = 'repeat(' + lanes + ', 1fr)';
+  padsEl.innerHTML = '';
+  letters.forEach((ch, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.l = i;
+    b.textContent = ch;
+    b.setAttribute('aria-label', ORD[i] + ' 칸');
+    padsEl.appendChild(b);
+    keyMap[ch.toLowerCase()] = i;
+    keyMap[JAMO[ch]] = i;
+  });
+}
+
+function setLevel(k) {
+  key = LEVELS[k] ? k : 'normal';
+  lv = LEVELS[key];
+  lanes = lv.lanes;
+  try { localStorage.setItem(KEY_LEVEL, key); } catch (e) {}
+  [...levelRow.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === key)));
+  buildPads();
+  fit();
+  newGame();
+}
+
+levelRow.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) setLevel(b.dataset.k);
+});
+padsEl.addEventListener('pointerdown', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  e.preventDefault();
+  b.classList.add('down');
+  tap(Number(b.dataset.l));
+});
+padsEl.addEventListener('pointerup', e => {
+  const b = e.target.closest('button');
+  if (b) b.classList.remove('down');
+});
+padsEl.addEventListener('pointerleave', () => {
+  [...padsEl.children].forEach(b => b.classList.remove('down'));
+});
+document.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  const lane = keyMap[e.key.toLowerCase()];
+  if (lane === undefined) return;
+  e.preventDefault();
+  const b = padsEl.children[lane];
+  b.classList.add('down');
+  tap(lane);
+});
+document.addEventListener('keyup', e => {
+  const lane = keyMap[e.key.toLowerCase()];
+  if (lane !== undefined) padsEl.children[lane].classList.remove('down');
+});
+coverBtn.addEventListener('click', start);
+document.getElementById('newBtn').addEventListener('click', newGame);
+window.addEventListener('resize', fit);
+
+let startKey = 'normal';
+try { startKey = localStorage.getItem(KEY_LEVEL) || 'normal'; } catch (e) {}
+setLevel(startKey);
+</script>
+</body>
+</html>

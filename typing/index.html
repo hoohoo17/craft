@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F4F6FD">
+<title>⌨️ 타자 대결</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 난이도 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 10px;
+    padding: 9px 2px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+
+  /* ---------- 점수 ---------- */
+  .bars { display: flex; gap: 8px; margin-bottom: 10px; }
+  .bar {
+    flex: 1;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 8px 6px 9px;
+    box-shadow: var(--shadow);
+  }
+  .bar b { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; white-space: nowrap; }
+  .bar span { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .bar.warn span { color: var(--pink); }
+
+  #hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; min-height: 18px; }
+  #hint b { color: #23883C; font-weight: 800; }
+
+  /* ---------- 판 ---------- */
+  #boardwrap { position: relative; }
+  #sky {
+    position: relative;
+    height: 320px;
+    overflow: hidden;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+  }
+  #ground {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 3px; background: var(--line);
+  }
+
+  /* ---------- 떨어지는 낱말 ---------- */
+  .word {
+    position: absolute;
+    left: 0; top: 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #EEF3FF;
+    border: 2px solid #D6E1FF;
+    color: var(--ink);
+    font-size: 17px; font-weight: 800;
+    white-space: nowrap;
+    will-change: transform;
+  }
+  .word.lit { background: #FFF7E3; border-color: var(--gold); }
+  .word .hit { color: var(--pink); }
+  .word.pop { animation: pop .26s ease-out forwards; }
+  .word.drop { animation: fade .3s ease-in forwards; }
+  @keyframes pop {
+    0% { transform: translate(var(--x), var(--y)) scale(1); opacity: 1; }
+    100% { transform: translate(var(--x), var(--y)) scale(1.5); opacity: 0; }
+  }
+  @keyframes fade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .word.pop, .word.drop { animation-duration: .01s; }
+  }
+
+  /* ---------- 적는 곳 ---------- */
+  #typebox {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 10px;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 4px 6px 4px 12px;
+    box-shadow: var(--shadow);
+  }
+  #typebox:focus-within { border-color: var(--blue); }
+  #typebox .cue { font-size: 17px; }
+  #inp {
+    flex: 1; min-width: 0;
+    border: none; outline: none; background: none;
+    font: inherit; font-size: 18px; font-weight: 800;
+    color: var(--ink);
+    padding: 9px 0;
+  }
+  #inp::placeholder { color: #BFC7DF; font-weight: 700; }
+
+  /* ---------- 덮는 화면 ---------- */
+  #cover {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    background: rgba(255,255,255,.94);
+    border-radius: 16px;
+  }
+  #cover.on { display: flex; }
+  #cover p { margin: 0; font-size: 23px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--muted); line-height: 1.6; }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 12px;
+    padding: 11px 18px;
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.warm { background: var(--pink); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .row button { flex: 1; max-width: 200px; }
+  #tip { margin: 12px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>⌨️ 타자 대결</h1>
+
+  <div class="seg" id="levelRow" role="group" aria-label="난이도">
+    <button data-k="easy">쉬움</button>
+    <button data-k="normal">보통</button>
+    <button data-k="hard">어려움</button>
+  </div>
+
+  <div class="bars">
+    <div class="bar" id="timeBar"><b>남은 시간</b><span id="time">60</span></div>
+    <div class="bar"><b>맞춘 낱말</b><span id="score">0</span></div>
+    <div class="bar"><b>최고 기록</b><span id="best">0</span></div>
+  </div>
+
+  <p id="hint">시작을 누르고 떨어지는 낱말을 적어 보자</p>
+
+  <div id="boardwrap">
+    <div id="sky"><div id="ground"></div></div>
+    <div id="cover">
+      <p id="coverMsg"></p>
+      <div class="row" style="margin:0">
+        <button id="coverBtn" class="warm">▶ 시작</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="typebox">
+    <span class="cue" aria-hidden="true">✏️</span>
+    <input id="inp" type="text" inputmode="text" autocomplete="off" autocorrect="off"
+           autocapitalize="off" spellcheck="false" placeholder="여기에 적는다" aria-label="낱말 적는 곳">
+  </div>
+
+  <div class="row">
+    <button id="newBtn" class="warm">🔄 새 게임</button>
+  </div>
+
+  <p id="tip">낱말이 바닥에 닿기 전에 똑같이 적으면 터진다<br>다 적으면 저절로 지워진다 · 틀리게 적어도 잃는 건 없다<br>60초 동안 몇 개나 잡는지만 센다</p>
+</main>
+
+<script>
+/* 60초 타임 어택. 놓쳐도 깎이는 점수가 없다.
+   낱말을 끝까지 적는 순간 저절로 터지고 적는 칸이 비워진다. */
+const LEVELS = {
+  easy:   { name: '쉬움',   pool: ['short'],                  speed: 22, every: 2200, max: 4 },
+  normal: { name: '보통',   pool: ['short', 'mid'],           speed: 25, every: 2000, max: 4 },
+  hard:   { name: '어려움', pool: ['short', 'mid', 'long'],   speed: 31, every: 1700, max: 5 }
+};
+const WORDS = {
+  short: ['사과','바다','구름','하늘','나무','토끼','여우','기차','우산','연필',
+          '가방','바람','참새','국수','딸기','수박','거북','오리','모자','풍선'],
+  mid:   ['무지개','자전거','코끼리','강아지','고양이','병아리','도서관','젓가락',
+          '소나기','다람쥐','개구리','호랑이','운동장','물고기','눈사람','비행기'],
+  long:  ['해바라기','놀이공원','초등학교','알록달록','반짝반짝','나뭇가지',
+          '구슬치기','무당벌레','김치찌개','바닷가재','도깨비불','소금쟁이']
+};
+const PLAY_SEC = 60;               // 한 판 길이
+const KEY_LEVEL = 'craft-typing-level';
+const KEY_BEST  = 'craft-typing-best';   // 난이도별로 따로 쌓인다
+
+const skyEl = document.getElementById('sky');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const timeEl = document.getElementById('time');
+const timeBar = document.getElementById('timeBar');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const hintEl = document.getElementById('hint');
+const inp = document.getElementById('inp');
+const levelRow = document.getElementById('levelRow');
+
+let key, lv;
+let live = [];            // 지금 떨어지고 있는 낱말들
+let score, chars, missed, combo;
+let running = false;
+let endAt = 0, lastSpawn = 0, lastFrame = 0;
+let raf = null;
+
+/* ---------- 새 게임 ---------- */
+
+function newGame() {
+  stop();
+  live.forEach(w => w.el.remove());
+  live = [];
+  score = 0; chars = 0; missed = 0; combo = 0;
+  inp.value = '';
+  timeEl.textContent = PLAY_SEC;
+  timeBar.classList.remove('warn');
+  coverMsg.innerHTML = '준비됐나?<small>60초 동안 낱말을 적어서 터뜨린다</small>';
+  coverBtn.textContent = '▶ 시작';
+  coverEl.classList.add('on');
+  hintEl.textContent = '시작을 누르고 떨어지는 낱말을 적어 보자';
+  paint();
+}
+
+function start() {
+  // 덮는 화면에서 곧장 들어오는 길이라 여기서 판을 새로 편다
+  live.slice().forEach(w => w.el.remove());
+  live = [];
+  score = 0; chars = 0; missed = 0; combo = 0;
+  inp.value = '';
+  timeEl.textContent = PLAY_SEC;
+  timeBar.classList.remove('warn');
+  paint();
+
+  coverEl.classList.remove('on');
+  running = true;
+  const now = performance.now();
+  endAt = now + PLAY_SEC * 1000;
+  lastSpawn = now - lv.every;     // 시작하자마자 한 개 떨어진다
+  lastFrame = now;
+  hintEl.textContent = '떨어지기 전에 적어 보자';
+  inp.focus();
+  raf = requestAnimationFrame(tick);
+}
+
+function stop() {
+  running = false;
+  if (raf) cancelAnimationFrame(raf);
+  raf = null;
+}
+
+/* ---------- 낱말 ---------- */
+
+function spawn() {
+  if (live.length >= lv.max) return;
+  const bag = lv.pool.reduce((a, k) => a.concat(WORDS[k]), []);
+  const here = live.map(w => w.text);
+  const left = bag.filter(t => !here.includes(t));
+  if (!left.length) return;
+
+  const text = left[Math.floor(Math.random() * left.length)];
+  const el = document.createElement('div');
+  el.className = 'word';
+  el.textContent = text;
+  skyEl.appendChild(el);
+
+  // 가로로는 판 안에 다 들어오는 자리에만 놓는다
+  const room = Math.max(0, skyEl.clientWidth - el.offsetWidth - 8);
+  const w = { text, el, x: 4 + Math.random() * room, y: -34 };
+  place(w);
+  live.push(w);
+}
+
+function place(w) {
+  w.el.style.setProperty('--x', w.x + 'px');
+  w.el.style.setProperty('--y', w.y + 'px');
+  w.el.style.transform = 'translate(' + w.x + 'px,' + w.y + 'px)';
+}
+
+function remove(w, cls) {
+  const i = live.indexOf(w);
+  if (i >= 0) live.splice(i, 1);
+  w.el.classList.add(cls);
+  setTimeout(() => w.el.remove(), 320);
+}
+
+/* ---------- 한 칸 흐르기 ---------- */
+
+function tick(now) {
+  if (!running) return;
+  const dt = Math.min(100, now - lastFrame) / 1000;
+  lastFrame = now;
+
+  if (now - lastSpawn >= lv.every) { spawn(); lastSpawn = now; }
+
+  const floor = skyEl.clientHeight - 34;
+  for (let i = live.length - 1; i >= 0; i--) {
+    const w = live[i];
+    w.y += lv.speed * dt;
+    if (w.y >= floor) {
+      remove(w, 'drop');
+      missed++;
+      combo = 0;
+      hintEl.textContent = '"' + w.text + '"를 놓쳤다';
+      continue;
+    }
+    place(w);
+  }
+
+  const left = Math.max(0, Math.ceil((endAt - now) / 1000));
+  timeEl.textContent = left;
+  timeBar.classList.toggle('warn', left <= 10);
+  if (now >= endAt) return finish();
+
+  raf = requestAnimationFrame(tick);
+}
+
+/* ---------- 적기 ---------- */
+
+function onType() {
+  const typed = inp.value.trim();
+  const lit = typed.length > 0;
+
+  for (const w of live.slice()) {
+    if (lit && w.text === typed) {
+      hit(w);
+      inp.value = '';
+      return;
+    }
+    const on = lit && w.text.startsWith(typed);
+    w.el.classList.toggle('lit', on);
+  }
+}
+
+function hit(w) {
+  remove(w, 'pop');
+  live.forEach(o => o.el.classList.remove('lit'));
+  score++;
+  chars += w.text.length;
+  combo++;
+  hintEl.innerHTML = combo >= 3
+    ? '<b>' + combo + '개 연속!</b>'
+    : '<b>잡았다!</b> ' + w.text;
+  paint();
+}
+
+/* ---------- 끝 ---------- */
+
+function finish() {
+  stop();
+  live.slice().forEach(w => remove(w, 'drop'));
+  inp.value = '';
+  inp.blur();
+
+  const best = loadBest();
+  const isNew = score > best;
+  if (isNew) saveBest(score);
+  paint();
+
+  const cpm = Math.round(chars * 60 / PLAY_SEC);
+  coverMsg.innerHTML = '끝! ⌨️' +
+    '<small>' + score + '개를 잡았다 · 분당 ' + cpm + '글자<br>' +
+    (isNew ? '새 기록이다!' : '최고 기록은 ' + best + '개') + '</small>';
+  coverBtn.textContent = '🔄 한 판 더';
+  coverEl.classList.add('on');
+  hintEl.innerHTML = '<b>' + score + '개</b> · 놓친 낱말 ' + missed + '개';
+}
+
+/* ---------- 기록 ---------- */
+
+function loadBest() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY_BEST + '-' + key); } catch (e) {}
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+function saveBest(n) {
+  try { localStorage.setItem(KEY_BEST + '-' + key, String(n)); } catch (e) {}
+}
+function paint() {
+  scoreEl.textContent = score;
+  bestEl.textContent = loadBest();
+}
+
+/* ---------- 난이도 ---------- */
+
+function setLevel(k) {
+  key = LEVELS[k] ? k : 'normal';
+  lv = LEVELS[key];
+  try { localStorage.setItem(KEY_LEVEL, key); } catch (e) {}
+  [...levelRow.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === key)));
+  newGame();
+}
+
+levelRow.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) setLevel(b.dataset.k);
+});
+inp.addEventListener('input', onType);
+inp.addEventListener('compositionupdate', onType);
+inp.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { inp.value = ''; onType(); }
+});
+inp.addEventListener('focus', () => { if (!running && coverEl.classList.contains('on')) start(); });
+coverBtn.addEventListener('click', start);
+document.getElementById('newBtn').addEventListener('click', newGame);
+
+let startKey = 'normal';
+try { startKey = localStorage.getItem(KEY_LEVEL) || 'normal'; } catch (e) {}
+setLevel(startKey);
+</script>
+</body>
+</html>

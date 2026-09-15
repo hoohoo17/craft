@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>🏹 물리 던지기</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 난이도 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 10px;
+    padding: 9px 2px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+
+  /* ---------- 점수 ---------- */
+  .bars { display: flex; gap: 8px; margin-bottom: 10px; }
+  .bar {
+    flex: 1;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 8px 6px 9px;
+    box-shadow: var(--shadow);
+  }
+  .bar b { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; white-space: nowrap; }
+  .bar span { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  #hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; min-height: 18px; }
+  #hint b { color: #23883C; font-weight: 800; }
+
+  /* ---------- 판 ---------- */
+  #boardwrap { position: relative; }
+  canvas {
+    display: block;
+    width: 100%;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    touch-action: none;
+  }
+
+  /* ---------- 덮는 화면 ---------- */
+  #cover {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    background: rgba(255,255,255,.94);
+    border-radius: 16px;
+  }
+  #cover.on { display: flex; }
+  #cover p { margin: 0; font-size: 23px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--muted); line-height: 1.6; }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 12px;
+    padding: 11px 18px;
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.warm { background: var(--pink); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .row button { flex: 1; max-width: 200px; }
+  #tip { margin: 12px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🏹 물리 던지기</h1>
+
+  <div class="seg" id="levelRow" role="group" aria-label="난이도">
+    <button data-k="easy">쉬움</button>
+    <button data-k="normal">보통</button>
+    <button data-k="hard">어려움</button>
+  </div>
+
+  <div class="bars">
+    <div class="bar"><b>점수</b><span id="score">0</span></div>
+    <div class="bar"><b>남은 공</b><span id="balls">0</span></div>
+    <div class="bar"><b>최고 점수</b><span id="best">0</span></div>
+  </div>
+
+  <p id="hint">공을 뒤로 당겼다 놓으면 날아간다</p>
+
+  <div id="boardwrap">
+    <canvas id="cv"></canvas>
+    <div id="cover">
+      <p id="coverMsg"></p>
+      <div class="row" style="margin:0">
+        <button id="coverBtn" class="warm">🔄 다시 하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <button id="newBtn" class="warm">🔄 새 게임</button>
+  </div>
+
+  <p id="tip">화면을 누른 채 뒤로 당기면 점선으로 길이 보인다<br>손을 떼면 그쪽으로 날아가서 탑을 무너뜨린다<br>풍선은 500점 · 한 방에 여러 개면 점수가 뛴다 · 널빤지를 넘어뜨려도 50점<br>풍선을 다 터뜨리면 이긴다 · 아낀 공마다 300점을 더 준다</p>
+</main>
+
+<script>
+/* 상자마다 무게와 회전이 있어서 맞으면 진짜로 기울고 넘어진다.
+   충돌은 분리축으로 찾고, 충격량을 여러 번 나눠 밀어서 푼다. */
+
+/* ---------- 낱낱의 셈 ---------- */
+const V = {
+  add: (a, b) => ({ x: a.x + b.x, y: a.y + b.y }),
+  sub: (a, b) => ({ x: a.x - b.x, y: a.y - b.y }),
+  mul: (a, s) => ({ x: a.x * s, y: a.y * s }),
+  dot: (a, b) => a.x * b.x + a.y * b.y,
+  crs: (a, b) => a.x * b.y - a.y * b.x,          // 밖으로 나오는 축 하나뿐이다
+  crsSV: (s, v) => ({ x: -s * v.y, y: s * v.x }), // 회전 속도 × 팔
+  len: a => Math.hypot(a.x, a.y),
+  norm: a => { const l = Math.hypot(a.x, a.y) || 1; return { x: a.x / l, y: a.y / l }; },
+  perp: a => ({ x: -a.y, y: a.x })
+};
+
+/* ---------- 세상 ---------- */
+const WW = 360, WH = 330;          // 어느 화면에서나 이 크기로 셈한다
+const GY = 300;                    // 땅 높이
+const G = 1500;                    // 중력
+const DT = 1 / 120;                // 한 번에 흐르는 시간
+const ITER = 20;                   // 충격량을 나눠 미는 횟수
+const SLOP = 0.4;                  // 이만큼 겹치는 건 봐준다
+const BETA = 0.22;                 // 겹친 걸 밀어내는 세기
+const SLEEP_V = 12, SLEEP_W = 0.2, SLEEP_T = 0.35;
+const POP_HIT = 105;               // 이보다 세게 부딪히면 풍선이 터진다
+
+let bodies = [];
+let warm = new Map();          // 지난 걸음에 주고받은 힘. 이어 쓰면 탑이 훨씬 잘 버틴다
+let nextId = 1;
+
+function body(o) {
+  return Object.assign({
+    id: nextId++,
+    x: 0, y: 0, a: 0,
+    vx: 0, vy: 0, w: 0,
+    pvx: 0, pvy: 0, pw: 0,      // 겹친 걸 푸는 데만 쓰는 속도
+    im: 0, ii: 0,               // 무게와 회전 관성의 역수
+    rest: 0.12, fric: 0.55,
+    fixed: false, kind: 'box',
+    idle: 0, asleep: false, impact: 0, dead: false
+  }, o);
+}
+
+function addBox(x, y, w, h, o) {
+  const b = body(Object.assign({ kind: 'box', x, y, hw: w / 2, hh: h / 2 }, o));
+  if (!b.fixed) {
+    const m = (o && o.dens || 0.0013) * w * h;
+    b.im = 1 / m;
+    b.ii = 1 / (m * (w * w + h * h) / 12);
+  }
+  bodies.push(b);
+  return b;
+}
+
+function addCircle(x, y, r, o) {
+  const b = body(Object.assign({ kind: 'circle', x, y, r }, o));
+  if (!b.fixed) {
+    const m = (o && o.dens || 0.0013) * Math.PI * r * r;
+    b.im = 1 / m;
+    b.ii = 1 / (m * r * r / 2);
+  }
+  bodies.push(b);
+  return b;
+}
+
+/* 상자의 네 귀퉁이와 네 면 */
+function axes(b) {
+  const c = Math.cos(b.a), s = Math.sin(b.a);
+  return [{ x: c, y: s }, { x: -s, y: c }];
+}
+function corners(b) {
+  const [ux, uy] = axes(b);
+  const px = V.mul(ux, b.hw), py = V.mul(uy, b.hh);
+  const c = { x: b.x, y: b.y };
+  return [
+    V.add(V.add(c, px), py),
+    V.add(V.sub(c, px), py),
+    V.sub(V.sub(c, px), py),
+    V.sub(V.add(c, px), py)
+  ];
+}
+function faces(b) {
+  const v = corners(b);
+  const [ux, uy] = axes(b);
+  return [
+    { a: v[0], b: v[1], n: uy },
+    { a: v[1], b: v[2], n: V.mul(ux, -1) },
+    { a: v[2], b: v[3], n: V.mul(uy, -1) },
+    { a: v[3], b: v[0], n: ux }
+  ];
+}
+function reach(b, n) {       // 그 축으로 상자가 뻗은 길이
+  const [ux, uy] = axes(b);
+  return Math.abs(V.dot(ux, n)) * b.hw + Math.abs(V.dot(uy, n)) * b.hh;
+}
+
+/* ---------- 부딪힘 찾기 ---------- */
+
+function hitCircles(A, B) {
+  const d = V.sub({ x: B.x, y: B.y }, { x: A.x, y: A.y });
+  const dist = V.len(d);
+  const pen = A.r + B.r - dist;
+  if (pen <= 0) return null;
+  const n = dist < 0.0001 ? { x: 0, y: -1 } : V.mul(d, 1 / dist);
+  return { A, B, n, pts: [{ p: V.add({ x: A.x, y: A.y }, V.mul(n, A.r - pen / 2)), pen, jn: 0, jt: 0 }] };
+}
+
+function hitCircleBox(C, Bx) {
+  // 상자 기준으로 돌려 놓고 가장 가까운 자리를 찾는다
+  const [ux, uy] = axes(Bx);
+  const d = V.sub({ x: C.x, y: C.y }, { x: Bx.x, y: Bx.y });
+  let lx = V.dot(d, ux), ly = V.dot(d, uy);
+  const cx = Math.max(-Bx.hw, Math.min(Bx.hw, lx));
+  const cy = Math.max(-Bx.hh, Math.min(Bx.hh, ly));
+  const inside = (cx === lx && cy === ly);
+
+  let nx = lx - cx, ny = ly - cy;
+  let dist = Math.hypot(nx, ny);
+  let pen;
+
+  if (inside) {
+    // 안에 파고들었으면 제일 가까운 면으로 밀어낸다
+    const dx = Bx.hw - Math.abs(lx), dy = Bx.hh - Math.abs(ly);
+    if (dx < dy) { nx = lx < 0 ? -1 : 1; ny = 0; pen = C.r + dx; }
+    else { nx = 0; ny = ly < 0 ? -1 : 1; pen = C.r + dy; }
+  } else {
+    pen = C.r - dist;
+    if (pen <= 0) return null;
+    nx /= dist || 1; ny /= dist || 1;
+  }
+
+  // 세상 좌표로 되돌린다. 축은 원 → 상자 쪽을 본다
+  const n = V.mul({ x: ux.x * nx + uy.x * ny, y: ux.y * nx + uy.y * ny }, -1);
+  const p = { x: Bx.x + ux.x * cx + uy.x * cy, y: Bx.y + ux.y * cx + uy.y * cy };
+  return { A: C, B: Bx, n, pts: [{ p, pen, jn: 0, jt: 0 }] };
+}
+
+function clip(p1, p2, n, o) {     // dot(n,p) <= o 인 쪽만 남긴다
+  const out = [];
+  const d1 = V.dot(n, p1) - o, d2 = V.dot(n, p2) - o;
+  if (d1 <= 0) out.push(p1);
+  if (d2 <= 0) out.push(p2);
+  if (d1 * d2 < 0) {
+    const t = d1 / (d1 - d2);
+    out.push(V.add(p1, V.mul(V.sub(p2, p1), t)));
+  }
+  return out;
+}
+
+function hitBoxes(A, B) {
+  // 네 축을 다 재 보고 제일 덜 겹치는 축을 고른다
+  let best = -Infinity, bestN = null, owner = null;
+  const test = (box, other, flip) => {
+    for (const ax of axes(box)) {
+      for (const sgn of [1, -1]) {
+        const n = V.mul(ax, sgn);
+        const d = V.dot(V.sub({ x: other.x, y: other.y }, { x: box.x, y: box.y }), n);
+        const gap = d - reach(box, n) - reach(other, n);
+        if (gap > best) { best = gap; bestN = n; owner = flip ? 'B' : 'A'; }
+      }
+    }
+  };
+  test(A, B, false);
+  test(B, A, true);
+  if (best > 0 || !bestN) return null;
+
+  const ref = owner === 'A' ? A : B;
+  const inc = owner === 'A' ? B : A;
+  const rn = bestN;                      // ref 에서 inc 쪽을 본다
+
+  // 기준 면과 맞은 면을 고른다
+  const rf = faces(ref).reduce((m, f) => V.dot(f.n, rn) > V.dot(m.n, rn) ? f : m);
+  const inf = faces(inc).reduce((m, f) => V.dot(f.n, rn) < V.dot(m.n, rn) ? f : m);
+
+  // 기준 면 옆구리로 잘라 낸다
+  const t = V.norm(V.sub(rf.b, rf.a));
+  let seg = clip(inf.a, inf.b, V.mul(t, -1), V.dot(V.mul(t, -1), rf.a));
+  if (seg.length < 2) return null;
+  seg = clip(seg[0], seg[1], t, V.dot(t, rf.b));
+  if (seg.length < 2) return null;
+
+  const off = V.dot(rf.n, rf.a);
+  const pts = [];
+  for (const p of seg) {
+    const pen = off - V.dot(rf.n, p);
+    if (pen >= 0) pts.push({ p, pen, jn: 0, jt: 0 });
+  }
+  if (!pts.length) return null;
+
+  // 축은 늘 A → B 를 보게 맞춘다
+  const n = owner === 'A' ? rf.n : V.mul(rf.n, -1);
+  return { A, B, n, pts };
+}
+
+function collide(a, b) {
+  if (a.kind === 'circle' && b.kind === 'circle') return hitCircles(a, b);
+  if (a.kind === 'circle') return hitCircleBox(a, b);
+  if (b.kind === 'circle') {
+    const m = hitCircleBox(b, a);
+    if (m) { m.n = V.mul(m.n, -1); const t = m.A; m.A = m.B; m.B = t; }
+    return m;
+  }
+  return hitBoxes(a, b);
+}
+
+/* ---------- 밀어내기 ---------- */
+
+function stirring(b) {
+  return Math.hypot(b.vx, b.vy) > SLEEP_V || Math.abs(b.w) > SLEEP_W;
+}
+
+function velAt(b, r) {
+  const rot = V.crsSV(b.w, r);
+  return { x: b.vx + rot.x, y: b.vy + rot.y };
+}
+
+function push(b, r, imp) {
+  if (b.fixed) return;
+  b.vx += imp.x * b.im;
+  b.vy += imp.y * b.im;
+  b.w += V.crs(r, imp) * b.ii;
+}
+
+function pseudoAt(b, r) {
+  return { x: b.pvx - b.pw * r.y, y: b.pvy + b.pw * r.x };
+}
+
+function pushP(b, r, imp) {
+  if (b.fixed) return;
+  b.pvx += imp.x * b.im;
+  b.pvy += imp.y * b.im;
+  b.pw += V.crs(r, imp) * b.ii;
+}
+
+function solve(list) {
+  for (const b of bodies) { b.pvx = 0; b.pvy = 0; b.pw = 0; }
+
+  // 한 번만 재 두면 되는 값들. 자리는 미는 동안 그대로다
+  for (const c of list) {
+    const { A, B, n } = c;
+    const t = V.perp(n);
+    for (const ct of c.pts) {
+      ct.rA = V.sub(ct.p, { x: A.x, y: A.y });
+      ct.rB = V.sub(ct.p, { x: B.x, y: B.y });
+      ct.vn0 = V.dot(V.sub(velAt(B, ct.rB), velAt(A, ct.rA)), n);
+      ct.kn = A.im + B.im + V.crs(ct.rA, n) ** 2 * A.ii + V.crs(ct.rB, n) ** 2 * B.ii;
+      ct.kt = A.im + B.im + V.crs(ct.rA, t) ** 2 * A.ii + V.crs(ct.rB, t) ** 2 * B.ii;
+      ct.bias = Math.min(220, BETA / DT * Math.max(0, ct.pen - SLOP));
+      ct.jp = 0;
+    }
+  }
+
+  // 지난 걸음에 주고받던 힘을 미리 한 번 넣어 준다.
+  // 이게 없으면 얇은 널빤지 탑이 제 무게에 눌려 주저앉는다
+  for (const c of list) {
+    const t = V.perp(c.n);
+    for (const ct of c.pts) {
+      if (!ct.jn && !ct.jt) continue;
+      const imp = V.add(V.mul(c.n, ct.jn), V.mul(t, ct.jt));
+      push(c.A, ct.rA, V.mul(imp, -1));
+      push(c.B, ct.rB, imp);
+    }
+  }
+
+  for (let it = 0; it < ITER; it++) {
+    // 늘 같은 차례로 밀면 그 방향으로 탑이 조금씩 밀린다. 번갈아 돈다
+    const order = it % 2 ? list : list.slice().reverse();
+    for (const c of order) {
+      const { A, B, n } = c;
+      const rest = Math.min(A.rest, B.rest);
+      const mu = Math.sqrt(A.fric * B.fric);
+      const t = V.perp(n);
+      const share = c.pts.length;
+
+      // 맞부딪히는 쪽으로 밀어낸다
+      for (const ct of c.pts) {
+        if (ct.kn <= 0) continue;
+        const rv = V.sub(velAt(B, ct.rB), velAt(A, ct.rA));
+        const e = ct.vn0 < -120 ? rest : 0;
+        const j = (-(1 + e) * V.dot(rv, n)) / ct.kn / share;
+        const old = ct.jn;
+        ct.jn = Math.max(0, old + j);
+        const imp = V.mul(n, ct.jn - old);
+        push(A, ct.rA, V.mul(imp, -1));
+        push(B, ct.rB, imp);
+      }
+
+      // 옆으로 미끄러지는 걸 잡는다
+      for (const ct of c.pts) {
+        if (ct.kt <= 0) continue;
+        const rv = V.sub(velAt(B, ct.rB), velAt(A, ct.rA));
+        const j = -V.dot(rv, t) / ct.kt / share;
+        const max = mu * ct.jn;
+        const old = ct.jt;
+        ct.jt = Math.max(-max, Math.min(max, old + j));
+        const imp = V.mul(t, ct.jt - old);
+        push(A, ct.rA, V.mul(imp, -1));
+        push(B, ct.rB, imp);
+      }
+
+      // 겹친 만큼 떼어 놓는다. 이 힘은 진짜 속도에 섞지 않는다.
+      // 섞으면 탑이 저 혼자 들썩이다 무너진다
+      for (const ct of c.pts) {
+        if (ct.kn <= 0 || ct.bias <= 0) continue;
+        const rv = V.sub(pseudoAt(B, ct.rB), pseudoAt(A, ct.rA));
+        const j = (-V.dot(rv, n) + ct.bias) / ct.kn / share;
+        const old = ct.jp;
+        ct.jp = Math.max(0, old + j);
+        const imp = V.mul(n, ct.jp - old);
+        pushP(A, ct.rA, V.mul(imp, -1));
+        pushP(B, ct.rB, imp);
+      }
+    }
+  }
+}
+
+/* ---------- 한 걸음 ---------- */
+
+function step() {
+  for (const b of bodies) {
+    if (b.fixed || b.asleep) continue;
+    b.vy += G * DT;
+    b.vx *= 0.999;
+    // 공은 굴러가다 저절로 멎는다. 안 그러면 얹어 둔 풍선이
+    // 아주 천천히 굴러서 혼자 탑에서 내려온다
+    b.w *= b.kind === 'circle' ? 0.985 : 0.995;
+    const sp = Math.hypot(b.vx, b.vy);
+    if (sp > 1500) { b.vx *= 1500 / sp; b.vy *= 1500 / sp; }
+  }
+
+  const list = [];
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      const a = bodies[i], b = bodies[j];
+      if (a.fixed && b.fixed) continue;
+      if (a.asleep && b.asleep) continue;
+      if (a.fixed && b.asleep) continue;
+      if (b.fixed && a.asleep) continue;
+      const m = collide(a, b);
+      if (!m) continue;
+      // 움직이는 쪽이 건드릴 때만 자던 쪽이 깬다.
+      // 옆에서 같이 잦아드는 중인 몸뚱이한테는 깨우지 않는다.
+      // 안 그러면 맞붙은 것들이 서로를 깨워 대느라 아무도 못 잔다
+      const livelyA = !a.asleep && stirring(a);
+      const livelyB = !b.asleep && stirring(b);
+      if (a.asleep && livelyB) { a.asleep = false; a.idle = 0; }
+      if (b.asleep && livelyA) { b.asleep = false; b.idle = 0; }
+      const blow = Math.max(0, -V.dot(V.sub({ x: b.vx, y: b.vy }, { x: a.vx, y: a.vy }), m.n));
+      a.impact = Math.max(a.impact, blow);
+      b.impact = Math.max(b.impact, blow);
+      list.push(m);
+    }
+  }
+
+  // 같은 자리에서 이어지는 자국이면 지난 힘을 물려받는다
+  const keep = new Map();
+  for (const m of list) {
+    const k = m.A.id + ':' + m.B.id;
+    const prev = warm.get(k);
+    if (prev) {
+      for (const ct of m.pts) {
+        const old = prev.find(o => Math.hypot(o.p.x - ct.p.x, o.p.y - ct.p.y) < 3);
+        if (old) { ct.jn = old.jn; ct.jt = old.jt; }
+      }
+    }
+    keep.set(k, m.pts);
+  }
+  warm = keep;
+
+  solve(list);
+
+  for (const b of bodies) {
+    if (b.fixed || b.asleep) continue;
+    b.x += (b.vx + b.pvx) * DT;
+    b.y += (b.vy + b.pvy) * DT;
+    b.a += (b.w + b.pw) * DT;
+
+    if (Math.hypot(b.vx, b.vy) < SLEEP_V && Math.abs(b.w) < SLEEP_W) {
+      b.idle += DT;
+      if (b.idle > SLEEP_T) { b.asleep = true; b.vx = b.vy = b.w = 0; }
+    } else {
+      b.idle = 0;
+    }
+  }
+  return list;
+}
+
+/* ---------- 게임 ---------- */
+const LEVELS = {
+  easy:   { name: '쉬움',   balls: 4, build: buildEasy },
+  normal: { name: '보통',   balls: 5, build: buildNormal },
+  hard:   { name: '어려움', balls: 6, build: buildHard }
+};
+const KEY_LEVEL = 'craft-throw-level';
+const KEY_BEST  = 'craft-throw-best';
+const SLING = { x: 46, y: GY - 66 };   // 공을 놓는 자리
+const PULL = 92;                       // 끝까지 당겼을 때의 거리
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrapEl = document.getElementById('boardwrap');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const ballsEl = document.getElementById('balls');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const hintEl = document.getElementById('hint');
+const levelRow = document.getElementById('levelRow');
+
+let key, lv;
+let S = 1;
+let ball = null, left = 0, popped = 0, needed = 0;
+let drag = null, aiming = true, over = false;
+let armed = false;             // 공을 한 번 날리기 전에는 풍선이 안 터진다
+let score = 0;
+let shotPops = 0;              // 이번 한 방으로 터뜨린 풍선 수
+let shotAt = 0;
+let trail = [];                // 공이 지나온 자리
+let shake = 0;                 // 세게 부딪히면 판이 흔들린다
+let lastThud = 0;
+let puffs = [];
+let raf = null, lastT = 0, acc = 0;
+
+/* ---------- 소리 ----------
+   부딪히는 소리가 없으면 아무리 무너져도 심심하다 */
+
+let ac = null, noiseBuf = null;
+
+function ensureAudio() {
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) ac = new AC();
+  }
+  if (ac && ac.state === 'suspended') ac.resume();
+  return ac;
+}
+
+function noise(dur) {
+  if (!noiseBuf) {
+    const n = Math.floor(ac.sampleRate * 0.5);
+    noiseBuf = ac.createBuffer(1, n, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuf;
+  src.loop = true;
+  return src;
+}
+
+function env(node, at, dur, vol) {
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  node.connect(g).connect(ac.destination);
+  return g;
+}
+
+function thud(vol) {          // 나무끼리 부딪히는 소리
+  if (!ac) return;
+  const at = ac.currentTime;
+  const o = ac.createOscillator();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(150, at);
+  o.frequency.exponentialRampToValueAtTime(70, at + 0.09);
+  env(o, at, 0.1, vol);
+  o.start(at); o.stop(at + 0.16);
+
+  const n = noise(0.08);
+  const f = ac.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(900, at);
+  n.connect(f);
+  env(f, at, 0.06, vol * 0.7);
+  n.start(at); n.stop(at + 0.1);
+}
+
+function popSound() {         // 풍선 터지는 소리
+  if (!ac) return;
+  const at = ac.currentTime;
+  const n = noise(0.14);
+  const f = ac.createBiquadFilter();
+  f.type = 'bandpass';
+  f.Q.value = 1.2;
+  f.frequency.setValueAtTime(2200, at);
+  f.frequency.exponentialRampToValueAtTime(400, at + 0.13);
+  n.connect(f);
+  env(f, at, 0.14, 0.34);
+  n.start(at); n.stop(at + 0.2);
+}
+
+function whoosh() {           // 던질 때 스치는 소리
+  if (!ac) return;
+  const at = ac.currentTime;
+  const n = noise(0.2);
+  const f = ac.createBiquadFilter();
+  f.type = 'highpass';
+  f.frequency.setValueAtTime(600, at);
+  f.frequency.exponentialRampToValueAtTime(2400, at + 0.18);
+  n.connect(f);
+  env(f, at, 0.19, 0.12);
+  n.start(at); n.stop(at + 0.25);
+}
+
+function knock(v) {           // 부딪힌 세기만큼 소리도 흔들림도 커진다
+  const now = performance.now();
+  if (now - lastThud > 45) {
+    lastThud = now;
+    thud(Math.min(0.42, 0.06 + v / 1400));
+  }
+  if (v > 320) shake = Math.min(10, shake + v / 130);
+}
+
+/* ---------- 점수 ---------- */
+
+function addScore(n, x, y, text, color) {
+  score += n;
+  const at = performance.now();
+  // 한꺼번에 여러 점수가 뜨면 글씨가 겹친다. 조금씩 위로 비켜 놓는다
+  const stack = puffs.filter(p => p.kind === 'text' && at - p.at < 260).length;
+  puffs.push({ kind: 'text', x, y: y - stack * 15, text, color, at });
+  paint();
+}
+
+/* ---------- 탑 세우기 ---------- */
+
+function plank(x, bottom, w, h) { return addBox(x, bottom - h / 2, w, h, { fric: .68, rest: .04 }); }
+function balloon(x, bottom) { return addCircle(x, bottom - 13, 13, { dens: .0007, fric: .72, rest: .06, target: true }); }
+
+function ground() {
+  addBox(WW / 2, GY + 40, WW * 3, 80, { fixed: true, fric: .8 });
+  addBox(-30, WH / 2, 40, WH * 2, { fixed: true });          // 왼쪽 벽
+  addBox(WW + 30, WH / 2, 40, WH * 2, { fixed: true });     // 오른쪽 벽. 부서진 게 판 밖으로 안 나간다
+}
+
+function buildEasy() {
+  plank(250, GY, 16, 74);
+  plank(316, GY, 16, 74);
+  plank(283, GY - 74, 98, 16);
+  balloon(283, GY - 90);
+  plank(175, GY, 18, 18);
+  balloon(212, GY);
+}
+
+function buildNormal() {
+  plank(232, GY, 14, 66);
+  plank(320, GY, 14, 66);
+  plank(276, GY - 66, 108, 14);
+  plank(248, GY - 80, 12, 48);
+  plank(304, GY - 80, 12, 48);
+  balloon(276, GY - 80);
+  plank(276, GY - 128, 74, 12);
+  balloon(276, GY - 140);
+  plank(180, GY, 18, 18);
+  balloon(198, GY - 18);
+}
+
+function buildHard() {
+  plank(213, GY, 13, 70);
+  plank(256, GY, 13, 70);
+  plank(299, GY, 13, 70);
+  plank(342, GY, 13, 70);
+  plank(277, GY - 70, 142, 13);
+  plank(235, GY - 83, 12, 52);
+  plank(320, GY - 83, 12, 52);
+  balloon(277, GY - 83);
+  plank(277, GY - 135, 110, 12);
+  plank(245, GY - 147, 10, 34);
+  plank(310, GY - 147, 10, 34);
+  balloon(277, GY - 147);
+  plank(277, GY - 181, 76, 10);
+  balloon(277, GY - 191);
+  balloon(180, GY);
+}
+
+/* ---------- 새 게임 ---------- */
+
+function newGame() {
+  stop();
+  bodies = [];
+  warm = new Map();
+  puffs = [];
+  ground();
+  lv.build();
+  needed = bodies.filter(b => b.target).length;
+
+  // 갓 세운 탑은 맞닿기만 했지 아직 서로를 받치지는 않는다.
+  // 몇 걸음 미리 흘려 자리를 잡아 준다. 안 그러면 세우자마자
+  // 주저앉는 힘이 풍선을 터뜨린다
+  for (let i = 0; i < 150; i++) {
+    bodies.forEach(b => { b.impact = 0; });
+    step();
+  }
+  // 자리를 잡았으면 통째로 재운다. 공이 와서 건드리기 전까지는
+  // 꼼짝도 하지 않는다. 얹어 둔 풍선이 혼자 굴러 내려오는 일도 없다
+  warm = new Map();
+  bodies.forEach(b => {
+    if (b.fixed) return;
+    b.vx = b.vy = b.w = 0;
+    b.asleep = true;
+    b.idle = SLEEP_T;
+  });
+
+  bodies.forEach(b => {
+    if (!b.fixed) b.home = { x: b.x, y: b.y };   // 여기서 얼마나 밀려났는지로 넘어진 걸 센다
+  });
+
+  popped = 0;
+  score = 0;
+  shotPops = 0;
+  trail = [];
+  shake = 0;
+  left = lv.balls;
+  ball = null;
+  armed = false;
+  over = false;
+  aiming = true;
+  drag = null;
+  coverEl.classList.remove('on');
+  hintEl.textContent = '공을 뒤로 당겼다 놓으면 날아간다';
+  paint();
+  run();
+}
+
+function run() {
+  if (raf) return;
+  lastT = performance.now();
+  acc = 0;
+  raf = requestAnimationFrame(tick);
+}
+function stop() {
+  if (raf) cancelAnimationFrame(raf);
+  raf = null;
+}
+
+/* ---------- 던지기 ---------- */
+
+function launch(vx, vy) {
+  ball = addCircle(SLING.x, SLING.y, 9, { dens: .0062, rest: .22, fric: .45, ball: true });
+  ball.vx = vx;
+  ball.vy = vy;
+  armed = true;
+  shotPops = 0;
+  shotAt = performance.now();
+  trail = [];
+  whoosh();
+  bodies.forEach(b => { if (!b.fixed) { b.asleep = false; b.idle = 0; } });
+  left--;
+  aiming = false;
+  hintEl.textContent = '날아간다!';
+  paint();
+}
+
+function pointer(e) {
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / S, y: (e.clientY - r.top) / S };
+}
+
+cv.addEventListener('pointerdown', e => {
+  ensureAudio();                  // 손이 처음 닿는 이때만 소리 길이 열린다
+  if (!aiming || over) return;
+  cv.setPointerCapture(e.pointerId);
+  drag = pointer(e);
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  drag = pointer(e);
+});
+cv.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const pull = V.sub(SLING, drag);
+  const d = Math.min(V.len(pull), PULL);
+  drag = null;
+  if (d < 12) { hintEl.textContent = '조금 더 당겨 보자'; return; }
+  const dir = V.norm(pull);
+  const speed = 150 + (d / PULL) * 600;
+  launch(dir.x * speed, dir.y * speed);
+});
+cv.addEventListener('pointercancel', () => { drag = null; });
+
+/* ---------- 흐르기 ---------- */
+
+function tick(t) {
+  raf = null;
+  const dt = Math.min(0.05, (t - lastT) / 1000);
+  lastT = t;
+  acc += dt;
+
+  let guard = 0;
+  let blow = 0;
+  while (acc >= DT && guard++ < 8) {
+    bodies.forEach(b => { b.impact = 0; });
+    step();
+    popCheck();
+    for (const b of bodies) if (b.impact > blow) blow = b.impact;
+    acc -= DT;
+  }
+  if (blow > 120) knock(blow);
+
+  if (ball && !aiming) {
+    trail.push({ x: ball.x, y: ball.y });
+    if (trail.length > 14) trail.shift();
+  }
+  shake *= 0.86;
+  if (shake < 0.2) shake = 0;
+
+  puffs = puffs.filter(p => (performance.now() - p.at) < (p.kind === 'text' ? 900 : 500));
+  settleCheck();
+  draw();
+  raf = requestAnimationFrame(tick);
+}
+
+function popCheck() {
+  if (!armed) return;
+
+  for (const b of bodies) {
+    if (!b.target || b.dead) continue;
+    if (b.impact > POP_HIT) {
+      b.dead = true;
+      popped++;
+      shotPops++;
+      puffs.push({ x: b.x, y: b.y, at: performance.now() });
+      popSound();
+      shake = Math.min(10, shake + 4);
+      // 한 방에 여러 개를 터뜨리면 뒤에 터진 것일수록 점수가 커진다
+      const gain = 500 * shotPops;
+      addScore(gain, b.x, b.y - 18, '+' + gain, '#FF4F7A');
+      if (shotPops >= 2) hintEl.innerHTML = '<b>한 방에 ' + shotPops + '개!</b>';
+    }
+  }
+  if (bodies.some(b => b.dead)) bodies = bodies.filter(b => !b.dead);
+
+  // 제자리에서 밀려난 널빤지도 점수로 셈해 준다
+  for (const b of bodies) {
+    if (b.fixed || b.ball || b.target || b.toppled || !b.home) continue;
+    if (Math.hypot(b.x - b.home.x, b.y - b.home.y) > 25) {
+      b.toppled = true;
+      addScore(50, b.x, b.y - 12, '+50', '#A9743F');
+    }
+  }
+}
+
+function settleCheck() {
+  if (over || aiming) return;
+  const gone = !ball || ball.x > WW + 60 || ball.y > WH + 80;
+  const still = ball && (ball.asleep || Math.hypot(ball.vx, ball.vy) < 12);
+  const quiet = bodies.every(b => b.fixed || b.asleep || Math.hypot(b.vx, b.vy) < 14);
+  const tooLong = performance.now() - shotAt > 8000;   // 어디 걸려 있어도 판이 멈추진 않는다
+
+  if (popped >= needed) return finish(true);
+  if (!(gone || tooLong || (still && quiet))) return;
+
+  // 공이 멈췄다. 치우고 다음 공을 얹는다
+  if (ball) {
+    bodies = bodies.filter(b => b !== ball);
+    ball = null;
+  }
+  if (left <= 0) return finish(false);
+  aiming = true;
+  hintEl.textContent = '공이 ' + left + '개 남았다';
+}
+
+function finish(won) {
+  over = true;
+  aiming = false;
+
+  const spare = won ? left * 300 : 0;      // 아낀 공만큼 더 준다
+  score += spare;
+  const best = loadBest();
+  const isNew = won && score > best;
+  if (isNew) saveBest(score);
+  paint();
+
+  const stars = won ? Math.max(1, Math.min(3, 1 + left)) : 0;
+  coverMsg.innerHTML = won
+    ? '다 터뜨렸다! 🎈<small>' + '⭐'.repeat(stars) + '<br>' +
+      score + '점 · 공 ' + left + '개를 남겨서 ' + spare + '점<br>' +
+      (isNew ? '새 기록이다!' : '최고 점수는 ' + best + '점') + '</small>'
+    : '공이 다 떨어졌다<small>풍선 ' + popped + '개를 터뜨려서 ' + score + '점<br>다시 해 보자</small>';
+  coverBtn.textContent = won ? '🔄 한 판 더' : '🔄 다시 하기';
+  coverEl.classList.add('on');
+  hintEl.innerHTML = won ? '<b>' + score + '점</b>' : '아깝다';
+}
+
+/* ---------- 그리기 ---------- */
+
+function fit() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const wCss = wrapEl.clientWidth || WW;
+  S = wCss / WW;
+  cv.width = Math.round(WW * S * dpr);
+  cv.height = Math.round(WH * S * dpr);
+  cv.style.height = (WH * S) + 'px';
+  ctx.setTransform(dpr * S, 0, 0, dpr * S, 0, 0);
+  draw();
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, WW, WH);
+
+  ctx.save();
+  if (shake > 0) {
+    // 세게 부딪힌 만큼 판을 흔든다
+    ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+  }
+
+  // 하늘과 땅
+  const sky = ctx.createLinearGradient(0, 0, 0, GY);
+  sky.addColorStop(0, '#EAF1FF');
+  sky.addColorStop(1, '#F7FAFF');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, WW, GY);
+  ctx.fillStyle = '#BFE3C4';
+  ctx.fillRect(0, GY, WW, WH - GY);
+  ctx.fillStyle = '#9ED3A6';
+  ctx.fillRect(0, GY, WW, 4);
+
+  // 새총
+  ctx.strokeStyle = '#A9743F';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(SLING.x, GY);
+  ctx.lineTo(SLING.x, SLING.y + 6);
+  ctx.moveTo(SLING.x, SLING.y + 6);
+  ctx.lineTo(SLING.x - 9, SLING.y - 8);
+  ctx.moveTo(SLING.x, SLING.y + 6);
+  ctx.lineTo(SLING.x + 9, SLING.y - 8);
+  ctx.stroke();
+
+  // 공이 지나온 자취
+  trail.forEach((p, i) => {
+    ctx.globalAlpha = (i + 1) / trail.length * 0.4;
+    ctx.fillStyle = '#4A5B9E';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2 + i * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // 상자와 풍선
+  for (const b of bodies) {
+    if (b.fixed) continue;
+    if (b.kind === 'box') {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.a);
+      ctx.fillStyle = '#DDA95F';
+      roundRect(-b.hw, -b.hh, b.hw * 2, b.hh * 2, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#B3813C';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-b.hw + 3, -b.hh + 3);
+      ctx.lineTo(b.hw - 3, -b.hh + 3);
+      ctx.stroke();
+      ctx.restore();
+    } else if (b.target) {
+      ctx.fillStyle = '#FF7FA2';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.6)';
+      ctx.beginPath();
+      ctx.arc(b.x - b.r * .3, b.y - b.r * .35, b.r * .28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#7A2E45';
+      ctx.beginPath();
+      ctx.arc(b.x - 4, b.y - 1, 1.8, 0, Math.PI * 2);
+      ctx.arc(b.x + 4, b.y - 1, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (b.ball) {
+      ctx.fillStyle = '#4A5B9E';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.45)';
+      ctx.beginPath();
+      ctx.arc(b.x - 3, b.y - 3, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // 기다리는 공과 겨냥선
+  if (aiming && !over) {
+    const at = drag ? aimAt() : SLING;
+    if (drag) {
+      ctx.strokeStyle = '#C3CCE6';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(SLING.x, SLING.y);
+      ctx.lineTo(at.x, at.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      path(at);
+    }
+    ctx.fillStyle = '#4A5B9E';
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, 9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 터진 자리와 떠오르는 점수
+  const now = performance.now();
+  ctx.textAlign = 'center';
+  puffs.forEach(p => {
+    if (p.kind === 'text') {
+      const k = (now - p.at) / 900;
+      ctx.globalAlpha = Math.max(0, 1 - k * k);
+      ctx.fillStyle = p.color;
+      ctx.font = '800 15px "Apple SD Gothic Neo", sans-serif';
+      ctx.fillText(p.text, p.x, p.y - k * 26);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    const k = (now - p.at) / 500;
+    ctx.globalAlpha = 1 - k;
+    ctx.strokeStyle = '#FF7FA2';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const ang = i * Math.PI / 4;
+      const r0 = 10 + k * 12, r1 = r0 + 7;
+      ctx.beginPath();
+      ctx.moveTo(p.x + Math.cos(ang) * r0, p.y + Math.sin(ang) * r0);
+      ctx.lineTo(p.x + Math.cos(ang) * r1, p.y + Math.sin(ang) * r1);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+
+  // 남은 공을 밑에 늘어놓는다
+  for (let i = 0; i < left; i++) {
+    ctx.fillStyle = '#4A5B9E';
+    ctx.beginPath();
+    ctx.arc(14 + i * 18, WH - 13, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 남은 풍선은 오른쪽 끝에 세어 둔다
+  const rest = Math.max(0, needed - popped);
+  for (let i = 0; i < rest; i++) {
+    ctx.fillStyle = '#FF7FA2';
+    ctx.beginPath();
+    ctx.arc(WW - 14 - i * 18, WH - 13, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function aimAt() {
+  const pull = V.sub(SLING, drag);
+  const d = Math.min(V.len(pull), PULL);
+  const dir = V.norm(pull);
+  return { x: SLING.x - dir.x * d, y: SLING.y - dir.y * d };
+}
+
+function path(at) {
+  const pull = V.sub(SLING, at);
+  const d = Math.min(V.len(pull), PULL);
+  if (d < 12) return;
+  const dir = V.norm(pull);
+  const speed = 150 + (d / PULL) * 600;
+  let x = SLING.x, y = SLING.y, vx = dir.x * speed, vy = dir.y * speed;
+  ctx.fillStyle = 'rgba(108,139,255,.5)';
+  for (let i = 0; i < 90; i++) {
+    vy += G * DT;
+    x += vx * DT;
+    y += vy * DT;
+    if (y > GY) break;
+    if (i % 9 === 0) {
+      ctx.beginPath();
+      ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+/* ---------- 기록 ---------- */
+
+function loadBest() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY_BEST + '-' + key); } catch (e) {}
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+function saveBest(n) {
+  try { localStorage.setItem(KEY_BEST + '-' + key, String(n)); } catch (e) {}
+}
+function paint() {
+  scoreEl.textContent = score;
+  ballsEl.textContent = left;
+  bestEl.textContent = loadBest();
+}
+
+/* ---------- 난이도 ---------- */
+
+function setLevel(k) {
+  key = LEVELS[k] ? k : 'normal';
+  lv = LEVELS[key];
+  try { localStorage.setItem(KEY_LEVEL, key); } catch (e) {}
+  [...levelRow.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === key)));
+  newGame();
+}
+
+levelRow.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) setLevel(b.dataset.k);
+});
+coverBtn.addEventListener('click', newGame);
+document.getElementById('newBtn').addEventListener('click', newGame);
+window.addEventListener('resize', fit);
+
+let startKey = 'normal';
+try { startKey = localStorage.getItem(KEY_LEVEL) || 'normal'; } catch (e) {}
+setLevel(startKey);
+fit();
+</script>
+</body>
+</html>
