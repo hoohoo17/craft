@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>옆옆집 손님</title>
+<style>
+  :root{
+    --paper:#FBF4E6; --ink:#3A3128;
+    --accent:#B4672F;
+    --quote:#7C4A24;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',serif;
+    background:#D9C7A9;
+    color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:16px 12px;
+    user-select:none;
+  }
+  .book{
+    position:relative;
+    width:100%; max-width:520px;
+    height:min(78dvh, 680px);
+    perspective:1600px;
+  }
+  .page{
+    position:absolute; inset:0;
+    background:var(--paper);
+    border-radius:8px;
+    box-shadow:0 10px 40px rgba(58,49,40,.28);
+    padding:38px 28px;
+    background-image:repeating-linear-gradient(transparent, transparent 35px, rgba(58,49,40,.05) 36px);
+    overflow-y:auto;
+    transform-origin:left center;
+    transition:transform .45s ease, opacity .45s ease;
+    display:flex; flex-direction:column;
+    cursor:pointer;
+  }
+  .pg-inner{margin:auto 0;}
+  .page.flip-out{transform:rotateY(-80deg); opacity:0;}
+  .page.flip-in-prep{transform:rotateY(60deg); opacity:0; transition:none;}
+
+  .series{
+    text-align:center;
+    font-size:.85rem; font-weight:800;
+    letter-spacing:.35em;
+    color:var(--accent);
+    margin-bottom:10px;
+  }
+  h1{
+    text-align:center;
+    font-size:2rem;
+    letter-spacing:.03em;
+    margin-bottom:10px;
+  }
+  .author{
+    text-align:center;
+    font-size:1.05rem;
+    font-weight:800;
+    color:var(--quote);
+    letter-spacing:.15em;
+    margin-bottom:6px;
+  }
+  .deco{
+    text-align:center;
+    font-size:1.1rem;
+    letter-spacing:.6em;
+    color:var(--accent);
+    margin:14px 0;
+  }
+  .hintline{
+    text-align:center;
+    font-size:.95rem;
+    color:var(--quote);
+    margin-top:26px;
+    animation:breath 2s infinite;
+  }
+  @keyframes breath{50%{opacity:.4}}
+  p{
+    font-size:1.1rem;
+    line-height:1.95;
+    margin-bottom:14px;
+    word-break:keep-all;
+  }
+  p.quote{
+    color:var(--quote);
+    font-weight:700;
+    padding-left:14px;
+    border-left:4px solid var(--accent);
+  }
+  p.turn{
+    text-align:center;
+    font-weight:900;
+    font-size:1.6rem;
+    color:var(--accent);
+    letter-spacing:.1em;
+    margin:18px 0;
+  }
+  p.list{
+    font-size:1.02rem;
+    line-height:1.8;
+    margin-bottom:8px;
+  }
+  .chapter{
+    text-align:center;
+    font-size:.85rem; font-weight:900;
+    letter-spacing:.3em;
+    color:var(--accent);
+    margin-bottom:16px;
+  }
+  .goal{
+    text-align:center;
+    font-weight:900;
+    font-size:1.5rem;
+    color:var(--accent);
+    margin:16px 0;
+  }
+  .ending{
+    text-align:center;
+    font-weight:900;
+    font-size:1.5rem;
+    letter-spacing:.5em;
+    margin-top:30px;
+  }
+
+  .nav{
+    display:flex; align-items:center; gap:16px;
+    margin-top:14px;
+  }
+  .nav button{
+    font-family:inherit;
+    font-size:1.1rem; font-weight:900;
+    background:var(--paper); color:var(--ink);
+    border:none; border-radius:12px;
+    padding:10px 20px;
+    box-shadow:0 3px 10px rgba(58,49,40,.2);
+    cursor:pointer;
+  }
+  .nav button:disabled{opacity:.35; cursor:default;}
+  .nav button:not(:disabled):active{transform:translateY(2px);}
+  .page-num{
+    font-weight:900; font-size:1rem;
+    color:var(--quote);
+    min-width:64px; text-align:center;
+  }
+  .toc-bg{
+    position:fixed; inset:0;
+    background:rgba(58,49,40,.5);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:20;
+    padding:20px;
+  }
+  .toc-bg.show{display:flex;}
+  .toc{
+    background:var(--paper);
+    border-radius:16px;
+    padding:24px 20px;
+    width:100%; max-width:380px;
+    max-height:70dvh;
+    overflow-y:auto;
+    box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .toc h2{text-align:center; margin-bottom:14px; font-size:1.2rem;}
+  .toc-item{
+    display:flex; justify-content:space-between; gap:8px;
+    width:100%;
+    font-family:inherit; font-size:1.05rem; font-weight:800;
+    background:none; border:none;
+    border-bottom:1px dashed rgba(58,49,40,.2);
+    color:var(--ink);
+    padding:11px 6px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .toc-item:active{background:rgba(180,103,47,.1);}
+  .toc-item .pg{color:var(--accent); font-size:.9rem;}
+  .toc-close{
+    margin-top:14px; width:100%;
+    font-family:inherit; font-size:1rem; font-weight:800;
+    background:rgba(0,0,0,.07); color:var(--ink);
+    border:none; border-radius:10px;
+    padding:11px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="book">
+  <div class="page" id="page" onclick="tapPage(event)"></div>
+</div>
+<div class="nav">
+  <button id="prev-btn" onclick="go(-1)">◀</button>
+  <div class="page-num" id="page-num"></div>
+  <button onclick="openToc()">📑 차례</button>
+  <button id="next-btn" onclick="go(1)">▶</button>
+</div>
+
+<div class="toc-bg" id="toc-bg" onclick="if(event.target===this) closeToc()">
+  <div class="toc">
+    <h2>📑 차례</h2>
+    <div id="toc-list"></div>
+    <button class="toc-close" onclick="closeToc()">닫기</button>
+  </div>
+</div>
+
+<script>
+const PAGES = [
+  `<div class="series">나의 이야기 · 세 번째</div>
+   <h1>옆옆집 손님</h1>
+   <div class="deco">✦ ✦ ✦</div>
+   <div class="hintline">화면을 탭해서 책장을 넘겨 보세요 👉</div>`,
+
+  `<p>밤 열한 시였다.</p>
+   <p>초인종이 울렸고, 촤르릅이 문을 열었다.</p>
+   <p>문 앞에는 처음 보는 사람이 서 있었다.</p>`,
+
+  `<p class="quote">"저 옆옆집인데요, 윷놀이 하신다고 해서요."</p>
+   <p>촤르릅은 잠깐 말이 없었다.</p>
+   <p>윷놀이 대회는 아까 끝났다.</p>
+   <p>식탁도 닦았고 간장 종지도 치웠다.</p>`,
+
+  `<p class="quote">"지금요?"</p>
+   <p class="quote">"네."</p>
+   <p class="quote">"지금 열한 시인데요."</p>
+   <p class="quote">"네."</p>`,
+
+  `<p>뒤에서 심판이 걸어 나왔다.</p>
+   <p>심판은 이런 순간을 좋아했다.</p>
+   <p class="quote">"밤에도 대회를 할 수 있습니다."</p>
+   <p class="quote">"그런 규칙이 있어요?"</p>
+   <p class="quote">"방금 생겼습니다."</p>`,
+
+  `<div class="chapter">뚜벅뚜</div>
+   <p>손님은 이름이 뚜벅뚜라고 했다.</p>
+   <p>걸어서 왔다고 했다.</p>
+   <p class="quote">"멀어요?"</p>
+   <p class="quote">"옆옆집인데요."</p>`,
+
+  `<p>뚜벅뚜는 신발을 벗었다.</p>
+   <p>신발 밑창에 흙이 조금 묻어 있었다.</p>
+   <p>촤르릅은 그걸 잠깐 봤다.</p>
+   <p>옆옆집이면 흙이 묻을 거리가 아니었다.</p>`,
+
+  `<div class="chapter">의자</div>
+   <p>식탁에 사람들이 다시 모였다.</p>
+   <p>촤르릅이 의자를 세었다.</p>
+   <p>하나, 둘, 셋… 열둘.</p>
+   <p>의자는 열두 개였다.</p>`,
+
+  `<p>그리고 사람을 세었다.</p>
+   <p>열세 명이었다.</p>
+   <p class="quote">"의자가 하나 모자라요."</p>`,
+
+  `<p class="quote">"규칙을 만들겠습니다."</p>
+   <p>심판이 말했다.</p>
+   <p class="quote">"의자가 없는 사람은 서서 합니다."</p>
+   <p class="quote">"누가 서요?"</p>
+   <p class="quote">"제일 늦게 온 사람입니다."</p>`,
+
+  `<p>모두 뚜벅뚜를 봤다.</p>
+   <p>뚜벅뚜는 아무 말 없이 일어섰다.</p>
+   <p>서 있는 게 익숙해 보였다.</p>
+   <p>걸어서 왔으니 그럴 만도 했다.</p>`,
+
+  `<div class="chapter">첫 판</div>
+   <p>윷을 던지기 전에 인원을 다시 셌다.</p>
+   <p>밤에는 정확해야 한다고 심판이 말했다.</p>
+   <p>심판이 셌다.</p>
+   <p class="turn">열두 명.</p>`,
+
+  `<p>촤르릅이 고개를 들었다.</p>
+   <p>아까는 분명히 열세 명이었다.</p>
+   <p>나간 사람은 없었다.</p>
+   <p>문도 열리지 않았다.</p>`,
+
+  `<p class="quote">"한 명이 없어졌는데요."</p>
+   <p class="quote">"누가요?"</p>
+   <p class="quote">"그건 모르겠어요."</p>`,
+
+  `<p>심판이 이름을 부르기 시작했다.</p>
+   <p class="list">뽀파뽀프. — 네.</p>
+   <p class="list">빠푸뽀푸. — 네.</p>
+   <p class="list">추루룹. — 네.</p>`,
+
+  `<p class="list">초추초추. — 네.</p>
+   <p class="list">우당탕. — 네.</p>
+   <p class="list">부릉부. — 네.</p>
+   <p class="list">꼬르륵. — 꼬르륵.</p>`,
+
+  `<p class="quote">"꼬르륵은 대답한 겁니까, 배가 운 겁니까."</p>
+   <p class="quote">"둘 다입니다."</p>
+   <p>심판은 그걸 대답으로 쳤다.</p>`,
+
+  `<p class="list">차추초추. — 네.</p>
+   <p class="list">초차초츠. — 네.</p>
+   <p class="list">기다랑. — 네.</p>
+   <p class="list">촤르릅. — 네.</p>
+   <p class="list">뚜벅뚜. — 네.</p>`,
+
+  `<p>다 있었다.</p>
+   <p>한 명도 빠지지 않았다.</p>
+   <p>그런데 세면 열두 명이었다.</p>`,
+
+  `<div class="chapter">다시 세기</div>
+   <p class="quote">"제가 세어 볼게요."</p>
+   <p>촤르릅이 천천히 셌다.</p>
+   <p class="turn">열세 명.</p>`,
+
+  `<p class="quote">"열셋인데요."</p>
+   <p class="quote">"열둘입니다."</p>
+   <p class="quote">"열셋이에요."</p>
+   <p class="quote">"열둘입니다."</p>`,
+
+  `<p>두 사람은 세 번 더 셌다.</p>
+   <p>촤르릅은 세 번 다 열셋이었고</p>
+   <p>심판은 세 번 다 열둘이었다.</p>`,
+
+  `<p>사람들이 웅성거렸다.</p>
+   <p>우당탕이 의자를 넘어뜨렸다.</p>
+   <p>꼬르륵의 배가 또 울었다.</p>
+   <p>밤 열한 시 반이었다.</p>`,
+
+  `<div class="chapter">동그랗게</div>
+   <p>촤르릅이 방법을 냈다.</p>
+   <p class="quote">"다 같이 손을 잡고 동그랗게 서요."</p>
+   <p>손을 놓지 않으면 아무도 빠져나갈 수 없다.</p>`,
+
+  `<p>모두 일어나 손을 잡았다.</p>
+   <p>동그라미가 만들어졌다.</p>
+   <p>뚜벅뚜의 손은 조금 차가웠다.</p>
+   <p>밤길을 걸어와서 그랬다.</p>`,
+
+  `<p>동그라미를 따라 세었다.</p>
+   <p>촤르릅부터 시작해서 한 바퀴.</p>
+   <p class="turn">열셋.</p>`,
+
+  `<p class="quote">"이제 심판이 세어 보세요."</p>
+   <p>심판이 동그라미를 따라 셌다.</p>
+   <p>손가락으로 한 명씩 짚었다.</p>
+   <p class="turn">열둘.</p>`,
+
+  `<p>모두가 심판을 봤다.</p>
+   <p>심판도 자기 손가락을 봤다.</p>
+   <p>손가락이 어디서 멈췄는지</p>
+   <p>심판 자신도 몰랐다.</p>`,
+
+  `<div class="chapter">빠진 한 명</div>
+   <p>촤르릅이 심판에게 물었다.</p>
+   <p class="quote">"누구부터 세셨어요?"</p>
+   <p class="quote">"제 옆 사람부터요."</p>
+   <p class="quote">"그럼 어디서 끝났어요?"</p>
+   <p class="quote">"제 앞 사람에서요."</p>`,
+
+  `<p>촤르릅은 잠깐 가만히 있었다.</p>
+   <p>그리고 말했다.</p>
+   <p class="quote">"심판은 심판을 안 세셨어요."</p>`,
+
+  `<p class="turn">빠진 한 명은 심판이었다.</p>
+   <p>식탁이 조용해졌다.</p>`,
+
+  `<p>심판은 자기 얼굴을 만져 봤다.</p>
+   <p>얼굴은 그대로 있었다.</p>
+   <p>자기는 늘 거기 있었는데</p>
+   <p>한 번도 세어지지 않았다.</p>`,
+
+  `<p class="quote">"그게 세는 것과 무슨 상관입니까."</p>
+   <p class="quote">"세는 사람도 사람이니까요."</p>
+   <p>초추초추가 고개를 끄덕였다.</p>`,
+
+  `<p>어제도 비슷한 일이 있었다.</p>
+   <p>어제는 한 명이 많았고</p>
+   <p>오늘은 한 명이 적었다.</p>
+   <p>이 집은 늘 한 명이 문제였다.</p>`,
+
+  `<div class="chapter">의자 하나</div>
+   <p class="quote">"그럼 의자는요?"</p>
+   <p>뽀파뽀프가 물었다.</p>
+   <p>사람은 열셋, 의자는 열둘.</p>
+   <p>여전히 하나가 모자랐다.</p>`,
+
+  `<p>심판이 또 규칙을 만들려고 했다.</p>
+   <p>그때 뚜벅뚜가 말했다.</p>
+   <p class="quote">"저는 서서 할게요. 괜찮아요."</p>`,
+
+  `<p class="quote">"왜요?"</p>
+   <p class="quote">"저는 원래 서 있는 게 편해요."</p>
+   <p class="quote">"왜요?"</p>
+   <p class="quote">"많이 걸어 다니니까요."</p>`,
+
+  `<p>촤르릅은 또 그 흙을 생각했다.</p>
+   <p>옆옆집에서 왔다는 사람의</p>
+   <p>신발 밑창에 묻은 흙을.</p>`,
+
+  `<div class="chapter">옆옆집</div>
+   <p>촤르릅은 창밖을 봤다.</p>
+   <p>우리 집 옆에 집이 하나 있고,</p>
+   <p>그 옆에 집이 하나 더 있었다.</p>
+   <p>골목에는 집이 세 채뿐이었다.</p>`,
+
+  `<p>옆집에는 홀짝훌과 훌짝훌이 산다.</p>
+   <p>옆옆집에는 아무도 안 산다.</p>
+   <p>작년부터 비어 있었다.</p>
+   <p>촤르릅은 그걸 알고 있었다.</p>`,
+
+  `<p class="quote">"뚜벅뚜 씨."</p>
+   <p class="quote">"네."</p>
+   <p class="quote">"옆옆집은 빈 집인데요."</p>
+   <p>뚜벅뚜가 눈을 깜빡였다.</p>`,
+
+  `<p class="quote">"빈 집이요?"</p>
+   <p class="quote">"네. 작년부터요."</p>
+   <p class="quote">"저는 거기 안 사는데요."</p>
+   <p class="quote">"방금 옆옆집이라고 하셨잖아요."</p>`,
+
+  `<p class="quote">"네. 저희 집에서 옆옆집이 여기라고요."</p>
+   <p class="turn">아.</p>
+   <p>촤르릅은 그 말을 마음속으로 한 번 더 들었다.</p>`,
+
+  `<div class="chapter">세는 자리</div>
+   <p>뚜벅뚜네 집에서 세면</p>
+   <p>자기 집이 하나, 그 옆이 둘, 그 옆이 셋이다.</p>
+   <p>그런데 뚜벅뚜는 자기 집을 하나로 세었다.</p>`,
+
+  `<p>그래서 뚜벅뚜에게 이 집은 옆옆집이었다.</p>
+   <p>이 집에서 세면 뚜벅뚜네는 세 집 건너였다.</p>
+   <p>같은 골목인데 부르는 이름이 달랐다.</p>`,
+
+  `<p>심판은 오늘 두 번 놀랐다.</p>
+   <p>자기를 빼고 세서 한 명이 사라졌고,</p>
+   <p>자기를 넣고 세서 집 하나가 늘었다.</p>`,
+
+  `<p class="quote">"세는 사람을 넣느냐 빼느냐군요."</p>
+   <p>초추초추가 말했다.</p>
+   <p class="quote">"그것만 정하면 됩니다."</p>`,
+
+  `<p>심판이 규칙을 만들었다.</p>
+   <p class="quote">"이 집에서는 세는 사람도 셉니다."</p>
+   <p>이번에는 아무도 반대하지 않았다.</p>
+   <p>오늘 만든 규칙 중에 제일 나은 규칙이었다.</p>`,
+
+  `<div class="chapter">야식</div>
+   <p>시계가 열두 시를 가리켰다.</p>
+   <p>꼬르륵의 배가 크게 울었다.</p>
+   <p>이번에는 식탁이 흔들리지 않았다.</p>
+   <p>식탁 위에 윷이 없었기 때문이다.</p>`,
+
+  `<p>부릉부가 일어났다.</p>
+   <p class="quote">"제가 다녀올게요."</p>
+   <p class="quote">"어디요?"</p>
+   <p class="quote">"꼬르륵식당이요. 열쇠 있어요."</p>`,
+
+  `<p>부릉부는 밤길을 다녀왔다.</p>
+   <p>그리고 김밥 열세 줄을 가져왔다.</p>
+   <p>열두 줄이 아니었다.</p>
+   <p>부릉부도 오늘 세는 법을 배운 것이다.</p>`,
+
+  `<p>열세 명이 김밥을 먹었다.</p>
+   <p>뚜벅뚜는 서서 먹었다.</p>
+   <p>아무도 그걸 이상하게 보지 않았다.</p>
+   <p>그게 뚜벅뚜의 방식이었다.</p>`,
+
+  `<div class="chapter">밤 윷놀이</div>
+   <p>김밥을 다 먹고 윷을 던졌다.</p>
+   <p>밤이라 크게 소리치면 안 됐다.</p>
+   <p>그래서 모두 작게 외쳤다.</p>
+   <p class="list">"모." "모." "개."</p>`,
+
+  `<p>작게 외치니까 이상하게 더 재미있었다.</p>
+   <p>우당탕도 조용히 넘어졌다.</p>
+   <p>심판도 규칙을 작게 만들었다.</p>`,
+
+  `<p>첫 판은 뚜벅뚜가 이겼다.</p>
+   <p>서서 던지면 각도가 잘 나온다고 했다.</p>
+   <p>심판이 그 말을 받아 적었다.</p>`,
+
+  `<div class="chapter">새벽</div>
+   <p>새벽 한 시에 대회가 끝났다.</p>
+   <p>뚜벅뚜가 신발을 신었다.</p>
+   <p class="quote">"다음에 또 와도 돼요?"</p>
+   <p class="quote">"오세요."</p>`,
+
+  `<p class="quote">"몇 시에요?"</p>
+   <p class="quote">"밤 열한 시 말고요."</p>
+   <p class="quote">"네."</p>`,
+
+  `<p>문이 닫혔다.</p>
+   <p>촤르릅은 식탁을 닦았다.</p>
+   <p>김밥 부스러기가 열세 개 있었다.</p>
+   <p>한 사람에 하나씩이었다.</p>`,
+
+  `<p>촤르릅은 의자를 세었다.</p>
+   <p>열두 개였다.</p>
+   <p>내일은 하나 더 사야겠다고 생각했다.</p>
+   <p>앉을 사람을 다 넣어서 세면 그래야 했다.</p>`,
+
+  `<p>불을 껐다.</p>
+   <p>골목에서 발소리가 났다.</p>
+   <p class="list">뚜벅, 뚜벅, 뚜벅.</p>
+   <p>소리는 집 세 채를 지나서 멈췄다.</p>`,
+
+  `<p>촤르릅은 이불을 덮었다.</p>
+   <p>내일은 골목에 있는 집을 다 세어 봐야지.</p>
+   <p>우리 집까지 넣어서.</p>`,
+
+  `<p>그때 부엌에서 소리가 났다.</p>
+   <p class="turn">꼬르륵.</p>
+   <p>꼬르륵은 아직 집에 있었다.</p>
+   <p class="turn">또 한 명이 남았다.</p>
+   <div class="ending">— 끝 —</div>`
+];
+
+let cur = 0;
+let animating = false;
+const pageEl = document.getElementById('page');
+const POS_KEY = 'yeopyeop-book-pos';
+try{
+  const saved = parseInt(localStorage.getItem(POS_KEY));
+  if(!isNaN(saved) && saved >= 0 && saved < PAGES.length) cur = saved;
+}catch(e){}
+
+function renderPage(){
+  pageEl.innerHTML = '<div class="pg-inner">' + PAGES[cur] + '</div>';
+  pageEl.scrollTop = 0;
+  try{ localStorage.setItem(POS_KEY, cur); }catch(e){}
+  document.getElementById('page-num').textContent = (cur+1) + ' / ' + PAGES.length;
+  document.getElementById('prev-btn').disabled = cur === 0;
+  document.getElementById('next-btn').disabled = cur === PAGES.length-1;
+}
+
+function go(dir){
+  if(animating) return;
+  const next = cur + dir;
+  if(next < 0 || next >= PAGES.length) return;
+  animating = true;
+  pageEl.classList.add('flip-out');
+  setTimeout(()=>{
+    cur = next;
+    renderPage();
+    pageEl.classList.remove('flip-out');
+    pageEl.classList.add('flip-in-prep');
+    void pageEl.offsetWidth;
+    pageEl.classList.remove('flip-in-prep');
+    setTimeout(()=>{ animating = false; }, 450);
+  }, 420);
+}
+
+function tapPage(e){
+  const rect = pageEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  if(x < 0.3) go(-1);
+  else go(1);
+}
+
+window.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if(e.key === 'ArrowLeft') go(-1);
+});
+
+function openToc(){
+  const list = document.getElementById('toc-list');
+  let items = '<button class="toc-item" onclick="jumpTo(0)"><span>📗 표지</span><span class="pg">1쪽</span></button>';
+  PAGES.forEach((p, i)=>{
+    const m = p.match(/<div class="chapter">(.*?)<\/div>/);
+    if(m){
+      items += `<button class="toc-item" onclick="jumpTo(${i})"><span>${m[1]}</span><span class="pg">${i+1}쪽</span></button>`;
+    }
+  });
+  list.innerHTML = items;
+  document.getElementById('toc-bg').classList.add('show');
+}
+function closeToc(){
+  document.getElementById('toc-bg').classList.remove('show');
+}
+function jumpTo(i){
+  closeToc();
+  cur = i;
+  renderPage();
+}
+
+renderPage();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
