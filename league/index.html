@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<meta name="description" content="카드로 혼자 돌리는 리그. 전반 후반 연장 승부차기까지 기록하면 순위표가 알아서 정리된다.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="카드 리그">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏆</text></svg>'>
+<title>🏆 카드 리그</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --green: #23883C;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(24px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: none;
+  }
+  main { width: 100%; max-width: 460px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 탭 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 10px;
+    padding: 9px 2px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .note { font-size: 13px; color: var(--muted); margin: 0 0 10px; line-height: 1.6; }
+  .note b { color: var(--ink); font-weight: 800; }
+
+  /* ---------- 순위표 ---------- */
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    letter-spacing: .04em; padding: 4px 2px 8px; white-space: nowrap;
+  }
+  td { font-size: 14px; font-weight: 700; padding: 8px 2px; border-top: 1px solid var(--line); }
+  tbody tr:first-child td { border-top: none; }
+  .rank { width: 26px; color: var(--muted); font-size: 12px; }
+  .tname { text-align: left; padding-left: 4px; }
+  .pts { color: var(--blue); font-size: 15px; font-weight: 800; }
+  tr.top .tname { color: #B8860B; }
+  tr.top .rank { color: var(--gold); }
+  tr.bottom { opacity: .62; }
+
+  /* ---------- 경기 목록 ---------- */
+  .round { font-size: 12px; font-weight: 800; color: var(--muted); text-align: left; margin: 14px 2px 6px; letter-spacing: .06em; }
+  .row {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 10px 6px; border: none; border-top: 1px solid var(--line);
+    background: none; font: inherit; color: inherit; cursor: pointer;
+  }
+  .row:first-of-type { border-top: none; }
+  .row .side { flex: 1; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .side.l { text-align: right; }
+  .row .side.r { text-align: left; }
+  .row .side.win { color: var(--blue); }
+  .row .side.lose { color: var(--muted); font-weight: 600; }
+  .row .mid {
+    min-width: 62px; font-size: 13px; font-weight: 800;
+    font-variant-numeric: tabular-nums; color: var(--muted);
+  }
+  .row .mid.done { color: var(--ink); }
+  .row .pk { display: block; font-size: 10px; font-weight: 700; color: var(--pink); }
+
+  /* ---------- 경기 진행 ---------- */
+  .board { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 14px 12px; margin-bottom: 10px; }
+  .vs { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .vs .t { flex: 1; font-size: 15px; font-weight: 800; }
+  .vs .sc {
+    font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums;
+    min-width: 92px; letter-spacing: .02em;
+  }
+  .stage { font-size: 12px; font-weight: 800; color: var(--pink); letter-spacing: .06em; margin-bottom: 2px; min-height: 16px; }
+  .half { margin-top: 14px; }
+  .half h3 { font-size: 12px; font-weight: 800; color: var(--muted); text-align: left; margin: 0 2px 6px; letter-spacing: .06em; }
+  .duel { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+  .duel .no { font-size: 11px; color: var(--muted); width: 30px; text-align: left; white-space: nowrap; }
+  .duel button {
+    flex: 1; font: inherit; font-size: 13px; font-weight: 700;
+    color: var(--muted); background: #F4F6FD;
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 4px; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .duel button[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .duel.locked button { opacity: .45; }
+
+  .kicks { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+  .kicks .who { font-size: 13px; font-weight: 700; width: 74px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dots { flex: 1; display: flex; gap: 5px; flex-wrap: wrap; }
+  .dot { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--line); }
+  .dot.goal { background: var(--green); border-color: var(--green); }
+  .dot.miss { background: #fff; border-color: var(--pink); }
+  .turn { font-size: 13px; font-weight: 800; margin: 10px 0 6px; }
+  .turn b { color: var(--blue); }
+
+  /* ---------- 팀 ---------- */
+  .teamrow { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+  .teamrow span { font-size: 12px; color: var(--muted); width: 18px; }
+  .teamrow input {
+    flex: 1; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink);
+    background: #F8FAFF; border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 10px; min-width: 0;
+  }
+
+  /* ---------- 배너 / 기록 ---------- */
+  #champion:not(:empty) {
+    background: linear-gradient(135deg, #FFF3D0, #FFE7A8);
+    border-radius: 16px; padding: 14px 12px; margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  #champion .big { font-size: 19px; font-weight: 800; margin: 4px 0 2px; }
+  #champion .sub { font-size: 12px; color: #8A6B1E; }
+  .hallrow { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; padding: 7px 2px; border-top: 1px solid var(--line); }
+  .hallrow:first-child { border-top: none; }
+  .hallrow span { color: var(--muted); font-weight: 600; }
+
+  button.big {
+    font: inherit; font-size: 14px; font-weight: 800;
+    background: var(--blue); color: #fff;
+    border: none; border-radius: 12px;
+    padding: 12px 16px; width: 100%; cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+  button.ghost { background: var(--card); color: var(--muted); border: 1px solid var(--line); }
+  .btns { display: flex; gap: 8px; margin-top: 8px; }
+  /* ---------- 카드 ---------- */
+  .chip {
+    flex: 1; border: 1px solid var(--line); border-radius: 10px;
+    padding: 6px 4px 5px; background: #F8FAFF; min-width: 0; cursor: pointer;
+  }
+  .chip .nm { display: block; font-size: 11px; font-weight: 700; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip b { display: block; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .chip.win { background: var(--blue); border-color: var(--blue); }
+  .chip.win .nm { color: rgba(255,255,255,.85); }
+  .chip.win b { color: #fff; }
+  .duel .no.wide { width: 62px; }
+  .draw {
+    flex: 1; font: inherit; font-size: 13px; font-weight: 800;
+    color: #fff; background: var(--blue); border: none; border-radius: 10px;
+    padding: 10px 4px; cursor: pointer;
+  }
+  .draw.ghost { background: #F4F6FD; color: var(--muted); border: 1px solid var(--line); }
+
+  .player { display: flex; align-items: center; gap: 8px; padding: 8px 2px; border-top: 1px solid var(--line); }
+  .player:first-child { border-top: none; }
+  .player .num { font-size: 11px; color: var(--muted); width: 18px; font-variant-numeric: tabular-nums; }
+  .player .pos { font-size: 10px; font-weight: 800; color: #fff; background: var(--muted);
+    border-radius: 6px; padding: 3px 5px; width: 34px; white-space: nowrap; }
+  .player .pos.FW { background: var(--pink); }
+  .player .pos.MF { background: var(--blue); }
+  .player .pos.DF { background: #4FB477; }
+  .player .pos.GK { background: var(--gold); color: #6B5200; }
+  .player .nm { flex: 1; font-size: 14px; font-weight: 700; text-align: left;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .player .st { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .player .st b { color: var(--ink); font-weight: 800; }
+  .picker { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .picker button {
+    font: inherit; font-size: 12px; font-weight: 700;
+    color: var(--muted); background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 7px 10px; cursor: pointer;
+  }
+  .picker button[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* ---------- 대회 ---------- */
+  .rowbox { display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--line); }
+  .rowbox:first-of-type { border-top: none; }
+  .rowbox .main {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    padding: 10px 4px; background: none; border: none; font: inherit; color: inherit; cursor: pointer;
+  }
+  .auto {
+    font: inherit; font-size: 11px; font-weight: 800; color: var(--muted);
+    background: #F4F6FD; border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 8px; cursor: pointer; white-space: nowrap;
+  }
+  .stagebar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .stagebar button {
+    font: inherit; font-size: 12px; font-weight: 800;
+    color: var(--muted); background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 10px; cursor: pointer;
+  }
+  .stagebar button[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .stagebar button:disabled { opacity: .4; }
+  .gtitle { font-size: 13px; font-weight: 800; text-align: left; margin: 2px 2px 8px; }
+  .qual { color: var(--green); }
+
+  /* ---------- 물어보는 창 ---------- */
+  #ask {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(44,53,96,.38);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #ask .sheet {
+    background: var(--card); border-radius: 18px;
+    box-shadow: 0 12px 34px rgba(44,53,96,.28);
+    padding: 18px 16px; width: 100%; max-width: 320px;
+  }
+  #ask p { font-size: 14px; font-weight: 700; line-height: 1.65; margin: 2px 0 14px; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🏆 카드 리그</h1>
+
+  <div class="seg" id="modes">
+    <button data-mode="league" aria-pressed="true">🏆 리그</button>
+    <button data-mode="cup" aria-pressed="false">🌍 월드컵</button>
+  </div>
+
+  <div class="seg" id="tabs">
+    <button data-tab="table" aria-pressed="true">순위표</button>
+    <button data-tab="games" aria-pressed="false">경기</button>
+    <button data-tab="cards" aria-pressed="false">카드</button>
+    <button data-tab="teams" aria-pressed="false">팀</button>
+  </div>
+
+  <!-- ---------- 순위표 ---------- -->
+  <section id="panel-table">
+    <div id="cupGroups" hidden></div>
+    <div id="leagueTable">
+    <div id="champion"></div>
+    <p class="note" id="progress"></p>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th class="rank"></th>
+            <th class="tname" style="text-align:left">팀</th>
+            <th>경기</th><th>승</th><th>패</th><th>득실</th><th>승점</th>
+          </tr>
+        </thead>
+        <tbody id="standings"></tbody>
+      </table>
+    </div>
+    <div class="card" id="hallcard" hidden>
+      <p class="note" style="margin:2px 0 8px">🏅 역대 우승</p>
+      <div id="hall"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ---------- 경기 ---------- -->
+  <section id="panel-games" hidden>
+    <div id="gameview"></div>
+  </section>
+
+  <!-- ---------- 카드 ---------- -->
+  <section id="panel-cards" hidden>
+    <div id="cardview"></div>
+  </section>
+
+  <!-- ---------- 팀 ---------- -->
+  <section id="panel-teams" hidden>
+    <div id="cupSettings" hidden></div>
+    <div id="leagueSettings">
+    <p class="note">팀 이름은 눌러서 고치면 돼. 한 팀에 카드 11장씩 나눠 갖고, 남는 카드는 이적시장용으로 따로 둬.</p>
+    <div class="seg" id="sizes">
+      <button data-n="6" aria-pressed="false">6팀</button>
+      <button data-n="8" aria-pressed="true">8팀</button>
+      <button data-n="10" aria-pressed="false">10팀</button>
+    </div>
+    <div class="seg" id="legs">
+      <button data-legs="1" aria-pressed="true">한 바퀴</button>
+      <button data-legs="2" aria-pressed="false">두 바퀴 (홈·원정)</button>
+    </div>
+    <p class="note" id="legnote"></p>
+    <div class="card" id="teamlist"></div>
+    <div class="btns">
+      <button class="big ghost" id="resetSeason">시즌 결과만 지우기</button>
+      <button class="big ghost" id="resetAll">전부 초기화</button>
+    </div>
+    </div>
+  </section>
+</main>
+
+<div id="ask" hidden>
+  <div class="sheet">
+    <p id="askMsg"></p>
+    <div class="btns">
+      <button class="big ghost" id="askNo">아니</button>
+      <button class="big" id="askYes">응</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'craft-league';
+const DEFAULT_NAMES = ['번개','태풍','화산','파도','유령','늑대','왕관','별똥별','무지개','회오리'];
+
+const HALF_DUELS = 3;   // 전반 3판, 후반 3판
+const ET_DUELS   = 2;   // 연장 2판
+const PK_ROUNDS  = 5;   // 승부차기 기본 5번씩
+
+let st = { n: 8, names: DEFAULT_NAMES.slice(), legs: 1, res: {}, hall: [], open: null,
+           cards: {}, look: 0, mode: 'league', cup: null, lookG: 0 };
+
+/* ---------- 선수 만들기 ---------- */
+const SURNAME = ['김','이','박','최','정','강','조','윤','장','임','한','오','서','신','권','황','안','송','전','홍','문','손','배','백','허'];
+const GIVEN1  = ['민','지','서','준','도','하','시','예','유','주','은','태','현','우','재','승','다','정','수','진','가','라','채'];
+const GIVEN2  = ['준','우','호','현','진','성','훈','영','아','인','규','빈','석','찬','결','온','후','범','건','율','원','람'];
+const SQUAD = [['GK',1],['DF',3],['MF',4],['FW',3]];
+const RANGE = {
+  GK: { a: [1,2], d: [7,9], s: [2,6] },
+  DF: { a: [1,4], d: [6,9], s: [3,7] },
+  MF: { a: [4,7], d: [4,7], s: [4,8] },
+  FW: { a: [6,9], d: [1,4], s: [5,9] }
+};
+function rnd(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function makeName(used) {
+  for (let t = 0; t < 40; t++) {
+    const nm = pick(SURNAME) + pick(GIVEN1) + pick(GIVEN2);
+    if (!used[nm]) { used[nm] = 1; return nm; }
+  }
+  return pick(SURNAME) + pick(GIVEN1) + pick(GIVEN2);
+}
+function makeSquad() {
+  const used = {}, out = [];
+  SQUAD.forEach(function (row) {
+    for (let i = 0; i < row[1]; i++) {
+      const r = RANGE[row[0]];
+      out.push({
+        n: makeName(used),
+        p: row[0],
+        a: rnd(r.a[0], r.a[1]),
+        d: rnd(r.d[0], r.d[1]),
+        s: rnd(r.s[0], r.s[1])
+      });
+    }
+  });
+  return out;
+}
+/* 리그와 대회가 같은 경기 엔진을 쓴다. 지금 어느 쪽인지에 따라 이름/선수/결과를 갈라준다 */
+function NAMES() { return st.mode === 'cup' ? st.cup.names : st.names; }
+function CARDS() { return st.mode === 'cup' ? st.cup.cards : st.cards; }
+function RES()   { return st.mode === 'cup' ? st.cup.res   : st.res; }
+function NTEAMS(){ return st.mode === 'cup' ? st.cup.size  : st.n; }
+
+function hasCards(i) { const c = CARDS(); return !!(c[i] && c[i].length); }
+function anyCards() {
+  for (let i = 0; i < NTEAMS(); i++) if (hasCards(i)) return true;
+  return false;
+}
+function fillMissingSquads() {
+  const c = CARDS();
+  for (let i = 0; i < NTEAMS(); i++) if (!hasCards(i)) c[i] = makeSquad();
+}
+const STAT_NAME = { a: '공격력', d: '수비력', s: '속도' };
+
+/* ---------- 저장 ---------- */
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+}
+function load() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch (e) {}
+  if (!raw) return;
+  try {
+    const o = JSON.parse(raw);
+    if (o && Array.isArray(o.names)) {
+      st.n = o.n || 8;
+      st.legs = o.legs || 1;
+      st.names = DEFAULT_NAMES.map(function (d, i) { return o.names[i] || d; });
+      st.res = o.res || {};
+      st.hall = o.hall || [];
+      st.open = o.open || null;
+      st.cards = o.cards || {};
+      st.look = o.look || 0;
+      st.mode = o.mode === 'cup' ? 'cup' : 'league';
+      st.cup = o.cup || null;
+      st.lookG = o.lookG || 0;
+      st.openFrom = o.openFrom || 'games';
+      if (st.mode === 'cup' && !st.cup) st.mode = 'league';
+    }
+  } catch (e) {}
+}
+
+/* ---------- 일정 ---------- */
+function schedule(n) {
+  const rest = [];
+  for (let i = 1; i < n; i++) rest.push(i);
+  const rounds = [];
+  for (let r = 0; r < n - 1; r++) {
+    const line = [0].concat(rest);
+    const m = [];
+    for (let i = 0; i < n / 2; i++) m.push([line[i], line[n - 1 - i]]);
+    rounds.push(m);
+    rest.unshift(rest.pop());
+  }
+  return rounds;
+}
+function fullSchedule() {
+  const base = schedule(st.n);
+  const out = base.map(function (r) {
+    return r.map(function (m) { return { x: m[0], y: m[1], leg: 0 }; });
+  });
+  if (st.legs === 2) {
+    base.forEach(function (r) {
+      out.push(r.map(function (m) { return { x: m[1], y: m[0], leg: 1 }; }));
+    });
+  }
+  return out;
+}
+function totalCount() { return st.n * (st.n - 1) / 2 * st.legs; }
+
+/* ---------- 한 경기 ---------- */
+function mkey(g) { return g.k || (g.x + '-' + g.y + '-' + g.leg); }
+function blank() { return { h: [null, null, null], s: [null, null, null], e: [null, null], p: { a: [], b: [] } }; }
+function getMatch(g) {
+  const k = mkey(g);
+  if (!RES()[k]) RES()[k] = blank();
+  return RES()[k];
+}
+function hasMatch(g) { return !!RES()[mkey(g)]; }
+
+/* 한 판 기록은 두 가지 모양이다: 손으로 누른 것(0/1), 카드로 뽑은 것({w,a,b}) */
+function wOf(v) {
+  if (v === null || v === undefined) return null;
+  return typeof v === 'number' ? v : v.w;
+}
+function okOf(v) { return typeof v === 'number' ? v : v.ok; }
+function countDuels(list) {
+  let a = 0, b = 0;
+  list.forEach(function (v) {
+    const w = wOf(v);
+    if (w === 0) a++; else if (w === 1) b++;
+  });
+  return [a, b];
+}
+function regGoals(m) { return countDuels(m.h.concat(m.s)); }
+function goals(m) {
+  // 연장 골도 골로 친다. 승부차기는 골이 아니다 (진짜 축구랑 같음)
+  return countDuels(m.h.concat(m.s, m.e));
+}
+function pkScore(m) {
+  const a = m.p.a.filter(function (v) { return okOf(v) === 1; }).length;
+  const b = m.p.b.filter(function (v) { return okOf(v) === 1; }).length;
+  return [a, b];
+}
+function regFilled(m) {
+  return m.h.concat(m.s).every(function (v) { return v !== null; });
+}
+function etFilled(m) {
+  return m.e.every(function (v) { return v !== null; });
+}
+function pkDecided(m) {
+  const kicks = Math.min(m.p.a.length, m.p.b.length);
+  if (m.p.a.length !== m.p.b.length) return false;
+  if (kicks < PK_ROUNDS) return false;
+  const s = pkScore(m);
+  return s[0] !== s[1];
+}
+/* 정규시간이 동점이면 연장, 연장도 동점이면 승부차기 */
+function needET(m) {
+  if (!regFilled(m)) return false;
+  const r = regGoals(m);
+  return r[0] === r[1];
+}
+function needPK(m) {
+  if (!needET(m) || !etFilled(m)) return false;
+  const g = goals(m);
+  return g[0] === g[1];
+}
+/* 'empty' | 'playing' | 'done' */
+function phase(m) {
+  const started = m.h.concat(m.s, m.e).some(function (v) { return v !== null; });
+  if (!regFilled(m)) return started ? 'playing' : 'empty';
+  if (!needET(m)) return 'done';
+  if (!etFilled(m)) return 'playing';
+  if (!needPK(m)) return 'done';
+  return pkDecided(m) ? 'done' : 'playing';
+}
+function winnerOf(m) {
+  const g = goals(m);
+  if (g[0] !== g[1]) return g[0] > g[1] ? 0 : 1;
+  const s = pkScore(m);
+  return s[0] > s[1] ? 0 : 1;
+}
+function wentToPk(m) { return m.p.a.length > 0; }
+
+/* ---------- 순위 ---------- */
+function playedCount() {
+  let c = 0;
+  fullSchedule().forEach(function (r) {
+    r.forEach(function (g) { if (hasMatch(g) && phase(RES()[mkey(g)]) === 'done') c++; });
+  });
+  return c;
+}
+function standings() {
+  const rows = [];
+  for (let i = 0; i < st.n; i++) {
+    rows.push({ i: i, name: NAMES()[i], p: 0, w: 0, l: 0, gf: 0, ga: 0, pts: 0 });
+  }
+  fullSchedule().forEach(function (r) {
+    r.forEach(function (g) {
+      if (!hasMatch(g)) return;
+      const m = RES()[mkey(g)];
+      if (phase(m) !== 'done') return;
+      const gl = goals(m), w = winnerOf(m);
+      const A = rows[g.x], B = rows[g.y];
+      A.p++; B.p++;
+      A.gf += gl[0]; A.ga += gl[1];
+      B.gf += gl[1]; B.ga += gl[0];
+      if (w === 0) { A.w++; B.l++; A.pts += 3; } else { B.w++; A.l++; B.pts += 3; }
+    });
+  });
+  rows.sort(function (x, y) {
+    return y.pts - x.pts
+      || (y.gf - y.ga) - (x.gf - x.ga)
+      || y.gf - x.gf
+      || x.i - y.i;
+  });
+  return rows;
+}
+
+/* ---------- 그리기: 순위표 ---------- */
+function renderTable() {
+  const rows = standings();
+  const done = playedCount(), total = totalCount();
+  const tbody = document.getElementById('standings');
+  tbody.innerHTML = '';
+
+  rows.forEach(function (r, idx) {
+    const tr = document.createElement('tr');
+    if (done === total && idx === 0) tr.className = 'top';
+    if (done === total && idx === rows.length - 1) tr.className = 'bottom';
+    const diff = r.gf - r.ga;
+    tr.innerHTML =
+      '<td class="rank">' + (idx + 1) + '</td>' +
+      '<td class="tname">' + esc(r.name) + '</td>' +
+      '<td>' + r.p + '</td><td>' + r.w + '</td><td>' + r.l + '</td>' +
+      '<td>' + (diff > 0 ? '+' + diff : diff) + '</td>' +
+      '<td class="pts">' + r.pts + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('progress').textContent =
+    done === total ? '시즌 끝! ' + total + '경기 다 했어.'
+                   : total + '경기 중 ' + done + '경기 끝났어. ' + (total - done) + '경기 남음.';
+
+  const champ = document.getElementById('champion');
+  if (done === total && rows.length) {
+    champ.innerHTML =
+      '<div>🏆</div>' +
+      '<div class="big">' + esc(rows[0].name) + ' 우승!</div>' +
+      '<div class="sub">꼴찌 ' + esc(rows[rows.length - 1].name) +
+      '은 제일 약한 선수 두 명을 남는 카드랑 바꿀 수 있어</div>' +
+      '<div class="btns"><button class="big" id="finish">기록에 남기고 새 시즌</button></div>';
+    document.getElementById('finish').addEventListener('click', finishSeason);
+  } else {
+    champ.innerHTML = '';
+  }
+
+  const hallcard = document.getElementById('hallcard');
+  const hall = document.getElementById('hall');
+  hallcard.hidden = st.hall.length === 0;
+  hall.innerHTML = st.hall.map(function (h, i) {
+    return '<div class="hallrow"><span>' + (i + 1) + '시즌</span><b>' + esc(h.champ) + '</b></div>';
+  }).join('');
+}
+
+/* ---------- 그리기: 경기 ---------- */
+function renderGames() {
+  const view = document.getElementById('gameview');
+  view.innerHTML = '';
+  if (st.open) renderBoard(view);
+  else renderList(view);
+}
+
+function renderList(view) {
+  const note = document.createElement('p');
+  note.className = 'note';
+  note.innerHTML = '경기를 누르면 시작해. 전반 3판, 후반 3판을 하고 ' +
+    '점수가 같으면 <b>연장전</b>, 그래도 같으면 <b>승부차기</b>야.';
+  view.appendChild(note);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  view.appendChild(wrap);
+
+  const rounds = fullSchedule();
+  rounds.forEach(function (games, ri) {
+    const h = document.createElement('div');
+    h.className = 'round';
+    h.textContent = (ri + 1) + '라운드' + (st.legs === 2 && ri >= st.n - 1 ? ' (원정)' : '');
+    wrap.appendChild(h);
+
+    games.forEach(function (g) {
+      const m = hasMatch(g) ? RES()[mkey(g)] : null;
+      const ph = m ? phase(m) : 'empty';
+      const gl = m ? goals(m) : [0, 0];
+      const w = ph === 'done' ? winnerOf(m) : null;
+
+      const row = document.createElement('button');
+      row.className = 'row';
+
+      let mid;
+      if (ph === 'done') {
+        mid = '<span class="mid done">' + gl[0] + ' : ' + gl[1] +
+          (wentToPk(m) ? '<span class="pk">승부차기 ' + pkScore(m)[0] + ':' + pkScore(m)[1] + '</span>' : '') +
+          '</span>';
+      } else if (ph === 'playing') {
+        mid = '<span class="mid">' + gl[0] + ' : ' + gl[1] + '<span class="pk">하는 중</span></span>';
+      } else {
+        mid = '<span class="mid">경기하기</span>';
+      }
+
+      row.innerHTML =
+        '<span class="side l' + (w === 0 ? ' win' : w === 1 ? ' lose' : '') + '">' + esc(NAMES()[g.x]) + '</span>' +
+        mid +
+        '<span class="side r' + (w === 1 ? ' win' : w === 0 ? ' lose' : '') + '">' + esc(NAMES()[g.y]) + '</span>';
+      row.addEventListener('click', function () { openMatch(g); });
+      wrap.appendChild(row);
+    });
+  });
+}
+
+function renderBoard(view) {
+  const g = st.open;
+  const m = getMatch(g);
+  const gl = goals(m);
+  const ph = phase(m);
+
+  const board = document.createElement('div');
+  board.className = 'board';
+
+  const stage = document.createElement('div');
+  stage.className = 'stage';
+  stage.textContent =
+    ph === 'done' ? (wentToPk(m) ? '승부차기로 끝!' : '경기 끝!')
+    : needPK(m) ? '연장에도 동점! 승부차기야'
+    : needET(m) ? '동점! 연장전이야'
+    : '';
+  board.appendChild(stage);
+
+  const vs = document.createElement('div');
+  vs.className = 'vs';
+  vs.innerHTML =
+    '<div class="t" style="text-align:right">' + esc(NAMES()[g.x]) + '</div>' +
+    '<div class="sc">' + gl[0] + ' : ' + gl[1] + '</div>' +
+    '<div class="t" style="text-align:left">' + esc(NAMES()[g.y]) + '</div>';
+  board.appendChild(vs);
+
+  const firstDone = m.h.every(function (v) { return v !== null && v !== undefined; });
+  board.appendChild(duelSection('전반전', m.h, function (i, v) { m.h[i] = v; }, ['a','d','s'], true, ''));
+  board.appendChild(duelSection('후반전', m.s, function (i, v) { m.s[i] = v; }, ['a','d','s'], firstDone, '전반전 먼저'));
+
+  if (needET(m)) {
+    board.appendChild(duelSection('연장전', m.e, function (i, v) { m.e[i] = v; }, ['a','d'], true, ''));
+  }
+  if (needPK(m)) {
+    board.appendChild(pkSection(m));
+  }
+
+  view.appendChild(board);
+
+  const btns = document.createElement('div');
+  btns.className = 'btns';
+  const back = document.createElement('button');
+  back.className = 'big';
+  back.textContent = ph === 'done' ? '저장하고 목록으로' : '목록으로';
+  back.addEventListener('click', function () {
+    const from = st.openFrom || 'games';
+    st.open = null; save();
+    setTab(st.mode === 'cup' ? from : 'games');
+    renderAll(); window.scrollTo(0, 0);
+  });
+  const redo = document.createElement('button');
+  redo.className = 'big ghost';
+  redo.textContent = '이 경기 다시';
+  redo.addEventListener('click', function () {
+    ask('이 경기 기록을 처음부터 다시 할까?', function () {
+      RES()[mkey(g)] = blank();
+      save(); renderAll();
+    });
+  });
+  btns.appendChild(redo);
+  btns.appendChild(back);
+  view.appendChild(btns);
+
+  const rule = document.createElement('p');
+  rule.className = 'note';
+  rule.style.marginTop = '12px';
+  rule.innerHTML = (hasCards(g.x) && hasCards(g.y))
+    ? '<b>어떻게 되는 거냐면</b><br>' +
+      '판마다 양 팀에서 선수가 한 명씩 나와서 그 판의 능력치로 붙어. ' +
+      '전반·후반은 <b>공격력 → 수비력 → 속도</b> 순서고, 한 번 나온 선수는 그 안에서 또 안 나와.<br>' +
+      '승부차기는 뽑힌 선수의 <b>속도가 5 이상이면 성공</b>이야.<br>' +
+      '잘못 나온 것 같으면 카드를 눌러서 그 판만 다시 뽑을 수 있어.'
+    : '<b>어떻게 하냐면</b><br>' +
+      '전반전 — 각자 카드 3장 뽑아서 <b>공격력 → 수비력 → 속도</b> 순으로 한 장씩 비교.<br>' +
+      '후반전 — 새로 3장씩 뽑아서 똑같이.<br>' +
+      '연장전 — 2장씩 뽑아서 공격력 → 수비력.<br>' +
+      '승부차기 — 한 장씩 뽑아서 <b>속도 5 이상이면 성공</b>. 번갈아 5번씩.';
+  view.appendChild(rule);
+}
+
+function duelSection(title, arr, set, stats, gate, gateText) {
+  const g = st.open;
+  const useCards = hasCards(g.x) && hasCards(g.y);
+  const box = document.createElement('div');
+  box.className = 'half';
+  const h = document.createElement('h3');
+  h.textContent = title;
+  box.appendChild(h);
+
+  arr.forEach(function (v, i) {
+    const stat = stats[i];
+    const row = document.createElement('div');
+    row.className = 'duel';
+    const no = document.createElement('div');
+    no.className = 'no' + (useCards ? ' wide' : '');
+    no.textContent = useCards ? (i + 1) + '판 · ' + STAT_NAME[stat] : (i + 1) + '판';
+    row.appendChild(no);
+
+    if (!useCards) {
+      [0, 1].forEach(function (side) {
+        const b = document.createElement('button');
+        b.textContent = NAMES()[side === 0 ? g.x : g.y];
+        b.setAttribute('aria-pressed', wOf(v) === side ? 'true' : 'false');
+        b.addEventListener('click', function () {
+          set(i, wOf(v) === side ? null : side);
+          save();
+          renderGames();
+        });
+        row.appendChild(b);
+      });
+    } else if (v === null || v === undefined) {
+      const b = document.createElement('button');
+      b.className = 'draw';
+      const myTurn = arr.slice(0, i).every(function (x) { return x !== null && x !== undefined; });
+      const ready = myTurn && gate;
+      b.textContent = ready ? '카드 뽑기' : (!gate ? gateText : (i + 1) + '판은 아직');
+      b.disabled = !ready;
+      if (!ready) b.className = 'draw ghost';
+      b.addEventListener('click', function () {
+        set(i, drawDuel(g, stat, usedIn(arr, 0), usedIn(arr, 1)));
+        save();
+        renderGames();
+      });
+      row.appendChild(b);
+    } else {
+      [0, 1].forEach(function (side) {
+        const card = CARDS()[side === 0 ? g.x : g.y][side === 0 ? v.a : v.b];
+        const chip = document.createElement('button');
+        chip.className = 'chip' + (v.w === side ? ' win' : '');
+        chip.innerHTML = '<span class="nm">' + esc(card ? card.n : '?') + '</span>' +
+                         '<b>' + (card ? card[stat] : '-') + '</b>';
+        chip.addEventListener('click', function () {
+          set(i, null);
+          save();
+          renderGames();
+        });
+        row.appendChild(chip);
+      });
+    }
+    box.appendChild(row);
+  });
+  return box;
+}
+
+/* 같은 전반/후반 안에서는 한 번 나온 선수가 또 나오지 않는다 */
+function usedIn(arr, side) {
+  const out = [];
+  arr.forEach(function (v) {
+    if (v && typeof v === 'object') out.push(side === 0 ? v.a : v.b);
+  });
+  return out;
+}
+function pickIdx(team, used) {
+  const all = [];
+  for (let i = 0; i < CARDS()[team].length; i++) if (used.indexOf(i) < 0) all.push(i);
+  const from = all.length ? all : CARDS()[team].map(function (_, i) { return i; });
+  return from[Math.floor(Math.random() * from.length)];
+}
+function drawDuel(g, stat, usedA, usedB) {
+  let ia, ib, ca, cb;
+  for (let t = 0; t < 30; t++) {
+    ia = pickIdx(g.x, usedA); ib = pickIdx(g.y, usedB);
+    ca = CARDS()[g.x][ia]; cb = CARDS()[g.y][ib];
+    if (ca[stat] !== cb[stat]) break;   // 같으면 다시 뽑는다
+  }
+  let w;
+  if (ca[stat] !== cb[stat]) w = ca[stat] > cb[stat] ? 0 : 1;
+  else {
+    const ta = ca.a + ca.d + ca.s, tb = cb.a + cb.d + cb.s;
+    w = ta !== tb ? (ta > tb ? 0 : 1) : (Math.random() < 0.5 ? 0 : 1);
+  }
+  return { w: w, a: ia, b: ib };
+}
+
+function pkSection(m) {
+  const g = st.open;
+  const box = document.createElement('div');
+  box.className = 'half';
+  const h = document.createElement('h3');
+  h.textContent = '승부차기';
+  box.appendChild(h);
+
+  [['a', g.x], ['b', g.y]].forEach(function (pair) {
+    const row = document.createElement('div');
+    row.className = 'kicks';
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = NAMES()[pair[1]];
+    const dots = document.createElement('div');
+    dots.className = 'dots';
+    const list = m.p[pair[0]];
+    const shown = Math.max(PK_ROUNDS, list.length);
+    for (let i = 0; i < shown; i++) {
+      const d = document.createElement('div');
+      const ok = i < list.length ? okOf(list[i]) : null;
+      d.className = 'dot' + (ok === 1 ? ' goal' : ok === 0 ? ' miss' : '');
+      dots.appendChild(d);
+    }
+    row.appendChild(who);
+    row.appendChild(dots);
+    box.appendChild(row);
+  });
+
+  if (!pkDecided(m)) {
+    const turnA = m.p.a.length <= m.p.b.length;
+    const side = turnA ? 'a' : 'b';
+    const team = turnA ? g.x : g.y;
+
+    const turn = document.createElement('div');
+    turn.className = 'turn';
+    turn.innerHTML = '<b>' + esc(NAMES()[team]) + '</b> 차례 · ' + (m.p[side].length + 1) + '번째';
+    box.appendChild(turn);
+
+    const row = document.createElement('div');
+    row.className = 'duel';
+    if (hasCards(g.x) && hasCards(g.y)) {
+      const b = document.createElement('button');
+      b.className = 'draw';
+      b.textContent = '카드 뽑아서 차기';
+      b.addEventListener('click', function () {
+        const idx = pickIdx(team, []);
+        const c = CARDS()[team][idx];
+        m.p[side].push({ ok: c.s >= 5 ? 1 : 0, c: idx });
+        save();
+        renderGames();
+      });
+      row.appendChild(b);
+    } else {
+      [['성공', 1], ['실패', 0]].forEach(function (opt) {
+        const b = document.createElement('button');
+        b.textContent = opt[0];
+        b.addEventListener('click', function () {
+          m.p[side].push(opt[1]);
+          save();
+          renderGames();
+        });
+        row.appendChild(b);
+      });
+    }
+    box.appendChild(row);
+
+    const last = m.p.b.length ? m.p.b[m.p.b.length - 1] : (m.p.a.length ? m.p.a[m.p.a.length - 1] : null);
+    if (last && typeof last === 'object') {
+      const lastTeam = m.p.b.length >= m.p.a.length ? g.y : g.x;
+      const lc = CARDS()[lastTeam][last.c];
+      const p2 = document.createElement('div');
+      p2.className = 'note';
+      p2.style.margin = '6px 0 0';
+      p2.innerHTML = '방금 — <b>' + esc(lc.n) + '</b> 속도 ' + lc.s + ' → ' + (last.ok ? '성공!' : '실패');
+      box.appendChild(p2);
+    }
+
+    if (m.p.a.length + m.p.b.length > 0) {
+      const undo = document.createElement('div');
+      undo.className = 'duel';
+      const u = document.createElement('button');
+      u.textContent = '한 번 되돌리기';
+      u.addEventListener('click', function () {
+        if (m.p.b.length >= m.p.a.length && m.p.b.length > 0) m.p.b.pop();
+        else m.p.a.pop();
+        save();
+        renderGames();
+      });
+      undo.appendChild(u);
+      box.appendChild(undo);
+    }
+  }
+  return box;
+}
+
+
+/* ================== 월드컵 ================== */
+const CUP_NAMES = [
+  '번개','태풍','화산','파도','유령','늑대','왕관','별똥별','무지개','회오리',
+  '폭풍','천둥','눈보라','소나기','불꽃','얼음','바위','모래','정글','사막',
+  '빙산','협곡','등대','항구','기차','로켓','혜성','은하','오로라','신기루',
+  '사자','호랑이','표범','매','독수리','상어','고래','문어','전갈','코브라',
+  '코뿔소','코끼리','기린','치타','여우','곰','부엉이','까마귀','두더지','고슴도치',
+  '방패','창','화살','도끼','망치','갑옷','성벽','대포','깃발','보석',
+  '황금','수정','진주','다이아'
+];
+const LETTER = 'ABCDEFGHIJKLMNOP';
+const KO_NAME = { 32: '32강', 16: '16강', 8: '8강', 4: '준결승', 3: '3·4위전', 2: '결승' };
+const G4 = [[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]];   // 4팀이 서로 한 번씩
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+function makeCup(size) {
+  const cards = {};
+  for (let i = 0; i < size; i++) cards[i] = makeSquad();
+  const order = [];
+  for (let i = 0; i < size; i++) order.push(i);
+  shuffle(order);
+  const groups = [];
+  for (let i = 0; i < size / 4; i++) groups.push(order.slice(i * 4, i * 4 + 4));
+  return { size: size, names: CUP_NAMES.slice(0, size), cards: cards, groups: groups, res: {} };
+}
+
+function groupGames(gi) {
+  const t = st.cup.groups[gi];
+  return G4.map(function (pair, mi) {
+    return { x: t[pair[0]], y: t[pair[1]], k: 'G' + gi + '-' + mi };
+  });
+}
+function isDone(g) {
+  const m = RES()[mkey(g)];
+  return !!m && phase(m) === 'done';
+}
+function tally(teams, games) {
+  const rows = {}, out = [];
+  teams.forEach(function (i) {
+    rows[i] = { i: i, name: NAMES()[i], p: 0, w: 0, l: 0, gf: 0, ga: 0, pts: 0 };
+    out.push(rows[i]);
+  });
+  games.forEach(function (g) {
+    if (!isDone(g)) return;
+    const m = RES()[mkey(g)], gl = goals(m), w = winnerOf(m);
+    rows[g.x].p++; rows[g.y].p++;
+    rows[g.x].gf += gl[0]; rows[g.x].ga += gl[1];
+    rows[g.y].gf += gl[1]; rows[g.y].ga += gl[0];
+    if (w === 0) { rows[g.x].w++; rows[g.y].l++; rows[g.x].pts += 3; }
+    else { rows[g.y].w++; rows[g.x].l++; rows[g.y].pts += 3; }
+  });
+  out.sort(function (x, y) {
+    return y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || x.i - y.i;
+  });
+  return out;
+}
+function groupTable(gi) { return tally(st.cup.groups[gi], groupGames(gi)); }
+function groupDone(gi) { return groupGames(gi).every(isDone); }
+function groupsAllDone() {
+  for (let i = 0; i < st.cup.groups.length; i++) if (!groupDone(i)) return false;
+  return true;
+}
+function firstKo() { return st.cup.size / 2; }
+function koRounds() {
+  const out = [];
+  for (let n = firstKo(); n >= 2; n = n / 2) out.push(n);
+  out.splice(out.length - 1, 0, 3);   // 결승 바로 앞에 3·4위전
+  return out;
+}
+/* 대진은 저장하지 않고 앞 단계 결과에서 그때그때 계산한다 */
+function koGames(size) {
+  if (size === 3) {                    // 준결승에서 진 두 팀
+    const semi = koGames(4);
+    if (!semi) return null;
+    const lost = [];
+    for (let i = 0; i < semi.length; i++) {
+      if (!isDone(semi[i])) return null;
+      const m = RES()[mkey(semi[i])];
+      lost.push(winnerOf(m) === 0 ? semi[i].y : semi[i].x);
+    }
+    return [{ x: lost[0], y: lost[1], k: 'K3-0-' + lost[0] + '-' + lost[1] }];
+  }
+  if (size === firstKo()) {
+    if (!groupsAllDone()) return null;
+    const out = [];
+    for (let gi = 0; gi < st.cup.groups.length; gi += 2) {
+      const A = groupTable(gi), B = groupTable(gi + 1);
+      out.push([A[0].i, B[1].i]);
+      out.push([B[0].i, A[1].i]);
+    }
+    return out.map(function (pr, i) {
+      return { x: pr[0], y: pr[1], k: 'K' + size + '-' + i + '-' + pr[0] + '-' + pr[1] };
+    });
+  }
+  const prev = koGames(size * 2);
+  if (!prev) return null;
+  const win = [];
+  for (let i = 0; i < prev.length; i++) {
+    if (!isDone(prev[i])) return null;
+    const m = RES()[mkey(prev[i])];
+    win.push(winnerOf(m) === 0 ? prev[i].x : prev[i].y);
+  }
+  const out = [];
+  for (let i = 0; i < win.length; i += 2) out.push([win[i], win[i + 1]]);
+  return out.map(function (pr, i) {
+    return { x: pr[0], y: pr[1], k: 'K' + size + '-' + i + '-' + pr[0] + '-' + pr[1] };
+  });
+}
+function cupChampion() {
+  const fin = koGames(2);
+  if (!fin || !isDone(fin[0])) return null;
+  const m = RES()[mkey(fin[0])];
+  return winnerOf(m) === 0 ? fin[0].x : fin[0].y;
+}
+function cupSecond() {
+  const fin = koGames(2);
+  if (!fin || !isDone(fin[0])) return null;
+  const m = RES()[mkey(fin[0])];
+  return winnerOf(m) === 0 ? fin[0].y : fin[0].x;
+}
+function cupThird() {
+  const t = koGames(3);
+  if (!t || !isDone(t[0])) return null;
+  const m = RES()[mkey(t[0])];
+  return winnerOf(m) === 0 ? t[0].x : t[0].y;
+}
+
+/* ---------- 자동 경기 ---------- */
+function autoPlay(g) {
+  if (!(hasCards(g.x) && hasCards(g.y))) return false;
+  const m = getMatch(g);
+  function fillArr(arr, stats) {
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] === null || arr[i] === undefined) {
+        arr[i] = drawDuel(g, stats[i], usedIn(arr, 0), usedIn(arr, 1));
+      }
+    }
+  }
+  fillArr(m.h, ['a','d','s']);
+  fillArr(m.s, ['a','d','s']);
+  if (needET(m)) fillArr(m.e, ['a','d']);
+  let guard = 0;
+  while (needPK(m) && !pkDecided(m) && guard++ < 80) {
+    const turnA = m.p.a.length <= m.p.b.length;
+    const side = turnA ? 'a' : 'b', team = turnA ? g.x : g.y;
+    const idx = pickIdx(team, []);
+    m.p[side].push({ ok: CARDS()[team][idx].s >= 5 ? 1 : 0, c: idx });
+  }
+  return true;
+}
+
+/* ---------- 대회 그리기 ---------- */
+function gameRow(g, showAuto) {
+  const m = RES()[mkey(g)];
+  const ph = m ? phase(m) : 'empty';
+  const gl = m ? goals(m) : [0, 0];
+  const w = ph === 'done' ? winnerOf(m) : null;
+
+  const box = document.createElement('div');
+  box.className = 'rowbox';
+  const main = document.createElement('button');
+  main.className = 'main';
+  let mid;
+  if (ph === 'done') {
+    mid = '<span class="mid done">' + gl[0] + ' : ' + gl[1] +
+      (wentToPk(m) ? '<span class="pk">승부차기 ' + pkScore(m)[0] + ':' + pkScore(m)[1] + '</span>' : '') + '</span>';
+  } else if (ph === 'playing') {
+    mid = '<span class="mid">' + gl[0] + ' : ' + gl[1] + '<span class="pk">하는 중</span></span>';
+  } else {
+    mid = '<span class="mid">경기하기</span>';
+  }
+  main.innerHTML =
+    '<span class="side l' + (w === 0 ? ' win' : w === 1 ? ' lose' : '') + '">' + esc(NAMES()[g.x]) + '</span>' +
+    mid +
+    '<span class="side r' + (w === 1 ? ' win' : w === 0 ? ' lose' : '') + '">' + esc(NAMES()[g.y]) + '</span>';
+  main.addEventListener('click', function () { openMatch(g); });
+  box.appendChild(main);
+
+  if (showAuto && ph !== 'done') {
+    const b = document.createElement('button');
+    b.className = 'auto';
+    b.textContent = '자동';
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      autoPlay(g); save(); renderAll();
+    });
+    box.appendChild(b);
+  }
+  return box;
+}
+
+function renderCupGroups() {
+  const view = document.getElementById('cupGroups');
+  view.innerHTML = '';
+
+  let done = 0, total = 0;
+  st.cup.groups.forEach(function (_, gi) {
+    groupGames(gi).forEach(function (g) { total++; if (isDone(g)) done++; });
+  });
+
+  const head = document.createElement('p');
+  head.className = 'note';
+  head.textContent = '조별리그 ' + total + '경기 중 ' + done + '경기 끝났어.' +
+    (groupsAllDone() ? ' 이제 ' + KO_NAME[firstKo()] + '이야!' : '');
+  view.appendChild(head);
+
+  if (done < total) {
+    const all = document.createElement('button');
+    all.className = 'big';
+    all.style.marginBottom = '10px';
+    all.textContent = '남은 조별리그 ' + (total - done) + '경기 자동으로 돌리기';
+    all.addEventListener('click', function () {
+      ask('남은 ' + (total - done) + '경기를 자동으로 다 돌릴까?', function () {
+        st.cup.groups.forEach(function (_, gi) {
+          groupGames(gi).forEach(function (g) { if (!isDone(g)) autoPlay(g); });
+        });
+        save(); renderAll();
+      });
+    });
+    view.appendChild(all);
+  }
+
+  const picker = document.createElement('div');
+  picker.className = 'picker';
+  st.cup.groups.forEach(function (_, gi) {
+    const b = document.createElement('button');
+    b.textContent = LETTER[gi] + '조';
+    b.setAttribute('aria-pressed', gi === st.lookG ? 'true' : 'false');
+    b.addEventListener('click', function () { st.lookG = gi; save(); renderCupGroups(); });
+    picker.appendChild(b);
+  });
+  view.appendChild(picker);
+
+  const gi = st.lookG;
+  const tbl = document.createElement('div');
+  tbl.className = 'card';
+  const rows = groupTable(gi);
+  tbl.innerHTML = '<div class="gtitle">' + LETTER[gi] + '조</div>' +
+    '<table><thead><tr><th class="rank"></th><th class="tname" style="text-align:left">팀</th>' +
+    '<th>경기</th><th>승</th><th>패</th><th>득실</th><th>승점</th></tr></thead><tbody>' +
+    rows.map(function (r, idx) {
+      const d = r.gf - r.ga;
+      return '<tr><td class="rank">' + (idx + 1) + '</td>' +
+        '<td class="tname' + (idx < 2 ? ' qual' : '') + '">' + esc(r.name) + (idx < 2 ? ' ↑' : '') + '</td>' +
+        '<td>' + r.p + '</td><td>' + r.w + '</td><td>' + r.l + '</td>' +
+        '<td>' + (d > 0 ? '+' + d : d) + '</td><td class="pts">' + r.pts + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  view.appendChild(tbl);
+
+  const list = document.createElement('div');
+  list.className = 'card';
+  groupGames(gi).forEach(function (g) { list.appendChild(gameRow(g, true)); });
+  view.appendChild(list);
+
+  const tip = document.createElement('p');
+  tip.className = 'note';
+  tip.innerHTML = '각 조 <b>1·2위</b>가 ' + KO_NAME[firstKo()] + '에 올라가. 초록색 ↑ 표시가 지금 올라가는 자리야.';
+  view.appendChild(tip);
+}
+
+function renderCupKo() {
+  const view = document.getElementById('gameview');
+  view.innerHTML = '';
+
+  const champ = cupChampion();
+  if (champ !== null) {
+    const b = document.createElement('div');
+    b.id = 'champion';
+    const second = cupSecond(), third = cupThird();
+    b.innerHTML = '<div>🏆</div><div class="big">' + esc(NAMES()[champ]) + ' 우승!</div>' +
+      '<div class="sub">🥈 ' + esc(NAMES()[second]) +
+      (third !== null ? ' &nbsp;·&nbsp; 🥉 ' + esc(NAMES()[third]) : ' &nbsp;·&nbsp; 3위는 3·4위전을 해야 정해져') +
+      '</div>' +
+      '<div class="btns"><button class="big" id="cupFinish">기록에 남기고 새 대회</button></div>';
+    view.appendChild(b);
+    document.getElementById('cupFinish').addEventListener('click', function () {
+      ask(NAMES()[champ] + ' 우승을 기록에 남기고 새 대회를 열까?', function () {
+        st.hall.push({ champ: NAMES()[champ], cup: true });
+        st.cup = makeCup(st.cup.size);
+        st.lookG = 0; st.open = null;
+        save(); renderAll();
+      });
+    });
+  }
+
+  if (!groupsAllDone()) {
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.innerHTML = '아직 조별리그가 안 끝났어. <b>조별리그</b> 탭에서 먼저 끝내면 여기에 대진표가 생겨.';
+    view.appendChild(p);
+    return;
+  }
+
+  const bar = document.createElement('div');
+  bar.className = 'stagebar';
+  const rounds = koRounds();
+  if (rounds.indexOf(st.cup.stage) < 0) st.cup.stage = rounds[0];
+  rounds.forEach(function (n) {
+    const games = koGames(n);
+    const b = document.createElement('button');
+    b.textContent = KO_NAME[n];
+    b.disabled = !games;
+    b.setAttribute('aria-pressed', n === st.cup.stage ? 'true' : 'false');
+    b.addEventListener('click', function () { st.cup.stage = n; save(); renderCupKo(); });
+    bar.appendChild(b);
+  });
+  view.appendChild(bar);
+
+  let games = koGames(st.cup.stage);
+  if (!games) {
+    for (let i = rounds.length - 1; i >= 0; i--) {
+      if (koGames(rounds[i])) { st.cup.stage = rounds[i]; games = koGames(rounds[i]); break; }
+    }
+  }
+  if (!games) return;
+
+  const left = games.filter(function (g) { return !isDone(g); }).length;
+  if (left) {
+    const all = document.createElement('button');
+    all.className = 'big';
+    all.style.marginBottom = '10px';
+    all.textContent = KO_NAME[st.cup.stage] + ' 남은 ' + left + '경기 자동으로';
+    all.addEventListener('click', function () {
+      ask(KO_NAME[st.cup.stage] + ' 남은 ' + left + '경기를 자동으로 돌릴까?', function () {
+        koGames(st.cup.stage).forEach(function (g) { if (!isDone(g)) autoPlay(g); });
+        nextStage();
+        save(); renderAll();
+      });
+    });
+    view.appendChild(all);
+  } else {
+    const idx = rounds.indexOf(st.cup.stage);
+    if (idx + 1 < rounds.length && koGames(rounds[idx + 1])) {
+      const nx = document.createElement('button');
+      nx.className = 'big';
+      nx.style.marginBottom = '10px';
+      nx.textContent = KO_NAME[rounds[idx + 1]] + ' 시작하기';
+      nx.addEventListener('click', function () {
+        st.cup.stage = rounds[idx + 1];
+        save(); renderAll(); window.scrollTo(0, 0);
+      });
+      view.appendChild(nx);
+    }
+  }
+
+  const list = document.createElement('div');
+  list.className = 'card';
+  games.forEach(function (g) { list.appendChild(gameRow(g, true)); });
+  view.appendChild(list);
+}
+
+/* 한 단계가 끝나면 다음 단계로 넘어간다 */
+function nextStage() {
+  const rounds = koRounds();
+  const idx = rounds.indexOf(st.cup.stage);
+  for (let i = idx + 1; i < rounds.length; i++) {
+    if (koGames(rounds[i])) { st.cup.stage = rounds[i]; return; }
+  }
+}
+
+function openMatch(g) {
+  st.open = g;
+  st.openFrom = (g.k && g.k[0] === 'G') ? 'table' : 'games';
+  save();
+  setTab('games');
+  renderAll();
+  window.scrollTo(0, 0);
+}
+function setTab(name) {
+  document.querySelectorAll('#tabs button').forEach(function (x) {
+    x.setAttribute('aria-pressed', x.dataset.tab === name ? 'true' : 'false');
+  });
+  ['table', 'games', 'cards', 'teams'].forEach(function (t) {
+    document.getElementById('panel-' + t).hidden = (t !== name);
+  });
+}
+
+/* ---------- 그리기: 카드 ---------- */
+function renderCards() {
+  const view = document.getElementById('cardview');
+  view.innerHTML = '';
+
+  if (!anyCards()) {
+    const box = document.createElement('div');
+    box.className = 'card';
+    box.innerHTML =
+      '<p class="note" style="margin:6px 4px 12px">' +
+      '누르면 팀마다 선수 11명을 만들어 줄게. 골키퍼 1, 수비수 3, 미드필더 4, 공격수 3명이고 ' +
+      '자리마다 능력치가 달라 — 공격수는 공격력이 세고 수비수는 수비력이 세.<br>' +
+      '선수를 만들면 경기 화면에서 <b>카드 뽑기</b> 버튼이 생겨서, 판마다 누가 나왔는지 보여줘.</p>';
+    const b = document.createElement('button');
+    b.className = 'big';
+    b.textContent = '선수 만들기';
+    b.addEventListener('click', function () {
+      fillMissingSquads();
+      save();
+      renderAll();
+    });
+    box.appendChild(b);
+    view.appendChild(box);
+    return;
+  }
+
+  /* 대회는 팀이 많아서 조를 먼저 고르게 한다 */
+  let teamList = [];
+  if (st.mode === 'cup') {
+    const gp = document.createElement('div');
+    gp.className = 'picker';
+    st.cup.groups.forEach(function (_, gi) {
+      const b = document.createElement('button');
+      b.textContent = LETTER[gi] + '조';
+      b.setAttribute('aria-pressed', gi === st.lookG ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        st.lookG = gi; st.look = st.cup.groups[gi][0]; save(); renderCards();
+      });
+      gp.appendChild(b);
+    });
+    view.appendChild(gp);
+    teamList = st.cup.groups[st.lookG].slice();
+  } else {
+    for (let i = 0; i < st.n; i++) teamList.push(i);
+  }
+  if (teamList.indexOf(st.look) < 0) st.look = teamList[0];
+
+  const picker = document.createElement('div');
+  picker.className = 'picker';
+  teamList.forEach(function (i) {
+    const b = document.createElement('button');
+    b.textContent = NAMES()[i];
+    b.setAttribute('aria-pressed', i === st.look ? 'true' : 'false');
+    b.addEventListener('click', function () { st.look = i; save(); renderCards(); });
+    picker.appendChild(b);
+  });
+  view.appendChild(picker);
+
+  const squad = CARDS()[st.look] || [];
+  const list = document.createElement('div');
+  list.className = 'card';
+  squad.forEach(function (c, i) {
+    const row = document.createElement('div');
+    row.className = 'player';
+    row.innerHTML =
+      '<span class="num">' + (i + 1) + '</span>' +
+      '<span class="pos ' + c.p + '">' + c.p + '</span>' +
+      '<span class="nm">' + esc(c.n) + '</span>' +
+      '<span class="st">공 <b>' + c.a + '</b> 수 <b>' + c.d + '</b> 속 <b>' + c.s + '</b></span>';
+    list.appendChild(row);
+  });
+  view.appendChild(list);
+
+  const btns = document.createElement('div');
+  btns.className = 'btns';
+  const one = document.createElement('button');
+  one.className = 'big ghost';
+  one.textContent = NAMES()[st.look] + ' 다시 뽑기';
+  one.addEventListener('click', function () {
+    ask(NAMES()[st.look] + ' 선수 11명을 전부 새로 만들까?', function () {
+      CARDS()[st.look] = makeSquad();
+      save();
+      renderCards();
+    });
+  });
+  const all = document.createElement('button');
+  all.className = 'big ghost';
+  all.textContent = '전체 다시';
+  all.addEventListener('click', function () {
+    ask('모든 팀의 선수를 새로 만들까? 지금 선수들은 사라져.', function () {
+      if (st.mode === 'cup') st.cup.cards = {}; else st.cards = {};
+      fillMissingSquads();
+      save();
+      renderAll();
+    });
+  });
+  btns.appendChild(one);
+  btns.appendChild(all);
+  view.appendChild(btns);
+}
+
+/* ---------- 그리기: 팀 ---------- */
+function renderTeams() {
+  const list = document.getElementById('teamlist');
+  list.innerHTML = '';
+  for (let i = 0; i < st.n; i++) {
+    (function (i) {
+      const row = document.createElement('div');
+      row.className = 'teamrow';
+      const num = document.createElement('span');
+      num.textContent = i + 1;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = NAMES()[i];
+      input.maxLength = 8;
+      input.addEventListener('input', function () {
+        st.names[i] = input.value.trim() || DEFAULT_NAMES[i];
+        save();
+        renderTable();
+      });
+      row.appendChild(num);
+      row.appendChild(input);
+      list.appendChild(row);
+    })(i);
+  }
+  document.querySelectorAll('#sizes button').forEach(function (b) {
+    b.setAttribute('aria-pressed', +b.dataset.n === st.n ? 'true' : 'false');
+  });
+  document.querySelectorAll('#legs button').forEach(function (b) {
+    b.setAttribute('aria-pressed', +b.dataset.legs === st.legs ? 'true' : 'false');
+  });
+  document.getElementById('legnote').textContent =
+    st.n + '팀 ' + (st.legs === 2 ? '두 바퀴' : '한 바퀴') + ' — ' +
+    ((st.n - 1) * st.legs) + '라운드, 모두 ' + totalCount() + '경기';
+}
+
+/* ---------- 시즌 ---------- */
+function finishSeason() {
+  const rows = standings();
+  if (!rows.length) return;
+  st.hall.push({ champ: rows[0].name });
+  st.res = {};
+  st.open = null;
+  save();
+  renderAll();
+  window.scrollTo(0, 0);
+}
+
+/* 브라우저 기본 confirm 창은 홈 화면 앱에서 막히는 경우가 있어서 직접 만든다 */
+let askFn = null;
+function ask(msg, fn) {
+  document.getElementById('askMsg').textContent = msg;
+  askFn = fn;
+  document.getElementById('ask').hidden = false;
+}
+document.getElementById('askYes').addEventListener('click', function () {
+  document.getElementById('ask').hidden = true;
+  const f = askFn; askFn = null;
+  if (f) f();
+});
+document.getElementById('askNo').addEventListener('click', function () {
+  document.getElementById('ask').hidden = true;
+  askFn = null;
+});
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+
+function renderAll() {
+  const cup = st.mode === 'cup';
+  document.getElementById('leagueTable').hidden = cup;
+  document.getElementById('cupGroups').hidden = !cup;
+  document.getElementById('leagueSettings').hidden = cup;
+  document.getElementById('cupSettings').hidden = !cup;
+  document.querySelectorAll('#modes button').forEach(function (b) {
+    b.setAttribute('aria-pressed', (b.dataset.mode === st.mode) ? 'true' : 'false');
+  });
+  const labels = cup ? ['조별리그','토너먼트','카드','대회'] : ['순위표','경기','카드','팀'];
+  document.querySelectorAll('#tabs button').forEach(function (b, i) { b.textContent = labels[i]; });
+
+  if (cup) fillMissingSquads();          // 대회는 항상 선수가 있어야 한다
+  else if (anyCards()) fillMissingSquads();
+
+  if (cup) {
+    renderCupGroups();
+    if (st.open) renderGames(); else renderCupKo();
+    renderCupSettings();
+  } else {
+    renderTable();
+    renderGames();
+    renderTeams();
+  }
+  renderCards();
+}
+
+function renderCupSettings() {
+  const view = document.getElementById('cupSettings');
+  view.innerHTML = '';
+  const info = document.createElement('p');
+  info.className = 'note';
+  info.innerHTML = '지금 대회는 <b>' + st.cup.size + '팀</b> — ' + st.cup.groups.length +
+    '개 조로 나눠서 조별리그를 하고, 각 조 1·2위가 ' + KO_NAME[firstKo()] + '부터 붙어. ' +
+    '조별리그 ' + (st.cup.groups.length * 6) + '경기 + 토너먼트 ' + (st.cup.size / 2 - 1) + '경기야.';
+  view.appendChild(info);
+
+  const seg = document.createElement('div');
+  seg.className = 'seg';
+  [[32, '32팀 · 16강부터'], [64, '64팀 · 32강부터']].forEach(function (opt) {
+    const b = document.createElement('button');
+    b.textContent = opt[1];
+    b.setAttribute('aria-pressed', st.cup.size === opt[0] ? 'true' : 'false');
+    b.addEventListener('click', function () {
+      if (st.cup.size === opt[0]) return;
+      ask(opt[0] + '팀짜리 대회를 새로 열까? 지금 대회 기록은 사라져.', function () {
+        st.cup = makeCup(opt[0]);
+        st.lookG = 0; st.look = 0; st.open = null;
+        save(); renderAll();
+      });
+    });
+    seg.appendChild(b);
+  });
+  view.appendChild(seg);
+
+  const nb = document.createElement('button');
+  nb.className = 'big ghost';
+  nb.textContent = '대회 새로 열기 (조 다시 뽑기)';
+  nb.addEventListener('click', function () {
+    ask('조 편성이랑 선수를 전부 새로 뽑을까? 지금 기록은 사라져.', function () {
+      st.cup = makeCup(st.cup.size);
+      st.lookG = 0; st.look = 0; st.open = null;
+      save(); renderAll();
+    });
+  });
+  view.appendChild(nb);
+
+  if (st.hall.length) {
+    const hall = document.createElement('div');
+    hall.className = 'card';
+    hall.style.marginTop = '10px';
+    hall.innerHTML = '<p class="note" style="margin:2px 0 8px">🏅 역대 우승</p>' +
+      st.hall.map(function (h, i) {
+        return '<div class="hallrow"><span>' + (h.cup ? '월드컵' : (i + 1) + '시즌') + '</span><b>' + esc(h.champ) + '</b></div>';
+      }).join('');
+    view.appendChild(hall);
+  }
+}
+
+/* ---------- 조작 ---------- */
+document.getElementById('tabs').addEventListener('click', function (e) {
+  const b = e.target.closest('button');
+  if (!b) return;
+  setTab(b.dataset.tab);
+});
+
+document.getElementById('modes').addEventListener('click', function (e) {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.mode === 'cup' && !st.cup) st.cup = makeCup(64);
+  st.mode = b.dataset.mode;
+  st.open = null;
+  st.look = st.mode === 'cup' ? st.cup.groups[0][0] : 0;
+  save();
+  setTab('table');
+  renderAll();
+  window.scrollTo(0, 0);
+});
+
+document.getElementById('sizes').addEventListener('click', function (e) {
+  const b = e.target.closest('button');
+  if (!b) return;
+  st.n = +b.dataset.n;
+  st.open = null;
+  save();
+  renderAll();
+});
+
+document.getElementById('legs').addEventListener('click', function (e) {
+  const b = e.target.closest('button');
+  if (!b) return;
+  st.legs = +b.dataset.legs;
+  st.open = null;
+  save();
+  renderAll();
+});
+
+document.getElementById('resetSeason').addEventListener('click', function () {
+  ask('이번 시즌 경기 결과를 다 지울까? 팀 이름이랑 역대 우승 기록은 남아.', function () {
+    st.res = {};
+    st.open = null;
+    save();
+    renderAll();
+  });
+});
+
+document.getElementById('resetAll').addEventListener('click', function () {
+  ask('팀 이름이랑 역대 우승 기록까지 전부 지울까? 되돌릴 수 없어.', function () {
+    st = { n: 8, names: DEFAULT_NAMES.slice(), legs: 1, res: {}, hall: [], open: null, cards: {}, look: 0 };
+    save();
+    renderAll();
+  });
+});
+
+load();
+renderAll();
+</script>
+</body>
+</html>
