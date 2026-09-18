@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>🏰 성 지키기</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --green: #55BE8A;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 난이도 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 10px;
+    padding: 9px 2px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+
+  /* ---------- 점수 ---------- */
+  .bars { display: flex; gap: 8px; margin-bottom: 10px; }
+  .bar {
+    flex: 1;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 8px 6px 9px;
+    box-shadow: var(--shadow);
+  }
+  .bar b { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; white-space: nowrap; }
+  .bar span { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  #hint { font-size: 13px; color: var(--muted); margin: 0 0 10px; min-height: 18px; }
+  #hint b { color: #23883C; font-weight: 800; }
+
+  /* ---------- 판 ---------- */
+  #boardwrap { position: relative; }
+  canvas {
+    display: block;
+    width: 100%;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    touch-action: none;
+  }
+
+  /* ---------- 덮는 화면 ---------- */
+  #cover {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    background: rgba(255,255,255,.94);
+    border-radius: 16px;
+  }
+  #cover.on { display: flex; }
+  #cover p { margin: 0; font-size: 23px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--muted); line-height: 1.6; }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 12px;
+    padding: 11px 18px;
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.warm { background: var(--pink); }
+  button.calm { background: var(--green); }
+  button:disabled { opacity: .45; }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+  .row button { flex: 1; max-width: 200px; }
+
+  /* ---------- 탑 고르는 칸 ---------- */
+  #shop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
+  #shop button {
+    padding: 8px 2px 9px;
+    background: var(--card);
+    color: var(--ink);
+    border: 2px solid var(--line);
+    line-height: 1.35;
+  }
+  #shop button .e { display: block; font-size: 22px; }
+  #shop button .n { display: block; font-size: 12px; font-weight: 800; }
+  #shop button .c { display: block; font-size: 11px; font-weight: 700; color: var(--muted); }
+  #shop button[aria-pressed="true"] { border-color: var(--blue); background: #EEF3FF; }
+  #shop button.poor { opacity: .5; }
+
+  /* ---------- 고른 탑 다루는 칸 ---------- */
+  #panel {
+    display: none;
+    align-items: center; gap: 8px;
+    margin-top: 10px; padding: 9px 10px;
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    text-align: left;
+  }
+  #panel.on { display: flex; }
+  #panel .who { flex: 1; font-size: 13px; font-weight: 800; line-height: 1.4; }
+  #panel .who small { display: block; font-size: 11px; font-weight: 700; color: var(--muted); }
+  #panel button { padding: 9px 12px; font-size: 13px; }
+
+  #tip { font-size: 12.5px; color: var(--muted); line-height: 1.75; margin: 14px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🏰 성 지키기</h1>
+
+  <div class="seg" id="levelRow">
+    <button data-lv="easy" aria-pressed="true">느긋하게</button>
+    <button data-lv="normal" aria-pressed="false">보통</button>
+    <button data-lv="hard" aria-pressed="false">어려움</button>
+  </div>
+
+  <div class="bars">
+    <div class="bar"><b>❤️ 성</b><span id="life">10</span></div>
+    <div class="bar"><b>🪙 동전</b><span id="gold">40</span></div>
+    <div class="bar"><b>🌊 물결</b><span id="wave">0/10</span></div>
+  </div>
+
+  <p id="hint">탑을 고르고 풀밭을 누르면 세워진다</p>
+
+  <div id="boardwrap">
+    <canvas id="cv"></canvas>
+    <div id="cover">
+      <p id="coverMsg">성 지키기</p>
+      <div class="row" id="coverRow">
+        <button id="moreBtn" class="calm" hidden>🌀 계속 가기</button>
+        <button id="easyBtn" class="calm" hidden>🐣 쉽게</button>
+        <button id="coverBtn">시작</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shop"></div>
+
+  <div id="panel">
+    <span class="who" id="panelWho"></span>
+    <button id="upBtn" class="calm">⬆️</button>
+    <button id="sellBtn" class="warm">💰</button>
+  </div>
+
+  <div class="row">
+    <button id="sendBtn">▶️ 바로 보내기</button>
+    <button id="newBtn" class="warm">🔄 새 게임</button>
+  </div>
+
+  <p id="tip">적은 흙길을 따라 성으로 걸어간다 · 길 옆 풀밭에 탑을 세워 막는다<br>탑을 누르면 더 세게 키우거나 팔 수 있다 · 판 적은 동전을 돌려준다<br>🦔 고슴도치는 가시 때문에 화살이 반만 박힌다 · 대포와 얼음은 그대로 먹힌다<br>🐛 애벌레는 잡으면 🐜 두 마리로 쪼개져 계속 온다<br>물결 열 개를 막으면 이긴다 · 거기서 🌀 끝없는 물결로 더 갈 수 있다</p>
+</main>
+
+<script>
+/* 길은 고정이고, 적과 탑과 화살은 그때그때 만들어 낸다.
+   쉬어 가는 시간에는 저절로 다음 물결이 온다. 서두를 일이 없다. */
+
+const LEVELS = {
+  easy:   { name: '느긋하게', life: 20, gold: 60, hp: 0.70, spd: 0.85, rest: 9, ramp: 0.24, next: 'normal' },
+  normal: { name: '보통',     life: 10, gold: 42, hp: 1.20, spd: 1.05, rest: 5, ramp: 0.40, next: 'hard', down: 'easy' },
+  hard:   { name: '어려움',   life: 7,  gold: 44, hp: 1.40, spd: 1.18, rest: 4, ramp: 0.42, down: 'normal' }
+};
+
+const COLS = 8, ROWS = 10, WAVES = 10;
+const MAXLVL = 8;        // 탑을 키울 수 있는 끝. 여기 닿으면 ⭐ 로 알려 준다
+
+/* 적이 걸어가는 흙길. 맨 위에서 들어와 맨 아래 성으로 간다 */
+const PATH = [
+  [1,-1],[1,0],[1,1],[1,2],[1,3],
+  [2,3],[3,3],[4,3],[5,3],[6,3],
+  [6,4],[6,5],[6,6],
+  [5,6],[4,6],[3,6],[2,6],[1,6],
+  [1,7],[1,8],
+  [2,8],[3,8],[4,8],[5,8],[6,8],
+  [6,9]
+];
+const CASTLE = [6,9];
+
+const TOWERS = {
+  bow:   { emoji: '🏹', name: '활 탑',   cost: 10, dmg: 6,  range: 2.2, rate: 0.55, color: '#6C8BFF' },
+  ice:   { emoji: '❄️', name: '얼음 탑', cost: 14, dmg: 2,  range: 2.0, rate: 0.85, color: '#4FB6E8', slow: 0.45, slowFor: 1.8 },
+  boom:  { emoji: '💣', name: '대포 탑', cost: 22, dmg: 13, range: 2.4, rate: 1.45, color: '#FF8C5A', splash: 0.95 }
+};
+
+const FOES = {
+  walk:   { emoji: '👾', hp: 24,  spd: 1.30, coin: 4,  size: .30, color: '#8E7BFF' },
+  fast:   { emoji: '🐇', hp: 16,  spd: 2.25, coin: 5,  size: .27, color: '#FF9CC0' },
+  tank:   { emoji: '🐢', hp: 76,  spd: 0.78, coin: 8,  size: .34, color: '#55BE8A' },
+  /* 고슴도치는 가시 때문에 화살이 반만 박힌다. 대포와 얼음은 그대로 먹힌다 */
+  shield: { emoji: '🦔', hp: 52,  spd: 1.00, coin: 7,  size: .32, color: '#C98A5A', armor: .5 },
+  /* 애벌레는 잡으면 개미 두 마리로 쪼개진다 */
+  split:  { emoji: '🐛', hp: 34,  spd: 1.10, coin: 5,  size: .31, color: '#7BC47F', splitInto: 'mini' },
+  mini:   { emoji: '🐜', hp: 14,  spd: 1.85, coin: 2,  size: .22, color: '#A9895F' },
+  boss:   { emoji: '👹', hp: 320, spd: 0.66, coin: 40, size: .40, color: '#FF6B8A' }
+};
+
+/* 물결마다 나오는 적. [종류, 마리 수] */
+const PLAN = [
+  [['walk', 6]],
+  [['walk', 8]],
+  [['walk', 7], ['fast', 4]],
+  [['split', 5], ['walk', 8]],
+  [['fast', 14], ['tank', 2]],
+  [['shield', 6], ['walk', 10]],
+  [['fast', 12], ['tank', 5]],
+  [['shield', 7], ['split', 8], ['fast', 8]],
+  [['tank', 9], ['fast', 12], ['shield', 5]],
+  [['boss', 1], ['shield', 7], ['tank', 6], ['fast', 12], ['split', 6]]
+];
+
+/* 열 물결을 다 막고 나면 끝없이 이어 갈 수 있다. 갈수록 많아지고 단단해진다 */
+function waveList(w) {
+  if (w <= WAVES) return PLAN[w - 1];
+  const k = w - WAVES;
+  const out = [['walk', 8 + k], ['fast', 7 + k], ['tank', 3 + Math.floor(k / 2)]];
+  out.push(['shield', 2 + Math.floor(k / 2)]);
+  out.push(['split', 2 + Math.floor(k / 2)]);
+  if (k % 3 === 0) out.push(['boss', Math.floor(k / 3)]);
+  return out;
+}
+
+const KEY_LEVEL = 'craft-castle-level';
+const KEY_BEST  = 'craft-castle-best';
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrapEl = document.getElementById('boardwrap');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const moreBtn = document.getElementById('moreBtn');
+const easyBtn = document.getElementById('easyBtn');
+const lifeEl = document.getElementById('life');
+const goldEl = document.getElementById('gold');
+const waveEl = document.getElementById('wave');
+const hintEl = document.getElementById('hint');
+const shopEl = document.getElementById('shop');
+const panelEl = document.getElementById('panel');
+const panelWho = document.getElementById('panelWho');
+const upBtn = document.getElementById('upBtn');
+const sellBtn = document.getElementById('sellBtn');
+const sendBtn = document.getElementById('sendBtn');
+const newBtn = document.getElementById('newBtn');
+const levelRow = document.getElementById('levelRow');
+
+let key, lv;
+let cell = 44, W = 352, H = 440;
+let pathPts = [];        // 길 꼭짓점을 칸 가운데 좌표로 바꾼 것
+let pathLen = 0;
+
+let life, gold, waveNo, phase, restLeft;
+let towers = [];         // { c, r, kind, lvl, cool }
+let foes = [];           // { kind, x, y, seg, t, hp, maxHp, slow, slowLeft }
+let shots = [];          // { x, y, tx, ty, target, dmg, splash, color, spd }
+let pops = [];           // { x, y, text, color, at }
+let rings = [];          // { x, y, r, max, color, at }
+let queue = [];          // 이번 물결에 아직 안 나온 적
+let spawnLeft = 0;
+let picked = 'bow';      // 지금 고른 탑 종류
+let endless = false;     // 열 물결을 넘기고 계속 가는 중인가
+let chosen = null;       // 누른 탑
+let raf = null, last = 0;
+let ac = null;
+let shake = 0;
+
+/* ---------- 판 크기 ---------- */
+
+function fit() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = wrapEl.clientWidth || 352;
+  cell = W / COLS;
+  H = cell * ROWS;
+  cv.width = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  cv.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  buildPath();
+  draw();
+}
+
+function buildPath() {
+  pathPts = PATH.map(([c, r]) => ({ x: (c + .5) * cell, y: (r + .5) * cell }));
+  pathLen = 0;
+  for (let i = 1; i < pathPts.length; i++) pathLen += dist(pathPts[i - 1], pathPts[i]);
+}
+
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+function isPath(c, r) { return PATH.some(p => p[0] === c && p[1] === r); }
+function towerAt(c, r) { return towers.find(t => t.c === c && t.r === r) || null; }
+
+/* ---------- 소리 ---------- */
+
+function ensureAudio() {
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) ac = new AC();
+  }
+  if (ac && ac.state === 'suspended') ac.resume();
+  return ac;
+}
+
+function tone(freq, dur, type, vol) {
+  if (!ac) return;
+  const at = ac.currentTime;
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(at);
+  o.stop(at + dur + 0.05);
+}
+
+const sfx = {
+  shoot: () => tone(880, 0.05, 'square', 0.04),
+  boom:  () => tone(160, 0.16, 'sawtooth', 0.09),
+  pop:   () => tone(660, 0.09, 'triangle', 0.10),
+  coin:  () => tone(1320, 0.08, 'triangle', 0.08),
+  build: () => tone(520, 0.12, 'sine', 0.12),
+  ouch:  () => tone(150, 0.22, 'square', 0.12),
+  win:   () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.12), i * 110)); }
+};
+
+/* ---------- 새 게임 ---------- */
+
+function newGame() {
+  cancelAnimationFrame(raf);
+  life = lv.life;
+  gold = lv.gold;
+  waveNo = 0;
+  towers = []; foes = []; shots = []; pops = []; rings = []; queue = [];
+  chosen = null;
+  phase = 'rest';
+  restLeft = lv.rest + 2;
+  endless = false;
+  shake = 0;
+  moreBtn.hidden = true;
+  easyBtn.hidden = true;
+  coverEl.classList.remove('on');
+  paint();
+  last = performance.now();
+  raf = requestAnimationFrame(tick);
+}
+
+/* ---------- 물결 ---------- */
+
+/* 물결이 갈수록 단단해진다. 열 물결을 넘기면 눈덩이처럼 불어난다 */
+function hardness(w) {
+  let mul = lv.hp * (1 + (w - 1) * lv.ramp);
+  if (w > WAVES) mul *= Math.pow(1.22, w - WAVES);
+  return mul;
+}
+
+function startWave() {
+  waveNo++;
+  const mul = hardness(waveNo);
+  queue = [];
+  waveList(waveNo).forEach(([kind, n]) => {
+    for (let i = 0; i < n; i++) queue.push({ kind, hp: Math.round(FOES[kind].hp * mul) });
+  });
+  /* 섞어서 내보내면 줄이 심심하지 않다 */
+  for (let i = queue.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [queue[i], queue[j]] = [queue[j], queue[i]];
+  }
+  spawnLeft = 0;
+  phase = 'fight';
+  say('🌊 ' + waveNo + '번째 물결이 온다');
+  paint();
+}
+
+function endWave() {
+  const bonus = 9 + waveNo * 2;
+  gold += bonus;
+  pops.push({ x: W / 2, y: H / 2, text: '+' + bonus + '🪙', color: '#C98A00', at: 0 });
+  sfx.coin();
+  if (waveNo >= WAVES && !endless) return finish(true);
+  phase = 'rest';
+  restLeft = lv.rest;
+  say('한숨 돌린다 · 탑을 더 세우자');
+  paint();
+}
+
+function finish(won) {
+  phase = 'over';
+  cancelAnimationFrame(raf);
+  const best = Math.max(waveNo, +(localStorage.getItem(KEY_BEST + '-' + key) || 0));
+  localStorage.setItem(KEY_BEST + '-' + key, best);
+  const upNext = lv.next ? '<br>다음에는 \'' + LEVELS[lv.next].name + '\'도 해 보자' : '<br>가장 어려운 것까지 깼다';
+  coverMsg.innerHTML = won
+    ? '🎉 성을 지켰다!<small>물결 열 개를 모두 막아 냈다' + upNext + '</small>'
+    : '🏳️ 성이 무너졌다<small>' + waveNo + '번째 물결까지 버텼다 · 가장 잘한 기록 ' + best + '</small>';
+  coverBtn.textContent = won ? '처음부터' : '다시 하기';
+  moreBtn.hidden = !won;
+  easyBtn.hidden = won || !lv.down;
+  if (!won && lv.down) easyBtn.textContent = '🐣 ' + LEVELS[lv.down].name + '로';
+  coverEl.classList.add('on');
+  if (won) sfx.win(); else sfx.ouch();
+  draw();
+}
+
+/* ---------- 돌아가는 판 ---------- */
+
+function tick(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  step(dt);
+  draw();
+  raf = requestAnimationFrame(tick);
+}
+
+function step(dt) {
+  if (phase === 'over') return;
+
+  if (phase === 'rest') {
+    restLeft -= dt;
+    if (restLeft <= 0) startWave();
+    else if (Math.ceil(restLeft) !== Math.ceil(restLeft + dt)) paint();
+  }
+
+  if (phase === 'fight') {
+    spawnLeft -= dt;
+    if (queue.length && spawnLeft <= 0) {
+      spawn(queue.shift());
+      spawnLeft = 0.62 / (1 + waveNo * 0.05);
+    }
+  }
+
+  moveFoes(dt);
+  fireTowers(dt);
+  moveShots(dt);
+
+  pops.forEach(p => p.at += dt);
+  pops = pops.filter(p => p.at < 0.9);
+  rings.forEach(r => r.at += dt);
+  rings = rings.filter(r => r.at < 0.35);
+  if (shake > 0) shake = Math.max(0, shake - dt * 14);
+
+  if (phase === 'fight' && !queue.length && !foes.length) endWave();
+}
+
+function spawn(o) {
+  const f = FOES[o.kind];
+  foes.push({
+    kind: o.kind, hp: o.hp, maxHp: o.hp,
+    seg: 0, t: 0, slow: 0, slowLeft: 0,
+    x: pathPts[0].x, y: pathPts[0].y
+  });
+}
+
+function moveFoes(dt) {
+  for (let i = foes.length - 1; i >= 0; i--) {
+    const f = foes[i];
+    const base = FOES[f.kind];
+    if (f.slowLeft > 0) { f.slowLeft -= dt; if (f.slowLeft <= 0) f.slow = 0; }
+    const rush = waveNo > WAVES ? 1 + (waveNo - WAVES) * 0.025 : 1;
+    let move = base.spd * lv.spd * rush * (1 - f.slow) * cell * dt;
+
+    while (move > 0 && f.seg < pathPts.length - 1) {
+      const a = pathPts[f.seg], b = pathPts[f.seg + 1];
+      const segLen = dist(a, b);
+      const left = segLen - f.t;
+      if (move < left) { f.t += move; move = 0; }
+      else { move -= left; f.seg++; f.t = 0; }
+    }
+    if (f.seg >= pathPts.length - 1) {     // 성에 닿았다
+      foes.splice(i, 1);
+      life--;
+      shake = 1;
+      sfx.ouch();
+      pops.push({ x: (CASTLE[0] + .5) * cell, y: (CASTLE[1] + .2) * cell, text: '💔', color: '#FF6B8A', at: 0 });
+      paint();
+      if (life <= 0) { life = 0; paint(); finish(false); return; }
+      continue;
+    }
+    const a = pathPts[f.seg], b = pathPts[f.seg + 1];
+    const k = f.t / dist(a, b);
+    f.x = a.x + (b.x - a.x) * k;
+    f.y = a.y + (b.y - a.y) * k;
+  }
+}
+
+function fireTowers(dt) {
+  towers.forEach(t => {
+    const s = TOWERS[t.kind];
+    t.cool -= dt;
+    if (t.cool > 0) return;
+    const tx = (t.c + .5) * cell, ty = (t.r + .5) * cell;
+    const reach = (s.range + (t.lvl - 1) * 0.28) * cell;
+    /* 성에 가장 가까운 적을 먼저 노린다 */
+    let best = null, bestGo = -1;
+    foes.forEach(f => {
+      if (f.hp <= 0) return;
+      if (Math.hypot(f.x - tx, f.y - ty) > reach) return;
+      const go = f.seg + f.t / 1000;
+      if (go > bestGo) { bestGo = go; best = f; }
+    });
+    if (!best) return;
+    t.cool = s.rate;
+    shots.push({
+      x: tx, y: ty, target: best,
+      dmg: Math.round(s.dmg * Math.pow(1.65, t.lvl - 1)),
+      kind: t.kind,
+      splash: s.splash || 0, slow: s.slow || 0, slowFor: s.slowFor || 0,
+      color: s.color, spd: cell * 11
+    });
+    sfx.shoot();
+  });
+}
+
+function moveShots(dt) {
+  for (let i = shots.length - 1; i >= 0; i--) {
+    const s = shots[i];
+    const f = s.target;
+    if (!f || f.hp <= 0 || !foes.includes(f)) { shots.splice(i, 1); continue; }
+    const dx = f.x - s.x, dy = f.y - s.y;
+    const d = Math.hypot(dx, dy);
+    const move = s.spd * dt;
+    if (d <= move) { hit(s, f); shots.splice(i, 1); continue; }
+    s.x += dx / d * move;
+    s.y += dy / d * move;
+  }
+}
+
+function hit(s, f) {
+  wound(f, s.dmg, s.color, s.kind);
+  if (s.slow) { f.slow = Math.max(f.slow, s.slow); f.slowLeft = s.slowFor; }
+  if (s.splash) {
+    const r = s.splash * cell;
+    rings.push({ x: f.x, y: f.y, r: r, color: s.color, at: 0 });
+    sfx.boom();
+    foes.slice().forEach(o => {
+      if (o === f || o.hp <= 0) return;
+      if (Math.hypot(o.x - f.x, o.y - f.y) <= r) wound(o, Math.round(s.dmg * 0.6), s.color, s.kind);
+    });
+  }
+}
+
+function wound(f, dmg, color, from) {
+  const b = FOES[f.kind];
+  /* 고슴도치는 가시 때문에 화살이 반만 박힌다 */
+  if (b.armor && from === 'bow') dmg = Math.max(1, Math.round(dmg * b.armor));
+  f.hp -= dmg;
+  if (f.hp > 0) return;
+  const i = foes.indexOf(f);
+  if (i < 0) return;
+  foes.splice(i, 1);
+  /* 애벌레는 잡히면 작은 것 둘로 쪼개져 계속 간다 */
+  if (b.splitInto) {
+    const mul = hardness(waveNo);
+    for (let k = 0; k < 2; k++) {
+      const hp = Math.round(FOES[b.splitInto].hp * mul);
+      foes.push({ kind: b.splitInto, hp, maxHp: hp, seg: f.seg, t: Math.max(0, f.t - k * cell * .35),
+                  slow: f.slow, slowLeft: f.slowLeft, x: f.x, y: f.y });
+    }
+  }
+  const coin = b.coin;
+  gold += coin;
+  pops.push({ x: f.x, y: f.y, text: '+' + coin, color: '#C98A00', at: 0 });
+  rings.push({ x: f.x, y: f.y, r: cell * .5, color: color, at: 0 });
+  sfx.pop();
+  paint();
+}
+
+/* ---------- 손가락 ---------- */
+
+cv.addEventListener('pointerdown', e => {
+  if (phase === 'over') return;
+  ensureAudio();
+  const b = cv.getBoundingClientRect();
+  const c = Math.floor((e.clientX - b.left) / cell);
+  const r = Math.floor((e.clientY - b.top) / cell);
+  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return;
+
+  const here = towerAt(c, r);
+  if (here) { chosen = here; paint(); return; }
+  if (isPath(c, r)) { chosen = null; say('흙길에는 못 세운다 · 옆 풀밭에 세우자'); paint(); return; }
+
+  const s = TOWERS[picked];
+  if (gold < s.cost) { chosen = null; say('동전이 모자란다 · 적을 잡으면 모인다'); paint(); return; }
+  gold -= s.cost;
+  const t = { c, r, kind: picked, lvl: 1, cool: 0 };
+  towers.push(t);
+  chosen = t;
+  rings.push({ x: (c + .5) * cell, y: (r + .5) * cell, r: cell * .8, color: s.color, at: 0 });
+  sfx.build();
+  say(s.emoji + ' ' + s.name + '을 세웠다');
+  paint();
+});
+
+/* ---------- 탑 다루기 ---------- */
+
+function upCost(t) { return Math.round(TOWERS[t.kind].cost * 0.85 * Math.pow(1.8, t.lvl - 1)); }
+function sellBack(t) {
+  let paid = TOWERS[t.kind].cost;
+  for (let i = 1; i < t.lvl; i++) paid += Math.round(TOWERS[t.kind].cost * 0.85 * Math.pow(1.8, i - 1));
+  return Math.round(paid * 0.7);
+}
+
+upBtn.addEventListener('click', () => {
+  if (!chosen) return;
+  if (chosen.lvl >= MAXLVL) { say('⭐ 여기가 끝이다 · 더는 못 키운다'); return; }
+  const cost = upCost(chosen);
+  if (gold < cost) { say('동전이 모자란다 · ' + (cost - gold) + '개만 더'); return; }
+  gold -= cost;
+  chosen.lvl++;
+  rings.push({ x: (chosen.c + .5) * cell, y: (chosen.r + .5) * cell, r: cell * .9, color: '#FFC53D', at: 0 });
+  sfx.build();
+  say('⬆️ 더 세졌다');
+  paint();
+});
+
+sellBtn.addEventListener('click', () => {
+  if (!chosen) return;
+  gold += sellBack(chosen);
+  pops.push({ x: (chosen.c + .5) * cell, y: (chosen.r + .5) * cell, text: '+' + sellBack(chosen), color: '#C98A00', at: 0 });
+  towers = towers.filter(t => t !== chosen);
+  chosen = null;
+  sfx.coin();
+  paint();
+});
+
+sendBtn.addEventListener('click', () => {
+  ensureAudio();
+  if (phase !== 'rest') return;
+  const bonus = 5 + waveNo * 2;
+  gold += bonus;
+  pops.push({ x: W / 2, y: H / 2, text: '+' + bonus + '🪙', color: '#C98A00', at: 0 });
+  sfx.coin();
+  startWave();
+});
+
+easyBtn.addEventListener('click', () => {
+  ensureAudio();
+  if (!lv.down) return;
+  key = lv.down;
+  lv = LEVELS[key];
+  localStorage.setItem(KEY_LEVEL, key);
+  [...levelRow.children].forEach(x => x.setAttribute('aria-pressed', x.dataset.lv === key));
+  newGame();
+  say('🐣 ' + lv.name + '로 바꿨다');
+});
+
+moreBtn.addEventListener('click', () => {
+  ensureAudio();
+  endless = true;
+  phase = 'rest';
+  restLeft = lv.rest;
+  moreBtn.hidden = true;
+  coverEl.classList.remove('on');
+  say('🌀 끝없는 물결이 시작된다');
+  paint();
+  last = performance.now();
+  raf = requestAnimationFrame(tick);
+});
+
+newBtn.addEventListener('click', () => { ensureAudio(); newGame(); });
+coverBtn.addEventListener('click', () => { ensureAudio(); newGame(); });
+
+levelRow.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  key = b.dataset.lv;
+  lv = LEVELS[key];
+  localStorage.setItem(KEY_LEVEL, key);
+  [...levelRow.children].forEach(x => x.setAttribute('aria-pressed', x === b));
+  newGame();
+});
+
+/* ---------- 고르는 칸 ---------- */
+
+Object.entries(TOWERS).forEach(([kind, s]) => {
+  const b = document.createElement('button');
+  b.dataset.kind = kind;
+  b.innerHTML = '<span class="e">' + s.emoji + '</span><span class="n">' + s.name + '</span><span class="c">' + s.cost + '🪙</span>';
+  b.setAttribute('aria-pressed', kind === picked);
+  b.addEventListener('click', () => {
+    picked = kind;
+    chosen = null;
+    [...shopEl.children].forEach(x => x.setAttribute('aria-pressed', x.dataset.kind === kind));
+    say(s.emoji + ' ' + s.name + ' · 풀밭을 누르면 세워진다');
+    paint();
+  });
+  shopEl.appendChild(b);
+});
+
+/* ---------- 글자 새로 쓰기 ---------- */
+
+let sayAt = 0;
+function say(text) { hintEl.innerHTML = text; sayAt = performance.now(); }
+
+function paint() {
+  lifeEl.textContent = life;
+  goldEl.textContent = gold;
+  waveEl.textContent = endless ? waveNo + '🌀' : waveNo + '/' + WAVES;
+  sendBtn.disabled = phase !== 'rest';
+  sendBtn.textContent = phase === 'rest'
+    ? '▶️ 바로 보내기 (+' + (5 + waveNo * 2) + ')'
+    : '⚔️ 싸우는 중';
+  [...shopEl.children].forEach(b => b.classList.toggle('poor', gold < TOWERS[b.dataset.kind].cost));
+
+  if (chosen) {
+    const s = TOWERS[chosen.kind];
+    panelEl.classList.add('on');
+    const top = chosen.lvl >= MAXLVL;
+    panelWho.innerHTML = s.emoji + ' ' + s.name + ' <b>Lv.' + chosen.lvl + (top ? ' ⭐최고' : '/' + MAXLVL) + '</b><small>힘 ' +
+      Math.round(s.dmg * Math.pow(1.65, chosen.lvl - 1)) + ' · 닿는 거리 ' + (s.range + (chosen.lvl - 1) * 0.28).toFixed(1) + '칸' +
+      (top ? ' · 더는 못 키운다' : ' · 키우면 힘 ' + Math.round(s.dmg * Math.pow(1.65, chosen.lvl)) + '') + '</small>';
+    upBtn.textContent = top ? '⭐ 끝' : '⬆️ ' + upCost(chosen) + '🪙';
+    upBtn.disabled = top || gold < upCost(chosen);
+    sellBtn.textContent = '💰 +' + sellBack(chosen);
+  } else {
+    panelEl.classList.remove('on');
+  }
+
+  if (phase === 'rest' && performance.now() - sayAt > 1200) {
+    hintEl.innerHTML = '쉬는 중 · <b>' + Math.ceil(restLeft) + '</b>초 뒤에 다음 물결이 온다';
+  }
+}
+
+/* ---------- 그리기 ---------- */
+
+function draw() {
+  ctx.save();
+  if (shake > 0) ctx.translate((Math.random() - .5) * shake * 5, (Math.random() - .5) * shake * 5);
+  ctx.clearRect(-10, -10, W + 20, H + 20);
+
+  /* 풀밭 */
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      ctx.fillStyle = (c + r) % 2 ? '#E9F4E4' : '#EEF7EA';
+      ctx.fillRect(c * cell, r * cell, cell, cell);
+    }
+  }
+
+  /* 흙길 */
+  ctx.strokeStyle = '#E7D5B4';
+  ctx.lineWidth = cell * 0.82;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  pathPts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.stroke();
+  ctx.strokeStyle = '#F2E6CF';
+  ctx.lineWidth = cell * 0.56;
+  ctx.stroke();
+
+  /* 성 */
+  ctx.font = (cell * 0.72) + 'px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏰', (CASTLE[0] + .5) * cell, (CASTLE[1] + .5) * cell);
+
+  /* 고른 탑이 닿는 거리 */
+  if (chosen) {
+    const s = TOWERS[chosen.kind];
+    const reach = (s.range + (chosen.lvl - 1) * 0.28) * cell;
+    ctx.fillStyle = 'rgba(108,139,255,.13)';
+    ctx.strokeStyle = 'rgba(108,139,255,.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc((chosen.c + .5) * cell, (chosen.r + .5) * cell, reach, 0, 7);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  /* 탑 */
+  towers.forEach(t => {
+    const x = (t.c + .5) * cell, y = (t.r + .5) * cell;
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = TOWERS[t.kind].color;
+    ctx.lineWidth = t === chosen ? 3 : 2;
+    round(x - cell * .38, y - cell * .38, cell * .76, cell * .76, cell * .22);
+    ctx.fill(); ctx.stroke();
+    ctx.font = (cell * 0.46) + 'px serif';
+    ctx.fillText(TOWERS[t.kind].emoji, x, y + cell * .02);
+    if (t.lvl > 1) {
+      ctx.fillStyle = '#FFC53D';
+      ctx.beginPath();
+      ctx.arc(x + cell * .3, y - cell * .3, cell * .15, 0, 7);
+      ctx.fill();
+      ctx.fillStyle = '#5A4300';
+      ctx.font = '700 ' + (cell * .21) + 'px sans-serif';
+      ctx.fillText(t.lvl, x + cell * .3, y - cell * .28);
+    }
+  });
+
+  /* 적 */
+  foes.forEach(f => {
+    const b = FOES[f.kind];
+    const rad = b.size * cell;
+    ctx.fillStyle = f.slow > 0 ? '#9FD8F5' : b.color;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, rad, 0, 7);
+    ctx.fill();
+    ctx.font = (rad * 1.25) + 'px serif';
+    ctx.fillText(b.emoji, f.x, f.y + rad * .05);
+    /* 남은 힘 막대 */
+    const w = rad * 2, h = Math.max(3, cell * .07);
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.fillRect(f.x - w / 2, f.y - rad - h - 3, w, h);
+    ctx.fillStyle = f.hp / f.maxHp > .4 ? '#55BE8A' : '#FF6B8A';
+    ctx.fillRect(f.x - w / 2, f.y - rad - h - 3, w * Math.max(0, f.hp / f.maxHp), h);
+  });
+
+  /* 화살 */
+  shots.forEach(s => {
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, cell * .09, 0, 7);
+    ctx.fill();
+  });
+
+  /* 터지는 자국 */
+  rings.forEach(r => {
+    const k = r.at / 0.35;
+    ctx.strokeStyle = r.color;
+    ctx.globalAlpha = 1 - k;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.r * (0.4 + k * 0.8), 0, 7);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  });
+
+  /* 뜨는 글자 */
+  pops.forEach(p => {
+    ctx.globalAlpha = Math.max(0, 1 - p.at / 0.9);
+    ctx.fillStyle = p.color;
+    ctx.font = '800 ' + (cell * .34) + 'px sans-serif';
+    ctx.fillText(p.text, p.x, p.y - p.at * cell * 1.1);
+    ctx.globalAlpha = 1;
+  });
+
+  ctx.restore();
+}
+
+function round(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* ---------- 시작 ---------- */
+
+key = localStorage.getItem(KEY_LEVEL) || 'easy';
+if (!LEVELS[key]) key = 'easy';
+lv = LEVELS[key];
+[...levelRow.children].forEach(b => b.setAttribute('aria-pressed', b.dataset.lv === key));
+
+window.addEventListener('resize', fit);
+fit();
+newGame();
+coverMsg.innerHTML = '🏰 성 지키기<small>길 옆에 탑을 세워 적을 막는다<br>물결 열 개를 버티면 이긴다<br>그 뒤로는 끝없는 물결이 기다린다</small>';
+coverBtn.textContent = '시작';
+coverEl.classList.add('on');
+cancelAnimationFrame(raf);
+</script>
+</body>
+</html>
