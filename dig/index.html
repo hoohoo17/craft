@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>⛏️ 땅속 보물 캐기</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --green: #55BE8A;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 6px 0 10px; letter-spacing: .04em; }
+
+  /* ---------- 난이도 ---------- */
+  .seg {
+    display: flex; gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+  }
+  .seg button {
+    flex: 1;
+    background: none; color: var(--muted);
+    font: inherit; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 10px;
+    padding: 9px 2px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+
+  /* ---------- 점수 ---------- */
+  .bars { display: flex; gap: 8px; margin-bottom: 9px; }
+  .bar {
+    flex: 1;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 8px 6px 9px;
+    box-shadow: var(--shadow);
+  }
+  .bar b { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .06em; white-space: nowrap; }
+  .bar span { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .bar span.pop { animation: pop .3s ease; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.28); color: var(--gold); } 100% { transform: scale(1); } }
+
+  /* ---------- 기력 막대 ---------- */
+  #power {
+    position: relative;
+    height: 22px;
+    background: var(--card);
+    border-radius: 11px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  #powerFill {
+    position: absolute; inset: 0 auto 0 0;
+    width: 100%;
+    background: linear-gradient(90deg, #FFD75E, #FFB13D);
+    transition: width .18s ease;
+  }
+  #powerTxt {
+    position: relative;
+    display: block;
+    line-height: 22px;
+    font-size: 12px; font-weight: 800;
+    letter-spacing: .04em;
+  }
+  #power.low #powerFill { background: linear-gradient(90deg, #FF9AA8, #FF6B8A); animation: blink .7s infinite; }
+  @keyframes blink { 50% { opacity: .55; } }
+
+  #hint { font-size: 13px; color: var(--muted); margin: 0 0 10px; min-height: 18px; }
+  #hint b { color: #23883C; font-weight: 800; }
+
+  /* ---------- 판 ---------- */
+  #boardwrap { position: relative; }
+  canvas {
+    display: block;
+    width: 100%;
+    background: #6FB8E8;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    touch-action: none;
+  }
+
+  /* ---------- 덮는 화면 ---------- */
+  #cover {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px;
+    padding: 0 18px;
+    background: rgba(255,255,255,.94);
+    border-radius: 16px;
+  }
+  #cover.on { display: flex; }
+  #cover p { margin: 0; font-size: 23px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--muted); line-height: 1.6; }
+
+  /* ---------- 새로 찾은 보석 알림 ---------- */
+  #found {
+    position: absolute; left: 50%; top: 18px;
+    transform: translate(-50%, -14px);
+    padding: 10px 18px;
+    background: rgba(255,255,255,.96);
+    border: 2px solid var(--gold);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    font-size: 15px; font-weight: 800;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    white-space: nowrap;
+  }
+  #found.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 12px;
+    padding: 11px 18px;
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.warm { background: var(--pink); }
+  button.calm { background: var(--green); }
+  button:disabled { opacity: .45; }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+  .row button { flex: 1; max-width: 220px; }
+
+  /* ---------- 방향 단추 ---------- */
+  #pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: 216px;
+    margin: 10px auto 0;
+  }
+  #pad button {
+    padding: 0;
+    height: 52px;
+    font-size: 22px;
+    background: var(--card);
+    color: var(--ink);
+    border: 2px solid var(--line);
+  }
+  #pad button:active { background: #EEF3FF; border-color: var(--blue); }
+  #pad .sp { visibility: hidden; }
+
+  /* ---------- 가게 ---------- */
+  #shop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
+  #shop button {
+    padding: 8px 2px 9px;
+    background: var(--card);
+    color: var(--ink);
+    border: 2px solid var(--line);
+    line-height: 1.35;
+  }
+  #shop button .e { display: block; font-size: 22px; }
+  #shop button .n { display: block; font-size: 12px; font-weight: 800; }
+  #shop button .c { display: block; font-size: 11px; font-weight: 700; color: var(--muted); }
+  #shop button.ok { border-color: var(--green); background: #EDFBF3; }
+  #shop button.ok .c { color: #23883C; }
+  #shop button.poor { opacity: .55; }
+  #shop button.max { border-color: var(--gold); background: #FFF8E4; }
+
+  /* ---------- 보석 도감 ---------- */
+  #dex {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;
+    margin-top: 10px; padding: 9px 8px;
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+  #dex i {
+    font-size: 19px; font-style: normal;
+    filter: grayscale(1); opacity: .28;
+  }
+  #dex i.on { filter: none; opacity: 1; }
+
+  #tip { font-size: 12.5px; color: var(--muted); line-height: 1.75; margin: 14px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>⛏️ 땅속 보물 캐기</h1>
+
+  <div class="seg" id="levelRow">
+    <button data-lv="easy" aria-pressed="true">느긋하게</button>
+    <button data-lv="normal" aria-pressed="false">보통</button>
+    <button data-lv="hard" aria-pressed="false">도전</button>
+  </div>
+
+  <div class="bars">
+    <div class="bar"><b>💰 돈</b><span id="money">0</span></div>
+    <div class="bar"><b>📏 깊이</b><span id="depth">0m</span></div>
+    <div class="bar"><b>🏆 최고</b><span id="best">0m</span></div>
+  </div>
+
+  <div id="power"><i id="powerFill"></i><span id="powerTxt">기력 30 / 30</span></div>
+
+  <p id="hint">땅을 눌러서 파 보자</p>
+
+  <div id="boardwrap">
+    <canvas id="cv"></canvas>
+    <div id="found"></div>
+    <div id="cover">
+      <p id="coverMsg">땅속 보물 캐기</p>
+      <div class="row" id="coverRow">
+        <button id="coverBtn">시작</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pad">
+    <button class="sp"></button>
+    <button data-go="up">⬆️</button>
+    <button class="sp"></button>
+    <button data-go="left">⬅️</button>
+    <button data-go="down">⬇️</button>
+    <button data-go="right">➡️</button>
+  </div>
+
+  <div class="row">
+    <button id="riseBtn" class="calm">🪜 올라가기</button>
+    <button id="diveBtn">🛗 내려가기</button>
+  </div>
+
+  <div id="shop"></div>
+
+  <div id="dex"></div>
+
+  <p id="tip">옆 칸을 누르면 판다 · 단단할수록, 깊을수록 기력을 많이 쓴다<br>기력이 다 떨어지면 저절로 땅 위로 올라온다 · 캔 보석은 그대로 남는다<br>땅 위에서는 기력이 가득 차고 🛒 장비를 살 수 있다<br>10m 내려갈 때마다 🛗 엘리베이터가 열려서 다음엔 거기서 바로 시작<br>깊이 100m 어딘가에 👑 전설의 왕관이 묻혀 있다</p>
+</main>
+
+<script>
+/* 땅은 미리 다 만들어 두지 않는다. 화면에 보일 때가 되면 그 줄만 새로 만든다.
+   한 번 만든 줄은 그대로 남아서, 파 놓은 굴은 다음에 내려가도 그대로 있다. */
+
+const LEVELS = {
+  easy:   { name: '느긋하게', pw: 1.5, price: 0.75, val: 1.15, next: 'normal' },
+  normal: { name: '보통',     pw: 1.0, price: 1.0,  val: 1.0,  next: 'hard', down: 'easy' },
+  hard:   { name: '도전',     pw: 0.8, price: 1.2,  val: 1.4,  down: 'normal' }
+};
+
+const COLS = 9;
+const SHAFT = 4;          // 엘리베이터가 오르내리는 가운데 칸
+const MAXUP = 6;          // 장비를 키울 수 있는 끝
+
+const T = {
+  empty:   { name: '빈 굴',       hard: 0,  val: 0 },
+  dirt:    { name: '흙',          hard: 1,  val: 0,    col: '#B57C4E', col2: '#9A6740' },
+  stone:   { name: '돌',          hard: 3,  val: 0,    col: '#909AB0', col2: '#79839C' },
+  rock:    { name: '단단한 바위',  hard: 7,  val: 0,    col: '#5C6478', col2: '#495164' },
+  coal:    { name: '석탄',        hard: 2,  val: 8,    col: '#7C7C90', emo: '🖤' },
+  copper:  { name: '구리',        hard: 3,  val: 20,   col: '#C9764A', emo: '🟠' },
+  silver:  { name: '은',          hard: 4,  val: 45,   col: '#AAB2C6', emo: '⚪' },
+  gold:    { name: '금',          hard: 5,  val: 95,   col: '#D9A62E', emo: '🟡' },
+  emerald: { name: '에메랄드',     hard: 6,  val: 190,  col: '#3FA971', emo: '💚' },
+  ruby:    { name: '루비',        hard: 7,  val: 340,  col: '#D2445E', emo: '❤️' },
+  diamond: { name: '다이아몬드',   hard: 8,  val: 600,  col: '#54C3DD', emo: '💎' },
+  meteor:  { name: '운석',        hard: 10, val: 1100, col: '#8558C8', emo: '☄️' },
+  chest:   { name: '보물 상자',    hard: 2,  val: 0,    col: '#C08048', emo: '🎁' },
+  crown:   { name: '전설의 왕관',  hard: 6,  val: 2500, col: '#FFC53D', emo: '👑' }
+};
+
+/* 도감에 모을 것들. 깊이 내려갈수록 뒤에 있는 것이 나온다 */
+const DEX = ['coal','copper','silver','gold','emerald','ruby','diamond','meteor','chest','crown'];
+
+/* [보석, 이 깊이부터, 이 깊이까지, 잘 나오는 정도] */
+const VEINS = [
+  ['coal',      2,  80, 15],
+  ['copper',    6, 110, 13],
+  ['silver',   16, 150, 12],
+  ['gold',     28, 999, 11],
+  ['emerald',  46, 999,  9],
+  ['ruby',     68, 999,  7],
+  ['diamond',  90, 999,  6],
+  ['meteor',  130, 999,  5]
+];
+
+const UPS = {
+  pick: { emo: '⛏️', name: '곡괭이', cost: [0, 90, 260, 650, 1500, 3200] },
+  lamp: { emo: '🔦', name: '랜턴',   cost: [0, 80, 230, 560, 1300, 2800] },
+  luck: { emo: '💎', name: '감정사', cost: [0, 160, 430, 1000, 2200, 4600] }
+};
+
+const KEY = 'craft-dig-';
+
+/* ---------- 화면 조각 ---------- */
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrapEl = document.getElementById('boardwrap');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const foundEl = document.getElementById('found');
+const moneyEl = document.getElementById('money');
+const depthEl = document.getElementById('depth');
+const bestEl = document.getElementById('best');
+const powerEl = document.getElementById('power');
+const powerFill = document.getElementById('powerFill');
+const powerTxt = document.getElementById('powerTxt');
+const hintEl = document.getElementById('hint');
+const shopEl = document.getElementById('shop');
+const dexEl = document.getElementById('dex');
+const padEl = document.getElementById('pad');
+const riseBtn = document.getElementById('riseBtn');
+const diveBtn = document.getElementById('diveBtn');
+const levelRow = document.getElementById('levelRow');
+
+/* ---------- 상태 ---------- */
+
+let key, lv;
+let cell = 44, W = 396, H = 400;
+let camY = 0;
+
+const world = new Map();      // "c,r" -> 흙, 돌, 보석…
+const madeRows = new Set();
+let crownAt = 100;            // 왕관이 묻힌 깊이
+let crownCol = 2 + Math.floor(Math.random() * 5);
+
+let money = 0, best = 0;
+let pick = 1, lamp = 1, luck = 1;
+let dexGot = new Set();
+
+let mc = SHAFT, mr = 0;       // 내가 선 칸
+let px = 0, py = 0;           // 실제로 그려지는 자리 (부드럽게 따라온다)
+let energy = 30, energyMax = 30;
+let mode = 'play';            // play | rise | dive
+let riseTo = 0, diveTo = 0;
+let face = 1, swing = 0;
+let bits = [], pops = [], rings = [];
+let shake = 0, glow = 0;
+let raf = null, last = 0;
+let ac = null;
+let held = null, heldAt = 0, heldNext = 0;
+let started = false;
+
+function tk(c, r) { return c + ',' + r; }
+function at(c, r) { return world.get(tk(c, r)) || 'empty'; }
+function shaftDepth() { return Math.floor(best / 10) * 10; }
+function power() { return pick; }
+/* 곡괭이는 돌의 단단함을 이겨 내지만, 깊이에서 오는 무게는 못 줄인다 */
+function digCost(type, r) { return Math.max(1, Math.ceil(T[type].hard / power())) + Math.floor(r / 30); }
+function gemValue(type) { return Math.round(T[type].val * (1 + 0.3 * (luck - 1)) * lv.val); }
+function upCost(k2, lvl) { return Math.round(UPS[k2].cost[lvl] * lv.price); }
+
+/* ---------- 땅 만들기 ---------- */
+
+function genBlock(c, r) {
+  if (r === crownAt && c === crownCol) return 'crown';
+  const q = Math.random();
+  /* 가끔 텅 빈 굴이 나온다. 깊을수록 조금 더 자주 */
+  if (q < 0.03 + Math.min(0.05, r / 2200)) return 'empty';
+  if (q < 0.045 + Math.min(0.05, r / 2200)) return 'chest';
+  /* 보석 자리 */
+  if (Math.random() < 0.22) {
+    const able = VEINS.filter(v => r >= v[1] && r <= v[2]);
+    if (able.length) {
+      let sum = 0;
+      able.forEach(v => sum += v[3]);
+      let pickN = Math.random() * sum;
+      for (const v of able) {
+        pickN -= v[3];
+        if (pickN <= 0) return v[0];
+      }
+    }
+  }
+  /* 그냥 땅 */
+  const rockCh = r > 40 ? Math.min(0.26, (r - 40) * 0.004) : 0;
+  const stoneCh = Math.min(0.55, 0.08 + r * 0.006);
+  const q2 = Math.random();
+  if (q2 < rockCh) return 'rock';
+  if (q2 < rockCh + stoneCh) return 'stone';
+  return 'dirt';
+}
+
+function ensureRow(r) {
+  if (r < 1 || madeRows.has(r)) return;
+  madeRows.add(r);
+  for (let c = 0; c < COLS; c++) world.set(tk(c, r), genBlock(c, r));
+  if (r <= shaftDepth()) world.set(tk(SHAFT, r), 'empty');
+}
+
+/* 새 기록이 나면 엘리베이터 길을 그만큼 뚫어 준다 */
+function openShaft() {
+  const d = shaftDepth();
+  for (let r = 1; r <= d; r++) {
+    if (madeRows.has(r)) world.set(tk(SHAFT, r), 'empty');
+  }
+}
+
+/* ---------- 소리 ---------- */
+
+function ensureAudio() {
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) ac = new AC();
+  }
+  if (ac && ac.state === 'suspended') ac.resume();
+  return ac;
+}
+
+function tone(freq, dur, type, vol, delay) {
+  if (!ac) return;
+  const a0 = ac.currentTime + (delay || 0);
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, a0);
+  g.gain.exponentialRampToValueAtTime(vol, a0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, a0 + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(a0);
+  o.stop(a0 + dur + 0.05);
+}
+
+const sfx = {
+  dig:  h => tone(210 - Math.min(90, h * 9), 0.09, 'square', 0.05),
+  step: () => tone(300, 0.05, 'sine', 0.04),
+  gem:  tier => {
+    const base = 620 + tier * 90;
+    [0, 1, 2].forEach(i => tone(base * Math.pow(1.26, i), 0.12, 'triangle', 0.09, i * 0.055));
+  },
+  chest: () => [660, 880, 1100, 1320].forEach((f, i) => tone(f, 0.14, 'square', 0.07, i * 0.07)),
+  buy:  () => { tone(520, 0.1, 'sine', 0.11); tone(780, 0.14, 'sine', 0.1, 0.09); },
+  rise: () => { if (!ac) return; [200, 300, 420, 560].forEach((f, i) => tone(f, 0.12, 'sine', 0.07, i * 0.06)); },
+  dive: () => { if (!ac) return; [560, 420, 300, 200].forEach((f, i) => tone(f, 0.12, 'sine', 0.07, i * 0.06)); },
+  tired: () => tone(150, 0.3, 'sawtooth', 0.09),
+  record: () => [784, 988, 1175].forEach((f, i) => tone(f, 0.16, 'triangle', 0.1, i * 0.09)),
+  win:  () => [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, 0.22, 'triangle', 0.12, i * 0.13))
+};
+
+/* ---------- 알림 ---------- */
+
+function say(t) { hintEl.innerHTML = t; }
+
+let foundTimer = null;
+function banner(t) {
+  foundEl.textContent = t;
+  foundEl.classList.add('on');
+  clearTimeout(foundTimer);
+  foundTimer = setTimeout(() => foundEl.classList.remove('on'), 1800);
+}
+
+function pop(x, y, txt, col) { pops.push({ x, y, txt, col, t: 0 }); }
+
+function burst(x, y, col, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 40 + Math.random() * 150;
+    bits.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, life: 0.45 + Math.random() * 0.3, t: 0, col, r: 2 + Math.random() * 3.5 });
+  }
+}
+
+/* ---------- 저장 ---------- */
+
+/* 저장이 막혀 있는 곳에서도 게임은 그냥 돌아가야 한다 */
+function put(k2, v) { try { localStorage.setItem(KEY + k2, v); } catch (e) {} }
+function get(k2) { try { return localStorage.getItem(KEY + k2); } catch (e) { return null; } }
+
+function save() {
+  put('money', money);
+  put('best', best);
+  put('pick', pick);
+  put('lamp', lamp);
+  put('luck', luck);
+  put('dex', [...dexGot].join(','));
+}
+
+function load() {
+  money = +get('money') || 0;
+  best = +get('best') || 0;
+  pick = +get('pick') || 1;
+  lamp = +get('lamp') || 1;
+  luck = +get('luck') || 1;
+  const d = get('dex');
+  dexGot = new Set(d ? d.split(',').filter(Boolean) : []);
+  while (crownAt <= best) crownAt += 150;
+}
+
+/* ---------- 기력 ---------- */
+
+function maxEnergy() { return Math.round((26 + 14 * (lamp - 1)) * lv.pw); }
+
+function refill() {
+  energyMax = maxEnergy();
+  energy = energyMax;
+}
+
+/* ---------- 움직이기 ---------- */
+
+const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+function go(dir) {
+  if (mode !== 'play' || !started) return;
+  const [dc, dr] = DIRS[dir];
+  const nc = mc + dc, nr = mr + dr;
+  if (nc < 0 || nc >= COLS) return;
+  if (nr < 0) return;
+  if (dc) face = dc;
+
+  /* 땅 위에서는 걸어 다니기만 한다 */
+  if (nr === 0) { mc = nc; mr = 0; sfx.step(); arrive(); return; }
+
+  ensureRow(nr);
+  const type = at(nc, nr);
+
+  if (type === 'empty') {
+    mc = nc; mr = nr;
+    sfx.step();
+    arrive();
+    return;
+  }
+
+  /* 기력이 바닥나면 더는 못 판다. 곧 밧줄이 끌어올린다 */
+  if (energy <= 0) { say('🔦 기력이 다 됐다. 올라가는 중…'); return; }
+
+  const cost = digCost(type, nr);
+  const info = T[type];
+  energy = Math.max(0, energy - cost);
+  swing = 1;
+  shake = Math.min(9, 1.5 + info.hard * 0.7);
+
+  world.set(tk(nc, nr), 'empty');
+  mc = nc; mr = nr;
+
+  const cx = (nc + 0.5) * cell, cy = (nr + 0.5) * cell;
+  burst(cx, cy, info.col || '#B57C4E', info.val ? 16 : 9);
+  sfx.dig(info.hard);
+
+  if (type === 'chest') {
+    const prize = Math.round((60 + Math.random() * 90 + nr * 9) * lv.val);
+    money += prize;
+    pop(cx, cy, '🎁 +' + prize, '#FF9F43');
+    rings.push({ x: cx, y: cy, r: 6, max: cell * 1.6, t: 0, col: '#FFC53D' });
+    sfx.chest();
+    glow = 1;
+    newDex('chest', '보물 상자');
+  } else if (info.val) {
+    const v = gemValue(type);
+    money += v;
+    pop(cx, cy, '+' + v, type === 'crown' ? '#FFB300' : '#23883C');
+    rings.push({ x: cx, y: cy, r: 6, max: cell * 1.5, t: 0, col: info.col });
+    sfx.gem(DEX.indexOf(type));
+    glow = 1;
+    newDex(type, info.name);
+    if (type === 'crown') winCrown();
+  }
+
+  arrive();
+  paint();
+  save();
+}
+
+function newDex(type, name) {
+  if (dexGot.has(type)) return;
+  dexGot.add(type);
+  banner('✨ 처음 찾았다! ' + (T[type].emo || '') + ' ' + name);
+  drawDex();
+}
+
+/* 칸에 도착할 때마다 챙길 것들 */
+function arrive() {
+  if (mr > best) {
+    const gain = mr - best;
+    const oldBest = best;
+    best = mr;
+    const bonus = gain * 2;
+    money += bonus;
+    /* 1m마다 글씨가 뜨면 어지러우니 5m마다 한 번만 보여 준다 */
+    if (Math.floor(best / 5) > Math.floor(oldBest / 5)) {
+      pop((mc + 0.5) * cell, (mr + 0.5) * cell - cell * 0.6, '🏆 ' + best + 'm!', '#6C8BFF');
+    }
+    if (Math.floor(best / 10) > Math.floor(oldBest / 10)) {
+      openShaft();
+      banner('🛗 ' + shaftDepth() + 'm 엘리베이터가 열렸다!');
+      sfx.record();
+    }
+    save();
+  }
+  if (mr === 0) {
+    if (energy < energyMax) sfx.buy();
+    refill();
+  }
+  if (energy <= 0 && mr > 0) {
+    say('🔦 기력이 다 됐다. 밧줄로 올라간다');
+    sfx.tired();
+    setTimeout(startRise, 500);
+  }
+  paint();
+}
+
+/* ---------- 오르내리기 ---------- */
+
+function startRise() {
+  if (mode !== 'play' || mr <= 0) return;
+  held = null;            // 올라가는 동안에는 파던 손을 놓는다
+  mode = 'rise';
+  riseTo = 0;
+  sfx.rise();
+  say('🪢 위로 올라가는 중…');
+}
+
+function startDive() {
+  if (mode !== 'play' || mr !== 0) return;
+  const d = shaftDepth();
+  if (d <= 0) { say('아직 엘리베이터가 없다. 10m까지 파 보자'); return; }
+  mc = SHAFT;
+  px = (mc + 0.5) * cell;
+  mode = 'dive';
+  diveTo = d;
+  for (let r = 1; r <= d; r++) ensureRow(r);
+  openShaft();
+  sfx.dive();
+  say('🛗 ' + d + 'm로 내려가는 중…');
+}
+
+function winCrown() {
+  setTimeout(() => {
+    sfx.win();
+    coverMsg.innerHTML = '👑 전설의 왕관을 찾았다!<small>' + crownAt + 'm 땅속에 묻혀 있던 보물<br>이제 더 깊은 곳에 또 하나가 숨는다</small>';
+    coverBtn.textContent = '더 깊이 가기';
+    coverEl.classList.add('on');
+    crownAt += 150;
+    crownCol = 2 + Math.floor(Math.random() * 5);
+  }, 420);
+}
+
+/* ---------- 가게와 도감 ---------- */
+
+function drawShop() {
+  const st = { pick: pick, lamp: lamp, luck: luck };
+  shopEl.innerHTML = '';
+  for (const k2 of ['pick', 'lamp', 'luck']) {
+    const cur = st[k2], u = UPS[k2];
+    const b = document.createElement('button');
+    const maxed = cur >= MAXUP;
+    const cost = maxed ? 0 : upCost(k2, cur);
+    b.dataset.up = k2;
+    b.innerHTML = '<span class="e">' + u.emo + '</span>' +
+                  '<span class="n">' + u.name + ' Lv' + cur + '</span>' +
+                  '<span class="c">' + (maxed ? '⭐ 끝' : cost + '원') + '</span>';
+    if (maxed) b.className = 'max';
+    else if (money >= cost && mr === 0) b.className = 'ok';
+    else b.className = 'poor';
+    shopEl.appendChild(b);
+  }
+}
+
+function buy(k2) {
+  const cur = { pick: pick, lamp: lamp, luck: luck }[k2];
+  if (cur >= MAXUP) { say('이미 끝까지 키웠다 ⭐'); return; }
+  if (mr !== 0) { say('🪜 땅 위로 올라와야 살 수 있다'); return; }
+  const cost = upCost(k2, cur);
+  if (money < cost) { say('💰 ' + (cost - money) + '원이 더 있어야 한다'); return; }
+  money -= cost;
+  if (k2 === 'pick') { pick++; say('⛏️ 곡괭이가 <b>Lv' + pick + '</b>! 더 쉽게 파진다'); }
+  if (k2 === 'lamp') { lamp++; refill(); say('🔦 랜턴이 <b>Lv' + lamp + '</b>! 멀리 보이고 기력도 늘었다'); }
+  if (k2 === 'luck') { luck++; say('💎 감정사가 <b>Lv' + luck + '</b>! 보석 값이 올랐다'); }
+  sfx.buy();
+  glow = 1;
+  save();
+  paint();
+}
+
+function drawDex() {
+  dexEl.innerHTML = '';
+  DEX.forEach(t => {
+    const i = document.createElement('i');
+    i.textContent = T[t].emo;
+    if (dexGot.has(t)) i.className = 'on';
+    i.title = dexGot.has(t) ? T[t].name : '아직 못 찾았다';
+    dexEl.appendChild(i);
+  });
+}
+
+/* ---------- 숫자 고치기 ---------- */
+
+let lastMoney = -1;
+function paint() {
+  moneyEl.textContent = money;
+  if (lastMoney >= 0 && money !== lastMoney) {
+    moneyEl.classList.remove('pop');
+    void moneyEl.offsetWidth;
+    moneyEl.classList.add('pop');
+  }
+  lastMoney = money;
+  depthEl.textContent = Math.max(0, mr) + 'm';
+  bestEl.textContent = best + 'm';
+  energyMax = maxEnergy();
+  if (energy > energyMax) energy = energyMax;
+  powerFill.style.width = Math.max(0, energy / energyMax * 100) + '%';
+  powerTxt.textContent = '기력 ' + energy + ' / ' + energyMax;
+  powerEl.classList.toggle('low', energy <= energyMax * 0.25);
+  riseBtn.disabled = mr === 0 || mode !== 'play';
+  const d = shaftDepth();
+  diveBtn.textContent = d > 0 ? '🛗 ' + d + 'm로' : '🛗 내려가기';
+  diveBtn.disabled = mr !== 0 || mode !== 'play' || d <= 0;
+  drawShop();
+}
+
+/* ---------- 판 크기 ---------- */
+
+function fit() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = wrapEl.clientWidth || 396;
+  cell = W / COLS;
+  H = Math.round(cell * 9);
+  cv.width = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  cv.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  px = (mc + 0.5) * cell;
+  py = (mr + 0.5) * cell;
+  camY = py - H * 0.45;
+}
+
+/* ---------- 그리기 ---------- */
+
+function hsh(c, r) {
+  let n = (c * 73856093) ^ (r * 19349663);
+  n = (n ^ (n >> 13)) * 1274126177;
+  return ((n ^ (n >> 16)) >>> 0) / 4294967296;
+}
+
+function drawTile(c, r) {
+  const t = at(c, r);
+  const x = c * cell, y = r * cell;
+  if (t === 'empty') {
+    ctx.fillStyle = '#4A4156';
+    ctx.fillRect(x, y, cell + 0.5, cell + 0.5);
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.fillRect(x, y, cell + 0.5, cell * 0.16);
+    return;
+  }
+  const info = T[t];
+  ctx.fillStyle = info.col;
+  ctx.fillRect(x, y, cell + 0.5, cell + 0.5);
+  /* 오돌토돌한 느낌 */
+  const dark = info.col2 || 'rgba(0,0,0,.14)';
+  ctx.fillStyle = dark;
+  for (let i = 0; i < 3; i++) {
+    const hx = hsh(c * 7 + i, r * 3 + i), hy = hsh(c * 11 + i, r * 5 + i);
+    const s = cell * (0.1 + hx * 0.1);
+    ctx.fillRect(x + cell * (0.1 + hx * 0.72), y + cell * (0.1 + hy * 0.72), s, s);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.10)';
+  ctx.fillRect(x, y, cell, cell * 0.1);
+  ctx.strokeStyle = 'rgba(0,0,0,.12)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + .5, y + .5, cell - 1, cell - 1);
+
+  if (info.emo) {
+    const cx = x + cell / 2, cy = y + cell / 2;
+    const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, cell * 0.5);
+    g.addColorStop(0, 'rgba(255,255,255,.55)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, cell * 0.5, 0, 7);
+    ctx.fill();
+    ctx.font = Math.round(cell * 0.52) + 'px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(info.emo, cx, cy + cell * 0.02);
+  }
+}
+
+function drawLadder(r) {
+  const x = SHAFT * cell, y = r * cell;
+  ctx.strokeStyle = 'rgba(197,142,86,.85)';
+  ctx.lineWidth = Math.max(2, cell * 0.06);
+  ctx.beginPath();
+  ctx.moveTo(x + cell * 0.32, y); ctx.lineTo(x + cell * 0.32, y + cell);
+  ctx.moveTo(x + cell * 0.68, y); ctx.lineTo(x + cell * 0.68, y + cell);
+  for (let i = 0; i < 3; i++) {
+    const yy = y + cell * (0.2 + i * 0.3);
+    ctx.moveTo(x + cell * 0.32, yy); ctx.lineTo(x + cell * 0.68, yy);
+  }
+  ctx.stroke();
+}
+
+function drawMiner() {
+  const s = cell;
+  ctx.save();
+  ctx.translate(px, py);
+  /* 그림자 */
+  ctx.fillStyle = 'rgba(0,0,0,.22)';
+  ctx.beginPath();
+  ctx.ellipse(0, s * 0.34, s * 0.22, s * 0.07, 0, 0, 7);
+  ctx.fill();
+  /* 곡괭이 */
+  const sw = swing > 0 ? Math.sin((1 - swing) * Math.PI) : 0;
+  ctx.save();
+  ctx.translate(face * s * 0.16, -s * 0.02);
+  ctx.rotate(face * (-0.9 + sw * 1.7));
+  ctx.strokeStyle = '#8B5E3C';
+  ctx.lineWidth = Math.max(2, s * 0.055);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(0, -s * 0.3);
+  ctx.stroke();
+  ctx.strokeStyle = '#C9D0E0';
+  ctx.lineWidth = Math.max(2, s * 0.07);
+  ctx.beginPath();
+  ctx.arc(0, -s * 0.3, s * 0.13, Math.PI * 0.15, Math.PI * 0.85);
+  ctx.stroke();
+  ctx.restore();
+  /* 몸 */
+  ctx.fillStyle = '#4A63C8';
+  rr(-s * 0.16, -s * 0.04, s * 0.32, s * 0.36, s * 0.08);
+  ctx.fill();
+  /* 머리 */
+  ctx.fillStyle = '#FFD9B0';
+  ctx.beginPath();
+  ctx.arc(0, -s * 0.16, s * 0.15, 0, 7);
+  ctx.fill();
+  /* 눈 */
+  ctx.fillStyle = '#2C3560';
+  ctx.beginPath();
+  ctx.arc(face * s * 0.05 - s * 0.03, -s * 0.16, s * 0.022, 0, 7);
+  ctx.arc(face * s * 0.05 + s * 0.04, -s * 0.16, s * 0.022, 0, 7);
+  ctx.fill();
+  /* 안전모 */
+  ctx.fillStyle = '#FFC53D';
+  ctx.beginPath();
+  ctx.arc(0, -s * 0.19, s * 0.17, Math.PI, 0);
+  ctx.fill();
+  ctx.fillRect(-s * 0.2, -s * 0.2, s * 0.4, s * 0.035);
+  /* 랜턴 불빛 */
+  ctx.fillStyle = 'rgba(255,240,180,.95)';
+  ctx.beginPath();
+  ctx.arc(0, -s * 0.3, s * 0.045, 0, 7);
+  ctx.fill();
+  ctx.restore();
+}
+
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  const sx = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
+  const sy = shake > 0.2 ? (Math.random() - 0.5) * shake : 0;
+  ctx.translate(sx, -camY + sy);
+
+  const top = Math.floor(camY / cell) - 1;
+  const bot = Math.floor((camY + H) / cell) + 1;
+
+  /* 하늘 */
+  if (top < 1) {
+    const g = ctx.createLinearGradient(0, camY, 0, cell);
+    g.addColorStop(0, '#8FD0F5');
+    g.addColorStop(1, '#CDEAF9');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, camY - 10, W, cell - camY + 10);
+    ctx.font = Math.round(cell * 0.5) + 'px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('☁️', W * 0.2, cell * 0.28);
+    ctx.fillText('☀️', W * 0.82, cell * 0.24);
+    ctx.fillStyle = '#6ABF69';
+    ctx.fillRect(0, cell - cell * 0.13, W, cell * 0.13);
+  }
+
+  /* 땅 */
+  for (let r = Math.max(1, top); r <= bot; r++) {
+    ensureRow(r);
+    for (let c = 0; c < COLS; c++) drawTile(c, r);
+    if (r <= shaftDepth() && at(SHAFT, r) === 'empty') drawLadder(r);
+  }
+
+  /* 랜턴 밖은 어둡다 */
+  const light = 3.4 + 0.5 * lamp + glow * 3;
+  for (let r = Math.max(1, top); r <= bot; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const d = Math.hypot(c - mc, r - (mode === 'play' ? mr : py / cell - 0.5));
+      let a = Math.min(0.74, Math.max(0, (d - light) * 0.3));
+      if (at(c, r) === 'crown') a = Math.min(a, 0.12);
+      if (a > 0.01) {
+        ctx.fillStyle = 'rgba(12,8,20,' + a.toFixed(3) + ')';
+        ctx.fillRect(c * cell, r * cell, cell + 0.5, cell + 0.5);
+      }
+    }
+  }
+
+  /* 깊이 눈금 */
+  ctx.font = '700 10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(255,255,255,.3)';
+  for (let r = Math.max(5, top); r <= bot; r++) {
+    if (r % 5 === 0) ctx.fillText(r + 'm', 3, r * cell + 3);
+  }
+
+  /* 밧줄 */
+  if (mode === 'rise') {
+    ctx.strokeStyle = 'rgba(210,170,110,.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py - cell * 0.3);
+    ctx.lineTo(px, camY - 20);
+    ctx.stroke();
+  }
+
+  drawMiner();
+
+  /* 튀는 조각 */
+  bits.forEach(b => {
+    ctx.globalAlpha = Math.max(0, 1 - b.t / b.life);
+    ctx.fillStyle = b.col;
+    ctx.fillRect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+  });
+  ctx.globalAlpha = 1;
+
+  /* 반짝 고리 */
+  rings.forEach(g => {
+    const k2 = g.t / 0.5;
+    ctx.globalAlpha = Math.max(0, 1 - k2);
+    ctx.strokeStyle = g.col;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(g.x, g.y, g.r + (g.max - g.r) * k2, 0, 7);
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+
+  /* 떠오르는 글씨 */
+  ctx.font = '800 15px "Apple SD Gothic Neo", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  pops.forEach(p => {
+    ctx.globalAlpha = Math.max(0, 1 - p.t / 0.95);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255,255,255,.9)';
+    ctx.strokeText(p.txt, p.x, p.y - p.t * 34);
+    ctx.fillStyle = p.col;
+    ctx.fillText(p.txt, p.x, p.y - p.t * 34);
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+/* ---------- 한 칸씩 흐르는 시간 ---------- */
+
+function tick(ts) {
+  const dt = Math.min(0.05, (ts - last) / 1000);
+  last = ts;
+
+  if (started && mode === 'play' && held && ts >= heldNext) {
+    go(held);
+    heldNext = ts + 150;
+  }
+
+  if (mode === 'play') {
+    const tx = (mc + 0.5) * cell, ty = (mr + 0.5) * cell;
+    const k2 = Math.min(1, dt * 20);
+    px += (tx - px) * k2;
+    py += (ty - py) * k2;
+  } else if (mode === 'rise') {
+    py -= 1000 * dt;
+    px += ((mc + 0.5) * cell - px) * Math.min(1, dt * 20);
+    const nr = Math.max(0, Math.round(py / cell - 0.5));
+    if (nr !== mr) { mr = nr; paint(); }
+    if (py <= 0.5 * cell) {
+      py = 0.5 * cell; mr = 0; mode = 'play'; held = null;
+      say('🪜 땅 위로 돌아왔다. 기력이 가득!');
+      arrive();
+    }
+  } else if (mode === 'dive') {
+    py += 1250 * dt;
+    const nr = Math.min(diveTo, Math.round(py / cell - 0.5));
+    if (nr !== mr) { mr = nr; paint(); }
+    if (py >= (diveTo + 0.5) * cell) {
+      py = (diveTo + 0.5) * cell; mr = diveTo; mode = 'play';
+      say('⛏️ ' + diveTo + 'm 도착! 여기서부터 파 보자');
+      paint();
+    }
+  }
+
+  swing = Math.max(0, swing - dt * 6);
+  shake = Math.max(0, shake - dt * 40);
+  glow = Math.max(0, glow - dt * 2.2);
+
+  bits.forEach(b => { b.t += dt; b.vy += 700 * dt; b.x += b.vx * dt; b.y += b.vy * dt; });
+  bits = bits.filter(b => b.t < b.life);
+  pops.forEach(p => p.t += dt);
+  pops = pops.filter(p => p.t < 0.95);
+  rings.forEach(g => g.t += dt);
+  rings = rings.filter(g => g.t < 0.5);
+
+  let want = py - H * 0.45;
+  if (want < -cell * 0.9) want = -cell * 0.9;
+  camY += (want - camY) * Math.min(1, dt * 8);
+
+  draw();
+  raf = requestAnimationFrame(tick);
+}
+
+/* ---------- 누르기 ---------- */
+
+function tapAt(e) {
+  const rect = cv.getBoundingClientRect();
+  const wx = (e.clientX - rect.left) * (W / rect.width);
+  const wy = (e.clientY - rect.top) * (H / rect.height) + camY;
+  const tc = Math.floor(wx / cell), tr = Math.floor(wy / cell);
+  const dc = tc - mc, dr = tr - mr;
+  if (Math.abs(dc) + Math.abs(dr) !== 1) {
+    if (dc === 0 && dr === 0) return null;
+    say('바로 옆 칸만 팔 수 있다');
+    return null;
+  }
+  if (dc === -1) return 'left';
+  if (dc === 1) return 'right';
+  if (dr === -1) return 'up';
+  return 'down';
+}
+
+function press(dir) {
+  if (!dir) return;
+  ensureAudio();
+  held = dir;
+  heldNext = performance.now() + 260;
+  go(dir);
+}
+
+/* 손가락을 떼는 신호를 놓치면 혼자 계속 파게 된다.
+   그래서 누른 곳이 그 손가락을 끝까지 붙잡고 있게 한다 */
+function release() { held = null; }
+
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (!started) return;
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  press(tapAt(e));
+});
+
+padEl.addEventListener('pointerdown', e => {
+  const b = e.target.closest('button[data-go]');
+  if (!b) return;
+  e.preventDefault();
+  try { b.setPointerCapture(e.pointerId); } catch (err) {}
+  press(b.dataset.go);
+});
+
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => {
+  cv.addEventListener(ev, release);
+  padEl.addEventListener(ev, release);
+  window.addEventListener(ev, release);
+});
+window.addEventListener('blur', release);
+document.addEventListener('visibilitychange', release);
+
+const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
+window.addEventListener('keydown', e => {
+  const dir = KEYS[e.key];
+  if (!dir || !started) return;
+  e.preventDefault();
+  if (held !== dir) press(dir);
+});
+window.addEventListener('keyup', () => { held = null; });
+
+riseBtn.addEventListener('click', () => { ensureAudio(); startRise(); paint(); });
+diveBtn.addEventListener('click', () => { ensureAudio(); startDive(); paint(); });
+
+shopEl.addEventListener('click', e => {
+  const b = e.target.closest('button[data-up]');
+  if (!b) return;
+  ensureAudio();
+  buy(b.dataset.up);
+});
+
+coverBtn.addEventListener('click', () => {
+  ensureAudio();
+  started = true;
+  coverEl.classList.remove('on');
+  say('땅을 눌러서 파 보자. 옆 칸만 파진다');
+  paint();
+});
+
+levelRow.addEventListener('click', e => {
+  const b = e.target.closest('button[data-lv]');
+  if (!b) return;
+  key = b.dataset.lv;
+  lv = LEVELS[key];
+  put('level', key);
+  [...levelRow.children].forEach(x => x.setAttribute('aria-pressed', x.dataset.lv === key));
+  energyMax = maxEnergy();
+  if (mr === 0) refill();
+  say(lv.name + '(으)로 바꿨다');
+  paint();
+});
+
+/* ---------- 시작 ---------- */
+
+key = get('level') || 'easy';
+if (!LEVELS[key]) key = 'easy';
+lv = LEVELS[key];
+[...levelRow.children].forEach(b => b.setAttribute('aria-pressed', b.dataset.lv === key));
+
+load();
+refill();
+openShaft();
+drawDex();
+
+window.addEventListener('resize', fit);
+fit();
+paint();
+
+coverMsg.innerHTML = '⛏️ 땅속 보물 캐기<small>옆 칸을 눌러 땅을 파고 보석을 캔다<br>기력이 다 되면 저절로 올라온다<br>100m 아래 👑 전설의 왕관을 찾아보자</small>';
+coverBtn.textContent = best > 0 ? '이어서 하기' : '시작';
+coverEl.classList.add('on');
+
+last = performance.now();
+raf = requestAnimationFrame(tick);
+</script>
+</body>
+</html>
