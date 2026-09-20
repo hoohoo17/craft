@@ -263,6 +263,10 @@
 
   <div id="shop"></div>
 
+  <div class="row">
+    <button id="resetBtn" class="warm">🔄 처음부터</button>
+  </div>
+
   <div id="dex"></div>
 
   <p id="tip">옆 칸을 누르면 판다 · 단단할수록, 깊을수록 기력을 많이 쓴다<br>기력이 다 떨어지면 저절로 땅 위로 올라온다 · 캔 보석은 그대로 남는다<br>땅 위에서는 기력이 가득 차고 🛒 장비를 살 수 있다<br>10m 내려갈 때마다 🛗 엘리베이터가 열려서 다음엔 거기서 바로 시작<br>♾️ 무한을 고르면 기력이 절대 안 닳는다 · 끝없이 파도 된다<br>깊이 100m 어딘가에 👑 전설의 왕관이 묻혀 있다</p>
@@ -349,6 +353,7 @@ const dexEl = document.getElementById('dex');
 const padEl = document.getElementById('pad');
 const riseBtn = document.getElementById('riseBtn');
 const diveBtn = document.getElementById('diveBtn');
+const resetBtn = document.getElementById('resetBtn');
 const levelRow = document.getElementById('levelRow');
 
 /* ---------- 상태 ---------- */
@@ -638,6 +643,28 @@ function arrive() {
     setTimeout(startRise, 500);
   }
   paint();
+}
+
+/* ---------- 처음부터 ---------- */
+
+/* 모은 돈도 장비도 도감도 싹 지우고, 땅까지 새로 만든다.
+   실수로 누르면 슬프니까 두 번 눌러야 지워진다 */
+function resetAll() {
+  money = 0; best = 0; pick = 1; lamp = 1; luck = 1;
+  dexGot = new Set();
+  world.clear(); madeRows.clear();
+  crownAt = 100; crownCol = pickCrownCol();
+  mc = SHAFT; mr = 0; mode = 'play'; held = null;
+  bits = []; pops = []; rings = []; shake = 0; glow = 0;
+  refill();
+  px = (mc + 0.5) * cell;
+  py = (mr + 0.5) * cell;
+  camY = py - H * 0.45;
+  save();
+  drawDex();
+  paint();
+  sfx.dive();
+  say('🔄 처음부터 다시! 땅도 새로 생겼다');
 }
 
 /* ---------- 오르내리기 ---------- */
@@ -1122,6 +1149,22 @@ window.addEventListener('keyup', () => { held = null; });
 
 riseBtn.addEventListener('click', () => { ensureAudio(); startRise(); paint(); });
 diveBtn.addEventListener('click', () => { ensureAudio(); startDive(); paint(); });
+
+let resetArm = false, resetTimer = null;
+function disarmReset() {
+  resetArm = false;
+  clearTimeout(resetTimer);
+  resetBtn.textContent = '🔄 처음부터';
+}
+
+resetBtn.addEventListener('click', () => {
+  ensureAudio();
+  if (resetArm) { disarmReset(); resetAll(); return; }
+  resetArm = true;
+  resetBtn.textContent = '정말? 한 번 더!';
+  say('🔄 돈도 장비도 도감도 다 없어진다. 괜찮으면 한 번 더');
+  resetTimer = setTimeout(disarmReset, 3500);
+});
 
 shopEl.addEventListener('click', e => {
   const b = e.target.closest('button[data-up]');
