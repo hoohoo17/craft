@@ -50,9 +50,9 @@
   .seg button {
     flex: 1;
     background: none; color: var(--muted);
-    font: inherit; font-size: 13px; font-weight: 700;
+    font: inherit; font-size: 12.5px; font-weight: 700;
     border: none; border-radius: 10px;
-    padding: 9px 2px;
+    padding: 9px 1px;
     white-space: nowrap;
     cursor: pointer;
   }
@@ -96,6 +96,8 @@
     letter-spacing: .04em;
   }
   #power.low #powerFill { background: linear-gradient(90deg, #FF9AA8, #FF6B8A); animation: blink .7s infinite; }
+  #power.inf #powerFill { background: linear-gradient(90deg, #7ED9A6, #55BE8A); }
+  #power.inf #powerTxt { font-size: 10px; letter-spacing: 0; }
   @keyframes blink { 50% { opacity: .55; } }
 
   #hint { font-size: 13px; color: var(--muted); margin: 0 0 10px; min-height: 18px; }
@@ -221,6 +223,7 @@
     <button data-lv="easy" aria-pressed="true">느긋하게</button>
     <button data-lv="normal" aria-pressed="false">보통</button>
     <button data-lv="hard" aria-pressed="false">도전</button>
+    <button data-lv="inf" aria-pressed="false">♾️ 무한</button>
   </div>
 
   <div class="bars">
@@ -262,17 +265,23 @@
 
   <div id="dex"></div>
 
-  <p id="tip">옆 칸을 누르면 판다 · 단단할수록, 깊을수록 기력을 많이 쓴다<br>기력이 다 떨어지면 저절로 땅 위로 올라온다 · 캔 보석은 그대로 남는다<br>땅 위에서는 기력이 가득 차고 🛒 장비를 살 수 있다<br>10m 내려갈 때마다 🛗 엘리베이터가 열려서 다음엔 거기서 바로 시작<br>깊이 100m 어딘가에 👑 전설의 왕관이 묻혀 있다</p>
+  <p id="tip">옆 칸을 누르면 판다 · 단단할수록, 깊을수록 기력을 많이 쓴다<br>기력이 다 떨어지면 저절로 땅 위로 올라온다 · 캔 보석은 그대로 남는다<br>땅 위에서는 기력이 가득 차고 🛒 장비를 살 수 있다<br>10m 내려갈 때마다 🛗 엘리베이터가 열려서 다음엔 거기서 바로 시작<br>♾️ 무한을 고르면 기력이 절대 안 닳는다 · 끝없이 파도 된다<br>깊이 100m 어딘가에 👑 전설의 왕관이 묻혀 있다</p>
 </main>
 
 <script>
 /* 땅은 미리 다 만들어 두지 않는다. 화면에 보일 때가 되면 그 줄만 새로 만든다.
    한 번 만든 줄은 그대로 남아서, 파 놓은 굴은 다음에 내려가도 그대로 있다. */
 
+/* 10000000000000000000000000. 여기서 아무리 빼도 그대로라서 기력이 안 닳는다 */
+const INF = 1e25;
+const INF_TXT = '10000000000000000000000000';
+
 const LEVELS = {
   easy:   { name: '느긋하게', pw: 1.5, price: 0.75, val: 1.15, next: 'normal' },
   normal: { name: '보통',     pw: 1.0, price: 1.0,  val: 1.0,  next: 'hard', down: 'easy' },
-  hard:   { name: '도전',     pw: 0.8, price: 1.2,  val: 1.4,  down: 'normal' }
+  hard:   { name: '도전',     pw: 0.8, price: 1.2,  val: 1.4,  down: 'normal' },
+  /* 기력 걱정 없이 끝없이 파고 싶을 때 고르는 칸 */
+  inf:    { name: '무한',     pw: 1.0, price: 0.75, val: 1.15, energy: INF }
 };
 
 const COLS = 9;
@@ -351,7 +360,12 @@ let camY = 0;
 const world = new Map();      // "c,r" -> 흙, 돌, 보석…
 const madeRows = new Set();
 let crownAt = 100;            // 왕관이 묻힌 깊이
-let crownCol = 2 + Math.floor(Math.random() * 5);
+/* 엘리베이터 통로에는 묻지 않는다. 통로를 뚫을 때 왕관까지 없어지면 안 되니까 */
+function pickCrownCol() {
+  const able = [1, 2, 3, 5, 6, 7];
+  return able[Math.floor(Math.random() * able.length)];
+}
+let crownCol = pickCrownCol();
 
 let money = 0, best = 0;
 let pick = 1, lamp = 1, luck = 1;
@@ -413,14 +427,14 @@ function ensureRow(r) {
   if (r < 1 || madeRows.has(r)) return;
   madeRows.add(r);
   for (let c = 0; c < COLS; c++) world.set(tk(c, r), genBlock(c, r));
-  if (r <= shaftDepth()) world.set(tk(SHAFT, r), 'empty');
+  if (r <= shaftDepth() && at(SHAFT, r) !== 'crown') world.set(tk(SHAFT, r), 'empty');
 }
 
 /* 새 기록이 나면 엘리베이터 길을 그만큼 뚫어 준다 */
 function openShaft() {
   const d = shaftDepth();
   for (let r = 1; r <= d; r++) {
-    if (madeRows.has(r)) world.set(tk(SHAFT, r), 'empty');
+    if (madeRows.has(r) && at(SHAFT, r) !== 'crown') world.set(tk(SHAFT, r), 'empty');
   }
 }
 
@@ -516,7 +530,7 @@ function load() {
 
 /* ---------- 기력 ---------- */
 
-function maxEnergy() { return Math.round((26 + 14 * (lamp - 1)) * lv.pw); }
+function maxEnergy() { return lv.energy || Math.round((26 + 14 * (lamp - 1)) * lv.pw); }
 
 function refill() {
   energyMax = maxEnergy();
@@ -658,7 +672,7 @@ function winCrown() {
     coverBtn.textContent = '더 깊이 가기';
     coverEl.classList.add('on');
     crownAt += 150;
-    crownCol = 2 + Math.floor(Math.random() * 5);
+    crownCol = pickCrownCol();
   }, 420);
 }
 
@@ -726,8 +740,9 @@ function paint() {
   energyMax = maxEnergy();
   if (energy > energyMax) energy = energyMax;
   powerFill.style.width = Math.max(0, energy / energyMax * 100) + '%';
-  powerTxt.textContent = '기력 ' + energy + ' / ' + energyMax;
-  powerEl.classList.toggle('low', energy <= energyMax * 0.25);
+  powerTxt.textContent = lv.energy ? '기력 ' + INF_TXT + ' ♾️' : '기력 ' + energy + ' / ' + energyMax;
+  powerEl.classList.toggle('inf', !!lv.energy);
+  powerEl.classList.toggle('low', !lv.energy && energy <= energyMax * 0.25);
   riseBtn.disabled = mr === 0 || mode !== 'play';
   const d = shaftDepth();
   diveBtn.textContent = d > 0 ? '🛗 ' + d + 'm로' : '🛗 내려가기';
@@ -1131,7 +1146,7 @@ levelRow.addEventListener('click', e => {
   put('level', key);
   [...levelRow.children].forEach(x => x.setAttribute('aria-pressed', x.dataset.lv === key));
   energyMax = maxEnergy();
-  if (mr === 0) refill();
+  if (mr === 0 || lv.energy) refill();
   say(lv.name + '(으)로 바꿨다');
   paint();
 });
