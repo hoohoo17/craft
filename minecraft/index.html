@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#172b29">
+<title>블록 숲 · 마인크래프트풍 만들기</title>
+<link rel="stylesheet" href="style.css">
+<body>
+<canvas id="view" aria-label="블록을 쌓고 탐험하는 3D 세계"></canvas>
+<header><a href="../">← 게임 모음</a><strong>🌳 블록 숲 <small>CREATIVE WORLD</small></strong><button id="menu">메뉴 · Esc</button></header>
+<div id="stats">세계 준비 중…</div>
+<div id="cross" aria-hidden="true">+</div>
+<div id="tip" role="status"></div>
+<div id="touch">
+  <div class="pad"><button data-key="KeyW" aria-label="앞으로">▲</button><button data-key="KeyA" aria-label="왼쪽">◀</button><button data-key="KeyS" aria-label="뒤로">▼</button><button data-key="KeyD" aria-label="오른쪽">▶</button></div>
+  <div class="actions"><button id="break">⛏ 부수기</button><button id="place">▣ 놓기</button><button data-key="Space">↑ 점프</button><button data-key="ShiftLeft">↓ 내려가기</button></div>
+</div>
+<footer><div id="selected">잔디</div><div id="hotbar" role="group" aria-label="블록 선택"></div><p>WASD 이동 · 한 칸 자동 오르기 · Space 점프 · 왼쪽 클릭 제거 · 오른쪽 클릭 설치</p></footer>
+<div id="overlay"><section>
+  <span class="eyebrow">나만의 작은 블록 세상</span><h1>블록 숲<span>상상한 만큼, 쌓아 봐.</span></h1>
+  <p>160×160의 숲과 약 64칸 깊이의 땅속을 탐험하세요.<br>한 칸 높이 블록은 걸어가면 자동으로 올라가요.<br>블록은 무제한! 만든 세계는 이 브라우저에 저장돼요.</p>
+  <div class="guide"><span>⌨️ WASD / 방향키 <b>이동</b></span><span>🖱 드래그 <b>둘러보기</b></span><span>⛏ 왼쪽 / 오른쪽 클릭 <b>제거 / 설치</b></span><span>🪽 F <b>비행 켜기</b> · Space ↑ · Shift ↓</span><span>📱 화면 드래그 <b>둘러보기</b> · 아래 버튼으로 조작</span></div>
+  <button id="start" class="primary">세계로 들어가기 →</button>
+  <div class="options"><button id="fly">🪽 비행: 꺼짐</button><button id="home">🏡 시작 위치</button><button id="reset">새 세계</button></div>
+  <small>Space 점프 · 숫자 1–8 블록 선택 · Esc 메뉴<br>마인크래프트에서 영감을 받은 독립 미니게임입니다.</small>
+</section></div>
+<script src="game.js"></script><script src="../rest.js?v=9"></script>
+</body>
+</html>
