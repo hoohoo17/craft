@@ -111,7 +111,7 @@
     background: #6FB8E8;
     border-radius: 16px;
     box-shadow: var(--shadow);
-    touch-action: none;
+    touch-action: pan-y;   /* 위아래로 쓸면 화면이 내려간다 */
   }
 
   /* ---------- 덮는 화면 ---------- */
@@ -159,20 +159,21 @@
   button.calm { background: var(--green); }
   button:disabled { opacity: .45; }
   button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-  .row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
-  .row button { flex: 1; max-width: 220px; }
+  .row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+  .row button { flex: 1; max-width: 220px; padding: 9px 10px; font-size: 14px; }
 
   /* ---------- 방향 단추 ---------- */
   #pad {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 6px;
-    width: 216px;
-    margin: 10px auto 0;
+    width: 100%;
+    max-width: 320px;
+    margin: 9px auto 0;
   }
   #pad button {
     padding: 0;
-    height: 52px;
+    height: 48px;
     font-size: 22px;
     background: var(--card);
     color: var(--ink);
@@ -182,7 +183,7 @@
   #pad .sp { visibility: hidden; }
 
   /* ---------- 가게 ---------- */
-  #shop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
+  #shop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 8px; }
   #shop button {
     padding: 8px 2px 9px;
     background: var(--card);
@@ -201,7 +202,7 @@
   /* ---------- 보석 도감 ---------- */
   #dex {
     display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;
-    margin-top: 10px; padding: 9px 8px;
+    margin-top: 8px; padding: 7px 8px;
     background: var(--card);
     border-radius: 14px;
     box-shadow: var(--shadow);
@@ -212,7 +213,7 @@
   }
   #dex i.on { filter: none; opacity: 1; }
 
-  #tip { font-size: 12.5px; color: var(--muted); line-height: 1.75; margin: 14px 0 0; }
+  #tip { font-size: 11.5px; color: var(--muted); line-height: 1.65; margin: 9px 0 0; }
 </style>
 </head>
 <body>
@@ -248,10 +249,8 @@
   </div>
 
   <div id="pad">
-    <button class="sp"></button>
-    <button data-go="up">⬆️</button>
-    <button class="sp"></button>
     <button data-go="left">⬅️</button>
+    <button data-go="up">⬆️</button>
     <button data-go="down">⬇️</button>
     <button data-go="right">➡️</button>
   </div>
@@ -269,7 +268,7 @@
 
   <div id="dex"></div>
 
-  <p id="tip">옆 칸을 누르면 판다 · 단단할수록, 깊을수록 기력을 많이 쓴다<br>기력이 다 떨어지면 저절로 땅 위로 올라온다 · 캔 보석은 그대로 남는다<br>땅 위에서는 기력이 가득 차고 🛒 장비를 살 수 있다<br>10m 내려갈 때마다 🛗 엘리베이터가 열려서 다음엔 거기서 바로 시작<br>♾️ 무한을 고르면 기력이 절대 안 닳는다 · 끝없이 파도 된다<br>깊이 100m 어딘가에 👑 전설의 왕관이 묻혀 있다</p>
+  <p id="tip">기력이 다 되면 저절로 올라온다 · 캔 보석은 그대로 남는다<br>10m마다 🛗 엘리베이터가 열린다 · 100m 아래 👑 왕관이 묻혀 있다</p>
 </main>
 
 <script>
@@ -779,11 +778,20 @@ function paint() {
 
 /* ---------- 판 크기 ---------- */
 
+/* 화면 세로가 짧으면 판을 줄여서 한 화면에 다 들어오게 한다.
+   판 위에서는 손가락으로 쓸어도 화면이 안 내려가기 때문이다 */
+function availH(minH, maxH) {
+  const pageH = document.documentElement.scrollHeight;
+  const cvH = cv.getBoundingClientRect().height || 0;
+  const room = (window.innerHeight || 800) - (pageH - cvH) - 4;
+  return Math.round(Math.max(minH, Math.min(maxH, room)));
+}
+
 function fit() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   W = wrapEl.clientWidth || 396;
   cell = W / COLS;
-  H = Math.round(cell * 9);
+  H = availH(Math.round(cell * 7), Math.round(cell * 9));
   cv.width = Math.round(W * dpr);
   cv.height = Math.round(H * dpr);
   cv.style.height = H + 'px';
@@ -1207,6 +1215,7 @@ openShaft();
 drawDex();
 
 window.addEventListener('resize', fit);
+fit();
 fit();
 paint();
 

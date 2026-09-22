@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>🧱 재후크래프트</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --green: #55BE8A;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 14px 12px calc(18px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 2px 0 6px; letter-spacing: .04em; }
+
+  #hint { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; min-height: 16px; }
+  #hint b { color: #23883C; font-weight: 800; }
+
+  /* ---------- 세상 ---------- */
+  #worldwrap { position: relative; }
+  canvas {
+    display: block;
+    width: 100%;
+    background: #9AD0F5;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    touch-action: none;
+  }
+
+  #cover, #craft {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px;
+    padding: 14px;
+    background: rgba(255,255,255,.95);
+    border-radius: 14px;
+  }
+  #cover.on, #craft.on { display: flex; }
+  #cover p { margin: 0; font-size: 22px; font-weight: 800; }
+  #cover small { display: block; margin-top: 6px; font-size: 13.5px; font-weight: 600; color: var(--muted); line-height: 1.6; }
+
+  /* ---------- 만들기 ---------- */
+  #craft h2 { margin: 0 0 2px; font-size: 17px; }
+  #craftList { width: 100%; max-height: 74%; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .rec {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 9px;
+    border: 2px solid var(--line);
+    border-radius: 11px;
+    background: #fff;
+    text-align: left;
+    font: inherit;
+    width: 100%;
+    color: var(--ink);
+    box-shadow: none;
+  }
+  .rec.ok { border-color: var(--green); background: #EDFBF3; }
+  .rec.no { opacity: .5; }
+  .rec .e { font-size: 21px; }
+  .rec .t { flex: 1; font-size: 12.5px; font-weight: 800; line-height: 1.35; }
+  .rec .t small { display: block; font-size: 11px; font-weight: 700; color: var(--muted); }
+
+  /* ---------- 버튼 ---------- */
+  button {
+    font: inherit; font-weight: 700;
+    border: none; border-radius: 12px;
+    padding: 10px 16px;
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(1px); }
+  button.warm { background: var(--pink); }
+  button.calm { background: var(--green); }
+  button:disabled { opacity: .45; }
+  .row { display: flex; gap: 7px; justify-content: center; margin-top: 8px; }
+
+  /* ---------- 움직이는 단추 ---------- */
+  #pad { display: flex; gap: 7px; margin-top: 8px; }
+  #pad button {
+    flex: 1;
+    height: 46px;
+    font-size: 20px;
+    padding: 0;
+    background: var(--card);
+    color: var(--ink);
+    border: 2px solid var(--line);
+  }
+  #pad button:active { background: #EEF3FF; border-color: var(--blue); }
+  #pad #jumpBtn { background: #EEF3FF; border-color: var(--blue); flex: 1.3; }
+
+  /* ---------- 가방 ---------- */
+  #bag {
+    display: flex; gap: 5px; overflow-x: auto; padding: 7px;
+    margin-top: 8px;
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  #bag::-webkit-scrollbar { display: none; }
+  #bag button {
+    position: relative;
+    flex: 0 0 auto;
+    width: 44px; height: 44px;
+    padding: 0;
+    background: #F7F9FF;
+    color: var(--ink);
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    font-size: 21px;
+    box-shadow: none;
+  }
+  #bag button[aria-pressed="true"] { border-color: var(--blue); background: #EEF3FF; }
+  #bag button i {
+    position: absolute; right: 2px; bottom: 1px;
+    font-style: normal; font-size: 10.5px; font-weight: 800; color: var(--ink);
+  }
+  #bag .empty { font-size: 12px; color: var(--muted); font-weight: 700; padding: 14px 6px; }
+
+  /* ---------- 도전 과제 ---------- */
+  #goals {
+    display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px;
+    margin-top: 8px; padding: 7px;
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    font-size: 11.5px; font-weight: 800;
+  }
+  #goals span { flex: 0 0 auto; padding: 3px 7px; border-radius: 8px; background: #F2F4FA; color: var(--muted); white-space: nowrap; }
+  #goals::-webkit-scrollbar { display: none; }
+  #goals span.on { background: #EDFBF3; color: #23883C; }
+
+  #tip { font-size: 11.5px; color: var(--muted); line-height: 1.65; margin: 9px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🧱 재후크래프트</h1>
+
+  <p id="hint">땅을 눌러서 캐고, 가방에서 골라 누르면 놓인다</p>
+
+  <div id="worldwrap">
+    <canvas id="cv"></canvas>
+    <div id="craft">
+      <h2>🔨 만들기</h2>
+      <div id="craftList"></div>
+      <button id="craftClose" class="warm">닫기</button>
+    </div>
+    <div id="cover">
+      <p id="coverMsg">재후크래프트</p>
+      <div class="row"><button id="coverBtn">시작</button></div>
+    </div>
+  </div>
+
+  <div id="pad">
+    <button data-go="left">◀️</button>
+    <button id="jumpBtn" data-go="jump">⤴️ 점프</button>
+    <button data-go="right">▶️</button>
+  </div>
+
+  <div id="bag"></div>
+
+  <div class="row">
+    <button id="craftBtn" class="calm">🔨 만들기</button>
+    <button id="newBtn" class="warm">🔄 새 세상</button>
+  </div>
+
+  <div id="goals"></div>
+
+  <p id="tip">🪨 돌은 나무 곡괭이, ⚙️ 철은 돌 곡괭이, 💎 다이아는 철 곡괭이가 필요하다</p>
+</main>
+
+<script>
+/* 세상은 칸(타일)으로 되어 있다. 칸마다 무엇이 들었는지 숫자로 적어 둔다.
+   캐면 가방에 들어가고, 가방에서 골라 빈 칸을 누르면 다시 놓인다. */
+
+const WW = 110, WH = 64;        // 세상의 가로 칸, 세로 칸
+const REACH = 4.6;              // 손이 닿는 거리
+const KEY = 'craft-jaehoo-';
+
+const B = {
+  air:     { name: '빈 칸',   solid: false },
+  grass:   { name: '잔디',    emo: '🟩', col: '#9C6B43', top: '#69C25F', hard: 0 },
+  dirt:    { name: '흙',      emo: '🟫', col: '#9C6B43', hard: 0 },
+  sand:    { name: '모래',    emo: '🟨', col: '#E4CE8E', hard: 0 },
+  stone:   { name: '돌',      emo: '🪨', col: '#8A8F9E', hard: 1 },
+  wood:    { name: '나무',    emo: '🪵', col: '#8B5E3C', hard: 0 },
+  leaf:    { name: '잎',      emo: '🍃', col: '#4FA65C', hard: 0 },
+  plank:   { name: '판자',    emo: '🟧', col: '#C99B5E', hard: 0 },
+  coal:    { name: '석탄',    emo: '⚫', col: '#8A8F9E', ore: '#3B3B46', hard: 1 },
+  iron:    { name: '철',      emo: '⚙️', col: '#8A8F9E', ore: '#D08B5B', hard: 2 },
+  diamond: { name: '다이아',  emo: '💎', col: '#8A8F9E', ore: '#5BD6E0', hard: 3 },
+  torch:   { name: '횃불',    emo: '🔥', solid: false, light: 7.5, hard: 0 }
+};
+const IDS = ['air', 'grass', 'dirt', 'sand', 'stone', 'wood', 'leaf', 'plank', 'coal', 'iron', 'diamond', 'torch'];
+const NUM = {};
+IDS.forEach((k, i) => NUM[k] = i);
+
+/* 놓을 수는 없고 가지고만 다니는 것들 */
+const TOOLS = {
+  stick: { name: '막대기',      emo: '🥢' },
+  pick1: { name: '나무 곡괭이', emo: '⛏️', tool: 1 },
+  pick2: { name: '돌 곡괭이',   emo: '⚒️', tool: 2 },
+  pick3: { name: '철 곡괭이',   emo: '🛠️', tool: 3 }
+};
+
+const RECIPES = [
+  { out: 'plank', n: 4, need: { wood: 1 },              tip: '나무 하나로 판자 네 장' },
+  { out: 'stick', n: 4, need: { plank: 2 },             tip: '판자 두 장으로 막대기 네 개' },
+  { out: 'pick1', n: 1, need: { plank: 3, stick: 2 },   tip: '돌을 캘 수 있다' },
+  { out: 'pick2', n: 1, need: { stone: 3, stick: 2 },   tip: '철을 캘 수 있다' },
+  { out: 'pick3', n: 1, need: { iron: 3, stick: 2 },    tip: '다이아를 캘 수 있다' },
+  { out: 'torch', n: 4, need: { coal: 1, stick: 1 },    tip: '땅속을 밝혀 준다' }
+];
+
+const GOALS = [
+  { id: 'wood',    txt: '🪵 나무 캐기' },
+  { id: 'plank',   txt: '🟧 판자 만들기' },
+  { id: 'pick1',   txt: '⛏️ 곡괭이 만들기' },
+  { id: 'stone',   txt: '🪨 돌 캐기' },
+  { id: 'coal',    txt: '⚫ 석탄 찾기' },
+  { id: 'torch',   txt: '🔥 횃불 놓기' },
+  { id: 'iron',    txt: '⚙️ 철 찾기' },
+  { id: 'diamond', txt: '💎 다이아 찾기' },
+  { id: 'build',   txt: '🏠 블록 30개 놓기' }
+];
+
+/* ---------- 화면 조각 ---------- */
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrapEl = document.getElementById('worldwrap');
+const coverEl = document.getElementById('cover');
+const coverMsg = document.getElementById('coverMsg');
+const coverBtn = document.getElementById('coverBtn');
+const craftEl = document.getElementById('craft');
+const craftList = document.getElementById('craftList');
+const craftBtn = document.getElementById('craftBtn');
+const craftClose = document.getElementById('craftClose');
+const newBtn = document.getElementById('newBtn');
+const hintEl = document.getElementById('hint');
+const bagEl = document.getElementById('bag');
+const goalsEl = document.getElementById('goals');
+const padEl = document.getElementById('pad');
+
+/* ---------- 상태 ---------- */
+
+let W = 396, H = 420, TS = 28;
+let world = new Uint8Array(WW * WH);
+let topSolid = new Int16Array(WW);
+let bag = {};                 // { 이름: 개수 }
+let picked = null;            // 지금 손에 든 것
+let done = {};                // 이룬 도전 과제
+let placed = 0;               // 놓은 블록 수
+let me = { x: 50, y: 10, vx: 0, vy: 0, face: 1, ground: false };
+let camX = 0, camY = 0;
+let goDir = 0, wantJump = false;
+let clock = 0, dayT = 0.18;
+let bits = [], pops = [];
+let shake = 0;
+let started = false;
+let raf = null, last = 0;
+let ac = null;
+let saveTimer = null;
+
+function put(k2, v) { try { localStorage.setItem(KEY + k2, v); } catch (e) {} }
+function get(k2) { try { return localStorage.getItem(KEY + k2); } catch (e) { return null; } }
+
+function idx(x, y) { return y * WW + x; }
+function tile(x, y) {
+  if (x < 0 || x >= WW || y < 0) return 'stone';
+  if (y >= WH) return 'stone';
+  return IDS[world[idx(x, y)]];
+}
+function setTile(x, y, k2) {
+  if (x < 0 || x >= WW || y < 0 || y >= WH) return;
+  world[idx(x, y)] = NUM[k2];
+}
+function solid(x, y) {
+  const t = tile(x, y);
+  return t !== 'air' && B[t].solid !== false;
+}
+function toolLevel() {
+  if (bag.pick3) return 3;
+  if (bag.pick2) return 2;
+  if (bag.pick1) return 1;
+  return 0;
+}
+
+/* ---------- 세상 만들기 ---------- */
+
+function makeWorld() {
+  world = new Uint8Array(WW * WH);
+  const seed = Math.random() * 1000;
+
+  /* 땅 모양 */
+  const hs = [];
+  for (let x = 0; x < WW; x++) {
+    const h = Math.round(21
+      + 2.6 * Math.sin((x + seed) * 0.15)
+      + 1.9 * Math.sin((x + seed) * 0.061 + 2)
+      + 1.1 * Math.sin((x + seed) * 0.31 + 0.7));
+    hs.push(h);
+    for (let y = h; y < WH; y++) {
+      let k2 = 'stone';
+      if (y === h) k2 = 'grass';
+      else if (y < h + 4) k2 = 'dirt';
+      setTile(x, y, k2);
+    }
+    setTile(x, WH - 1, 'stone');
+  }
+
+  /* 굴 파기 */
+  for (let i = 0; i < 85; i++) {
+    let cx = 2 + Math.random() * (WW - 4);
+    let cy = 28 + Math.random() * (WH - 34);
+    let a = Math.random() * Math.PI * 2;
+    const len = 8 + Math.random() * 24;
+    for (let s = 0; s < len; s++) {
+      a += (Math.random() - 0.5) * 0.8;
+      cx += Math.cos(a) * 1.1;
+      cy += Math.sin(a) * 0.8;
+      const r = 1.1 + Math.random() * 1.5;
+      for (let dx = -3; dx <= 3; dx++) {
+        for (let dy = -3; dy <= 3; dy++) {
+          if (dx * dx + dy * dy > r * r) continue;
+          const x = Math.round(cx + dx), y = Math.round(cy + dy);
+          if (y > hs[Math.max(0, Math.min(WW - 1, x))] + 3 && y < WH - 2) setTile(x, y, 'air');
+        }
+      }
+    }
+  }
+
+  /* 광물 */
+  vein('coal', 70, 26, WH - 3, 3, 6);
+  vein('iron', 46, 32, WH - 3, 2, 4);
+  vein('diamond', 16, 46, WH - 3, 1, 3);
+
+  /* 나무 */
+  for (let x = 3; x < WW - 3; x++) {
+    if (Math.random() > 0.13) continue;
+    const h = hs[x];
+    if (tile(x, h) !== 'grass') continue;
+    const th = 3 + Math.floor(Math.random() * 3);
+    for (let i = 1; i <= th; i++) setTile(x, h - i, 'wood');
+    const topY = h - th;
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 1; dy++) {
+        if (Math.abs(dx) === 2 && dy >= 0) continue;
+        if (Math.abs(dx) + Math.abs(dy) > 3) continue;
+        if (tile(x + dx, topY + dy) === 'air') setTile(x + dx, topY + dy, 'leaf');
+      }
+    }
+    x += 2;
+  }
+
+  /* 내가 설 자리 */
+  const sx = Math.round(WW / 2);
+  me.x = sx + 0.5;
+  me.y = hs[sx] - 2.2;
+  me.vx = 0; me.vy = 0;
+  refreshTop();
+}
+
+function vein(kind, count, fromY, toY, lo, hi) {
+  for (let i = 0; i < count; i++) {
+    const cx = Math.floor(Math.random() * WW);
+    const cy = fromY + Math.floor(Math.random() * (toY - fromY));
+    const n = lo + Math.floor(Math.random() * (hi - lo + 1));
+    let x = cx, y = cy;
+    for (let j = 0; j < n; j++) {
+      if (tile(x, y) === 'stone') setTile(x, y, kind);
+      x += Math.round(Math.random() * 2 - 1);
+      y += Math.round(Math.random() * 2 - 1);
+    }
+  }
+}
+
+/* 칸마다 하늘이 보이는 높이를 적어 둔다. 빛을 칠할 때 쓴다 */
+function refreshTop() {
+  for (let x = 0; x < WW; x++) {
+    let y = 0;
+    while (y < WH && !solid(x, y)) y++;
+    topSolid[x] = y;
+  }
+}
+
+/* ---------- 저장 ---------- */
+
+function saveSoon() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 700);
+}
+
+function save() {
+  let s = '';
+  for (let i = 0; i < world.length; i++) s += String.fromCharCode(48 + world[i]);
+  put('world', s);
+  put('bag', JSON.stringify(bag));
+  put('done', JSON.stringify(done));
+  put('placed', placed);
+  put('me', JSON.stringify({ x: me.x, y: me.y }));
+}
+
+function load() {
+  const s = get('world');
+  if (!s || s.length !== WW * WH) return false;
+  world = new Uint8Array(WW * WH);
+  for (let i = 0; i < s.length; i++) {
+    const v = s.charCodeAt(i) - 48;
+    world[i] = (v >= 0 && v < IDS.length) ? v : 0;
+  }
+  try { bag = JSON.parse(get('bag')) || {}; } catch (e) { bag = {}; }
+  try { done = JSON.parse(get('done')) || {}; } catch (e) { done = {}; }
+  placed = +get('placed') || 0;
+  try {
+    const p = JSON.parse(get('me'));
+    if (p && typeof p.x === 'number') { me.x = p.x; me.y = p.y; }
+  } catch (e) {}
+  refreshTop();
+  return true;
+}
+
+/* ---------- 소리 ---------- */
+
+function ensureAudio() {
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) ac = new AC();
+  }
+  if (ac && ac.state === 'suspended') ac.resume();
+  return ac;
+}
+
+function tone(freq, dur, type, vol, delay) {
+  if (!ac) return;
+  const a0 = ac.currentTime + (delay || 0);
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, a0);
+  g.gain.exponentialRampToValueAtTime(vol, a0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, a0 + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(a0);
+  o.stop(a0 + dur + 0.05);
+}
+
+const sfx = {
+  dig:  h => tone(230 - h * 30, 0.08, 'square', 0.05),
+  put:  () => tone(420, 0.08, 'sine', 0.07),
+  no:   () => tone(150, 0.14, 'sawtooth', 0.06),
+  jump: () => tone(560, 0.07, 'triangle', 0.05),
+  make: () => { [523, 659, 784].forEach((f, i) => tone(f, 0.13, 'triangle', 0.08, i * 0.06)); },
+  goal: () => { [659, 784, 988, 1319].forEach((f, i) => tone(f, 0.16, 'triangle', 0.1, i * 0.09)); },
+  gem:  () => { [880, 1175, 1568].forEach((f, i) => tone(f, 0.14, 'triangle', 0.09, i * 0.06)); }
+};
+
+function say(t) { hintEl.innerHTML = t; }
+function pop(x, y, txt, col) { pops.push({ x, y, txt, col, t: 0 }); }
+function burst(x, y, col, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 30 + Math.random() * 110;
+    bits.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, life: 0.4 + Math.random() * 0.3, t: 0, col, r: 2 + Math.random() * 3 });
+  }
+}
+
+/* ---------- 가방 ---------- */
+
+function give(k2, n) {
+  bag[k2] = (bag[k2] || 0) + n;
+  if (!picked || !bag[picked]) picked = k2;
+  drawBag();
+  saveSoon();
+}
+
+function take(k2, n) {
+  bag[k2] = (bag[k2] || 0) - n;
+  if (bag[k2] <= 0) {
+    delete bag[k2];
+    if (picked === k2) picked = Object.keys(bag).find(x => B[x]) || null;
+  }
+  drawBag();
+  saveSoon();
+}
+
+function drawBag() {
+  const keys = Object.keys(bag).filter(k2 => bag[k2] > 0);
+  keys.sort((a, b) => IDS.indexOf(a) - IDS.indexOf(b));
+  bagEl.innerHTML = '';
+  if (!keys.length) {
+    const d = document.createElement('div');
+    d.className = 'empty';
+    d.textContent = '가방이 비었다 · 땅이나 나무를 눌러서 캐 보자';
+    bagEl.appendChild(d);
+    return;
+  }
+  keys.forEach(k2 => {
+    const info = B[k2] || TOOLS[k2];
+    const b = document.createElement('button');
+    b.dataset.item = k2;
+    b.setAttribute('aria-pressed', picked === k2);
+    b.title = info.name;
+    b.innerHTML = info.emo + '<i>' + bag[k2] + '</i>';
+    bagEl.appendChild(b);
+  });
+}
+
+function drawGoals() {
+  goalsEl.innerHTML = '';
+  GOALS.forEach(g => {
+    const s = document.createElement('span');
+    s.className = done[g.id] ? 'on' : '';
+    s.textContent = (done[g.id] ? '✅ ' : '') + g.txt;
+    goalsEl.appendChild(s);
+  });
+}
+
+function win(id) {
+  if (done[id]) return;
+  done[id] = 1;
+  drawGoals();
+  sfx.goal();
+  const g = GOALS.find(x => x.id === id);
+  say('🏅 해냈다! <b>' + (g ? g.txt : id) + '</b>');
+  saveSoon();
+}
+
+/* ---------- 만들기 ---------- */
+
+function canMake(r) {
+  return Object.keys(r.need).every(k2 => (bag[k2] || 0) >= r.need[k2]);
+}
+
+function drawCraft() {
+  craftList.innerHTML = '';
+  RECIPES.forEach((r, i) => {
+    const info = B[r.out] || TOOLS[r.out];
+    const ok = canMake(r);
+    const b = document.createElement('button');
+    b.className = 'rec ' + (ok ? 'ok' : 'no');
+    b.dataset.rec = i;
+    const needTxt = Object.keys(r.need).map(k2 => {
+      const ni = B[k2] || TOOLS[k2];
+      return ni.emo + ' ' + ni.name + ' ' + (bag[k2] || 0) + '/' + r.need[k2];
+    }).join(' · ');
+    b.innerHTML = '<span class="e">' + info.emo + '</span>' +
+                  '<span class="t">' + info.name + (r.n > 1 ? ' ×' + r.n : '') +
+                  '<small>' + needTxt + '</small></span>';
+    craftList.appendChild(b);
+  });
+}
+
+function make(i) {
+  const r = RECIPES[i];
+  if (!r) return;
+  if (!canMake(r)) { sfx.no(); say('재료가 모자라다'); return; }
+  Object.keys(r.need).forEach(k2 => take(k2, r.need[k2]));
+  give(r.out, r.n);
+  sfx.make();
+  const info = B[r.out] || TOOLS[r.out];
+  say('🔨 <b>' + info.name + '</b>을(를) 만들었다!');
+  if (r.out === 'plank') win('plank');
+  if (r.out === 'pick1') win('pick1');
+  drawCraft();
+  drawBag();
+}
+
+/* ---------- 캐고 놓기 ---------- */
+
+function overlapsMe(tx, ty) {
+  return (me.x + 0.36 > tx && me.x - 0.36 < tx + 1 && me.y + 1.75 > ty && me.y < ty + 1);
+}
+
+function useAt(tx, ty) {
+  const d = Math.hypot(tx + 0.5 - me.x, ty + 0.5 - (me.y + 0.9));
+  if (d > REACH) { say('너무 멀다. 가까이 가서 눌러 보자'); sfx.no(); return; }
+  const t = tile(tx, ty);
+
+  if (t !== 'air') {
+    const need = B[t].hard || 0;
+    if (need > toolLevel()) {
+      const what = need === 1 ? '나무 곡괭이' : need === 2 ? '돌 곡괭이' : '철 곡괭이';
+      say('⛏️ <b>' + what + '</b>가 있어야 캘 수 있다');
+      sfx.no();
+      return;
+    }
+    setTile(tx, ty, 'air');
+    refreshTop();
+    give(t, 1);
+    burst((tx + 0.5) * TS, (ty + 0.5) * TS, B[t].ore || B[t].col || '#9C6B43', 9);
+    pop((tx + 0.5) * TS, (ty + 0.2) * TS, '+1 ' + B[t].name, '#23883C');
+    if (t === 'diamond' || t === 'iron' || t === 'coal') sfx.gem(); else sfx.dig(need);
+    shake = need * 2;
+    if (t === 'wood') win('wood');
+    if (t === 'stone') win('stone');
+    if (t === 'coal') win('coal');
+    if (t === 'iron') win('iron');
+    if (t === 'diamond') win('diamond');
+    saveSoon();
+    return;
+  }
+
+  /* 빈 칸이면 놓기 */
+  if (!picked || !B[picked] || !bag[picked]) { say('가방에서 놓을 블록을 먼저 고르자'); sfx.no(); return; }
+  if (B[picked].solid !== false && overlapsMe(tx, ty)) { say('내가 서 있는 자리에는 못 놓는다'); sfx.no(); return; }
+  if (!(solid(tx - 1, ty) || solid(tx + 1, ty) || solid(tx, ty - 1) || solid(tx, ty + 1) ||
+        tile(tx, ty + 1) === 'torch' || tile(tx, ty - 1) === 'torch')) {
+    say('허공에는 못 놓는다. 다른 블록 옆에 놓자');
+    sfx.no();
+    return;
+  }
+  setTile(tx, ty, picked);
+  refreshTop();
+  placed++;
+  if (picked === 'torch') win('torch');
+  if (placed >= 30) win('build');
+  take(picked, 1);
+  sfx.put();
+  saveSoon();
+}
+
+/* ---------- 몸 움직이기 ---------- */
+
+const SPD = 6.2, GRAV = 38, JUMPV = 12.6;
+
+function hitBox(x, y) {
+  const x0 = Math.floor(x - 0.36), x1 = Math.floor(x + 0.36);
+  const y0 = Math.floor(y), y1 = Math.floor(y + 1.74);
+  for (let tx = x0; tx <= x1; tx++) {
+    for (let ty = y0; ty <= y1; ty++) {
+      if (solid(tx, ty)) return true;
+    }
+  }
+  return false;
+}
+
+function moveX(d) {
+  if (!d) return;
+  let left = Math.abs(d);
+  const sgn = Math.sign(d);
+  while (left > 0) {
+    const s = sgn * Math.min(left, 0.06);
+    if (hitBox(me.x + s, me.y)) {
+      /* 한 칸짜리 턱은 저절로 올라간다 */
+      if (me.ground && !hitBox(me.x + s, me.y - 1.02) && !hitBox(me.x, me.y - 1.02)) {
+        me.y -= 1.02;
+        continue;
+      }
+      return;
+    }
+    me.x += s;
+    left -= Math.abs(s);
+  }
+}
+
+function moveY(d) {
+  if (!d) return;
+  let left = Math.abs(d);
+  const sgn = Math.sign(d);
+  while (left > 0) {
+    const s = sgn * Math.min(left, 0.06);
+    if (hitBox(me.x, me.y + s)) {
+      if (sgn > 0) me.ground = true;
+      me.vy = 0;
+      return;
+    }
+    me.y += s;
+    left -= Math.abs(s);
+  }
+  if (sgn > 0) me.ground = false;
+}
+
+function physics(dt) {
+  if (goDir) me.face = goDir;
+  if (wantJump && me.ground) { me.vy = -JUMPV; me.ground = false; sfx.jump(); }
+  wantJump = false;
+  me.vy = Math.min(30, me.vy + GRAV * dt);
+  moveX(goDir * SPD * dt);
+  moveY(me.vy * dt);
+  me.x = Math.max(1, Math.min(WW - 1, me.x));
+  if (me.y > WH + 4) { me.y = 2; me.vy = 0; }
+}
+
+/* ---------- 빛 ---------- */
+
+let daylight = 1;
+let torches = [];
+
+function scanTorches(x0, x1, y0, y1) {
+  torches = [];
+  for (let x = Math.max(0, x0 - 8); x < Math.min(WW, x1 + 8); x++) {
+    for (let y = Math.max(0, y0 - 8); y < Math.min(WH, y1 + 8); y++) {
+      if (tile(x, y) === 'torch') torches.push({ x: x + 0.5, y: y + 0.5 });
+    }
+  }
+}
+
+function lightAt(x, y) {
+  const ts = topSolid[x] || 0;
+  let l = y < ts ? daylight : Math.max(0, daylight * (1 - (y - ts + 1) * 0.3));
+  const dm = Math.hypot(x + 0.5 - me.x, y + 0.5 - (me.y + 0.9));
+  l = Math.max(l, Math.max(0, 1 - dm / 4.4) * 0.8);
+  for (let i = 0; i < torches.length; i++) {
+    const d = Math.hypot(x + 0.5 - torches[i].x, y + 0.5 - torches[i].y);
+    if (d < 8) l = Math.max(l, Math.max(0, 1 - d / 7.5));
+  }
+  return Math.min(1, l);
+}
+
+/* ---------- 판 크기 ---------- */
+
+/* 화면 세로가 짧으면 판을 줄여서 한 화면에 다 들어오게 한다.
+   판 위에서는 손가락으로 쓸어도 화면이 안 내려가기 때문이다 */
+function availH(minH, maxH) {
+  const pageH = document.documentElement.scrollHeight;
+  const cvH = cv.getBoundingClientRect().height || 0;
+  const room = (window.innerHeight || 800) - (pageH - cvH) - 4;
+  return Math.round(Math.max(minH, Math.min(maxH, room)));
+}
+
+function fit() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = wrapEl.clientWidth || 396;
+  TS = Math.round(W / 14);
+  H = availH(250, Math.round(Math.min(W * 1.06, 460)));
+  cv.width = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  cv.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+/* ---------- 그리기 ---------- */
+
+function lerpCol(a, b, t) {
+  const p = c => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
+  const A = p(a), C = p(b);
+  return 'rgb(' + Math.round(A[0] + (C[0] - A[0]) * t) + ',' + Math.round(A[1] + (C[1] - A[1]) * t) + ',' + Math.round(A[2] + (C[2] - A[2]) * t) + ')';
+}
+
+function drawTile(k2, x, y) {
+  const px = x * TS - camX, py = y * TS - camY;
+  const info = B[k2];
+  if (k2 === 'torch') {
+    ctx.fillStyle = '#8B5E3C';
+    ctx.fillRect(px + TS * 0.44, py + TS * 0.35, TS * 0.12, TS * 0.6);
+    ctx.fillStyle = '#FFD75E';
+    ctx.beginPath();
+    ctx.arc(px + TS * 0.5, py + TS * 0.3, TS * 0.19 + Math.sin(clock * 9 + x) * TS * 0.02, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,200,90,.35)';
+    ctx.beginPath();
+    ctx.arc(px + TS * 0.5, py + TS * 0.3, TS * 0.4, 0, 7);
+    ctx.fill();
+    return;
+  }
+  ctx.fillStyle = info.col;
+  ctx.fillRect(px, py, TS + 1, TS + 1);
+  /* 무늬 */
+  const h1 = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+  ctx.fillStyle = 'rgba(0,0,0,.09)';
+  ctx.fillRect(px + (h1 % 5) * TS * 0.14 + 2, py + (h1 % 7) * TS * 0.1 + 2, TS * 0.2, TS * 0.2);
+  if (k2 === 'grass') {
+    ctx.fillStyle = info.top;
+    ctx.fillRect(px, py, TS + 1, TS * 0.3);
+  }
+  if (k2 === 'wood') {
+    ctx.fillStyle = 'rgba(0,0,0,.16)';
+    ctx.fillRect(px + TS * 0.22, py, TS * 0.1, TS + 1);
+    ctx.fillRect(px + TS * 0.66, py, TS * 0.08, TS + 1);
+  }
+  if (k2 === 'leaf') {
+    ctx.fillStyle = 'rgba(255,255,255,.14)';
+    ctx.fillRect(px + TS * 0.1, py + TS * 0.1, TS * 0.25, TS * 0.25);
+    ctx.fillRect(px + TS * 0.6, py + TS * 0.55, TS * 0.22, TS * 0.22);
+  }
+  if (info.ore) {
+    ctx.fillStyle = info.ore;
+    const spots = [[0.28, 0.3], [0.62, 0.45], [0.4, 0.68]];
+    spots.forEach((s, i) => {
+      ctx.beginPath();
+      ctx.arc(px + TS * s[0], py + TS * s[1], TS * (0.11 + (i % 2) * 0.03), 0, 7);
+      ctx.fill();
+    });
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,.10)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(px + .5, py + .5, TS, TS);
+}
+
+function drawMe() {
+  const px = me.x * TS - camX, py = me.y * TS - camY;
+  const w = TS * 0.72, h = TS * 1.74;
+  ctx.save();
+  ctx.translate(px, py);
+  /* 다리 */
+  const walk = goDir ? Math.sin(clock * 12) : 0;
+  ctx.fillStyle = '#3C4A8C';
+  ctx.fillRect(-w * 0.42, h * 0.62 + walk * 2, w * 0.36, h * 0.38);
+  ctx.fillRect(w * 0.06, h * 0.62 - walk * 2, w * 0.36, h * 0.38);
+  /* 몸 */
+  ctx.fillStyle = '#4FB6E8';
+  ctx.fillRect(-w * 0.5, h * 0.3, w, h * 0.34);
+  /* 팔 */
+  ctx.fillStyle = '#3FA3D4';
+  ctx.fillRect(me.face > 0 ? w * 0.34 : -w * 0.64, h * 0.32 + walk, w * 0.3, h * 0.3);
+  /* 머리 */
+  ctx.fillStyle = '#FFD9B0';
+  ctx.fillRect(-w * 0.42, 0, w * 0.84, h * 0.3);
+  ctx.fillStyle = '#5A3B22';
+  ctx.fillRect(-w * 0.42, 0, w * 0.84, h * 0.09);
+  ctx.fillStyle = '#2C3560';
+  const ex = me.face > 0 ? w * 0.06 : -w * 0.3;
+  ctx.fillRect(ex, h * 0.14, w * 0.1, h * 0.06);
+  ctx.fillRect(ex + w * 0.18, h * 0.14, w * 0.1, h * 0.06);
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  if (shake > 0.2) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+  /* 하늘 */
+  const sky = lerpCol('#182052', '#9AD0F5', Math.max(0, Math.min(1, (daylight - 0.3) / 0.7)));
+  ctx.fillStyle = sky;
+  ctx.fillRect(-20, -20, W + 40, H + 40);
+
+  /* 해와 달 */
+  const ang = dayT * Math.PI * 2;
+  const sunX = W * 0.5 + Math.cos(ang - Math.PI / 2) * W * 0.42;
+  const sunY = H * 0.42 + Math.sin(ang - Math.PI / 2) * H * 0.42;
+  ctx.font = Math.round(TS * 0.9) + 'px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(daylight > 0.62 ? '☀️' : '🌙', sunX, sunY);
+
+  const x0 = Math.max(0, Math.floor(camX / TS));
+  const x1 = Math.min(WW - 1, Math.ceil((camX + W) / TS));
+  const y0 = Math.max(0, Math.floor(camY / TS));
+  const y1 = Math.min(WH - 1, Math.ceil((camY + H) / TS));
+  scanTorches(x0, x1, y0, y1);
+
+  for (let x = x0; x <= x1; x++) {
+    for (let y = y0; y <= y1; y++) {
+      const k2 = tile(x, y);
+      if (k2 !== 'air') drawTile(k2, x, y);
+    }
+  }
+
+  drawMe();
+
+  /* 어둠 */
+  for (let x = x0; x <= x1; x++) {
+    for (let y = y0; y <= y1; y++) {
+      const a = (1 - lightAt(x, y)) * 0.92;
+      if (a > 0.02) {
+        ctx.fillStyle = 'rgba(8,8,22,' + a.toFixed(3) + ')';
+        ctx.fillRect(x * TS - camX, y * TS - camY, TS + 1, TS + 1);
+      }
+    }
+  }
+
+  /* 조각과 글씨 */
+  bits.forEach(b => {
+    ctx.globalAlpha = Math.max(0, 1 - b.t / b.life);
+    ctx.fillStyle = b.col;
+    ctx.fillRect(b.x - camX - b.r, b.y - camY - b.r, b.r * 2, b.r * 2);
+  });
+  ctx.globalAlpha = 1;
+  pops.forEach(p => {
+    ctx.globalAlpha = Math.max(0, 1 - p.t / 1.1);
+    ctx.font = '800 13px "Apple SD Gothic Neo", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255,255,255,.9)';
+    ctx.strokeText(p.txt, p.x - camX, p.y - camY - p.t * 26);
+    ctx.fillStyle = p.col;
+    ctx.fillText(p.txt, p.x - camX, p.y - camY - p.t * 26);
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+
+  /* 지금 손에 든 것 */
+  const cur = picked && (B[picked] || TOOLS[picked]);
+  ctx.fillStyle = 'rgba(255,255,255,.82)';
+  ctx.fillRect(8, 8, 116, 24);
+  ctx.font = '800 12px "Apple SD Gothic Neo", sans-serif';
+  ctx.fillStyle = '#2C3560';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  const lvTxt = ['맨손', '나무 곡괭이', '돌 곡괭이', '철 곡괭이'][toolLevel()];
+  ctx.fillText('⛏️ ' + lvTxt, 14, 20);
+  if (cur) {
+    ctx.fillStyle = 'rgba(255,255,255,.82)';
+    ctx.fillRect(W - 116, 8, 108, 24);
+    ctx.fillStyle = '#2C3560';
+    ctx.fillText('손: ' + cur.emo + ' ' + cur.name, W - 110, 20);
+  }
+}
+
+/* ---------- 흐르는 시간 ---------- */
+
+function tick(ts) {
+  const dt = Math.min(0.05, (ts - last) / 1000);
+  last = ts;
+  clock += dt;
+  shake = Math.max(0, shake - dt * 30);
+
+  if (started) {
+    dayT = (dayT + dt / 150) % 1;
+    const s = Math.sin(dayT * Math.PI * 2);
+    daylight = 0.3 + 0.7 * Math.max(0, Math.min(1, (s + 0.35) * 1.7));
+    physics(dt);
+  }
+
+  camX = Math.max(0, Math.min(WW * TS - W, me.x * TS - W / 2));
+  camY = Math.max(0, Math.min(WH * TS - H, (me.y + 0.9) * TS - H / 2));
+
+  bits.forEach(b => { b.t += dt; b.vy += 420 * dt; b.x += b.vx * dt; b.y += b.vy * dt; });
+  bits = bits.filter(b => b.t < b.life);
+  pops.forEach(p => p.t += dt);
+  pops = pops.filter(p => p.t < 1.1);
+
+  draw();
+  raf = requestAnimationFrame(tick);
+}
+
+/* ---------- 손가락 ---------- */
+
+let digging = false, digCool = 0;
+
+function tileAt(e) {
+  const rect = cv.getBoundingClientRect();
+  const px = (e.clientX - rect.left) * (W / rect.width) + camX;
+  const py = (e.clientY - rect.top) * (H / rect.height) + camY;
+  return { x: Math.floor(px / TS), y: Math.floor(py / TS) };
+}
+
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (!started) return;
+  ensureAudio();
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  digging = true;
+  digCool = 0;
+  const t = tileAt(e);
+  useAt(t.x, t.y);
+});
+cv.addEventListener('pointermove', e => {
+  if (!digging || !started) return;
+  e.preventDefault();
+  if (performance.now() < digCool) return;
+  digCool = performance.now() + 110;
+  const t = tileAt(e);
+  useAt(t.x, t.y);
+});
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => {
+  cv.addEventListener(ev, () => { digging = false; });
+  window.addEventListener(ev, () => { digging = false; });
+});
+
+/* 움직이는 단추 */
+function release() { goDir = 0; }
+padEl.addEventListener('pointerdown', e => {
+  const b = e.target.closest('button[data-go]');
+  if (!b || !started) return;
+  e.preventDefault();
+  ensureAudio();
+  try { b.setPointerCapture(e.pointerId); } catch (err) {}
+  if (b.dataset.go === 'jump') wantJump = true;
+  else goDir = b.dataset.go === 'left' ? -1 : 1;
+});
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => {
+  padEl.addEventListener(ev, release);
+  window.addEventListener(ev, release);
+});
+window.addEventListener('blur', release);
+
+bagEl.addEventListener('click', e => {
+  const b = e.target.closest('button[data-item]');
+  if (!b) return;
+  picked = b.dataset.item;
+  drawBag();
+  const info = B[picked] || TOOLS[picked];
+  say(info.emo + ' <b>' + info.name + '</b>을(를) 손에 들었다' + (B[picked] ? ' · 빈 곳을 누르면 놓인다' : ''));
+});
+
+craftList.addEventListener('click', e => {
+  const b = e.target.closest('button[data-rec]');
+  if (!b) return;
+  ensureAudio();
+  make(+b.dataset.rec);
+});
+
+craftBtn.addEventListener('click', () => { ensureAudio(); drawCraft(); craftEl.classList.add('on'); });
+craftClose.addEventListener('click', () => craftEl.classList.remove('on'));
+
+const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', a: 'left', d: 'right', ' ': 'jump', ArrowUp: 'jump', w: 'jump' };
+window.addEventListener('keydown', e => {
+  const k2 = KEYS[e.key];
+  if (!k2 || !started) return;
+  e.preventDefault();
+  if (k2 === 'jump') wantJump = true;
+  else goDir = k2 === 'left' ? -1 : 1;
+});
+window.addEventListener('keyup', e => { if (KEYS[e.key] && KEYS[e.key] !== 'jump') goDir = 0; });
+
+coverBtn.addEventListener('click', () => {
+  ensureAudio();
+  started = true;
+  coverEl.classList.remove('on');
+  say('땅을 눌러 캐고, 가방에서 골라 빈 곳을 누르면 놓인다');
+});
+
+let newArm = false, newTimer = null;
+newBtn.addEventListener('click', () => {
+  ensureAudio();
+  if (!newArm) {
+    newArm = true;
+    newBtn.textContent = '정말? 한 번 더!';
+    say('🔄 지금 만든 세상이 사라진다. 괜찮으면 한 번 더');
+    newTimer = setTimeout(() => { newArm = false; newBtn.textContent = '🔄 새 세상'; }, 3500);
+    return;
+  }
+  clearTimeout(newTimer);
+  newArm = false;
+  newBtn.textContent = '🔄 새 세상';
+  bag = {}; done = {}; placed = 0; picked = null;
+  makeWorld();
+  drawBag(); drawGoals();
+  save();
+  say('🌱 새 세상이 만들어졌다!');
+});
+
+window.addEventListener('resize', fit);
+
+/* ---------- 시작 ---------- */
+
+fit();
+fit();
+if (!load()) makeWorld();
+drawBag();
+drawGoals();
+
+coverMsg.innerHTML = '🧱 재후크래프트<small>땅을 캐서 모으고, 만들고, 다시 놓아 집을 짓자<br>돌을 캐려면 ⛏️ 나무 곡괭이부터!<br>만든 세상은 저절로 저장된다</small>';
+coverBtn.textContent = '시작';
+coverEl.classList.add('on');
+
+last = performance.now();
+raf = requestAnimationFrame(tick);
+</script>
+</body>
+</html>

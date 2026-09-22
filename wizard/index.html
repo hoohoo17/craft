@@ -81,7 +81,7 @@
     background: #EAF0FF;
     border-radius: 16px;
     box-shadow: var(--shadow);
-    touch-action: none;
+    touch-action: pan-y;   /* 위아래로 쓸면 화면이 내려간다 */
   }
 
   #cover {
@@ -680,10 +680,19 @@ function paint() {
 
 /* ---------- 판 크기 ---------- */
 
+/* 화면 세로가 짧으면 판을 줄여서 한 화면에 다 들어오게 한다.
+   판 위에서는 손가락으로 쓸어도 화면이 안 내려가기 때문이다 */
+function availH(minH, maxH) {
+  const pageH = document.documentElement.scrollHeight;
+  const cvH = cv.getBoundingClientRect().height || 0;
+  const room = (window.innerHeight || 800) - (pageH - cvH) - 4;
+  return Math.round(Math.max(minH, Math.min(maxH, room)));
+}
+
 function fit() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   W = wrapEl.clientWidth || 396;
-  H = Math.round(W * 0.62);
+  H = availH(190, Math.round(W * 0.62));
   cv.width = Math.round(W * dpr);
   cv.height = Math.round(H * dpr);
   cv.style.height = H + 'px';
@@ -983,6 +992,7 @@ best = +get('best') || 1;
 known = new Set((get('dex') || '').split(',').filter(Boolean));
 
 drawRunes();
+fit();
 fit();
 newRun();
 paint();
