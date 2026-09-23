@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>한국인만 알아듣는 책</title>
+<style>
+  :root{
+    --paper:#FBF4E4; --ink:#3B3126;
+    --accent:#C4622D;
+    --quote:#7A4A24;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',serif;
+    background:#E8D9BC;
+    color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:16px 12px;
+    user-select:none;
+  }
+  .book{
+    position:relative;
+    width:100%; max-width:520px;
+    height:min(76dvh, 660px);
+    perspective:1600px;
+  }
+  .page{
+    position:absolute; inset:0;
+    background:var(--paper);
+    border-radius:8px;
+    box-shadow:0 10px 40px rgba(59,49,38,.28);
+    padding:38px 26px;
+    background-image:repeating-linear-gradient(transparent, transparent 35px, rgba(59,49,38,.05) 36px);
+    overflow-y:auto;
+    transform-origin:left center;
+    transition:transform .45s ease, opacity .45s ease;
+    display:flex; flex-direction:column;
+    cursor:pointer;
+  }
+  .pg-inner{margin:auto 0;}
+  .page.flip-out{transform:rotateY(-80deg); opacity:0;}
+  .page.flip-in-prep{transform:rotateY(60deg); opacity:0; transition:none;}
+
+  h1{
+    text-align:center;
+    font-size:2rem;
+    line-height:1.5;
+    letter-spacing:.02em;
+    margin-bottom:10px;
+    word-break:keep-all;
+  }
+  .author{
+    text-align:center;
+    font-size:1.05rem;
+    font-weight:800;
+    color:var(--quote);
+    letter-spacing:.15em;
+    margin-bottom:6px;
+  }
+  .deco{
+    text-align:center;
+    font-size:1.1rem;
+    letter-spacing:.6em;
+    color:var(--accent);
+    margin:14px 0;
+  }
+  .hintline{
+    text-align:center;
+    font-size:.95rem;
+    color:var(--quote);
+    margin-top:26px;
+    animation:breath 2s infinite;
+  }
+  @keyframes breath{50%{opacity:.4}}
+  p{
+    font-size:1.1rem;
+    line-height:1.95;
+    margin-bottom:14px;
+    word-break:keep-all;
+  }
+  p.quote{
+    color:var(--quote);
+    font-weight:700;
+    padding-left:14px;
+    border-left:4px solid var(--accent);
+  }
+  p.turn{
+    text-align:center;
+    font-weight:900;
+    font-size:1.45rem;
+    color:var(--accent);
+    letter-spacing:.06em;
+    margin:12px 0;
+    line-height:1.6;
+  }
+  p.list{
+    text-align:center;
+    font-size:1.35rem;
+    font-weight:800;
+    line-height:1.9;
+    margin-bottom:10px;
+    letter-spacing:.04em;
+  }
+  .label,
+  .chapter{
+    text-align:center;
+    font-size:.85rem; font-weight:900;
+    letter-spacing:.3em;
+    color:var(--accent);
+    margin-bottom:16px;
+  }
+  .goal{
+    text-align:center;
+    font-weight:900;
+    font-size:2.1rem;
+    color:var(--accent);
+    margin:22px 0;
+    letter-spacing:.06em;
+  }
+  .ending{
+    text-align:center;
+    font-weight:900;
+    font-size:1.5rem;
+    letter-spacing:.5em;
+    margin-top:30px;
+  }
+  .note{
+    text-align:center;
+    font-size:.92rem;
+    color:var(--quote);
+    margin-top:22px;
+    opacity:.85;
+  }
+
+  .nav{
+    display:flex; align-items:center; gap:10px;
+    margin-top:14px;
+    flex-wrap:wrap; justify-content:center;
+  }
+  .nav button{
+    font-family:inherit;
+    font-size:1.05rem; font-weight:900;
+    background:var(--paper); color:var(--ink);
+    border:none; border-radius:12px;
+    padding:10px 18px;
+    box-shadow:0 3px 10px rgba(59,49,38,.22);
+    cursor:pointer;
+  }
+  .nav button:disabled{opacity:.35; cursor:default;}
+  .nav button:not(:disabled):active{transform:translateY(2px);}
+  #answer-btn.on{background:var(--accent); color:#fff;}
+  .page-num{
+    font-weight:900; font-size:1rem;
+    color:var(--quote);
+    min-width:62px; text-align:center;
+  }
+  @media (max-width:430px){
+    .nav{gap:6px;}
+    .nav button{padding:9px 11px; font-size:.95rem;}
+    .page-num{min-width:50px; font-size:.9rem;}
+  }
+  .toc-bg{
+    position:fixed; inset:0;
+    background:rgba(59,49,38,.5);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:20;
+    padding:20px;
+  }
+  .toc-bg.show{display:flex;}
+  .toc{
+    background:var(--paper);
+    border-radius:16px;
+    padding:24px 20px;
+    width:100%; max-width:380px;
+    max-height:70dvh;
+    overflow-y:auto;
+    box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .toc h2{text-align:center; margin-bottom:14px; font-size:1.2rem;}
+  .toc-item{
+    display:flex; justify-content:space-between; gap:8px;
+    width:100%;
+    font-family:inherit; font-size:1.05rem; font-weight:800;
+    background:none; border:none;
+    border-bottom:1px dashed rgba(59,49,38,.2);
+    color:var(--ink);
+    padding:11px 6px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .toc-item:active{background:rgba(196,98,45,.12);}
+  .toc-item .pg{color:var(--accent); font-size:.9rem;}
+  .toc-close{
+    margin-top:14px; width:100%;
+    font-family:inherit; font-size:1rem; font-weight:800;
+    background:rgba(0,0,0,.07); color:var(--ink);
+    border:none; border-radius:10px;
+    padding:11px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="book">
+  <div class="page" id="page" onclick="tapPage(event)"></div>
+</div>
+<div class="nav">
+  <button id="prev-btn" onclick="go(-1)">◀</button>
+  <div class="page-num" id="page-num"></div>
+  <button onclick="openToc()">📑 차례</button>
+  <button id="answer-btn" onclick="toggleAnswer()">🔍 정답</button>
+  <button id="next-btn" onclick="go(1)">▶</button>
+</div>
+
+<div class="toc-bg" id="toc-bg" onclick="if(event.target===this) closeToc()">
+  <div class="toc">
+    <h2>📑 차례</h2>
+    <div id="toc-list"></div>
+    <button class="toc-close" onclick="closeToc()">닫기</button>
+  </div>
+</div>
+
+<script>
+/* 글은 그냥 한국말로 적어 둔다. 화면에 보여 줄 때 글자를 망가뜨린다.
+   <span class="lit">...</span> 안에 든 글자는 망가뜨리지 않는다. */
+const PAGES = [
+  `<h1>한국인만 알아듣는 책</h1>
+   <div class="author"><span class="lit">글 곽재후</span></div>
+   <div class="deco">✦ ✦ ✦</div>
+   <div class="hintline"><span class="lit">화면을 탭해서 책장을 넘겨 보세요 👉</span></div>`,
+
+  `<p>이 책은 아주 이상한 책이다.</p>
+   <p>글자가 전부 망가져 있다.</p>
+   <p>그런데 한국 사람은 읽을 수 있다.</p>
+   <p>정말이다. 한 장만 더 넘겨 보자.</p>`,
+
+  `<div class="chapter">1장 이상한 책</div>
+   <p>어느 날 길에서 책을 한 권 주웠다.</p>
+   <p>표지에 이상한 글자가 잔뜩 적혀 있었다.</p>
+   <p>버리려다가 한 번 읽어 봤다.</p>
+   <p class="turn">어? 읽히네?</p>`,
+
+  `<p>친구를 불러서 보여 줬다.</p>
+   <p>친구도 술술 읽었다.</p>
+   <p class="quote">"이거 왜 읽히지?"</p>
+   <p>둘 다 한국 사람이었다.</p>`,
+
+  `<div class="chapter">2장 외국인 친구</div>
+   <p>외국에서 온 친구에게도 보여 줬다.</p>
+   <p>친구는 한참 들여다보더니 물었다.</p>
+   <p class="quote">"이거...... 한국어 맞아?"</p>
+   <p>맞다고 했더니 더 헷갈려 했다.</p>`,
+
+  `<p>번역기에도 넣어 봤다.</p>
+   <p>번역기가 한참 생각하더니 대답했다.</p>
+   <p class="quote">"......"</p>
+   <p>번역기도 포기했다.</p>`,
+
+  `<div class="chapter">3장 비밀</div>
+   <p>비밀은 아주 간단하다.</p>
+   <p>글자마다 받침을 잔뜩 붙였을 뿐이다.</p>
+   <p>소리는 비슷한데 모양은 완전히 달라진다.</p>`,
+
+  `<p class="label">이렇게</p>
+   <p class="list"><span class="lit">사과 → 삵괆</span></p>
+   <p class="list"><span class="lit">학교 → 핛굟</span></p>
+   <p class="list"><span class="lit">친구 → 칞굵</span></p>
+   <p class="note"><span class="lit">소리 내어 읽어 보면 안다.</span></p>`,
+
+  `<p>한국 사람은 받침을 슬쩍 빼고 읽는 법을</p>
+   <p>배운 적도 없는데 저절로 안다.</p>
+   <p>그래서 이 책이 읽히는 것이다.</p>
+   <p>참 신기한 일이다.</p>`,
+
+  `<div class="chapter">4장 시험</div>
+   <p>진짜 한국 사람인지 시험해 보자.</p>
+   <p>아래 글자를 소리 내어 읽어 보라.</p>
+   <p class="goal"><span class="lit">앉녕핬셌욣</span></p>`,
+
+  `<p>읽었는가?</p>
+   <p class="turn">그렇다면 당신은<br>한국 사람이다.</p>
+   <p>못 읽었다면 한국어를 더 배우면 된다.</p>
+   <p>아니면 옆에 있는 한국 사람을 부르면 된다.</p>`,
+
+  `<div class="chapter">5장 주의</div>
+   <p>이 책을 소리 내어 읽으면 혀가 꼬인다.</p>
+   <p>그러니 천천히 읽어야 한다.</p>
+   <p>빨리 읽으면 이렇게 된다.</p>`,
+
+  `<p class="turn">간장 공장 공장장은<br>강 공장장이고</p>
+   <p class="turn">된장 공장 공장장은<br>공 공장장이다</p>
+   <p class="note"><span class="lit">틀려도 괜찮다. 아무도 못 읽는다.</span></p>`,
+
+  `<div class="chapter">6장 마지막</div>
+   <p>여기까지 왔다면 이 책을 다 읽은 것이다.</p>
+   <p>세상에서 이 책을 읽을 수 있는 사람은</p>
+   <p>그렇게 많지 않다.</p>`,
+
+  `<p>친구에게 보여 주자.</p>
+   <p>읽으면 한국 사람이고,</p>
+   <p>못 읽으면...... 그것도 괜찮다.</p>
+   <div class="ending">끝</div>
+   <p class="note"><span class="lit">🔍 정답을 누르면 원래 글자가 나온다.</span></p>`,
+];
+
+/* ---------- 글자 망가뜨리기 ---------- */
+const BASE = 0xAC00, JONG = 28;
+/* 받침을 이걸로 바꾼다. 앞 글자가 받침 번호, 뒤가 바꿀 후보들. */
+const SWAP = {
+  0:  [9, 10, 11, 15, 5, 6, 3, 18],   // 받침 없음 -> ㄺㄻㄼㅀㄵㄶㄳㅄ
+  1:  [3, 9],                          // ㄱ -> ㄳㄺ
+  4:  [5, 6, 8, 16],                   // ㄴ -> ㄵㄶㄹㅁ
+  8:  [9, 10, 11, 12, 15],             // ㄹ -> ㄺㄻㄼㄽㅀ
+  16: [10, 18],                        // ㅁ -> ㄻㅄ
+  17: [18],                            // ㅂ -> ㅄ
+  19: [3, 20],                         // ㅅ -> ㄳㅆ
+  20: [3],                             // ㅆ -> ㄳ
+  21: [9, 10, 6],                      // ㅇ -> ㄺㄻㄶ
+};
+
+function rnd(n){
+  const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function garbleText(s, seed){
+  let out = '';
+  for(let i = 0; i < s.length; i++){
+    const code = s.charCodeAt(i);
+    const off = code - BASE;
+    if(off < 0 || off >= 11172){ out += s[i]; continue; }   // 한글이 아니면 그대로
+    const jong = off % JONG;
+    const cand = SWAP[jong];
+    const r = rnd(seed * 7919 + i * 131 + jong);
+    if(!cand || r > 0.78){ out += s[i]; continue; }         // 가끔은 그냥 둔다
+    const pick = cand[Math.floor(rnd(seed * 104729 + i * 31 + 5) * cand.length) % cand.length];
+    out += String.fromCharCode(code - jong + pick);
+  }
+  return out;
+}
+
+function applyGarble(root, seed){
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let n;
+  while(n = walker.nextNode()) nodes.push(n);
+  nodes.forEach((node, k) => {
+    if(node.parentElement && node.parentElement.closest('.lit')) return;
+    node.data = garbleText(node.data, seed * 1000 + k);
+  });
+}
+
+/* ---------- 책장 넘기기 ---------- */
+let cur = 0;
+let answer = false;     // 정답(원래 글자) 보기
+let animating = false;
+const pageEl = document.getElementById('page');
+const POS_KEY = 'korean-book-pos';
+const ANS_KEY = 'korean-book-answer';
+try{
+  const saved = parseInt(localStorage.getItem(POS_KEY));
+  if(!isNaN(saved) && saved >= 0 && saved < PAGES.length) cur = saved;
+  answer = localStorage.getItem(ANS_KEY) === '1';
+}catch(e){}
+
+function renderPage(){
+  pageEl.innerHTML = '<div class="pg-inner">' + PAGES[cur] + '</div>';
+  if(!answer) applyGarble(pageEl, cur + 1);
+  pageEl.scrollTop = 0;
+  try{ localStorage.setItem(POS_KEY, cur); }catch(e){}
+  document.getElementById('page-num').textContent = (cur+1) + ' / ' + PAGES.length;
+  document.getElementById('prev-btn').disabled = cur === 0;
+  document.getElementById('next-btn').disabled = cur === PAGES.length-1;
+  const ab = document.getElementById('answer-btn');
+  ab.textContent = answer ? '🙈 되돌리기' : '🔍 정답';
+  ab.classList.toggle('on', answer);
+}
+
+function toggleAnswer(){
+  answer = !answer;
+  try{ localStorage.setItem(ANS_KEY, answer ? '1' : '0'); }catch(e){}
+  renderPage();
+}
+
+function go(dir){
+  if(animating) return;
+  const next = cur + dir;
+  if(next < 0 || next >= PAGES.length) return;
+  animating = true;
+  pageEl.classList.add('flip-out');
+  setTimeout(()=>{
+    cur = next;
+    renderPage();
+    pageEl.classList.remove('flip-out');
+    pageEl.classList.add('flip-in-prep');
+    void pageEl.offsetWidth;
+    pageEl.classList.remove('flip-in-prep');
+    setTimeout(()=>{ animating = false; }, 450);
+  }, 420);
+}
+
+function tapPage(e){
+  const rect = pageEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  if(x < 0.3) go(-1);
+  else go(1);
+}
+
+window.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if(e.key === 'ArrowLeft') go(-1);
+});
+
+function openToc(){
+  const list = document.getElementById('toc-list');
+  let items = '<button class="toc-item" onclick="jumpTo(0)"><span>📕 표지</span><span class="pg">1쪽</span></button>';
+  PAGES.forEach((p, i)=>{
+    const m = p.match(/class="chapter">(.*?)</);
+    if(m){
+      items += `<button class="toc-item" onclick="jumpTo(${i})"><span>${m[1]}</span><span class="pg">${i+1}쪽</span></button>`;
+    }
+  });
+  list.innerHTML = items;
+  document.getElementById('toc-bg').classList.add('show');
+}
+function closeToc(){
+  document.getElementById('toc-bg').classList.remove('show');
+}
+function jumpTo(i){
+  closeToc();
+  cur = i;
+  renderPage();
+}
+
+renderPage();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
