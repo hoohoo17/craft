@@ -4,6 +4,36 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key',
 };
 
+// 욕설·비속어 거르기.
+// 낱말은 여기 한 곳에만 있으니 고칠 때도 여기만 고치면 된다.
+// '시 발', '시*발', '시-발'처럼 띄어 쓰거나 기호로 갈라 써도 걸리도록,
+// 검사하기 전에 글자·숫자만 남기고 나머지는 모두 지운다.
+//
+// 평범한 말에도 들어가는 글자(보지/자지/꺼져 같은 것)는 일부러 넣지 않았다.
+// '보지 마', '자지 않고', '불이 꺼져'까지 막히면 오히려 불편하기 때문이다.
+const BAD_WORDS = [
+  '시발', '씨발', '시팔', '씨팔', '씨바', '쓰발', '싀발', 'ㅅㅂ',
+  '병신', '븅신', '빙신', 'ㅂㅅ', 'ㅄ',
+  '지랄', 'ㅈㄹ', '존나', '졸라', '좆', '존만', 'ㅈㄴ',
+  '개새', '새끼', '쌔끼', '색끼', '개색', '개놈', '개년',
+  '미친놈', '미친년', '또라이', '돌아이',
+  '니미', '애미', '애비', '느금',
+  '씹새', '씹창', '씹할', '엠창', '창녀', '창년',
+  '짱깨', '쪽바리', '똥꼬',
+  'fuck', 'fuk', 'fck', 'shit', 'bitch', 'asshole', 'bastard',
+  'dick', 'cunt', 'pussy', 'slut', 'whore', 'nigger', 'retard',
+];
+
+function flatten(text) {
+  return String(text).toLowerCase().replace(/[^0-9a-z가-힣ㄱ-ㅎㅏ-ㅣ]/g, '');
+}
+
+// 걸린 낱말을 돌려준다. 걸린 게 없으면 null.
+function findBadWord(...texts) {
+  const flat = flatten(texts.join(' '));
+  return BAD_WORDS.find(w => flat.includes(w)) || null;
+}
+
 function isAdmin(request, env) {
   return request.headers.get('X-Admin-Key') === env.ADMIN_KEY;
 }
@@ -93,6 +123,11 @@ export default {
       const { name, message } = await request.json();
       if (!name || !message) {
         return new Response(JSON.stringify({ error: '이름과 메시지를 입력하세요' }), { status: 400, headers: json() });
+      }
+
+      // 욕이 있으면 저장도 기록도 하지 않고 여기서 돌려보낸다
+      if (findBadWord(name, message)) {
+        return new Response(JSON.stringify({ error: '고운 말로 써 주세요 🙂' }), { status: 400, headers: json() });
       }
 
       const comments = (await env.COMMENTS.get(key, 'json')) || [];
