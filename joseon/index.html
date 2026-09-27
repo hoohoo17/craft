@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>평민에서 왕까지</title>
+<style>
+  :root{
+    --paper:#F7EEDB; --ink:#3A2E22; --dim:#8A7860;
+    --red:#C1362F; --blue:#2E5E86; --gold:#D8A63C; --green:#41794C;
+    --line:rgba(58,46,34,.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:#E3D2B2;
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(255,255,255,.55), transparent 45%),
+      radial-gradient(circle at 85% 92%, rgba(193,54,47,.10), transparent 45%);
+    color:var(--ink);
+    user-select:none;
+  }
+  .wrap{
+    height:100dvh;
+    max-width:520px; margin:0 auto;
+    padding:10px 12px 12px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+
+  /* ---------- 위쪽: 지금 내 신분 ---------- */
+  .top{
+    background:var(--paper);
+    border-radius:14px;
+    padding:8px 12px;
+    box-shadow:0 3px 10px rgba(58,46,34,.16);
+    display:flex; align-items:center; gap:10px;
+  }
+  .badge{
+    width:44px; height:44px; flex:none;
+    border-radius:50%;
+    background:#fff; border:2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center;
+    font-size:24px;
+    transition:transform .3s;
+  }
+  .badge.pop{transform:scale(1.35) rotate(-12deg);}
+  .who{flex:1; min-width:0;}
+  .who b{font-size:clamp(17px,5vw,21px); letter-spacing:.02em;}
+  .who small{display:block; font-size:12px; color:var(--dim); margin-top:1px;}
+  .restart{
+    flex:none;
+    border:none; background:transparent;
+    font-size:18px; color:var(--dim);
+    padding:6px; cursor:pointer;
+  }
+
+  /* ---------- 가진 것 ---------- */
+  .stats{display:flex; gap:6px;}
+  .chip{
+    flex:1;
+    background:var(--paper);
+    border-radius:12px;
+    padding:6px 4px;
+    text-align:center;
+    box-shadow:0 2px 6px rgba(58,46,34,.12);
+    position:relative;
+    transition:transform .18s;
+  }
+  .chip.pop{transform:translateY(-4px) scale(1.06);}
+  .chip .ic{font-size:15px;}
+  .chip .num{display:block; font-size:clamp(15px,4.4vw,19px); font-weight:800; line-height:1.2;}
+  .chip .nm{display:block; font-size:10.5px; color:var(--dim);}
+  .fly{
+    position:absolute; left:0; right:0; top:-2px;
+    font-size:14px; font-weight:800;
+    pointer-events:none;
+    animation:fly .9s ease-out forwards;
+  }
+  .fly.up{color:var(--green);}
+  .fly.down{color:var(--red);}
+  @keyframes fly{
+    from{opacity:0; transform:translateY(6px) scale(.8);}
+    25%{opacity:1; transform:translateY(-6px) scale(1.1);}
+    to{opacity:0; transform:translateY(-26px) scale(1);}
+  }
+
+  /* ---------- 가운데: 풍경과 말 ---------- */
+  .scene{
+    flex:1; min-height:0;
+    background:linear-gradient(#DCEBF3 0%, #CFE6F0 38%, #E3D3AE 38%, #EDE1C4 100%);
+    border-radius:16px;
+    box-shadow:inset 0 2px 10px rgba(58,46,34,.14);
+    position:relative;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:8px 12px;
+    overflow:hidden;
+  }
+  .sun{position:absolute; top:8px; right:14px; font-size:20px; opacity:.85;}
+  .place{
+    font-size:clamp(28px,10vw,46px);
+    letter-spacing:.06em;
+    line-height:1.1;
+    filter:drop-shadow(0 3px 4px rgba(58,46,34,.25));
+    transition:transform .35s;
+  }
+  .place.hop{transform:translateY(-8px);}
+  .hero{
+    font-size:clamp(34px,12vw,54px);
+    line-height:1;
+    margin-top:2px;
+    filter:drop-shadow(0 4px 5px rgba(58,46,34,.3));
+  }
+  .hero.work{animation:work .42s ease-in-out;}
+  @keyframes work{
+    30%{transform:translateY(-10px) rotate(-10deg);}
+    60%{transform:translateY(0) rotate(8deg);}
+  }
+  .say{
+    margin-top:8px;
+    max-width:92%;
+    background:#fff;
+    border-radius:4px 14px 14px 14px;
+    padding:8px 12px;
+    font-size:clamp(13px,3.7vw,15px);
+    line-height:1.5;
+    text-align:center;
+    word-break:keep-all;
+    box-shadow:0 3px 9px rgba(58,46,34,.16);
+    animation:sayIn .3s ease-out;
+  }
+  @keyframes sayIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  /* ---------- 다음 신분까지 ---------- */
+  .goal{
+    background:var(--paper);
+    border-radius:14px;
+    padding:8px 12px 9px;
+    box-shadow:0 3px 10px rgba(58,46,34,.14);
+  }
+  .goal h2{
+    font-size:12.5px; color:var(--dim); font-weight:700;
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:5px;
+  }
+  .goal h2 span{color:var(--ink); font-size:13.5px;}
+  .bars{display:flex; flex-direction:column; gap:4px;}
+  .bar{
+    display:flex; align-items:center; gap:6px;
+    font-size:11px; color:var(--dim);
+  }
+  .bar .track{
+    flex:1; height:9px;
+    background:#E6D8BD; border-radius:9px; overflow:hidden;
+  }
+  .bar .track i{
+    display:block; height:100%;
+    border-radius:9px;
+    background:linear-gradient(90deg,#E8B94C,#C1362F);
+    transition:width .45s cubic-bezier(.2,.9,.3,1);
+  }
+  .bar.done .track i{background:linear-gradient(90deg,#6BBF7B,#41794C);}
+  .bar .n{width:76px; text-align:right; font-variant-numeric:tabular-nums;}
+  .up-btn{
+    width:100%; margin-top:7px;
+    border:none; border-radius:11px;
+    padding:10px;
+    font-family:inherit; font-size:15px; font-weight:800;
+    background:linear-gradient(#E8B94C,#D8A63C);
+    color:#4A3410;
+    box-shadow:0 3px 0 #A97F22;
+    cursor:pointer;
+    animation:glow 1.1s ease-in-out infinite alternate;
+  }
+  .up-btn:active{transform:translateY(2px); box-shadow:0 1px 0 #A97F22;}
+  @keyframes glow{from{filter:brightness(1);} to{filter:brightness(1.18);}}
+
+  /* ---------- 아래: 오늘 할 일 카드 ---------- */
+  .hand{display:flex; gap:7px;}
+  .card{
+    position:relative;
+    flex:1; min-width:0;
+    background:var(--paper);
+    border:2px solid transparent;
+    border-radius:14px;
+    padding:9px 4px 8px;
+    font-family:inherit; color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    box-shadow:0 3px 0 rgba(58,46,34,.18);
+    cursor:pointer;
+    transition:transform .12s, box-shadow .12s;
+    animation:dealIn .28s ease-out backwards;
+  }
+  .card:nth-child(2){animation-delay:.05s;}
+  .card:nth-child(3){animation-delay:.1s;}
+  @keyframes dealIn{from{opacity:0; transform:translateY(14px) rotate(4deg);} to{opacity:1; transform:none;}}
+  .card:active{transform:translateY(3px); box-shadow:0 0 0 rgba(58,46,34,.18);}
+  .card .ci{font-size:clamp(20px,6.5vw,26px);}
+  .card .cn{font-size:clamp(11px,3.2vw,13px); font-weight:700; text-align:center; word-break:keep-all; line-height:1.25;}
+  .card .cg{font-size:11px; font-weight:800; display:flex; gap:5px; flex-wrap:wrap; justify-content:center;}
+  .card .cg .plus{color:var(--green);}
+  .card .cg .minus{color:var(--red);}
+  .card.poor{opacity:.42;}
+
+  /* ---------- 사건 · 시험 · 즉위 ---------- */
+  .veil{
+    position:fixed; inset:0;
+    background:rgba(40,30,18,.55);
+    display:flex; align-items:center; justify-content:center;
+    padding:18px;
+    z-index:9;
+    animation:fade .2s;
+  }
+  @keyframes fade{from{opacity:0;} to{opacity:1;}}
+  .sheet{
+    width:100%; max-width:400px;
+    max-height:88dvh; overflow-y:auto;
+    background:var(--paper);
+    border-radius:18px;
+    padding:20px 18px 18px;
+    text-align:center;
+    box-shadow:0 14px 40px rgba(30,20,10,.4);
+    animation:rise .26s cubic-bezier(.2,.9,.3,1);
+  }
+  @keyframes rise{from{opacity:0; transform:translateY(22px) scale(.95);} to{opacity:1; transform:none;}}
+  .sheet .big{font-size:48px; line-height:1.1;}
+  .sheet h3{font-size:19px; margin:8px 0 6px; word-break:keep-all;}
+  .sheet p{font-size:14px; line-height:1.6; color:#5B4B39; word-break:keep-all;}
+  .sheet .kicker{font-size:12px; color:var(--red); font-weight:800; letter-spacing:.1em;}
+  .opts{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
+  .opt{
+    border:2px solid var(--line); border-radius:12px;
+    background:#fff; color:var(--ink);
+    font-family:inherit; font-size:14.5px; font-weight:700;
+    padding:11px 10px;
+    cursor:pointer;
+    transition:transform .1s, background .15s;
+    word-break:keep-all;
+  }
+  .opt:active{transform:scale(.97);}
+  .opt.right{background:#DFF3E1; border-color:var(--green);}
+  .opt.wrong{background:#F6DCDA; border-color:var(--red); opacity:.55;}
+  .opt.wrong.shake{animation:shake .3s;}
+  @keyframes shake{25%{transform:translateX(-6px);} 75%{transform:translateX(6px);}}
+  .ok{
+    margin-top:14px; width:100%;
+    border:none; border-radius:12px;
+    padding:12px;
+    font-family:inherit; font-size:15.5px; font-weight:800;
+    background:linear-gradient(#E8B94C,#D8A63C); color:#4A3410;
+    box-shadow:0 3px 0 #A97F22;
+    cursor:pointer;
+  }
+  .ok:active{transform:translateY(2px); box-shadow:0 1px 0 #A97F22;}
+  .gift{font-size:13px; font-weight:800; color:var(--green); margin-top:8px;}
+  .note{font-size:11.5px; color:var(--dim); margin-top:12px; line-height:1.5;}
+  .deeds{margin-top:10px; text-align:left;}
+  .deed{
+    background:#fff;
+    border-radius:9px;
+    padding:7px 10px;
+    margin-bottom:5px;
+    font-size:13px;
+    line-height:1.4;
+    word-break:keep-all;
+    box-shadow:0 1px 4px rgba(58,46,34,.12);
+  }
+  .dots{margin-top:10px; font-size:13px; letter-spacing:.3em;}
+
+  /* 승급할 때 뿌리는 색종이 */
+  .confetti{
+    position:fixed; top:-16px;
+    width:9px; height:14px;
+    z-index:20; pointer-events:none;
+    animation:fall linear forwards;
+  }
+  @keyframes fall{
+    to{transform:translateY(105dvh) rotate(720deg);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01ms !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="badge" id="badge">👨‍🌾</div>
+    <div class="who">
+      <b id="rankName">평민</b>
+      <small id="ageLine">15살 · 첫해</small>
+    </div>
+    <button class="restart" id="restart" type="button" title="처음부터">↺</button>
+  </div>
+
+  <div class="stats">
+    <div class="chip" id="chipMoney"><span class="ic">💰</span><span class="num" id="numMoney">0</span><span class="nm">엽전</span></div>
+    <div class="chip" id="chipStudy"><span class="ic">📚</span><span class="num" id="numStudy">0</span><span class="nm">학문</span></div>
+    <div class="chip" id="chipHeart"><span class="ic">❤️</span><span class="num" id="numHeart">0</span><span class="nm">인망</span></div>
+  </div>
+
+  <div class="scene">
+    <span class="sun" id="sun">☀️</span>
+    <div class="place" id="place">🛖 🌾 🌾</div>
+    <div class="hero" id="hero">👨‍🌾</div>
+    <div class="say" id="say">해 뜨면 밭에 나가는 평민. 언젠가 높은 사람이 되고 싶다!</div>
+  </div>
+
+  <div class="goal">
+    <h2><span id="goalLabel">다음 신분까지</span> <span id="nextName">🧑‍💼 중인</span></h2>
+    <div class="bars" id="bars"></div>
+    <button class="up-btn" id="upBtn" type="button" hidden>🎉 신분 올리기!</button>
+  </div>
+
+  <div class="hand" id="hand"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+
+/* ---------- 소리 ---------- */
+let ac = null;
+function ensureAudio(){
+  if(!ac){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(AC) ac = new AC();
+  }
+  if(ac && ac.state === 'suspended') ac.resume();
+}
+function tone(freq, dur, type, vol){
+  if(!ac) return;
+  const at = ac.currentTime;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(at); o.stop(at + dur + 0.05);
+}
+function melody(list, gap, dur, vol){
+  list.forEach((f,i) => setTimeout(() => tone(f, dur, 'triangle', vol), i*gap));
+}
+const sfx = {
+  tap:  () => tone(620, .06, 'triangle', .07),
+  gain: () => melody([700, 980], 70, .09, .08),
+  lose: () => tone(200, .12, 'sine', .06),
+  right:() => melody([784, 1046], 90, .14, .10),
+  wrong:() => tone(170, .16, 'square', .06),
+  up:   () => melody([523, 659, 784, 1046], 110, .22, .11),
+  king: () => melody([523, 659, 784, 1046, 1318, 1046, 1318], 150, .3, .12)
+};
+
+/* ---------- 신분 사다리 ----------
+   unit 은 그 신분에서 한 번에 오가는 값의 크기다.
+   사건의 보상을 unit 으로 적어 두면 신분이 올라가도 알맞게 커진다. */
+const RANKS = [
+  {
+    name:'평민', ico:'👨‍🌾', place:'🛖 🌾 🌾', unit:10,
+    say:'해 뜨면 밭에 나가는 평민. 언젠가 높은 사람이 되고 싶다!',
+    need:{money:30},
+    cards:[
+      {ico:'🌾', name:'밭 갈기',    gain:{money:10},           line:'하루 종일 밭을 갈아 엽전을 벌었다.'},
+      {ico:'🪵', name:'나무하기',   gain:{money:8, heart:2},   line:'나무를 해다 팔고, 이웃집에도 한 짐 나눠 줬다.'},
+      {ico:'📖', name:'서당 기웃',  gain:{study:6},            line:'담 너머로 글 읽는 소리를 몰래 따라 했다.'},
+      {ico:'🤝', name:'이웃 돕기',  gain:{heart:8},            line:'아픈 이웃의 밭을 대신 매 주었다.'},
+      {ico:'🐟', name:'물고기 잡기',gain:{money:7, study:2},   line:'냇가에서 물고기를 잡아 장에 내다 팔았다.'}
+    ]
+  },
+  {
+    name:'중인', ico:'🧑‍💼', place:'🏪 🧺 🐴', unit:18,
+    say:'장터에 내 자리가 생겼다! 사람들이 나를 알아본다.',
+    need:{money:95, study:60},
+    cards:[
+      {ico:'🧺', name:'장터에서 팔기', gain:{money:22},            line:'목이 쉬도록 외쳐 물건을 다 팔았다.'},
+      {ico:'🌿', name:'약초 팔기',     gain:{money:15, heart:4},   line:'아픈 사람에게 약초를 싸게 내어 주었다.'},
+      {ico:'📚', name:'책 사서 읽기',  gain:{money:-8, study:16},  line:'비싼 책을 한 권 사서 밤새 읽었다.'},
+      {ico:'🍵', name:'손님 대접',     gain:{heart:12},            line:'먼 길 온 손님에게 따뜻한 차를 내었다.'},
+      {ico:'⚖️', name:'저울 고치기',   gain:{money:13, study:5},   line:'저울을 고쳐 주고 셈하는 법도 배웠다.'}
+    ]
+  },
+  {
+    name:'양반', ico:'🧑‍🎓', place:'🏯 🎋 📚', unit:30,
+    say:'갓을 쓰고 글을 읽는다. 다음은 소과다!',
+    need:{study:190, money:215},
+    cards:[
+      {ico:'✍️', name:'밤새 글공부',  gain:{study:28},              line:'호롱불 아래서 밤이 새도록 글을 읽었다.'},
+      {ico:'🧑‍🏫', name:'스승께 배우기',gain:{money:-20, study:42},  line:'이름난 스승을 찾아가 가르침을 받았다.'},
+      {ico:'🖌️', name:'시 짓기',      gain:{study:15, heart:14},    line:'지은 시가 고을에 널리 퍼졌다.'},
+      {ico:'🌾', name:'소작료 받기',  gain:{money:32},              line:'가을걷이가 끝나 곳간이 넉넉해졌다.'},
+      {ico:'🎊', name:'마을 잔치',    gain:{money:-15, heart:26},   line:'마을 사람을 모두 불러 큰 잔치를 열었다.'},
+      {ico:'🖋️', name:'글씨 써 주기',  gain:{money:22, study:8},     line:'잔칫집 글씨를 써 주고 사례를 받았다.'}
+    ]
+  },
+  {
+    name:'성균관 스승', ico:'🧑‍🏫', place:'🏫 📖 🎋', unit:46,
+    say:'소과에 붙었다! 성균관에서 글을 가르친다. 다음은 대과!',
+    need:{study:430, money:425},
+    cards:[
+      {ico:'📖', name:'유생 가르치기', gain:{study:58},             line:'유생들과 밤늦도록 글을 읽었다.'},
+      {ico:'🖋️', name:'책 펴내기',     gain:{money:-30, study:80},  line:'손수 쓴 책을 펴내 이름이 널리 알려졌다.'},
+      {ico:'🧒', name:'제자 기르기',   gain:{heart:52},             line:'가난한 아이도 성균관에 들여 가르쳤다.'},
+      {ico:'🏫', name:'성균관 살림',   gain:{money:64},             line:'성균관 살림을 알뜰하게 꾸렸다.'},
+      {ico:'🗣️', name:'임금께 글 올리기', gain:{study:32, heart:34}, line:'임금께 올린 글이 널리 읽혔다.'},
+      {ico:'🏮', name:'사랑방 글방',   gain:{money:56, study:14},   line:'사랑방에 글방을 열자 배우러 몰려왔다.'}
+    ]
+  },
+  {
+    name:'현감', ico:'🧑‍⚖️', place:'🏛️ 🚩 🐎', unit:66,
+    say:'대과에 급제! 한 고을을 맡았다. 백성이 나를 지켜본다.',
+    need:{heart:560, money:740},
+    cards:[
+      {ico:'👀', name:'고을 살피기', gain:{heart:60},              line:'구석구석 돌며 백성의 살림을 살폈다.'},
+      {ico:'⚖️', name:'송사 판결',   gain:{heart:38, study:30},    line:'억울한 사람의 손을 들어 주었다.'},
+      {ico:'💴', name:'세금 걷기',   gain:{money:80, heart:-14},   line:'세금을 걷었지만 백성의 얼굴이 어두웠다.'},
+      {ico:'📜', name:'상소문 쓰기', gain:{study:52},              line:'임금께 올릴 상소문을 정성껏 썼다.'},
+      {ico:'🌉', name:'다리 놓기',   gain:{money:-44, heart:84},   line:'냇가에 다리를 놓자 온 고을이 기뻐했다.'},
+      {ico:'🏪', name:'저잣거리 열기',gain:{money:62, heart:10},    line:'저잣거리를 열자 고을에 돈이 돌았다.'}
+    ]
+  },
+  {
+    name:'판서', ico:'🧔', place:'🏯 📜 🔔', unit:100,
+    say:'육조 거리에 내 이름이 있다. 나랏일을 맡았다.',
+    need:{study:1050, heart:1100},
+    cards:[
+      {ico:'🏛️', name:'나랏일 보기', gain:{study:110},             line:'산더미 같은 문서를 밤새 살폈다.'},
+      {ico:'🕵️', name:'암행 다녀오기',gain:{heart:100},            line:'몰래 백성 속으로 들어가 이야기를 들었다.'},
+      {ico:'📦', name:'곳간 채우기', gain:{money:140},             line:'나라 곳간을 든든히 채웠다.'},
+      {ico:'🗺️', name:'지도 만들기', gain:{study:72, heart:46},    line:'온 나라의 길을 그린 지도를 펴냈다.'},
+      {ico:'🍚', name:'쌀 나누기',   gain:{money:-100, heart:160}, line:'굶는 백성에게 나라 쌀을 풀었다.'}
+    ]
+  },
+  {
+    name:'영의정', ico:'👴', place:'🏰 🎏 🔥', unit:160,
+    say:'신하 중 으뜸! 이제 백성의 마음만 남았다.',
+    need:{money:1600, study:1600, heart:1750},
+    cards:[
+      {ico:'👑', name:'임금께 아뢰기', gain:{study:180},             line:'임금 앞에서 나라의 앞날을 말씀드렸다.'},
+      {ico:'🛡️', name:'나라 지키기',  gain:{heart:160, money:66},   line:'국경을 튼튼히 하자 백성이 발 뻗고 잤다.'},
+      {ico:'🏗️', name:'성 쌓기',      gain:{money:-160, heart:250}, line:'큰 성을 쌓아 백성을 지켰다.'},
+      {ico:'🗣️', name:'백성 소리 듣기',gain:{heart:150, study:80},  line:'신문고를 울린 백성의 말을 끝까지 들었다.'},
+      {ico:'💰', name:'나라 곳간',    gain:{money:250},             line:'흉년에 대비해 곳간을 가득 채웠다.'}
+    ]
+  },
+  {
+    name:'왕', ico:'🤴', place:'🏯 👑 🎆', unit:240,
+    say:'전하 만세! 이제 이 나라를 다스린다.',
+    need:null,
+    cards:[
+      {ico:'🏫', name:'집현전 세우기',   gain:{study:300},              line:'학자들을 모아 밤새 연구하게 했다.'},
+      {ico:'🔔', name:'신문고 소리 듣기',gain:{heart:300},             line:'북소리를 듣고 억울한 사람을 불러들였다.'},
+      {ico:'💰', name:'세금 고르게 하기',gain:{money:330},             line:'땅이 많은 사람에게 더 걷게 고쳤다.'},
+      {ico:'🍚', name:'곳간 열기',       gain:{money:-200, heart:430}, line:'흉년이 든 고을마다 쌀을 보냈다.'},
+      {ico:'🌾', name:'농사 책 펴내기',  gain:{study:180, heart:180},  line:'우리 땅에 맞는 농사법을 책으로 펴냈다.'},
+      {ico:'🛡️', name:'군사 기르기',     gain:{money:-120, study:150, heart:160}, line:'새 무기를 만들고 군사를 길렀다.'}
+    ]
+  }
+];
+
+/* ---------- 임금이 되어 이룬 일(치적) ----------
+   즉위한 뒤에 얼마나 더 모았는지로 센다. */
+const DEEDS = [
+  {k:'study', at:1000, ico:'📜', t:'백성을 위한 새 글자를 만들었다'},
+  {k:'study', at:2400, ico:'🏫', t:'집현전을 세워 학자를 길렀다'},
+  {k:'study', at:4200, ico:'📚', t:'나라의 역사책을 펴냈다'},
+  {k:'heart', at:1000, ico:'🍚', t:'굶는 백성에게 곳간을 열었다'},
+  {k:'heart', at:2400, ico:'🔔', t:'신문고를 달아 억울함을 들었다'},
+  {k:'heart', at:4200, ico:'❤️', t:'백성이 성군이라 불렀다'},
+  {k:'money', at:1000, ico:'💰', t:'나라 곳간을 가득 채웠다'},
+  {k:'money', at:2400, ico:'🌉', t:'큰 다리와 넓은 길을 놓았다'},
+  {k:'money', at:4200, ico:'🏯', t:'튼튼한 성을 쌓아 올렸다'}
+];
+DEEDS.forEach((d, i) => { d.id = i; });
+
+
+/* ---------- 살다 보면 생기는 일 ----------
+   숫자는 unit 의 배수다. 어느 쪽을 골라도 손해만 보지는 않게 했다. */
+const EVENTS = [
+  {ico:'🌧️', title:'큰 비가 내려요!', text:'냇물이 넘칠 것 같아요.',
+   opts:[{l:'둑을 막으러 간다', e:{money:-1, heart:3}, r:'흠뻑 젖었지만 마을을 지켰다!'},
+         {l:'집에서 책을 본다', e:{study:2}, r:'비 오는 날, 글이 잘 읽힌다.'}]},
+  {ico:'🐯', title:'호랑이가 나타났대요!', text:'산길에 호랑이 발자국이 찍혔어요.',
+   opts:[{l:'사람들과 함께 쫓는다', e:{heart:3}, r:'다 함께 꽹과리를 쳐서 쫓아냈다!'},
+         {l:'먼 길로 돌아간다', e:{money:1, study:1}, r:'돌아가는 길에 좋은 것을 주웠다.'}]},
+  {ico:'📜', title:'떠돌이 선비가 책을 팔아요', text:'귀한 책이라며 내밀어요.',
+   opts:[{l:'값을 치르고 산다', e:{money:-1, study:3}, r:'정말 귀한 책이었다!'},
+         {l:'이야기만 듣는다', e:{study:1, heart:1}, r:'공짜로 재미난 이야기를 들었다.'}]},
+  {ico:'👵', title:'할머니의 짐이 무거워요', text:'언덕길에서 쉬고 계세요.',
+   opts:[{l:'짐을 들어 드린다', e:{heart:3}, r:'할머니가 온 동네에 자랑을 하셨다.'},
+         {l:'수레를 빌려 드린다', e:{money:-1, heart:4}, r:'수레 값이 아깝지 않았다!'}]},
+  {ico:'🎪', title:'장터에 광대가 왔어요', text:'줄타기 구경으로 시끌시끌해요.',
+   opts:[{l:'같이 구경한다', e:{heart:2}, r:'사람들과 실컷 웃었다.'},
+         {l:'그 틈에 일한다', e:{money:2}, r:'사람이 많아 벌이가 좋았다!'}]},
+  {ico:'🔥', title:'이웃집에 불이 났어요!', text:'연기가 하늘로 치솟아요.',
+   opts:[{l:'물을 나른다', e:{money:-1, heart:4}, r:'다 함께 불을 껐다. 다친 사람은 없다!'},
+         {l:'아이들을 먼저 피신시킨다', e:{heart:3}, r:'아이들을 모두 안전하게 데리고 나왔다.'}]},
+  {ico:'🐴', title:'암행어사 출두요!', text:'마패를 든 사람이 나타났어요.',
+   opts:[{l:'솔직하게 맞이한다', e:{heart:2, money:2}, r:'정직하다며 상을 내렸다!'},
+         {l:'고을 살림을 보여 준다', e:{study:2, heart:1}, r:'장부가 깨끗하다며 칭찬했다.'}]},
+  {ico:'🌕', title:'보름달이 떴어요', text:'소원을 빌면 이루어진대요.',
+   opts:[{l:'소원을 빈다', e:{rand:3}, r:'정말 좋은 일이 생겼다!'},
+         {l:'푹 잔다', e:{money:1, study:1, heart:1}, r:'잘 자고 나니 모든 게 잘 풀렸다.'}]},
+  {ico:'📯', title:'임금님 행차예요!', text:'긴 행렬이 지나가요.',
+   opts:[{l:'길가에서 절한다', e:{heart:2, study:1}, r:'임금님과 눈이 마주쳤다!'},
+         {l:'행렬을 살펴본다', e:{study:3}, r:'나랏일이 어떻게 돌아가는지 배웠다.'}]},
+  {ico:'🍚', title:'흉년이 들었어요', text:'굶는 사람이 늘었어요.',
+   opts:[{l:'곳간을 활짝 연다', e:{money:-2, heart:5}, r:'백성이 눈물을 흘리며 고마워했다.'},
+         {l:'죽을 쑤어 나눈다', e:{money:-1, heart:3}, r:'따뜻한 죽 한 그릇에 마을이 살아났다.'}]},
+  {ico:'🧧', title:'옛 친구가 찾아왔어요', text:'오랜만에 얼굴을 봐요.',
+   opts:[{l:'밥을 산다', e:{money:-1, heart:3}, r:'친구가 두고두고 은혜를 갚겠다고 했다.'},
+         {l:'밤새 이야기한다', e:{study:2, heart:1}, r:'세상 돌아가는 이야기를 잔뜩 들었다.'}]},
+  {ico:'🪁', title:'아이들이 연을 날려요', text:'연줄이 나무에 걸렸어요.',
+   opts:[{l:'나무에 올라가 준다', e:{heart:3}, r:'아이들이 영웅이라고 불러 줬다!'},
+         {l:'새 연을 만들어 준다', e:{money:-1, heart:4}, r:'더 잘 나는 연이 하늘 높이 떴다!'}]}
+];
+
+/* ---------- 과거 시험 문제 ---------- */
+const QUIZ = [
+  {q:'조선을 세운 사람은 누구일까요?', a:['이성계','이순신','김유신']},
+  {q:'한글을 만든 임금님은 누구일까요?', a:['세종대왕','태조','광개토대왕']},
+  {q:'거북선으로 왜군을 물리친 장군은?', a:['이순신','강감찬','계백']},
+  {q:'조선의 도읍(수도)은 어디였을까요?', a:['한양','개경','경주']},
+  {q:'조선이 가장 먼저 지은 궁궐은?', a:['경복궁','첨성대','불국사']},
+  {q:'관리가 되려면 보던 시험 이름은?', a:['과거','씨름','백일장']},
+  {q:'조선 시대에 쓰던 돈은?', a:['엽전','지폐','조개껍데기']},
+  {q:'억울한 일을 알리려고 치던 북은?', a:['신문고','장구','꽹과리']},
+  {q:'암행어사가 보여 주던 증표는?', a:['마패','목탁','부채']},
+  {q:'비가 얼마나 왔는지 재던 기구는?', a:['측우기','물레방아','거북선']},
+  {q:'세종 때 만든 물시계의 이름은?', a:['자격루','거중기','측우기']},
+  {q:'조선 시대 양반이 쓰던 모자는?', a:['갓','왕관','투구']},
+  {q:'조선의 법을 모아 놓은 책은?', a:['경국대전','삼국유사','난중일기']},
+  {q:'한글을 처음 만들었을 때의 이름은?', a:['훈민정음','천자문','동의보감']},
+  {q:'허준이 쓴 의학책의 이름은?', a:['동의보감','난중일기','경국대전']},
+  {q:'이순신 장군이 쓴 일기의 이름은?', a:['난중일기','열하일기','목민심서']}
+];
+
+const KEY = 'joseon-save-1';
+const STATS = [
+  {k:'money', ic:'💰', nm:'엽전'},
+  {k:'study', ic:'📚', nm:'학문'},
+  {k:'heart', ic:'❤️', nm:'인망'}
+];
+let S = null;
+let busy = false;
+
+function fresh(){
+  return {rank:0, turn:0, age:15, money:0, study:0, heart:0,
+          hand:null, say:RANKS[0].say,
+          deeds:[], crown:null, crownAge:0, crownTurn:0, deathAge:0};
+}
+function isKing(){ return S.rank === RANKS.length - 1; }
+function madeSince(k){ return S[k] - (S.crown ? S.crown[k] : 0); }   // 임금이 된 뒤로 모은 것
+function nextDeed(k){
+  return DEEDS.filter(d => d.k === k && S.deeds.indexOf(d.id) < 0)
+              .sort((x, y) => x.at - y.at)[0];
+}
+function pendingDeeds(){
+  return DEEDS.filter(d => S.deeds.indexOf(d.id) < 0 && madeSince(d.k) >= d.at)
+              .sort((x, y) => x.at - y.at);
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(typeof d.rank === 'number') return Object.assign(fresh(), d);
+    }
+  }catch(e){}
+  return fresh();
+}
+
+/* ---------- 카드 뽑기 ---------- */
+function shuffled(a){
+  const b = a.slice();
+  for(let i = b.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = b[i]; b[i] = b[j]; b[j] = t;
+  }
+  return b;
+}
+/* 손패 나눠 주기.
+   1) 아직 모자란 것을 깎아 먹는 카드는 잠시 빼 둔다
+   2) 모자란 것마다 채워 주는 카드를 한 장씩 넣는다
+   3) 적어도 두 장은 도움이 되는 카드로 채운다
+   아무 카드나 눌러도 이야기가 앞으로 가야 재미있다. */
+function dealHand(){
+  const r = RANKS[S.rank];
+  if(!r || !r.cards.length){ S.hand = []; return; }   // 왕이 되면 더 할 일이 없다
+  const pool = r.cards;
+  const need = r.need || {};
+  const lack = STATS.map(s => s.k).filter(k => (need[k] || 0) > S[k]);
+  const ok = pool.map((c, i) => i).filter(i =>
+    !lack.some(k => (pool[i].gain[k] || 0) < 0) &&
+    S.money + (pool[i].gain.money || 0) >= 0);
+  const helps = ok.filter(i => lack.some(k => (pool[i].gain[k] || 0) > 0));
+  const take = [];
+  const push = i => { if(i !== undefined && take.length < 3 && take.indexOf(i) < 0) take.push(i); };
+
+  lack.slice()
+      .sort((a, b) => (need[b] - S[b]) - (need[a] - S[a]))   // 제일 모자란 것부터
+      .forEach(k => push(shuffled(helps).find(i =>
+        (pool[i].gain[k] || 0) > 0 && take.indexOf(i) < 0)));
+  shuffled(helps).forEach(i => { if(take.length < 2) push(i); });
+  shuffled(ok).forEach(push);
+  shuffled(pool.map((c, i) => i)).forEach(push);
+  S.hand = shuffled(take);
+}
+function drawTop(){
+  const r = RANKS[S.rank];
+  $('#badge').textContent = r.ico;
+  $('#rankName').textContent = r.name;
+  $('#ageLine').textContent = S.age + '살 · ' +
+    (isKing() ? '즉위 ' + (S.age - S.crownAge + 1) + '년'
+              : (S.turn === 0 ? '첫해' : (S.turn + 1) + '년째'));
+  $('#place').textContent = r.place;
+  $('#hero').textContent = r.ico;
+  $('#say').textContent = S.say;
+  $('#sun').textContent = ['☀️','🌤️','⛅','🌙','⭐'][S.turn % 5];
+}
+function drawStats(){
+  STATS.forEach(s => {
+    document.getElementById('num' + s.k[0].toUpperCase() + s.k.slice(1)).textContent = S[s.k];
+  });
+}
+function drawGoal(){
+  const r = RANKS[S.rank];
+  const bars = $('#bars');
+  if(!r.need){                                   // 임금이 되면 신분 대신 치적을 쌓는다
+    $('#goalLabel').textContent = '임금이 이룬 일';
+    $('#nextName').textContent = '📜 치적 ' + S.deeds.length + '개';
+    bars.innerHTML = STATS.map(s => {
+      const nd = nextDeed(s.k);
+      if(!nd) return '<div class="bar done"><span>' + s.ic + '</span>' +
+        '<span class="track"><i style="width:100%"></i></span>' +
+        '<span class="n">다 이뤘다!</span></div>';
+      const made = Math.min(madeSince(s.k), nd.at);
+      const pct = Math.round(made / nd.at * 100);
+      return '<div class="bar"><span>' + s.ic + '</span>' +
+             '<span class="track"><i style="width:' + pct + '%"></i></span>' +
+             '<span class="n">' + made + ' / ' + nd.at + '</span></div>';
+    }).join('');
+    $('#upBtn').hidden = true;
+    return;
+  }
+  const nx = RANKS[S.rank + 1];
+  $('#goalLabel').textContent = '다음 신분까지';
+  $('#nextName').textContent = nx.ico + ' ' + nx.name;
+  bars.innerHTML = STATS.filter(s => r.need[s.k]).map(s => {
+    const have = Math.min(S[s.k], r.need[s.k]);
+    const pct = Math.round(have / r.need[s.k] * 100);
+    return '<div class="bar' + (pct >= 100 ? ' done' : '') + '">' +
+             '<span>' + s.ic + '</span>' +
+             '<span class="track"><i style="width:' + pct + '%"></i></span>' +
+             '<span class="n">' + have + ' / ' + r.need[s.k] + '</span>' +
+           '</div>';
+  }).join('');
+  $('#upBtn').hidden = !canRankUp();
+}
+function canRankUp(){
+  const need = RANKS[S.rank].need;
+  if(!need) return false;
+  return Object.keys(need).every(k => S[k] >= need[k]);
+}
+function gainText(g){
+  return STATS.filter(s => g[s.k]).map(s => {
+    const v = g[s.k];
+    return '<span class="' + (v > 0 ? 'plus' : 'minus') + '">' +
+           (v > 0 ? '+' : '') + v + s.ic + '</span>';
+  }).join('');
+}
+function drawHand(){
+  const pool = (RANKS[S.rank] && RANKS[S.rank].cards) || [];
+  const hand = $('#hand');
+  hand.innerHTML = '';
+  if(!S.hand || !pool.length) return;
+  S.hand.forEach(idx => {
+    const c = pool[idx];
+    if(!c) return;
+    const poor = (c.gain.money || 0) < 0 && S.money + c.gain.money < 0;
+    const b = document.createElement('button');
+    b.className = 'card' + (poor ? ' poor' : '');
+    b.type = 'button';
+    b.innerHTML = '<span class="ci">' + c.ico + '</span>' +
+                  '<span class="cn">' + c.name + '</span>' +
+                  '<span class="cg">' + (poor ? '엽전 부족' : gainText(c.gain)) + '</span>';
+    b.addEventListener('click', () => { if(!poor) playCard(idx); else sfx.wrong(); });
+    hand.appendChild(b);
+  });
+}
+function drawAll(){ drawTop(); drawStats(); drawGoal(); drawHand(); }
+
+/* ---------- 숫자가 오르내리는 느낌 ---------- */
+function apply(gain, quiet){
+  STATS.forEach(s => {
+    const v = gain[s.k];
+    if(!v) return;
+    S[s.k] = Math.max(0, S[s.k] + v);
+    if(quiet) return;
+    const chip = document.getElementById('chip' + s.k[0].toUpperCase() + s.k.slice(1));
+    chip.classList.add('pop');
+    setTimeout(() => chip.classList.remove('pop'), 200);
+    const f = document.createElement('span');
+    f.className = 'fly ' + (v > 0 ? 'up' : 'down');
+    f.textContent = (v > 0 ? '+' : '') + v;
+    chip.appendChild(f);
+    setTimeout(() => f.remove(), 900);
+  });
+  drawStats();
+  if(!quiet){
+    const down = STATS.some(s => (gain[s.k] || 0) < 0);
+    down ? sfx.lose() : sfx.gain();
+  }
+}
+
+/* ---------- 한 턴 ---------- */
+function playCard(idx){
+  if(busy) return;
+  busy = true;
+  ensureAudio();
+  sfx.tap();
+  const c = RANKS[S.rank] && RANKS[S.rank].cards[idx];
+  if(!c){ busy = false; return; }
+  apply(c.gain);
+  S.say = c.line;
+  S.turn++;
+  S.age = isKing() ? S.age + 1 : 15 + Math.floor(S.turn * 0.7);
+  const place = $('#place');
+  place.classList.add('hop');
+  setTimeout(() => place.classList.remove('hop'), 350);
+  const hero = $('#hero');
+  hero.classList.remove('work');
+  void hero.offsetWidth;                       // 같은 동작을 다시 하려면 한 번 끊어 줘야 한다
+  hero.classList.add('work');
+
+  setTimeout(() => {
+    dealHand();
+    drawAll();
+    save();
+    afterTurn();
+  }, 420);
+}
+/* 한 턴이 끝나면 차례대로 살핀다: 이룬 일 → 돌아가실 때 → 마을에 생긴 일 */
+function afterTurn(){
+  if(isKing()){
+    const got = pendingDeeds();
+    if(got.length){ showDeed(got[0]); return; }      // 치적은 한 번에 하나씩
+    if(S.age >= S.deathAge){ passAway(); return; }
+  }
+  if(Math.random() < 0.34) showEvent();              // 세 번에 한 번쯤
+  else busy = false;
+}
+
+/* ---------- 사건 ---------- */
+function unitize(e){
+  const u = RANKS[S.rank].unit;
+  const out = {};
+  if(e.rand){                                    // 보름달 소원: 아무거나 하나 크게
+    const pick = STATS[Math.floor(Math.random() * 3)].k;
+    out[pick] = e.rand * u;
+    return out;
+  }
+  STATS.forEach(s => { if(e[s.k]) out[s.k] = Math.round(e[s.k] * u); });
+  return out;
+}
+function sheet(html){
+  const veil = document.createElement('div');
+  veil.className = 'veil';
+  veil.innerHTML = '<div class="sheet">' + html + '</div>';
+  document.body.appendChild(veil);
+  return veil;
+}
+/* 사건은 섞어 놓은 더미에서 한 장씩 꺼낸다.
+   그래야 열두 가지가 다 나오기 전에 같은 일이 또 생기지 않는다. */
+let eventBag = [];
+function nextEvent(){
+  if(!eventBag.length) eventBag = shuffled(EVENTS.map((e, i) => i));
+  return EVENTS[eventBag.pop()];
+}
+function showEvent(){
+  const ev = nextEvent();
+  const veil = sheet(
+    '<div class="kicker">이런 일이!</div>' +
+    '<div class="big">' + ev.ico + '</div>' +
+    '<h3>' + ev.title + '</h3>' +
+    '<p>' + ev.text + '</p>' +
+    '<div class="opts">' + ev.opts.map((o, i) =>
+      '<button class="opt" data-i="' + i + '" type="button">' + o.l + '</button>').join('') +
+    '</div>'
+  );
+  veil.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(veil.dataset.done) return;            // 두 번 눌러도 한 번만 센다
+      veil.dataset.done = '1';
+      const o = ev.opts[+btn.dataset.i];
+      const gain = unitize(o.e);
+      veil.remove();
+      apply(gain);
+      S.say = o.r;
+      drawAll();
+      save();
+      busy = false;
+    });
+  });
+}
+
+/* ---------- 과거 시험 ---------- */
+function askQuiz(count, title, done){
+  const picks = shuffled(QUIZ.map((q, i) => i)).slice(0, count);
+  let at = 0;
+  function fail(q){
+    sfx.wrong();
+    const veil = sheet(
+      '<div class="kicker">낙 방</div>' +
+      '<div class="big">📕</div>' +
+      '<h3>낙방…</h3>' +
+      '<p>한 문제를 틀려 이번에는 붙지 못했어요.</p>' +
+      '<div class="gift">정답: ' + q.a[0] + '</div>' +
+      '<div class="note">외워 두면 다음에는 붙어요!</div>' +
+      '<button class="ok" type="button">다시 도전하기</button>'
+    );
+    veil.querySelector('.ok').addEventListener('click', () => {
+      if(veil.dataset.done) return;
+      veil.dataset.done = '1';
+      veil.remove();
+      drawAll();
+      busy = false;                              // 신분은 그대로. 언제든 다시 볼 수 있다
+    });
+  }
+  function one(){
+    if(at >= picks.length){ done(); return; }
+    const q = QUIZ[picks[at]];
+    const right = q.a[0];
+    const opts = shuffled(q.a);
+    const veil = sheet(
+      '<div class="kicker">' + title + '</div>' +
+      '<div class="big">📜</div>' +
+      '<h3>' + q.q + '</h3>' +
+      '<div class="opts">' + opts.map(t =>
+        '<button class="opt" type="button">' + t + '</button>').join('') +
+      '</div>' +
+      '<div class="dots">' + picks.map((_, i) => i < at ? '●' : '○').join('') + '</div>' +
+      '<div class="note">한 문제라도 틀리면 낙방이에요!</div>'
+    );
+    veil.querySelectorAll('.opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(veil.dataset.done) return;
+        veil.dataset.done = '1';
+        if(btn.textContent === right){
+          btn.classList.add('right');
+          sfx.right();
+          setTimeout(() => { veil.remove(); at++; one(); }, 620);
+        }else{
+          btn.classList.add('wrong', 'shake');
+          setTimeout(() => { veil.remove(); fail(q); }, 700);
+        }
+      });
+    });
+  }
+  one();
+}
+
+/* ---------- 색종이 ---------- */
+function confetti(n){
+  const colors = ['#C1362F','#D8A63C','#2E5E86','#41794C','#E86A9B','#F7EEDB'];
+  for(let i = 0; i < n; i++){
+    const p = document.createElement('i');
+    p.className = 'confetti';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[i % colors.length];
+    p.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+    p.style.animationDelay = (Math.random() * 0.5) + 's';
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3600);
+  }
+}
+
+/* ---------- 신분 올리기 ---------- */
+function rankUp(){
+  if(busy || !canRankUp() || S.rank >= RANKS.length - 1) return;
+  busy = true;
+  ensureAudio();
+  // 과거는 두 번 본다. 소과에 붙으면 성균관, 대과에 붙으면 벼슬이다
+  if(S.rank === 2){
+    askQuiz(2, '소 과', () => celebrate());
+  }else if(S.rank === 3){
+    askQuiz(3, '대 과', () => celebrate());
+  }else{
+    celebrate();
+  }
+}
+function celebrate(){
+  if(S.rank >= RANKS.length - 1) return;
+  const nx = RANKS[S.rank + 1];
+  const toKing = (S.rank + 1) === RANKS.length - 1;
+  S.rank++;
+  S.say = nx.say;
+  // 새 신분이 되면 녹봉을 받는다 (다음 단계가 너무 멀지 않게)
+  const bonus = {};
+  if(!toKing) STATS.forEach(s => { bonus[s.k] = nx.unit * 2; });
+
+  drawTop();                                   // 축하 창 뒤로 새 신분이 먼저 보이게
+  confetti(toKing ? 90 : 40);
+  toKing ? sfx.king() : sfx.up();
+  const badge = $('#badge');
+  badge.classList.add('pop');
+  setTimeout(() => badge.classList.remove('pop'), 420);
+
+  if(toKing){ crownKing(); return; }
+
+  const veil = sheet(
+    '<div class="kicker">신분이 올랐어요!</div>' +
+    '<div class="big">' + nx.ico + '</div>' +
+    '<h3>이제 ' + nx.name + '!</h3>' +
+    '<p>' + nx.say + '</p>' +
+    '<div class="gift">녹봉 +' + (nx.unit * 2) + ' 💰📚❤️</div>' +
+    '<button class="ok" type="button">좋아!</button>'
+  );
+  veil.querySelector('.ok').addEventListener('click', () => {
+    if(veil.dataset.done) return;
+    veil.dataset.done = '1';
+    veil.remove();
+    apply(bonus);
+    dealHand();
+    drawAll();
+    save();
+    busy = false;
+  });
+}
+
+/* ---------- 즉위식 ---------- */
+function crownKing(){
+  S.crown = {money:S.money, study:S.study, heart:S.heart};
+  S.crownAge = S.age;
+  S.crownTurn = S.turn;
+  S.deeds = [];
+  // 임금 노릇을 적어도 열네 해는 하게 해 둔다
+  S.deathAge = S.age + 12 + Math.floor(Math.random() * 7);
+
+  let best = S.turn;
+  try{
+    const b = parseInt(localStorage.getItem(KEY + '-best'));
+    if(!isNaN(b)) best = Math.min(b, S.turn);
+    localStorage.setItem(KEY + '-best', String(best));
+  }catch(e){}
+
+  const veil = sheet(
+    '<div class="kicker">즉 위 식</div>' +
+    '<div class="big">🤴👑</div>' +
+    '<h3>전하 만세!</h3>' +
+    '<p>밭을 갈던 아이가 ' + S.age + '살에 임금이 되었어요.</p>' +
+    '<div class="gift">' + S.turn + '번 만에 해냈어요! (최고 기록 ' + best + '번)</div>' +
+    '<div class="note">이제부터는 나라를 다스려요.<br>' +
+    '좋은 일을 할 때마다 <b>치적</b>이 하나씩 쌓여요.</div>' +
+    '<button class="ok" type="button">나라를 다스리러 가자!</button>'
+  );
+  veil.querySelector('.ok').addEventListener('click', () => {
+    if(veil.dataset.done) return;
+    veil.dataset.done = '1';
+    veil.remove();
+    dealHand();
+    drawAll();
+    save();
+    busy = false;
+  });
+  setTimeout(() => confetti(50), 900);
+  drawAll();
+  save();
+}
+
+/* ---------- 임금이 이룬 일 ---------- */
+function showDeed(d){
+  S.deeds.push(d.id);
+  sfx.up();
+  confetti(30);
+  S.say = d.t + '.';
+  drawAll();
+  save();
+  const veil = sheet(
+    '<div class="kicker">치 적</div>' +
+    '<div class="big">' + d.ico + '</div>' +
+    '<h3>' + d.t + '!</h3>' +
+    '<p>실록에 길이 남을 일이에요.</p>' +
+    '<div class="gift">치적 ' + S.deeds.length + '개째</div>' +
+    '<button class="ok" type="button">좋아!</button>'
+  );
+  veil.querySelector('.ok').addEventListener('click', () => {
+    if(veil.dataset.done) return;
+    veil.dataset.done = '1';
+    veil.remove();
+    afterTurn();                                 // 또 이룬 일이 있는지 이어서 살핀다
+  });
+}
+
+/* ---------- 승하 ---------- */
+function passAway(){
+  busy = true;
+  S.hand = [];
+  S.say = '온 나라가 흰 옷을 입었다.';
+  const reign = S.age - S.crownAge + 1;
+  const top = STATS.slice().sort((a, b) => madeSince(b.k) - madeSince(a.k))[0].k;
+  const siho = top === 'study' ? '글을 밝힌 임금 📚'
+             : top === 'heart' ? '백성을 품은 임금 ❤️'
+             :                   '곳간을 채운 임금 💰';
+  const list = S.deeds.length
+    ? S.deeds.map(id => '<div class="deed">' + DEEDS[id].ico + ' ' + DEEDS[id].t + '</div>').join('')
+    : '<div class="deed">큰 일은 없었지만, 나라는 조용하고 평안했어요.</div>';
+  melody([392, 330, 262], 340, .5, .09);         // 조용한 종소리
+
+  const veil = sheet(
+    '<div class="kicker">승 하</div>' +
+    '<div class="big">🕯️</div>' +
+    '<h3>' + S.age + '살, 눈을 감다</h3>' +
+    '<p>' + reign + '해 동안 나라를 다스렸어요.<br><b>' + siho + '</b></p>' +
+    '<div class="gift">실록에 적힌 일 ' + S.deeds.length + '가지</div>' +
+    '<div class="deeds">' + list + '</div>' +
+    '<div class="note">사실 진짜 조선에서는 평민이 임금이 되는 일은 없었어요.<br>' +
+    '임금의 아들이 임금이 되었거든요. 하지만 여기선 네가 해냈다! 👏</div>' +
+    '<button class="ok" type="button">처음부터 다시</button>'
+  );
+  veil.querySelector('.ok').addEventListener('click', () => {
+    if(veil.dataset.done) return;
+    veil.dataset.done = '1';
+    veil.remove();
+    reset();
+  });
+  drawAll();
+  save();
+}
+
+/* ---------- 시작 ---------- */
+function reset(){
+  S = fresh();
+  dealHand();
+  drawAll();
+  save();
+  busy = false;
+}
+$('#upBtn').addEventListener('click', rankUp);
+$('#restart').addEventListener('click', () => {
+  if(confirm('처음부터 다시 할까요?')) reset();
+});
+
+S = load();
+if(S.rank >= RANKS.length && S.rank !== RANKS.length - 1) S = fresh();   // 알 수 없는 신분이면 새로
+if(isKing() && S.age >= S.deathAge) S = fresh();                         // 이미 승하한 판은 새로
+if(!S.hand || !S.hand.length) dealHand();
+drawAll();
+</script>
+</body>
+</html>
