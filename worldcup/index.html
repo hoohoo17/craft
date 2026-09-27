@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F4F6FD">
+<title>🏆 좋아하는 게임 뽑기</title>
+<style>
+  :root {
+    --bg: #F4F6FD;
+    --card: #ffffff;
+    --ink: #2C3560;
+    --muted: #7C86A8;
+    --line: #E3E9F8;
+    --blue: #6C8BFF;
+    --pink: #FF6B8A;
+    --gold: #FFC53D;
+    --shadow: 0 3px 10px rgba(80,100,160,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(123,167,255,.16), transparent 42%),
+      radial-gradient(circle at 88% 4%, rgba(255,170,210,.16), transparent 40%);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+    min-height: 100dvh;
+  }
+  main { width: 100%; max-width: 420px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 8px 0 6px; letter-spacing: .04em; }
+  .sub { margin: 0 0 18px; font-size: 14px; color: var(--muted); font-weight: 700; }
+  [hidden] { display: none !important; }
+
+  /* ---------- 몇 개로 할지 고르는 곳 ---------- */
+  .sizes { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .sizes button {
+    font: inherit; font-size: 18px; font-weight: 800; color: var(--ink);
+    background: var(--card); border: 2px solid var(--line); border-radius: 18px;
+    padding: 16px; box-shadow: var(--shadow); cursor: pointer;
+    transition: transform .12s, border-color .12s;
+  }
+  .sizes button small { display: block; font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 3px; }
+  .sizes button:active { transform: scale(.97); border-color: var(--blue); }
+
+  /* ---------- 명예의 전당 ---------- */
+  .hall { background: var(--card); border: 2px solid var(--line); border-radius: 18px;
+          padding: 12px 14px; box-shadow: var(--shadow); }
+  .hall h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); letter-spacing: .04em; }
+  .hall li { list-style: none; display: flex; align-items: center; gap: 8px;
+             font-size: 15px; font-weight: 800; padding: 4px 0; }
+  .hall ul { margin: 0; padding: 0; }
+  .hall .cnt { margin-left: auto; font-size: 13px; color: var(--muted); }
+
+  /* ---------- 대결 화면 ---------- */
+  .bar { display: flex; align-items: center; justify-content: space-between;
+         font-size: 15px; font-weight: 800; margin: 2px 2px 6px; }
+  .bar .cnt { color: var(--muted); font-size: 13px; }
+  .prog { height: 7px; background: var(--line); border-radius: 99px; overflow: hidden; margin-bottom: 10px; }
+  .prog i { display: block; height: 100%; width: 0; border-radius: 99px;
+            background: linear-gradient(90deg, var(--blue), var(--pink)); transition: width .3s; }
+
+  .fight { display: flex; flex-direction: column; gap: 8px;
+           height: calc(100dvh - 150px); min-height: 380px; }
+  .pick {
+    flex: 1; position: relative; font: inherit; color: var(--ink);
+    background: var(--card); border: 3px solid var(--line); border-radius: 22px;
+    box-shadow: var(--shadow); cursor: pointer; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  }
+  .pick .e { font-size: 58px; line-height: 1; }
+  .pick .n { font-size: 21px; font-weight: 800; padding: 0 12px; word-break: keep-all; line-height: 1.3; }
+  .pick .c { font-size: 12px; font-weight: 800; color: var(--muted); }
+  .pick:active { transform: scale(.98); }
+
+  .vs { font-size: 15px; font-weight: 900; color: var(--muted); letter-spacing: .1em; }
+
+  /* 고르면 이긴 쪽은 커지고 진 쪽은 쪼그라든다 */
+  @keyframes win {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  @keyframes lose { to { transform: scale(.88); opacity: 0; } }
+  .pick.win { animation: win .4s ease-out; border-color: var(--gold);
+              box-shadow: 0 0 0 5px rgba(255,197,61,.35), var(--shadow); }
+  .pick.lose { animation: lose .4s ease-in forwards; }
+  @keyframes inA { from { transform: translateX(-24px); opacity: 0; } }
+  @keyframes inB { from { transform: translateX(24px); opacity: 0; } }
+  .fight.enter #pickA { animation: inA .28s ease-out; }
+  .fight.enter #pickB { animation: inB .28s ease-out; }
+
+  /* ---------- 우승 화면 ---------- */
+  .crown { font-size: 34px; }
+  .champ { background: var(--card); border: 3px solid var(--gold); border-radius: 24px;
+           padding: 22px 16px; box-shadow: 0 0 0 6px rgba(255,197,61,.22), var(--shadow); margin: 8px 0 14px; }
+  .champ .e { font-size: 76px; line-height: 1; }
+  .champ .n { font-size: 25px; font-weight: 900; margin-top: 8px; word-break: keep-all; line-height: 1.3; }
+  .rank { font-size: 14px; word-break: keep-all; color: var(--muted); font-weight: 700; line-height: 1.8; margin-bottom: 16px; }
+  .go, .again {
+    display: block; font: inherit; font-size: 18px; font-weight: 800; text-decoration: none;
+    border-radius: 18px; padding: 15px; margin-bottom: 10px; border: 0; width: 100%; cursor: pointer;
+  }
+  .go { background: var(--blue); color: #fff; }
+  .again { background: var(--card); color: var(--ink); border: 2px solid var(--line); }
+  .go:active, .again:active { transform: scale(.98); }
+
+  .back { display: block; text-align: center; color: var(--muted);
+          font-size: 13px; font-weight: 800; text-decoration: none; padding: 10px 0 2px; }
+
+  /* 우승할 때 종이조각이 떨어진다 */
+  .conf { position: fixed; top: -20px; width: 10px; height: 14px; border-radius: 2px;
+          pointer-events: none; animation: fall linear forwards; z-index: 9; }
+  @keyframes fall { to { transform: translateY(105vh) rotate(720deg); opacity: .2; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pick.win, .pick.lose, .fight.enter #pickA, .fight.enter #pickB, .conf { animation: none; }
+    .pick.lose { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- ===== 시작 화면 ===== -->
+  <section id="start">
+    <h1>🏆 좋아하는 게임 뽑기</h1>
+    <p class="sub">둘 중에 더 좋아하는 게임을 고르면 돼</p>
+    <div class="sizes" id="sizes"></div>
+    <div class="hall" id="hall" hidden></div>
+    <a class="back" href="../index.html">← 게임 목록으로</a>
+  </section>
+
+  <!-- ===== 대결 화면 ===== -->
+  <section id="play" hidden>
+    <div class="bar"><b id="roundName">16강</b><span class="cnt" id="count">1 / 8</span></div>
+    <div class="prog"><i id="progFill"></i></div>
+    <div class="fight" id="fight">
+      <button class="pick" id="pickA"></button>
+      <div class="vs">VS</div>
+      <button class="pick" id="pickB"></button>
+    </div>
+  </section>
+
+  <!-- ===== 우승 화면 ===== -->
+  <section id="done" hidden>
+    <div class="crown">👑</div>
+    <h1 style="margin:2px 0 0">우승!</h1>
+    <div class="champ" id="champ"></div>
+    <div class="rank" id="rank"></div>
+    <a class="go" id="goPlay" href="#">이 게임 하러 가기</a>
+    <button class="again" id="again">다시 하기</button>
+    <a class="back" href="../index.html">← 게임 목록으로</a>
+  </section>
+
+</main>
+
+<script>
+const GAMES = [
+  {"c": "puzzle", "u": "../pour/", "e": "🧪", "n": "물 붓기 퍼즐"},
+  {"c": "story", "u": "../korean-book/", "e": "📖", "n": "한국인만 알아듣는 책"},
+  {"c": "puzzle", "u": "../secret/", "e": "🔐", "n": "비밀 암호 기계"},
+  {"c": "make", "u": "../minecraft/", "e": "🌳", "n": "블록 숲 · 마인크래프트"},
+  {"c": "make", "u": "../jaehoo/", "e": "🧱", "n": "재후크래프트"},
+  {"c": "action", "u": "../space/", "e": "👾", "n": "우주 침략자 막기"},
+  {"c": "puzzle", "u": "../wizard/", "e": "🧙", "n": "마법사 대결"},
+  {"c": "action", "u": "../dig/", "e": "⛏️", "n": "땅속 보물 캐기"},
+  {"c": "puzzle", "u": "../spot/", "e": "🔍", "n": "틀린 그림 찾기"},
+  {"c": "puzzle", "u": "../castle/", "e": "🏰", "n": "성 지키기"},
+  {"c": "make", "u": "../league/", "e": "🏆", "n": "카드 리그"},
+  {"c": "action", "u": "../rhythm/", "e": "🥁", "n": "리듬 두드리기"},
+  {"c": "action", "u": "../typing/", "e": "⌨️", "n": "타자 대결"},
+  {"c": "puzzle", "u": "../memory/", "e": "🃏", "n": "짝 맞추기"},
+  {"c": "action", "u": "../throw/", "e": "🏹", "n": "물리 던지기"},
+  {"c": "story", "u": "../next-door/", "e": "📗", "n": "옆옆집 손님"},
+  {"c": "action", "u": "../fishing/", "e": "🎣", "n": "낚시왕"},
+  {"c": "puzzle", "u": "../baseball/", "e": "⚾", "n": "숫자 야구"},
+  {"c": "action", "u": "../history/", "e": "🏛️", "n": "역사 술래잡기"},
+  {"c": "story", "u": "../story10/", "e": "📖", "n": "10강의 비밀"},
+  {"c": "action", "u": "../snake/", "e": "🐍", "n": "뱀 게임"},
+  {"c": "puzzle", "u": "../mine/", "e": "💣", "n": "지뢰 찾기"},
+  {"c": "puzzle", "u": "../2048/", "e": "🔢", "n": "2048"},
+  {"c": "puzzle", "u": "../escape/", "e": "🚪", "n": "방 탈출"},
+  {"c": "puzzle", "u": "../omok/", "e": "⚫", "n": "오목"},
+  {"c": "puzzle", "u": "../maze/", "e": "🌀", "n": "미로 탈출"},
+  {"c": "story", "u": "../guinness/", "e": "🏅", "n": "기네스북"},
+  {"c": "action", "u": "../mole-dodge/", "e": "🐹", "n": "두더지 피하기"},
+  {"c": "action", "u": "../brick/", "e": "🧱", "n": "벽돌 깨기"},
+  {"c": "story", "u": "../story/", "e": "📕", "n": "나의 이야기"},
+  {"c": "story", "u": "../tease/", "e": "😜", "n": "약올리는 인공지능"},
+  {"c": "puzzle", "u": "../wordchain/", "e": "🔤", "n": "끝말잇기"},
+  {"c": "action", "u": "../water/", "e": "💦", "n": "물총놀이"},
+  {"c": "action", "u": "../blocks/", "e": "🧩", "n": "떨어지는 블럭"},
+  {"c": "action", "u": "../lava/", "e": "🌋", "n": "용암!!"},
+  {"c": "make", "u": "../garden/", "e": "🌷", "n": "나의 정원"},
+  {"c": "action", "u": "../mole/", "e": "🔨", "n": "두더지 잡기"},
+  {"c": "action", "u": "../stack/", "e": "🏗️", "n": "낙하 스택 쌓기"},
+  {"c": "puzzle", "u": "../laser/", "e": "🔦", "n": "빛 반사 퍼즐"},
+  {"c": "make", "u": "../raccoon/", "e": "🦝", "n": "너구리 키우기"},
+  {"c": "action", "u": "../choco/", "e": "🍄", "n": "초코송이 받기"},
+  {"c": "story", "u": "../idea-room/", "e": "💡", "n": "게임 아이디어 방"},
+  {"c": "story", "u": "../mystery/", "e": "❓", "n": "??"},
+  {"c": "action", "u": "../train-driver/", "e": "🚂", "n": "기관사의 하루"},
+  {"c": "action", "u": "../gold-ring/", "e": "💍", "n": "돌반지 끼우기"},
+  {"c": "action", "u": "../birthday/", "e": "🎂", "n": "생일 촛불 끄기"},
+  {"c": "puzzle", "u": "../split-rewind/", "e": "🧠", "n": "생각을 해야 할걸"},
+  {"c": "make", "u": "../accretion/", "e": "🪐", "n": "행성 만들기"},
+  {"c": "puzzle", "u": "../subway/", "e": "🚇", "n": "지하철 노선도 게임"},
+  {"c": "action", "u": "../samgak/", "e": "🍙", "n": "삼각김밥"},
+  {"c": "puzzle", "u": "../planet-merge/", "e": "🌍", "n": "행성 합치기"},
+  {"c": "action", "u": "../nakseo-run/", "e": "✏️", "n": "낙서런"},
+  {"c": "action", "u": "../world/", "e": "⚽", "n": "월드컵"},
+  {"c": "action", "u": "../pocketmon/", "e": "⚡", "n": "포켓몬볼"},
+  {"c": "make", "u": "../craft/", "e": "⚗️", "n": "원소크래프트"},
+  {"c": "make", "u": "../tooth/", "e": "🦷", "n": "이빨크래프트"},
+  {"c": "make", "u": "../doobuy/", "e": "🍫", "n": "두바이초코렛"},
+  {"c": "make", "u": "../snow/", "e": "❄️", "n": "눈송이"},
+  {"c": "make", "u": "../tree/", "e": "🌳", "n": "나무크래프트"}
+];
+
+// 갈래마다 화면에 보여 줄 이름
+const CATS = { puzzle: "🧩 퍼즐", action: "⚡ 액션", make: "🌱 만들기", story: "📖 이야기" };
+
+const $ = (id) => document.getElementById(id);
+const startEl = $("start"), playEl = $("play"), doneEl = $("done");
+
+let pool = [];      // 이번 판에 남은 게임들
+let next = [];      // 이번 판에서 이긴 게임들
+let i = 0;          // 지금 몇 번째 대결인지
+let total = 0;      // 이번 판의 대결 수
+let runnerUp = null, semis = [];
+let busy = false;
+let timer = null;   // 다음 대결로 넘어갈 때 쓰는 시계
+
+/* ---------- 소리 ---------- */
+let ac = null;
+function beep(freq, dur, when) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const t = ac.currentTime + (when || 0);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) {}
+}
+const pickSound = () => { beep(660, 0.09); beep(990, 0.12, 0.07); };
+const winSound = () => { [523, 659, 784, 1047].forEach((f, k) => beep(f, 0.3, k * 0.13)); };
+
+/* ---------- 시작 화면 ---------- */
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let k = a.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    [a[k], a[j]] = [a[j], a[k]];
+  }
+  return a;
+}
+
+function roundName(n) {
+  if (n === 2) return "결승";
+  if (n === 4) return "준결승";
+  return n + "강";
+}
+
+function buildStart() {
+  const sizes = [8, 16, 32].filter((s) => s <= GAMES.length);
+  $("sizes").innerHTML = sizes.map((s) =>
+    `<button data-size="${s}">${roundName(s)}<small>게임 ${s}개 · 대결 ${s - 1}번</small></button>`
+  ).join("");
+  $("sizes").querySelectorAll("button").forEach((b) => {
+    b.onclick = () => startGame(+b.dataset.size);
+  });
+  showHall();
+}
+
+/* ---------- 명예의 전당 (이 기계에만 저장된다) ---------- */
+function hallData() {
+  try { return JSON.parse(localStorage.getItem("wc-hall") || "{}"); } catch (e) { return {}; }
+}
+function showHall() {
+  const h = hallData();
+  const top = Object.keys(h).map((n) => [n, h[n]]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  if (!top.length) { $("hall").hidden = true; return; }
+  const medal = ["🥇", "🥈", "🥉"];
+  $("hall").hidden = false;
+  $("hall").innerHTML = "<h2>내가 뽑은 우승 게임</h2><ul>" + top.map((t, k) => {
+    const g = GAMES.find((x) => x.n === t[0]);
+    return `<li>${medal[k]} <span>${g ? g.e : "🎮"}</span> ${t[0]}<span class="cnt">${t[1]}번</span></li>`;
+  }).join("") + "</ul>";
+}
+function recordWin(name) {
+  try {
+    const h = hallData();
+    h[name] = (h[name] || 0) + 1;
+    localStorage.setItem("wc-hall", JSON.stringify(h));
+  } catch (e) {}
+}
+
+/* ---------- 대결 ---------- */
+function startGame(size) {
+  clearTimeout(timer); timer = null;   // 앞 판이 남긴 시계를 반드시 끈다
+  busy = false;
+  pool = shuffle(GAMES).slice(0, size);
+  next = []; i = 0; total = pool.length / 2;
+  runnerUp = null; semis = [];
+  startEl.hidden = true; doneEl.hidden = true; playEl.hidden = false;
+  showPair();
+}
+
+function fill(btn, g) {
+  btn.innerHTML = `<span class="e">${g.e}</span><span class="n">${g.n}</span><span class="c">${CATS[g.c] || ""}</span>`;
+  btn.className = "pick";
+}
+
+function showPair() {
+  const a = pool[i * 2], b = pool[i * 2 + 1];
+  if (!a || !b) { startEl.hidden = false; playEl.hidden = true; return; }  // 꼬였으면 처음으로
+  fill($("pickA"), a); fill($("pickB"), b);
+  $("roundName").textContent = roundName(pool.length);
+  $("count").textContent = (i + 1) + " / " + total;
+  $("progFill").style.width = (i / total * 100) + "%";
+  const f = $("fight");
+  f.classList.remove("enter"); void f.offsetWidth; f.classList.add("enter");
+  busy = false;
+}
+
+function choose(side) {
+  if (busy || playEl.hidden) return;
+  busy = true;
+  pickSound();
+  const A = $("pickA"), B = $("pickB");
+  const winner = side === "A" ? pool[i * 2] : pool[i * 2 + 1];
+  const loser  = side === "A" ? pool[i * 2 + 1] : pool[i * 2];
+  (side === "A" ? A : B).classList.add("win");
+  (side === "A" ? B : A).classList.add("lose");
+
+  if (pool.length === 2) runnerUp = loser;
+  if (pool.length === 4) semis.push(loser);
+  next.push(winner);
+
+  timer = setTimeout(() => {
+    timer = null;
+    i++;
+    $("progFill").style.width = (i / total * 100) + "%";
+    if (i < total) { showPair(); return; }
+    if (next.length === 1) { finish(next[0]); return; }
+    pool = next; next = []; i = 0; total = pool.length / 2;
+    showPair();
+  }, 430);
+}
+
+$("pickA").onclick = () => choose("A");
+$("pickB").onclick = () => choose("B");
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowUp" || e.key === "1") choose("A");
+  if (e.key === "ArrowDown" || e.key === "2") choose("B");
+});
+
+/* ---------- 우승 ---------- */
+function confetti() {
+  const colors = ["#6C8BFF", "#FF6B8A", "#FFC53D", "#63D8A4", "#B58BFF"];
+  for (let k = 0; k < 36; k++) {
+    const s = document.createElement("i");
+    s.className = "conf";
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.background = colors[k % colors.length];
+    s.style.animationDuration = (1.6 + Math.random() * 1.4) + "s";
+    s.style.animationDelay = (Math.random() * 0.5) + "s";
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 3600);
+  }
+}
+
+function finish(g) {
+  playEl.hidden = true; doneEl.hidden = false;
+  $("champ").innerHTML = `<div class="e">${g.e}</div><div class="n">${g.n}</div>`;
+  let txt = "";
+  if (runnerUp) txt += `🥈 준우승 &nbsp;${runnerUp.e} ${runnerUp.n}<br>`;
+  if (semis.length) txt += "🥉 4강 &nbsp;" + semis.map((s) => s.e + " " + s.n).join(" · ");
+  $("rank").innerHTML = txt;
+  $("goPlay").href = g.u;
+  recordWin(g.n);
+  winSound(); confetti();
+}
+
+$("again").onclick = () => {
+  doneEl.hidden = true; startEl.hidden = false;
+  showHall();
+};
+
+buildStart();
+</script>
+</body>
+</html>

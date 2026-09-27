@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>나의 이야기 만화책</title>
+<style>
+  :root{
+    --ink:#17140f;
+    --paper:#FFFDF5;
+    --cap:#FFF3CF;
+    --accent:#C9452F;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:#2B2A26;
+    color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:10px 8px;
+    user-select:none;
+  }
+  .book{
+    position:relative;
+    width:100%; max-width:520px;
+    height:min(82dvh, 760px);
+    perspective:1600px;
+  }
+  .page{
+    position:absolute; inset:0;
+    background:var(--paper);
+    border-radius:6px;
+    box-shadow:0 12px 40px rgba(0,0,0,.45);
+    padding:10px;
+    overflow-y:auto;
+    transform-origin:left center;
+    transition:transform .4s ease, opacity .4s ease;
+    display:flex; flex-direction:column; gap:9px;
+    cursor:pointer;
+  }
+  .page.flip-out{transform:rotateY(-80deg); opacity:0;}
+  .page.flip-in-prep{transform:rotateY(60deg); opacity:0; transition:none;}
+
+  /* ── 만화 칸 ── */
+  .panel{
+    position:relative;
+    border:3px solid var(--ink);
+    border-radius:4px;
+    background:#EAF0F5;
+    overflow:hidden;
+    flex:1 1 auto;
+    min-height:fit-content;
+    display:flex; flex-direction:column;
+  }
+  .bg{position:absolute; inset:0; width:100%; height:100%;}
+  .panel .inner{
+    position:relative; z-index:1;
+    flex:1; display:flex; flex-direction:column;
+    padding:7px; gap:5px;
+  }
+
+  /* 설명 글 상자 */
+  .cap{
+    background:var(--cap);
+    border:2px solid var(--ink);
+    border-radius:2px;
+    padding:5px 7px;
+    font-size:.86rem; font-weight:700; line-height:1.35;
+    box-shadow:2px 2px 0 rgba(0,0,0,.3);
+    align-self:flex-start;
+    max-width:96%;
+  }
+
+  /* 말풍선 */
+  .say{display:flex; align-items:flex-end; gap:5px; max-width:97%;}
+  .say.r{align-self:flex-end; flex-direction:row-reverse;}
+  .say .face{flex:0 0 auto; width:42px; height:42px;}
+  .say .face svg{width:100%; height:100%; display:block;}
+  .bub{
+    position:relative;
+    background:#fff;
+    border:2.5px solid var(--ink);
+    border-radius:16px;
+    padding:6px 10px;
+    font-size:.85rem; font-weight:800; line-height:1.35;
+    box-shadow:2px 2px 0 rgba(0,0,0,.25);
+  }
+  .bub .nm{display:block; font-size:.62rem; font-weight:800; color:#A8642F; letter-spacing:.02em;}
+  .bub::before, .bub::after{content:''; position:absolute; bottom:8px; width:0; height:0;}
+  .say:not(.r) .bub::before{left:-12px; border:6px solid transparent; border-right-color:var(--ink); border-right-width:12px;}
+  .say:not(.r) .bub::after{left:-7px; border:5px solid transparent; border-right-color:#fff; border-right-width:10px;}
+  .say.r .bub::before{right:-12px; border:6px solid transparent; border-left-color:var(--ink); border-left-width:12px;}
+  .say.r .bub::after{right:-7px; border:5px solid transparent; border-left-color:#fff; border-left-width:10px;}
+  .say.solo .bub::before, .say.solo .bub::after{display:none;}
+
+  /* 효과음 */
+  .fx{
+    align-self:center;
+    font-size:1.3rem; font-weight:900;
+    color:#FFF; letter-spacing:.04em;
+    text-shadow:2px 2px 0 var(--ink), -2px 2px 0 var(--ink), 2px -2px 0 var(--ink), -2px -2px 0 var(--ink);
+    transform:rotate(-4deg);
+    padding:2px 0;
+  }
+
+  /* 말풍선 무리 — 사람들 바로 위에 놓는다 */
+  .talk{
+    margin-top:auto;
+    display:flex; flex-direction:column; gap:5px; align-items:stretch;
+  }
+
+  /* 사람들이 서 있는 자리 */
+  .stage{
+    display:flex; align-items:flex-end; justify-content:center;
+    gap:2px; margin-top:6px;
+    height:clamp(80px, 16vh, 150px);
+    pointer-events:none;
+  }
+  .stage svg{height:100%; width:auto; display:block;}
+
+  /* 큰 글자 칸 (하지만!, 골!) */
+  .bang{
+    position:relative; border:3px solid var(--ink); border-radius:4px;
+    background:#1D1B17; overflow:hidden;
+    min-height:112px; flex:1 1 auto; max-height:40vh;
+    display:flex; align-items:center; justify-content:center; padding:10px;
+  }
+  .bang .txt{
+    position:relative; z-index:1;
+    font-size:clamp(1.2rem, 6vw, 1.9rem); font-weight:900; text-align:center;
+    color:#FFF2C8; line-height:1.2;
+    text-shadow:3px 3px 0 var(--ink), -2px 2px 0 var(--ink), 2px -2px 0 var(--ink), -2px -2px 0 var(--ink);
+    transform:rotate(-3deg);
+  }
+  .bang.gold .txt{color:#FFD447;}
+
+  /* 명단·대진표 칸 */
+  .board{
+    border:3px solid var(--ink); border-radius:4px;
+    background:#FFF8E6; flex:1 1 auto;
+    padding:12px 14px 14px;
+    box-shadow:inset 0 0 0 2px #E8D9AE;
+  }
+  .board .pin{text-align:center; font-size:1rem; margin-bottom:4px;}
+  .board p{font-size:.85rem; font-weight:700; line-height:1.55; padding-left:12px; text-indent:-12px;}
+  .board p::before{content:'· ';}
+
+  /* 장 제목 칸 */
+  .chap{
+    border:3px solid var(--ink); border-radius:4px;
+    background:#C9452F; color:#FFF3CF;
+    flex:0 0 auto; padding:14px 12px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    box-shadow:inset 0 0 0 3px #FFF3CF, inset 0 0 0 6px #C9452F;
+  }
+  .chap .no{font-size:.72rem; font-weight:800; letter-spacing:.3em;}
+  .chap .nm{font-size:1.45rem; font-weight:900; letter-spacing:.02em;}
+
+  /* 표지 */
+  .cover{
+    flex:1; border:3px solid var(--ink); border-radius:4px;
+    background:linear-gradient(#FFE9A8, #F8C471 60%, #E8A05C);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; padding:16px 12px; position:relative; overflow:hidden;
+  }
+  .cover .kind{font-size:.75rem; font-weight:900; letter-spacing:.45em; color:#A8451F;}
+  .cover h1{font-size:2.1rem; font-weight:900; letter-spacing:.02em; color:#5A2A12; text-shadow:3px 3px 0 #FFF3CF;}
+  .cover .sub{font-size:1.05rem; font-weight:900; color:#8A3C1A; background:#FFF3CF; border:3px solid var(--ink); border-radius:20px; padding:3px 14px; transform:rotate(-2deg);}
+  .cover .by{font-size:.92rem; font-weight:800; color:#5A2A12;}
+  .cover .row{display:flex; align-items:flex-end; gap:2px; height:150px; margin-top:4px;}
+  .cover .row svg{height:100%; width:auto;}
+  .cover.end{background:linear-gradient(#FFD98A, #F0A868 70%, #D98A4E);}
+  .cover .hint{font-size:.85rem; font-weight:700; color:#7A3A18; animation:breath 2s infinite;}
+  @keyframes breath{0%,100%{opacity:.45;} 50%{opacity:1;}}
+
+  /* 아래 단추 */
+  .nav{
+    width:100%; max-width:520px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:8px; margin-top:8px;
+  }
+  .nav button{
+    font-family:inherit; font-size:.95rem; font-weight:800;
+    background:#FFF3CF; color:var(--ink);
+    border:3px solid var(--ink); border-radius:8px;
+    padding:7px 14px; cursor:pointer;
+    box-shadow:0 3px 0 rgba(0,0,0,.5);
+  }
+  .nav button:active{transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.5);}
+  .nav button:disabled{opacity:.35; box-shadow:none;}
+  .nav .mid{display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .pgnum{color:#E8DCC0; font-size:.85rem; font-weight:800;}
+
+  /* 목차 */
+  .toc-bg{
+    position:fixed; inset:0; background:rgba(0,0,0,.6);
+    display:none; align-items:center; justify-content:center; padding:20px; z-index:50;
+  }
+  .toc-bg.show{display:flex;}
+  .toc{
+    background:var(--paper); border:4px solid var(--ink); border-radius:8px;
+    width:100%; max-width:420px; max-height:78vh; overflow-y:auto; padding:14px;
+  }
+  .toc h2{font-size:1.1rem; text-align:center; margin-bottom:10px;}
+  .toc-item{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    width:100%; text-align:left; font-family:inherit; font-size:.92rem; font-weight:700;
+    background:none; border:none; border-bottom:2px dotted #CFC6AE;
+    padding:9px 4px; cursor:pointer; color:var(--ink);
+  }
+  .toc-item .pg{font-size:.78rem; color:#96825C; font-weight:800;}
+  .toc-close{
+    width:100%; margin-top:10px; font-family:inherit; font-weight:800; font-size:.95rem;
+    background:#FFF3CF; border:3px solid var(--ink); border-radius:8px; padding:8px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="book">
+  <div class="page" id="page"></div>
+</div>
+
+<div class="nav">
+  <button id="prev-btn" onclick="go(-1)">← 앞</button>
+  <div class="mid">
+    <button onclick="openToc()">목차</button>
+    <span class="pgnum" id="page-num"></span>
+  </div>
+  <button id="next-btn" onclick="go(1)">뒤 →</button>
+</div>
+
+<div class="toc-bg" id="toc-bg" onclick="if(event.target===this)closeToc()">
+  <div class="toc">
+    <h2>목차</h2>
+    <div id="toc-list"></div>
+    <button class="toc-close" onclick="closeToc()">닫기</button>
+  </div>
+</div>
+
+<script src="story.js?v=1"></script>
+<script src="draw.js?v=1"></script>
+<script>
+/* ───── 만화 한 쪽 그리기 ───── */
+
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function scenePanel(p){
+  let caps = '', talk = '', side = 0;
+  p.lines.forEach(l=>{
+    if(l.t === 'n'){
+      caps += '<div class="cap">' + esc(l.s) + '</div>';
+    }else if(l.t === 'fx'){
+      talk += '<div class="fx">' + esc(l.s) + '</div>';
+    }else{
+      const r = (side++ % 2) ? ' r' : '';
+      if(l.who){
+        talk += '<div class="say' + r + '"><div class="face">' + drawFace(l.who) + '</div>'
+              + '<div class="bub"><span class="nm">' + esc(l.who) + '</span>' + esc(l.s) + '</div></div>';
+      }else{
+        talk += '<div class="say solo' + r + '"><div class="bub">' + esc(l.s) + '</div></div>';
+      }
+    }
+  });
+  const cast = (p.cast || []).slice(0, 4);
+  return '<div class="panel">' + drawBg(p.bg) + '<div class="inner">'
+       + caps + '<div class="talk">' + talk + '</div>'
+       + (cast.length ? '<div class="stage">' + cast.map(n=>drawPerson(n)).join('') + '</div>' : '')
+       + '</div></div>';
+}
+
+function bangPanel(p){
+  return '<div class="bang' + (p.gold ? ' gold' : '') + '">' + drawBurst(p.gold)
+       + '<div class="txt">' + esc(p.s) + '</div></div>';
+}
+
+function boardPanel(p){
+  return '<div class="board"><div class="pin">📌</div>'
+       + p.lines.map(l=>'<p>' + esc(l) + '</p>').join('') + '</div>';
+}
+
+function chapPanel(p){
+  return '<div class="chap"><span class="no">' + p.no + '장</span>'
+       + '<span class="nm">' + esc(p.s) + '</span></div>';
+}
+
+function coverPanel(){
+  return '<div class="cover">'
+    + '<span class="kind">만 화 책</span>'
+    + '<h1>나의 이야기</h1>'
+    + '<span class="sub">간장 종지에서 시작된 이야기</span>'
+    + '<span class="by">글 곽재후</span>'
+    + '<div class="row">' + drawPerson('추루룹') + drawPerson('촤르릅') + drawPerson('기다랑') + '</div>'
+    + '<span class="hint">화면을 탭하면 다음 쪽 👉</span>'
+    + '</div>';
+}
+
+function endPanel(){
+  return '<div class="cover end">'
+    + '<div class="row">' + drawPerson('기다랑') + drawPerson('촤르릅') + drawPerson('기다래') + '</div>'
+    + '<h1>— 끝 —</h1>'
+    + '<span class="sub">읽어 주셔서 고맙습니다</span>'
+    + '<span class="by">나의 이야기 · 글 곽재후</span>'
+    + '</div>';
+}
+
+function panelHtml(p){
+  if(p.k === 'scene')   return scenePanel(p);
+  if(p.k === 'bang')    return bangPanel(p);
+  if(p.k === 'board')   return boardPanel(p);
+  if(p.k === 'chapter') return chapPanel(p);
+  if(p.k === 'end')     return endPanel();
+  return coverPanel();
+}
+
+/* ───── 쪽 넘기기 ───── */
+let cur = 0, animating = false;
+const pageEl = document.getElementById('page');
+const POS_KEY = 'chururup-comic-pos';
+try{
+  const saved = parseInt(localStorage.getItem(POS_KEY));
+  if(!isNaN(saved) && saved >= 0 && saved < COMIC.length) cur = saved;
+}catch(e){}
+
+function renderPage(){
+  pageEl.innerHTML = COMIC[cur].panels.map(panelHtml).join('');
+  pageEl.scrollTop = 0;
+  try{ localStorage.setItem(POS_KEY, cur); }catch(e){}
+  document.getElementById('page-num').textContent = (cur+1) + ' / ' + COMIC.length;
+  document.getElementById('prev-btn').disabled = cur === 0;
+  document.getElementById('next-btn').disabled = cur === COMIC.length-1;
+}
+
+function go(dir){
+  if(animating) return;
+  const next = cur + dir;
+  if(next < 0 || next >= COMIC.length) return;
+  animating = true;
+  pageEl.classList.add('flip-out');
+  setTimeout(()=>{
+    cur = next;
+    renderPage();
+    pageEl.classList.remove('flip-out');
+    pageEl.classList.add('flip-in-prep');
+    void pageEl.offsetWidth;
+    pageEl.classList.remove('flip-in-prep');
+    setTimeout(()=>{ animating = false; }, 400);
+  }, 380);
+}
+
+pageEl.addEventListener('click', e=>{
+  const rect = pageEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  go(x < 0.3 ? -1 : 1);
+});
+
+let tx = 0;
+pageEl.addEventListener('touchstart', e=>{ tx = e.changedTouches[0].clientX; }, {passive:true});
+pageEl.addEventListener('touchend', e=>{
+  const dx = e.changedTouches[0].clientX - tx;
+  if(Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+}, {passive:true});
+
+window.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if(e.key === 'ArrowLeft') go(-1);
+});
+
+/* ───── 목차 ───── */
+function openToc(){
+  let items = '<button class="toc-item" onclick="jumpTo(0)"><span>📕 표지</span><span class="pg">1쪽</span></button>';
+  COMIC.forEach((pg, i)=>{
+    const c = pg.panels.find(p=>p.k === 'chapter');
+    if(c){
+      items += '<button class="toc-item" onclick="jumpTo(' + i + ')"><span>' + c.no + '. ' + esc(c.s)
+             + '</span><span class="pg">' + (i+1) + '쪽</span></button>';
+    }
+  });
+  document.getElementById('toc-list').innerHTML = items;
+  document.getElementById('toc-bg').classList.add('show');
+}
+function closeToc(){ document.getElementById('toc-bg').classList.remove('show'); }
+function jumpTo(i){ closeToc(); cur = i; renderPage(); }
+
+renderPage();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
