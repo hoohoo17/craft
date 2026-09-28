@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>색깔 순서 기억하기</title>
+<style>
+  :root{
+    --bg1:#1B1035; --bg2:#2E1A5C;
+    --ink:#FFFFFF;
+    --pad-red:#FF4D5E;    --pad-red-lit:#FF9AA6;
+    --pad-blue:#3D8BFF;   --pad-blue-lit:#8FC3FF;
+    --pad-green:#33C46A;  --pad-green-lit:#8CEBB0;
+    --pad-yellow:#FFC93D; --pad-yellow-lit:#FFE28A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:radial-gradient(circle at 50% 20%, var(--bg2), var(--bg1));
+    color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    touch-action:manipulation;
+    -webkit-user-select:none; user-select:none;
+  }
+  #wrap{
+    position:relative;
+    width:100%; height:100%; max-width:480px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:18px 18px 26px;
+  }
+  .hud{
+    display:flex; justify-content:space-between; align-items:center;
+    width:100%; max-width:340px;
+    margin-bottom:14px;
+    font-weight:800;
+  }
+  .hud .lv{font-size:1.15rem;}
+  .hud .best{font-size:.95rem; opacity:.7;}
+  h1{
+    font-size:1.4rem;
+    margin-bottom:4px;
+    text-align:center;
+  }
+  .sub{
+    font-size:.9rem;
+    opacity:.65;
+    margin-bottom:18px;
+    text-align:center;
+    min-height:1.3em;
+  }
+
+  #board{
+    position:relative;
+    width:min(78vw, 320px);
+    height:min(78vw, 320px);
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr 1fr;
+    gap:12px;
+    flex:none;
+  }
+  .pad{
+    border:none;
+    cursor:pointer;
+    outline:none;
+    filter:brightness(.72) saturate(.85);
+    transition:filter .08s, transform .08s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .pad:active{transform:scale(.97);}
+  .pad.lit{filter:brightness(1.35) saturate(1.15); transform:scale(1.02);}
+  .pad.wrong{filter:brightness(1.6) saturate(1.4);}
+  #p0{background:var(--pad-red);    border-radius:20px 4px 4px 4px;}
+  #p1{background:var(--pad-blue);   border-radius:4px 20px 4px 4px;}
+  #p2{background:var(--pad-green);  border-radius:4px 4px 4px 20px;}
+  #p3{background:var(--pad-yellow); border-radius:4px 4px 20px 4px;}
+
+  #hub{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:34%; height:34%;
+    border-radius:50%;
+    background:#12081F;
+    box-shadow:0 0 0 6px rgba(0,0,0,.25) inset, 0 6px 18px rgba(0,0,0,.5);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.6rem; font-weight:900;
+    pointer-events:none;
+  }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(15,8,30,.92);
+    text-align:center;
+    padding:24px;
+    z-index:5;
+  }
+  .overlay h2{font-size:1.9rem; margin-bottom:10px;}
+  .overlay p{font-size:1.02rem; line-height:1.6; opacity:.85; margin-bottom:6px;}
+  .big-btn{
+    margin-top:20px;
+    font-family:inherit;
+    font-size:1.25rem; font-weight:800;
+    color:#12081F; background:#FFC93D;
+    border:none; border-radius:14px;
+    padding:13px 36px;
+    cursor:pointer;
+    box-shadow:0 5px 0 #B8890C;
+  }
+  .big-btn:active{transform:translateY(4px); box-shadow:0 1px 0 #B8890C;}
+  .score-final{font-size:2.6rem; font-weight:900; color:#FFC93D; margin:10px 0 4px;}
+  .best-final{font-size:1rem; opacity:.75; margin-bottom:8px;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>🌈 색깔 순서 기억하기</h1>
+  <div class="sub" id="sub">순서를 잘 보고, 똑같이 눌러 봐!</div>
+  <div class="hud">
+    <div class="lv">단계 <span id="level">0</span></div>
+    <div class="best">🏆 최고 <span id="best">0</span></div>
+  </div>
+
+  <div id="board">
+    <button class="pad" id="p0" data-i="0" aria-label="빨강"></button>
+    <button class="pad" id="p1" data-i="1" aria-label="파랑"></button>
+    <button class="pad" id="p2" data-i="2" aria-label="초록"></button>
+    <button class="pad" id="p3" data-i="3" aria-label="노랑"></button>
+    <div id="hub">▶</div>
+  </div>
+
+  <div class="overlay" id="start">
+    <h2>🌈 색깔 순서 기억하기</h2>
+    <p>빨강 · 파랑 · 초록 · 노랑이<br>번쩍이는 순서를 잘 기억했다가<br>똑같은 순서로 눌러 봐!</p>
+    <p>한 번 성공할 때마다 순서가 하나씩 길어져요.</p>
+    <button class="big-btn" id="startBtn">시작!</button>
+  </div>
+
+  <div class="overlay hidden" id="over">
+    <h2>😵 아쉬워요!</h2>
+    <div class="score-final" id="finalLevel">0단계</div>
+    <div class="best-final" id="bestLine"></div>
+    <button class="big-btn" id="retryBtn">다시 하기</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const COLORS = ['red','blue','green','yellow'];
+  const FREQ = [329.63, 261.63, 392.00, 220.00]; // 빨 파 초 노
+  const pads = COLORS.map((_, i) => document.getElementById('p' + i));
+  const levelEl = document.getElementById('level');
+  const bestEl = document.getElementById('best');
+  const subEl = document.getElementById('sub');
+  const startOverlay = document.getElementById('start');
+  const overOverlay = document.getElementById('over');
+
+  const K_BEST = 'simon-best';
+  function loadBest(){ try{ return parseInt(localStorage.getItem(K_BEST), 10) || 0; }catch(e){ return 0; } }
+  function saveBest(v){ try{ localStorage.setItem(K_BEST, String(v)); }catch(e){} }
+  let best = loadBest();
+  bestEl.textContent = best;
+
+  let audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function beep(i, dur){
+    if(!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = FREQ[i];
+    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur/1000);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + dur/1000 + 0.02);
+  }
+
+  let sequence = [];
+  let playerStep = 0;
+  let level = 0;
+  let accepting = false;
+  let playing = false;
+
+  function light(i, dur, cls){
+    cls = cls || 'lit';
+    pads[i].classList.add(cls);
+    setTimeout(() => pads[i].classList.remove(cls), dur);
+  }
+
+  function stepDelay(){
+    // 순서가 길어질수록 조금씩 빨라지되, 너무 빨라지진 않는다
+    return Math.max(300, 620 - level * 12);
+  }
+
+  function playSequence(){
+    accepting = false;
+    playerStep = 0;
+    subEl.textContent = '잘 보고 기억해!';
+    let i = 0;
+    const gap = stepDelay();
+    const timer = setInterval(() => {
+      const idx = sequence[i];
+      light(idx, gap * 0.72);
+      beep(idx, gap * 0.72);
+      i++;
+      if(i >= sequence.length){
+        clearInterval(timer);
+        setTimeout(() => {
+          accepting = true;
+          subEl.textContent = '이제 똑같이 눌러 봐!';
+        }, gap * 0.5);
+      }
+    }, gap);
+  }
+
+  function nextRound(){
+    level++;
+    levelEl.textContent = level;
+    sequence.push(Math.floor(Math.random() * 4));
+    setTimeout(playSequence, 500);
+  }
+
+  function startGame(){
+    ensureAudio();
+    startOverlay.classList.add('hidden');
+    overOverlay.classList.add('hidden');
+    sequence = [];
+    level = 0;
+    levelEl.textContent = 0;
+    playing = true;
+    nextRound();
+  }
+
+  function endGame(wrongIdx){
+    playing = false;
+    accepting = false;
+    light(wrongIdx, 400, 'wrong');
+    beep(wrongIdx, 500);
+    subEl.textContent = '틀렸어요! 순서를 다시 잘 봐봐';
+    best = Math.max(best, level);
+    saveBest(best);
+    bestEl.textContent = best;
+    setTimeout(() => {
+      document.getElementById('finalLevel').textContent = level + '단계';
+      document.getElementById('bestLine').textContent = '🏆 최고 기록: ' + best + '단계';
+      overOverlay.classList.remove('hidden');
+    }, 650);
+  }
+
+  function handlePick(i){
+    if(!playing || !accepting) return;
+    light(i, 220);
+    beep(i, 220);
+    if(sequence[playerStep] !== i){
+      endGame(i);
+      return;
+    }
+    playerStep++;
+    if(playerStep >= sequence.length){
+      accepting = false;
+      subEl.textContent = '정답! 다음 단계로…';
+      setTimeout(nextRound, 550);
+    }
+  }
+
+  pads.forEach((pad, i) => {
+    pad.addEventListener('click', () => handlePick(i));
+  });
+
+  const KEYMAP = { '1':0, '2':1, '3':2, '4':3,
+                   'ArrowUp':0, 'ArrowRight':1, 'ArrowLeft':2, 'ArrowDown':3 };
+  window.addEventListener('keydown', e => {
+    if(e.key in KEYMAP) handlePick(KEYMAP[e.key]);
+  });
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('retryBtn').addEventListener('click', startGame);
+})();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
