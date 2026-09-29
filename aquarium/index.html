@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>나의 수족관</title>
+<style>
+  :root{
+    --ink:#20364A;
+    --card:#FFFFFF;
+    --deep:#0E4A6B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:linear-gradient(#CFEAF7, #EAF6FB);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex; justify-content:center;
+    user-select:none;
+  }
+  .wrap{width:100%; max-width:480px; padding:14px 12px 24px; display:flex; flex-direction:column; gap:10px;}
+
+  header{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  h1{font-size:1.3rem; white-space:nowrap;}
+  .count{
+    font-weight:900; font-size:.95rem;
+    background:#FFF; color:var(--deep);
+    border-radius:20px; padding:7px 13px;
+    box-shadow:0 3px 8px rgba(0,0,0,.1);
+    white-space:nowrap;
+  }
+
+  /* ---------- 수조 ---------- */
+  .tank{
+    position:relative;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 8px 22px rgba(14,74,107,.28), inset 0 0 0 4px rgba(255,255,255,.65);
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+  canvas{display:block; width:100%; height:auto;}
+  /* 유리에 비친 빛 */
+  .glare{
+    position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, rgba(255,255,255,.22) 0 14%, transparent 22% 100%);
+  }
+  .toast{
+    position:absolute; left:50%; top:14px; transform:translateX(-50%);
+    background:rgba(255,255,255,.94); color:var(--deep);
+    font-weight:800; font-size:.95rem;
+    padding:8px 16px; border-radius:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
+    pointer-events:none;
+    opacity:0; transition:opacity .3s, transform .3s;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(4px);}
+
+  .menu{display:flex; gap:8px; flex-wrap:wrap; justify-content:center;}
+  .btn{
+    font-family:inherit; font-size:.95rem; font-weight:800;
+    background:var(--card); color:var(--ink);
+    border:none; border-radius:20px;
+    padding:9px 15px;
+    box-shadow:0 3px 8px rgba(0,0,0,.12);
+    cursor:pointer;
+  }
+  .btn:active{transform:translateY(2px);}
+  .btn.on{background:#1E3A5F; color:#FFF;}
+
+  .tip{
+    background:rgba(255,255,255,.8);
+    border-radius:12px;
+    padding:9px 14px;
+    font-size:.92rem;
+    text-align:center;
+    box-shadow:0 3px 8px rgba(0,0,0,.07);
+    line-height:1.5;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🐠 나의 수족관</h1>
+    <div class="count" id="count">물고기 0마리</div>
+  </header>
+
+  <div class="tank" id="tank">
+    <canvas id="cv"></canvas>
+    <div class="glare"></div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="menu">
+    <button class="btn" id="addBtn">🐟 물고기 넣기</button>
+    <button class="btn" id="nameBtn">🏷️ 이름 보기</button>
+    <button class="btn" id="netBtn">🪣 물고기 빼기</button>
+    <button class="btn" id="nightBtn">🌙 밤</button>
+  </div>
+
+  <div class="tip" id="tip">수조를 <b>톡톡</b> 누르면 먹이가 떨어져요. 물고기가 몰려와요!</div>
+</div>
+
+<script>
+/* ==================== 저장 ==================== */
+const KEY = 'aquarium-v1';
+function save(){
+  try{
+    localStorage.setItem(KEY, JSON.stringify({
+      fish: fish.map(f => ({name:f.name, hue:f.hue, size:f.size, kind:f.kind, ate:f.ate})),
+      night: night
+    }));
+  }catch(e){}
+}
+function load(){
+  try{ return JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ return null; }
+}
+
+/* ==================== 화면 ==================== */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+function resize(){
+  const oldW = W, oldH = H;
+  const box = document.getElementById('tank').getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  // 아직 자리를 못 잡아 0으로 나올 때가 있어서 최소 크기는 지켜 준다
+  W = Math.max(240, Math.round(box.width) || Math.min(window.innerWidth - 24, 456) || 360);
+  // 세로는 화면 높이에 맞춰서, 너무 납작하거나 길지 않게
+  H = Math.round(Math.min(Math.max((window.innerHeight || 700) * 0.58, 300), 520));
+  cv.style.height = H + 'px';
+  cv.width  = W * DPR;
+  cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  layoutScenery();
+  // 수조 크기가 바뀌면 물고기도 같은 비율로 옮겨 준다 (한쪽에 뭉치지 않게)
+  if(oldW > 0 && oldH > 0 && (oldW !== W || oldH !== H)){
+    for(const f of fish){
+      f.x = Math.max(20, Math.min(W - 20, f.x / oldW * W));
+      f.y = Math.max(20, Math.min(H - 20, f.y / oldH * H));
+    }
+  }
+}
+window.addEventListener('resize', resize);
+if(window.ResizeObserver) new ResizeObserver(resize).observe(document.getElementById('tank'));
+
+/* ==================== 소리 (톡, 냠) ==================== */
+let audio = null;
+function beep(freq, dur, type, vol){
+  try{
+    if(!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type || 'sine';
+    o.frequency.value = freq;
+    g.gain.value = vol || 0.06;
+    g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + dur);
+    o.connect(g); g.connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + dur);
+  }catch(e){}
+}
+
+/* ==================== 물고기 ==================== */
+const NAMES = ['방울','뽀글','하양','노랑','달이','별이','구름','하늘','솜사탕','콩이',
+               '단추','반짝','물결','파도','산호','보리','두부','모찌','초코','사탕',
+               '햇살','새싹','참외','수박','자두','모래','조약돌','진주','미역','다시마'];
+const KINDS = ['금붕어','구피','열대어','해마','복어'];
+
+let fish = [];
+let foods = [];
+let bubbles = [];
+let hearts = [];   // 먹었을 때 뽕 뜨는 하트
+let night = false;
+let showNames = false;
+let netMode = false;    // 뜰채로 물고기를 빼는 중
+let crowd = 1;          // 물고기가 많아지면 1보다 작아져서 모두 작게 그려진다
+
+function updateCrowd(){
+  crowd = Math.max(0.3, Math.min(1, Math.sqrt(26 / Math.max(1, fish.length))));
+}
+let totalAte = 0;
+
+// 받침이 있으면 '이', 없으면 '가'  (예: 방울이, 모찌가)
+function iGa(name){
+  const c = name.charCodeAt(name.length - 1);
+  const hasJong = (c >= 0xAC00 && c <= 0xD7A3) && ((c - 0xAC00) % 28) !== 0;
+  return name + (hasJong ? '이' : '가');
+}
+
+function randName(){
+  const used = fish.map(f => f.name);
+  const free = NAMES.filter(n => !used.includes(n));
+  const pool = free.length ? free : NAMES;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function makeFish(opt){
+  opt = opt || {};
+  return {
+    name: opt.name || randName(),
+    kind: opt.kind || KINDS[Math.floor(Math.random() * KINDS.length)],
+    hue:  opt.hue  != null ? opt.hue  : Math.floor(Math.random() * 360),
+    size: opt.size != null ? opt.size : 13 + Math.random() * 6,
+    ate:  opt.ate  || 0,
+    x: 40 + Math.random() * Math.max(1, W - 80),
+    y: 40 + Math.random() * Math.max(1, H - 120),
+    ang: Math.random() * Math.PI * 2,
+    spd: 0.5 + Math.random() * 0.4,
+    phase: Math.random() * 10,
+    wander: 0,
+    munch: 0        // 먹은 직후 잠깐 커지는 연출
+  };
+}
+
+/* ==================== 수초 · 돌 (배경) ==================== */
+let weeds = [], rocks = [];
+function layoutScenery(){
+  weeds = [];
+  const n = Math.max(4, Math.round(W / 70));
+  for(let i = 0; i < n; i++){
+    weeds.push({
+      x: (W / n) * i + Math.random() * (W / n),
+      h: 50 + Math.random() * 90,
+      w: 5 + Math.random() * 4,
+      hue: 120 + Math.random() * 50,
+      phase: Math.random() * 10,
+      blades: 2 + Math.floor(Math.random() * 3)
+    });
+  }
+  rocks = [];
+  for(let i = 0; i < 4; i++){
+    rocks.push({
+      x: Math.random() * W,
+      r: 14 + Math.random() * 22,
+      g: 150 + Math.random() * 60
+    });
+  }
+}
+
+/* ==================== 먹이 주기 ==================== */
+function dropFood(x, y){
+  const n = 3 + Math.floor(Math.random() * 3);
+  for(let i = 0; i < n; i++){
+    foods.push({
+      x: x + (Math.random() - 0.5) * 26,
+      y: y + (Math.random() - 0.5) * 14,
+      vy: 0.15 + Math.random() * 0.25,
+      vx: (Math.random() - 0.5) * 0.3,
+      life: 900,
+      hue: 25 + Math.random() * 25
+    });
+  }
+  beep(880 + Math.random() * 200, 0.08, 'triangle', 0.05);
+}
+
+/* ==================== 한 칸 움직이기 ==================== */
+function step(){
+  const t = performance.now() / 1000;
+  updateCrowd();
+
+  /* --- 먹이: 천천히 가라앉는다 --- */
+  for(let i = foods.length - 1; i >= 0; i--){
+    const f = foods[i];
+    f.x += f.vx + Math.sin(t * 2 + f.y * 0.05) * 0.12;
+    f.y += f.vy;
+    const floor = H - 18 - Math.random() * 4;
+    if(f.y > floor){ f.y = floor; f.vy = 0; f.vx *= 0.9; }
+    f.life--;
+    if(f.life <= 0) foods.splice(i, 1);
+  }
+
+  /* --- 물고기 --- */
+  for(const fi of fish){
+    // 제일 가까운 먹이 찾기
+    let best = null, bestD = 1e9;
+    for(const f of foods){
+      const d = (f.x - fi.x) ** 2 + (f.y - fi.y) ** 2;
+      if(d < bestD){ bestD = d; best = f; }
+    }
+
+    let want = null, hurry = 1, turn = 0.06;
+    let chasing = false;
+    if(best && bestD < 300 * 300){
+      chasing = true;
+      const d = Math.sqrt(bestD);
+      want = Math.atan2(best.y - fi.y, best.x - fi.x);
+      // 멀면 확 달려들고, 가까워지면 속도를 줄이고 몸을 빨리 꺾어 정확히 문다
+      hurry = d > 70 ? 2.4 : 1.2;
+      turn  = d > 70 ? 0.14 : 0.34;
+      if(d < fi.size * crowd * 0.6 + 7){   // 입에 닿았다
+        foods.splice(foods.indexOf(best), 1);
+        fi.ate++; totalAte++;
+        fi.size = Math.min(fi.size + 0.25, 23);
+        fi.munch = 14;
+        hearts.push({x: fi.x, y: fi.y, life: 45});
+        beep(420 + Math.random() * 120, 0.09, 'sine', 0.05);
+        maybeBaby();
+      }
+    }else{
+      // 먹이가 없으면 슬슬 돌아다닌다
+      fi.wander--;
+      if(fi.wander <= 0){
+        fi.wander = 60 + Math.random() * 160;
+        fi.want = fi.ang + (Math.random() - 0.5) * 2.2;
+      }
+      want = fi.want != null ? fi.want : fi.ang;
+      if(night){ hurry = 0.35; turn = 0.03; }   // 밤에는 느릿느릿
+    }
+
+    // 벽이 가까우면 안쪽으로 몸을 돌린다.
+    // 벽에서 멀어지는 쪽을 새 목표로 아예 정해 둬야 벽에 붙어 있지 않는다.
+    const pad = 40, padDown = chasing ? 20 : 56;   // 바닥 먹이를 먹을 땐 더 내려간다
+    let ax = 0, ay = 0;
+    if(fi.x < pad)       ax += (pad - fi.x) / pad;
+    if(fi.x > W - pad)   ax -= (fi.x - (W - pad)) / pad;
+    if(fi.y < pad)       ay += (pad - fi.y) / pad;
+    if(fi.y > H - padDown) ay -= (fi.y - (H - padDown)) / padDown;
+    if(ax || ay){
+      if(chasing){
+        // 먹이를 쫓는 중이면 벽을 살짝만 피하면서 계속 먹이 쪽으로 간다
+        want = Math.atan2(Math.sin(want) * 1.6 + ay, Math.cos(want) * 1.6 + ax);
+      }else{
+        want = Math.atan2(ay, ax);
+        fi.want = want;
+        fi.wander = 50 + Math.random() * 90;   // 한동안 이 방향을 지킨다
+      }
+    }
+
+    // 방향을 부드럽게 꺾는다
+    let diff = want - fi.ang;
+    while(diff >  Math.PI) diff -= Math.PI * 2;
+    while(diff < -Math.PI) diff += Math.PI * 2;
+    fi.ang += diff * turn;
+
+    const v = fi.spd * hurry;
+    fi.x += Math.cos(fi.ang) * v;
+    fi.y += Math.sin(fi.ang) * v;
+    fi.x = Math.max(8, Math.min(W - 8, fi.x));
+    fi.y = Math.max(8, Math.min(H - 8, fi.y));
+    fi.phase += 0.12 + v * 0.1;
+    if(fi.munch > 0) fi.munch--;
+
+  }
+
+  separate();
+
+  /* --- 기포 --- */
+  if(Math.random() < 0.06 && bubbles.length < 26){
+    bubbles.push({x: 10 + Math.random() * (W - 20), y: H, r: 1.5 + Math.random() * 3, w: Math.random() * 10});
+  }
+  for(let i = bubbles.length - 1; i >= 0; i--){
+    const b = bubbles[i];
+    b.y -= 0.5 + b.r * 0.12;
+    b.w += 0.06;
+    if(b.y < -6) bubbles.splice(i, 1);
+  }
+
+  /* --- 하트 --- */
+  for(let i = hearts.length - 1; i >= 0; i--){
+    hearts[i].y -= 0.6;
+    if(--hearts[i].life <= 0) hearts.splice(i, 1);
+  }
+}
+
+/* 서로 겹치지 않게 살짝 비켜 준다.
+   수조를 네모 칸으로 나눠서 '옆 칸에 있는 물고기'만 살펴보기 때문에
+   물고기가 몇백 마리가 돼도 느려지지 않는다. */
+function separate(){
+  if(fish.length < 2) return;
+  const cell = Math.max(16, 34 * crowd);
+  const cols = Math.max(1, Math.ceil(W / cell));
+  const grid = new Map();
+  for(const f of fish){
+    const k = Math.floor(f.y / cell) * cols + Math.floor(f.x / cell);
+    const box = grid.get(k);
+    if(box) box.push(f); else grid.set(k, [f]);
+  }
+  for(const fi of fish){
+    const cx = Math.floor(fi.x / cell), cy = Math.floor(fi.y / cell);
+    for(let dy = -1; dy <= 1; dy++){
+      for(let dx = -1; dx <= 1; dx++){
+        const box = grid.get((cy + dy) * cols + (cx + dx));
+        if(!box) continue;
+        for(const o of box){
+          if(o === fi) continue;
+          const ox = fi.x - o.x, oy = fi.y - o.y;
+          const d2 = ox * ox + oy * oy;
+          const near = (fi.size + o.size) * crowd * 0.85;
+          if(d2 > 0.01 && d2 < near * near){
+            const d = Math.sqrt(d2);
+            fi.x += ox / d * 0.45;
+            fi.y += oy / d * 0.45;
+          }
+        }
+      }
+    }
+  }
+}
+
+/* 먹이를 많이 먹으면 새끼가 태어난다 */
+function maybeBaby(){
+  if(!fish.length) return;
+  if(totalAte > 0 && totalAte % 12 === 0){
+    const mom = fish[Math.floor(Math.random() * fish.length)];
+    const baby = makeFish({hue: (mom.hue + (Math.random() - 0.5) * 40 + 360) % 360, size: 8, kind: mom.kind});
+    baby.x = mom.x; baby.y = mom.y;
+    fish.push(baby);
+    toast('🥚 ' + iGa(baby.name) + ' 태어났어요!');
+    beep(660, 0.12, 'triangle', 0.06);
+    beep(990, 0.18, 'triangle', 0.05);
+    refreshCount(); save();
+  }
+}
+
+/* ==================== 그리기 ==================== */
+function draw(){
+  const t = performance.now() / 1000;
+
+  // 물
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  if(night){ g.addColorStop(0, '#0B2B4A'); g.addColorStop(1, '#07182C'); }
+  else     { g.addColorStop(0, '#5FC4E8'); g.addColorStop(1, '#0E6EA0'); }
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // 위에서 내려오는 빛줄기
+  ctx.save();
+  ctx.globalAlpha = night ? 0.05 : 0.13;
+  ctx.fillStyle = '#FFFFFF';
+  for(let i = 0; i < 4; i++){
+    const x = (W / 4) * i + Math.sin(t * 0.3 + i) * 18 + 20;
+    ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x + 26, 0); ctx.lineTo(x + 66, H); ctx.lineTo(x - 6, H);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+
+  // 모래
+  ctx.fillStyle = night ? '#2A3A46' : '#E8D9A8';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for(let x = 0; x <= W; x += 16) ctx.lineTo(x, H - 16 - Math.sin(x * 0.04) * 5);
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+
+  // 돌
+  for(const r of rocks){
+    ctx.fillStyle = night ? 'rgba(90,110,125,.9)' : 'rgb(' + r.g + ',' + r.g + ',' + (r.g - 12) + ')';
+    ctx.beginPath();
+    ctx.ellipse(r.x, H - 18, r.r, r.r * 0.6, 0, Math.PI, 0);
+    ctx.fill();
+  }
+
+  // 수초 (물결에 흔들린다)
+  for(const wd of weeds){
+    for(let b = 0; b < wd.blades; b++){
+      const sway = Math.sin(t * 1.1 + wd.phase + b) * 12;
+      const h = wd.h * (1 - b * 0.16);
+      ctx.strokeStyle = night
+        ? 'hsl(' + wd.hue + ',30%,22%)'
+        : 'hsl(' + wd.hue + ',55%,' + (34 + b * 5) + '%)';
+      ctx.lineWidth = wd.w - b;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(wd.x + b * 6 - 6, H - 16);
+      ctx.quadraticCurveTo(wd.x + b * 6 - 6 + sway * 0.4, H - 16 - h * 0.6, wd.x + b * 6 - 6 + sway, H - 16 - h);
+      ctx.stroke();
+    }
+  }
+
+  // 먹이
+  for(const f of foods){
+    ctx.fillStyle = 'hsl(' + f.hue + ',70%,' + (night ? 40 : 55) + '%)';
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 물고기
+  for(const fi of fish) drawFish(fi, t);
+
+  // 하트
+  for(const h of hearts){
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, h.life / 25);
+    ctx.font = '14px serif';
+    ctx.fillText('💗', h.x - 7, h.y - 10);
+    ctx.restore();
+  }
+
+  // 기포
+  ctx.strokeStyle = 'rgba(255,255,255,.65)';
+  ctx.lineWidth = 1;
+  for(const b of bubbles){
+    ctx.beginPath();
+    ctx.arc(b.x + Math.sin(b.w) * 6, b.y, b.r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // 밤에는 물속이 어둑해진다
+  if(night){
+    ctx.fillStyle = 'rgba(0,10,30,.25)';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function drawFish(fi, t){
+  const s = fi.size * crowd * (fi.munch > 0 ? 1.18 : 1);
+  const flip = Math.cos(fi.ang) < 0 ? -1 : 1;  // 왼쪽으로 갈 땐 몸을 뒤집는다
+  const light = night ? 38 : 58;
+
+  // 색 글자를 물고기마다 한 번만 만들어 둔다 (매번 만들면 느려진다)
+  if(fi._light !== light){
+    fi._light = light;
+    fi._body = 'hsl(' + fi.hue + ',72%,' + light + '%)';
+    fi._dark = 'hsl(' + fi.hue + ',72%,' + (light - 16) + '%)';
+  }
+  const body = fi._body, dark = fi._dark;
+  const wag  = Math.sin(fi.phase) * 0.5;
+
+  // 몸 통통함 (복어는 동글동글, 해마는 길쭉)
+  const fat = fi.kind === '복어' ? 0.88 : (fi.kind === '해마' ? 0.5 : 0.68);
+
+  ctx.save();
+  ctx.translate(fi.x, fi.y);
+  ctx.rotate(fi.ang);
+  ctx.scale(1, flip);   // 왼쪽으로 갈 땐 위아래를 뒤집어 거울처럼 만든다
+
+  // 아주 작게 보일 땐 간단히 그린다 (수백 마리여도 안 버벅이게)
+  if(s < 7){
+    ctx.fillStyle = dark;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.8, 0);
+    ctx.lineTo(-s * 1.55, -s * fat + wag * s * 0.45);
+    ctx.lineTo(-s * 1.55,  s * fat + wag * s * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, s, s * fat, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    drawName(fi, s);
+    return;
+  }
+
+  // 꼬리 — 몸에 파묻히지 않게 몸 뒤쪽 밖에서 시작한다
+  ctx.fillStyle = dark;
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.8, 0);
+  ctx.lineTo(-s * 1.55, -s * fat * 0.95 + wag * s * 0.45);
+  ctx.lineTo(-s * 1.55,  s * fat * 0.95 + wag * s * 0.45);
+  ctx.closePath();
+  ctx.fill();
+
+  // 등지느러미 — 통통한 물고기는 더 높이 세운다
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.4, -s * fat * 0.78);
+  ctx.lineTo(-s * 0.02, -s * (fat + 0.3) - wag * s * 0.1);
+  ctx.lineTo( s * 0.5, -s * fat * 0.68);
+  ctx.closePath();
+  ctx.fill();
+
+  // 몸통
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, s, s * fat, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 배 쪽 밝은 무늬
+  ctx.fillStyle = 'rgba(255,255,255,.3)';
+  ctx.beginPath();
+  ctx.ellipse(-s * 0.1, s * fat * 0.45, s * 0.62, s * fat * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 열대어 줄무늬
+  if(fi.kind === '열대어'){
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    for(let i = -1; i <= 1; i++){
+      ctx.beginPath();
+      ctx.ellipse(i * s * 0.45, 0, s * 0.09, s * fat * 0.9, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // 눈
+  const eyeY = -s * fat * 0.3;
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath(); ctx.arc(s * 0.48, eyeY, s * 0.19, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#12202C';
+  ctx.beginPath(); ctx.arc(s * 0.54, eyeY, s * 0.095, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+
+  drawName(fi, s);
+}
+
+/* 이름표 (작게 그리는 물고기에도 똑같이 붙는다) */
+function drawName(fi, s){
+  if(!showNames && !netMode) return;
+  ctx.save();
+  ctx.font = '700 11px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.fillText(fi.name, fi.x, fi.y - s - 7);
+  ctx.fillStyle = '#FFF';
+  ctx.fillText(fi.name, fi.x, fi.y - s - 8);
+  ctx.restore();
+}
+
+/* ==================== 돌아가기 ==================== */
+function loop(){
+  step();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ==================== 버튼 · 누르기 ==================== */
+const tankEl  = document.getElementById('tank');
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+}
+
+function tankPoint(e){
+  const box = cv.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return {x: (p.clientX - box.left), y: (p.clientY - box.top)};
+}
+tankEl.addEventListener('pointerdown', e => {
+  const p = tankPoint(e);
+  if(netMode){ scoop(p.x, p.y); return; }
+  dropFood(p.x, Math.min(p.y, H - 40));
+});
+
+/* 뜰채로 물고기 한 마리 빼기 */
+function scoop(x, y){
+  let hit = null, hitD = 1e9;
+  for(const f of fish){
+    const d = Math.hypot(f.x - x, f.y - y);
+    const r = Math.max(f.size * crowd * 1.4, 22);   // 작은 물고기도 누르기 쉽게
+    if(d < r && d < hitD){ hitD = d; hit = f; }
+  }
+  if(!hit){ toast('물고기를 콕 눌러 주세요'); return; }
+
+  fish.splice(fish.indexOf(hit), 1);
+  // 빠져나간 자리에 물방울이 뽁뽁
+  for(let i = 0; i < 12; i++){
+    bubbles.push({
+      x: hit.x + (Math.random() - 0.5) * 26,
+      y: hit.y + (Math.random() - 0.5) * 16,
+      r: 1.5 + Math.random() * 3.5,
+      w: Math.random() * 10
+    });
+  }
+  toast('👋 ' + iGa(hit.name) + ' 다른 수조로 갔어요');
+  beep(330, 0.1, 'sine', 0.05);
+  beep(220, 0.16, 'sine', 0.04);
+  refreshCount(); save(); updateTip();
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  const f = makeFish();
+  fish.push(f);
+  toast('🐟 ' + iGa(f.name) + ' 왔어요!');
+  beep(560, 0.1, 'triangle', 0.06);
+  refreshCount(); save(); updateTip();
+});
+
+const nameBtn = document.getElementById('nameBtn');
+nameBtn.addEventListener('click', () => {
+  showNames = !showNames;
+  nameBtn.classList.toggle('on', showNames);
+});
+
+const netBtn = document.getElementById('netBtn');
+netBtn.addEventListener('click', () => {
+  netMode = !netMode;
+  netBtn.classList.toggle('on', netMode);
+  updateTip();
+});
+
+const nightBtn = document.getElementById('nightBtn');
+nightBtn.addEventListener('click', () => {
+  night = !night;
+  nightBtn.classList.toggle('on', night);
+  nightBtn.textContent = night ? '☀️ 낮' : '🌙 밤';
+  updateTip();
+  save();
+});
+
+function updateTip(){
+  const tip = document.getElementById('tip');
+  if(!fish.length)       tip.innerHTML = '수조가 텅 비었어요. <b>🐟 물고기 넣기</b>를 눌러 보세요!';
+  else if(netMode)       tip.innerHTML = '🪣 빼고 싶은 물고기를 <b>콕</b> 누르세요. 다 했으면 버튼을 다시 눌러요.';
+  else if(night)         tip.innerHTML = '불을 껐어요. 물고기들이 <b>느릿느릿</b> 헤엄쳐요. 🌙';
+  else                   tip.innerHTML = '수조를 <b>톡톡</b> 누르면 먹이가 떨어져요. 물고기가 몰려와요!';
+}
+
+function refreshCount(){
+  document.getElementById('count').textContent = '물고기 ' + fish.length + '마리';
+}
+
+/* ==================== 시작 ==================== */
+resize();
+const old = load();
+if(old && old.fish && old.fish.length){
+  fish = old.fish.map(f => makeFish(f));
+  night = !!old.night;
+  if(night){ nightBtn.classList.add('on'); nightBtn.textContent = '☀️ 낮'; }
+}else{
+  for(let i = 0; i < 5; i++) fish.push(makeFish());
+}
+refreshCount();
+updateTip();
+loop();
+</script>
+</body>
+</html>

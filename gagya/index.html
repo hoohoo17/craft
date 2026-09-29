@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>가갸거겨 이야기</title>
+<style>
+  :root{
+    --paper:#FAF3E3; --ink:#3B3327;
+    --accent:#B35C2E;
+    --quote:#7A5A3A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',serif;
+    background:#EADCBE;
+    color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:16px 12px;
+    user-select:none;
+  }
+  .book{
+    position:relative;
+    width:100%; max-width:520px;
+    height:min(78dvh, 680px);
+    perspective:1600px;
+  }
+  .page{
+    position:absolute; inset:0;
+    background:var(--paper);
+    border-radius:8px;
+    box-shadow:0 10px 40px rgba(59,51,39,.25);
+    padding:38px 28px;
+    background-image:repeating-linear-gradient(transparent, transparent 35px, rgba(59,51,39,.05) 36px);
+    overflow-y:auto;
+    transform-origin:left center;
+    transition:transform .45s ease, opacity .45s ease;
+    display:flex; flex-direction:column;
+    cursor:pointer;
+  }
+  .pg-inner{margin:auto 0;}
+  .page.flip-out{transform:rotateY(-80deg); opacity:0;}
+  .page.flip-in-prep{transform:rotateY(60deg); opacity:0; transition:none;}
+
+  .series{
+    text-align:center;
+    font-size:.85rem; font-weight:800;
+    letter-spacing:.35em;
+    color:var(--accent);
+    margin-bottom:10px;
+  }
+  h1{
+    text-align:center;
+    font-size:2rem;
+    letter-spacing:.03em;
+    margin-bottom:10px;
+  }
+  .author{
+    text-align:center;
+    font-size:1.05rem;
+    font-weight:800;
+    color:var(--quote);
+    letter-spacing:.15em;
+    margin-bottom:6px;
+  }
+  .deco{
+    text-align:center;
+    font-size:1.1rem;
+    letter-spacing:.6em;
+    color:var(--accent);
+    margin:14px 0;
+  }
+  .hintline{
+    text-align:center;
+    font-size:.95rem;
+    color:var(--quote);
+    margin-top:26px;
+    animation:breath 2s infinite;
+  }
+  @keyframes breath{50%{opacity:.4}}
+  p{
+    font-size:1.1rem;
+    line-height:1.95;
+    margin-bottom:14px;
+    word-break:keep-all;
+  }
+  p.quote{
+    color:var(--quote);
+    font-weight:700;
+    padding-left:14px;
+    border-left:4px solid var(--accent);
+  }
+  p.turn{
+    text-align:center;
+    font-weight:900;
+    font-size:1.6rem;
+    color:var(--accent);
+    letter-spacing:.1em;
+    margin:18px 0;
+  }
+  p.list{
+    font-size:1.02rem;
+    line-height:1.8;
+    margin-bottom:8px;
+  }
+  .chapter{
+    text-align:center;
+    font-size:.85rem; font-weight:900;
+    letter-spacing:.3em;
+    color:var(--accent);
+    margin-bottom:16px;
+  }
+  .goal{
+    text-align:center;
+    font-weight:900;
+    font-size:1.5rem;
+    color:var(--accent);
+    margin:16px 0;
+  }
+  .ending{
+    text-align:center;
+    font-weight:900;
+    font-size:1.5rem;
+    letter-spacing:.5em;
+    margin-top:30px;
+  }
+
+  .nav{
+    display:flex; align-items:center; gap:16px;
+    margin-top:14px;
+  }
+  .nav button{
+    font-family:inherit;
+    font-size:1.1rem; font-weight:900;
+    background:var(--paper); color:var(--ink);
+    border:none; border-radius:12px;
+    padding:10px 20px;
+    box-shadow:0 3px 10px rgba(59,51,39,.2);
+    cursor:pointer;
+  }
+  .nav button:disabled{opacity:.35; cursor:default;}
+  .nav button:not(:disabled):active{transform:translateY(2px);}
+  .page-num{
+    font-weight:900; font-size:1rem;
+    color:var(--quote);
+    min-width:64px; text-align:center;
+  }
+  .toc-bg{
+    position:fixed; inset:0;
+    background:rgba(59,51,39,.5);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:20;
+    padding:20px;
+  }
+  .toc-bg.show{display:flex;}
+  .toc{
+    background:var(--paper);
+    border-radius:16px;
+    padding:24px 20px;
+    width:100%; max-width:380px;
+    max-height:70dvh;
+    overflow-y:auto;
+    box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .toc h2{text-align:center; margin-bottom:14px; font-size:1.2rem;}
+  .toc-item{
+    display:flex; justify-content:space-between; gap:8px;
+    width:100%;
+    font-family:inherit; font-size:1.05rem; font-weight:800;
+    background:none; border:none;
+    border-bottom:1px dashed rgba(59,51,39,.2);
+    color:var(--ink);
+    padding:11px 6px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .toc-item:active{background:rgba(179,92,46,.1);}
+  .toc-item .pg{color:var(--accent); font-size:.9rem;}
+  .toc-close{
+    margin-top:14px; width:100%;
+    font-family:inherit; font-size:1rem; font-weight:800;
+    background:rgba(0,0,0,.07); color:var(--ink);
+    border:none; border-radius:10px;
+    padding:11px; cursor:pointer;
+  }
+
+  .big{
+    text-align:center;
+    font-size:1.9rem; font-weight:900;
+    letter-spacing:.12em; line-height:1.6;
+    color:var(--accent);
+    margin:20px 0;
+    word-break:keep-all;
+  }
+  .big.faded{
+    color:rgba(59,51,39,.3);
+    letter-spacing:.06em;
+  }
+</style>
+</head>
+<body>
+<div class="book">
+  <div class="page" id="page" onclick="tapPage(event)"></div>
+</div>
+<div class="nav">
+  <button id="prev-btn" onclick="go(-1)">◀</button>
+  <div class="page-num" id="page-num"></div>
+  <button onclick="openToc()">📑 차례</button>
+  <button id="next-btn" onclick="go(1)">▶</button>
+</div>
+
+<div class="toc-bg" id="toc-bg" onclick="if(event.target===this) closeToc()">
+  <div class="toc">
+    <h2>📑 차례</h2>
+    <div id="toc-list"></div>
+    <button class="toc-close" onclick="closeToc()">닫기</button>
+  </div>
+</div>
+
+<script>
+const PAGES = [
+
+  `<h1>가갸거겨 이야기</h1>
+   <div class="author">글 곽재후</div>
+   <div class="deco">가 갸 거 겨 고</div>
+   <div class="deco">교 구 규 그 기</div>
+   <div class="hintline">화면을 탭해서 책장을 넘겨 보세요 👉</div>`,
+
+  `<div class="chapter">가갸거겨 마을</div>
+   <p>산 너머 강 건너, 지도에는 없는 마을이 하나 있었다.</p>
+   <p>그 마을에는 글자 열 명이 살았다.</p>
+   <div class="big">가 갸 거 겨 고<br>교 구 규 그 기</div>
+   <p>마을 이름은 그래서 가갸거겨 마을이었다.</p>`,
+
+  `<p>아침마다 촌장님이 이름을 불렀다.</p>
+   <p class="quote">"가!"</p>
+   <p class="quote">"갸!"</p>
+   <p class="quote">"거!"</p>
+   <p>그렇게 아홉 명이 대답하고 나면, 맨 마지막에 기가 대답했다.</p>
+   <p class="quote">"기!"</p>
+   <p>기가 대답해야 아침이 끝났다.</p>`,
+
+  `<p>이 마을 글자들에게는 아직 받침이 없었다.</p>
+   <p>받침이 없으면 낱말이 될 수 없다.</p>
+   <p>그리고 낱말이 되지 못하면, 사람들 입에서 살 수가 없었다.</p>
+   <p>마을 뒤에는 받침 언덕이 있었다.</p>
+   <p>거기서 받침을 하나 주워 밟으면, 아주 잠깐 낱말이 될 수 있었다.</p>`,
+
+  `<p>하지만 받침은 무거웠다.</p>
+   <p>오래 달고 있으면 다리가 후들거렸다.</p>
+   <p>그래서 글자들은 아껴 가며, 진짜 필요할 때만 받침을 밟았다.</p>
+   <p>그게 이 마을의 규칙이었다.</p>
+   <p>규는 이 대목에서 늘 어깨를 폈다. 규칙에는 자기가 들어 있으니까.</p>`,
+
+  `<div class="chapter">사라진 열 번째</div>
+   <p>어느 날 아침이었다.</p>
+   <p class="quote">"가!" "갸!" "거!" "겨!" "고!" "교!" "구!" "규!" "그!"</p>
+   <p>아홉 명이 대답했다.</p>
+   <p>그리고 마을이 조용해졌다.</p>
+   <p class="turn">기가 없었다.</p>`,
+
+  `<p>아침이 끝나지 않았다.</p>
+   <p>해가 하늘 한가운데에 멈춰 서서 내려오지 않았다.</p>
+   <p>그리고 그날 오후, 마을 앞 철길로 지나가던 것이 사라졌다.</p>
+   <p>칙칙폭폭 소리만 남고, 아무것도 없었다.</p>
+   <p class="turn">기차.</p>
+   <p>기차에는 기가 들어 있었다.</p>`,
+
+  `<p>그다음은 기린이었다.</p>
+   <p>동물원에서 제일 목이 긴 그 동물이, 이름까지 통째로 없어졌다.</p>
+   <p>사람들은 텅 빈 우리를 보면서도 무엇이 없어졌는지 몰랐다.</p>
+   <p>없어진 낱말은 없어졌다는 것도 말할 수 없으니까.</p>`,
+
+  `<p>그리고 아무도 웃지 않게 되었다.</p>
+   <p>기쁨이 사라졌기 때문이다.</p>
+   <p>사람들은 웃고 싶은데 웃는 법을 잊은 얼굴로 서 있었다.</p>
+   <p>아기도 사라지고, 고기도 사라지고, 기억도 사라졌다.</p>`,
+
+  `<p class="turn">그리고 더 큰일이 났다.</p>
+   <p>가가 고개를 들었을 때, 하늘에 떠 있던 이 책의 제목이 이렇게 보였다.</p>
+   <div class="big faded">가갸거겨 이야□</div>
+   <p>이야기.</p>
+   <p>그 말에도 기가 들어 있었다.</p>
+   <p>지금 네가 읽고 있는 이 책의 책장이, 뒤에서부터 한 장씩 하얘지고 있었다.</p>`,
+
+  `<div class="chapter">받침 언덕</div>
+   <p>가가 일어섰다.</p>
+   <p class="quote">"내가 찾아올게."</p>
+   <p>가는 늘 첫 번째였다. 첫 번째는 앞장서는 자리다.</p>
+   <p>가나다라마바사아자차카타파하에서도, 가갸거겨고교구규그기에서도, 가는 맨 앞이었다.</p>
+   <p>앞장서는 건 자랑이 아니라 일이었다.</p>`,
+
+  `<p>받침 언덕에는 받침들이 돌멩이처럼 굴러다녔다.</p>
+   <p>ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ.</p>
+   <p>가는 동그란 ㅇ을 골라 발밑에 놓고 꾹 밟았다.</p>
+   <div class="big">가 + ㅇ = 강</div>
+   <p>발끝에서 물이 터져 나왔다.</p>
+   <p>가는 강이 되어 언덕 아래로 콸콸 흘러갔다.</p>`,
+
+  `<p>뒤에서 누가 헐레벌떡 쫓아왔다.</p>
+   <p>갸, 교, 규였다.</p>
+   <p class="quote">"우리도 갈래."</p>
+   <p>가는 잠깐 망설였다. 이 셋은 마을에서 제일 쓸 데가 없다고 놀림받는 글자들이었다.</p>
+   <p>갸가 들어가는 말은 갸우뚱, 갸륵하다. 그게 거의 전부였다.</p>
+   <p>하지만 가는 고개를 끄덕였다.</p>
+   <p class="quote">"따라와."</p>`,
+
+  `<div class="chapter">말의 바다</div>
+   <p>강을 타고 내려가자 말의 바다가 나왔다.</p>
+   <p>받침은 갈수록 무거웠다. 가는 다리가 후들거릴 때쯤 겨우 바다에 닿아, ㅇ을 모래밭에 내려놓았다.</p>
+   <p>바다에는 낱말들이 둥둥 떠서 헤엄치고 있었다.</p>
+   <p>사과가 지나가고, 우산이 지나가고, 할머니가 지나갔다.</p>
+   <p>그런데 군데군데 구멍이 나 있었다.</p>
+   <p>기가 들어간 낱말들이 있던 자리였다.</p>
+   <p>텅 빈 자리에서 물만 빙글빙글 돌았다.</p>`,
+
+  `<p>바다 끝에는 골짜기가 하나 있었다.</p>
+   <p>끝소리 골짜기.</p>
+   <p>낱말의 맨 끝을 맡는 글자들이 쉬러 오는 곳이었다.</p>
+   <p>하, 히, 치, 지 같은 글자들이 바위에 걸터앉아 다리를 흔들고 있었다.</p>
+   <p>규가 가의 소매를 잡아당겼다.</p>
+   <p class="quote">"여기 규칙이 있어. 끝소리들한테는 인사부터 해야 대답해 줘."</p>
+   <p>가는 허리를 꾸벅 숙이고 물었다.</p>
+   <p class="quote">"안녕하세요. 여기 기 왔어요?"</p>
+   <p>하가 턱으로 저쪽 바위를 가리켰다.</p>`,
+
+  `<div class="chapter">꼴찌의 마음</div>
+   <p>바위 뒤에 기가 무릎을 안고 앉아 있었다.</p>
+   <p class="quote">"나 안 갈 거야."</p>
+   <p class="quote">"왜."</p>
+   <p class="quote">"나는 꼴찌니까."</p>`,
+
+  `<p>기가 땅에 글씨를 썼다.</p>
+   <div class="big">가 갸 거 겨 고 교 구 규 그 기</div>
+   <p class="quote">"봐. 너는 첫 번째야. 나는 열 번째, 맨 끝이야."</p>
+   <p class="quote">"아침 점호도 내가 대답해야 끝나잖아. 그거 알아? 그건 내가 중요해서가 아니라, 내 뒤에 아무도 없어서야."</p>
+   <p class="quote">"내가 없어져도 아무도 모를 줄 알았어."</p>`,
+
+  `<p>가는 한참 말이 없었다.</p>
+   <p>그러다 뒤를 돌아보고 셋을 불렀다.</p>
+   <p class="quote">"갸야. 교야. 규야. 이리 와 봐."</p>
+   <p>셋이 쭈뼛쭈뼛 걸어왔다.</p>
+   <p class="quote">"얘네도 들어가는 낱말이 몇 개 없어. 근데 학교에는 교가 있어. 규칙에는 규가 있어."</p>
+   <p class="quote">"학교에서 규칙을 안 지키면 선생님이 어떻게 하시는 줄 알아?"</p>`,
+
+  `<p>갸가 고개를 옆으로 기울였다.</p>
+   <div class="big">갸우뚱</div>
+   <p>기가 픽 웃었다. 오랜만이었다.</p>`,
+
+  `<p>그리고 가가 하늘을 가리켰다.</p>
+   <p>책 제목이 반쯤 지워진 채 떠 있었다.</p>
+   <div class="big faded">가갸거겨 이야□</div>
+   <p class="quote">"네가 없으면 이야기가 없어."</p>
+   <p class="quote">"네가 없으면, 내가 너를 찾으러 여기까지 온 이 이야기도 없어."</p>
+   <p class="quote">"나는 첫 번째라서 앞장선 거야. 근데 앞장서 봤자, 끝나는 자리가 없으면 그냥 길이야. 이야기가 아니라."</p>`,
+
+  `<div class="chapter">돌아온 글자</div>
+   <p>기가 무릎에 얼굴을 묻었다가 들었다.</p>
+   <p class="quote">"나 돌아가도 돼?"</p>
+   <p class="quote">"네가 대답을 안 해서 우리 마을 아침이 아직도 안 끝났어. 해가 하늘에 박혀 있어."</p>
+   <p>기가 일어섰다.</p>`,
+
+  `<p>돌아오는 길에 바다가 차오르기 시작했다.</p>
+   <p>구멍 난 자리에 기차가 다시 떴다.</p>
+   <p>기린이 목을 쑥 내밀었다.</p>
+   <p>아기가 웃고, 고기가 익고, 사람들이 잊었던 기억을 하나씩 주워 들었다.</p>
+   <p>그리고 무엇보다, 기쁨이 돌아왔다.</p>
+   <p>하얘졌던 책장에 글자가 뒤에서부터 다시 차올랐다.</p>`,
+
+  `<p>마을에서는 촌장님이 처음부터 다시 이름을 불렀다.</p>
+   <p class="quote">"가!" "갸!" "거!" "겨!" "고!" "교!" "구!" "규!" "그!"</p>
+   <p>그리고 마지막.</p>
+   <p class="quote">"기!"</p>
+   <p>해가 스르르 서쪽으로 기울었다. 드디어 아침이 끝났다.</p>`,
+
+  `<p>그날 밤 마을에서는 받침 축제가 열렸다.</p>
+   <p>다들 받침을 하나씩 밟고 낱말이 되어 보았다.</p>
+   <p>가는 감이 되고, 고는 곰이 되고, 구는 굴이 되고, 그는 금이 되었다.</p>
+   <p>기는 ㅁ을 밟았다.</p>
+   <div class="big">기 + ㅁ = 김</div>
+   <p>그날 마을 사람들은 밤새 김을 먹었다.</p>
+   <p>갸는 밟을 만한 받침이 없어서, 그냥 옆에서 갸우뚱하고 있었다.</p>`,
+
+  `<p>혹시 눈치챘을까.</p>
+   <p>이 책 제목을 다시 한번 봐 줘.</p>
+   <div class="big">가갸거겨 이야기</div>
+   <p>첫 글자는 가다.</p>
+   <p>그리고 마지막 글자는, 기다.</p>
+   <p>끝을 맡는 건 아무나 하는 일이 아니다.</p>
+   <div class="ending">끝</div>`,
+];
+
+let cur = 0;
+let animating = false;
+const pageEl = document.getElementById('page');
+const POS_KEY = 'gagya-book-pos';
+try{
+  const saved = parseInt(localStorage.getItem(POS_KEY));
+  if(!isNaN(saved) && saved >= 0 && saved < PAGES.length) cur = saved;
+}catch(e){}
+
+function renderPage(){
+  pageEl.innerHTML = '<div class="pg-inner">' + PAGES[cur] + '</div>';
+  pageEl.scrollTop = 0;
+  try{ localStorage.setItem(POS_KEY, cur); }catch(e){}
+  document.getElementById('page-num').textContent = (cur+1) + ' / ' + PAGES.length;
+  document.getElementById('prev-btn').disabled = cur === 0;
+  document.getElementById('next-btn').disabled = cur === PAGES.length-1;
+}
+
+function go(dir){
+  if(animating) return;
+  const next = cur + dir;
+  if(next < 0 || next >= PAGES.length) return;
+  animating = true;
+  pageEl.classList.add('flip-out');
+  setTimeout(()=>{
+    cur = next;
+    renderPage();
+    pageEl.classList.remove('flip-out');
+    pageEl.classList.add('flip-in-prep');
+    void pageEl.offsetWidth;
+    pageEl.classList.remove('flip-in-prep');
+    setTimeout(()=>{ animating = false; }, 450);
+  }, 420);
+}
+
+function tapPage(e){
+  const rect = pageEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  if(x < 0.3) go(-1);
+  else go(1);
+}
+
+window.addEventListener('keydown', e=>{
+  if(e.key === 'ArrowRight' || e.key === ' ') go(1);
+  if(e.key === 'ArrowLeft') go(-1);
+});
+
+function openToc(){
+  const list = document.getElementById('toc-list');
+  let items = '<button class="toc-item" onclick="jumpTo(0)"><span>📕 표지</span><span class="pg">1쪽</span></button>';
+  PAGES.forEach((p, i)=>{
+    const m = p.match(/<div class="chapter">(.*?)<\/div>/);
+    if(m){
+      items += `<button class="toc-item" onclick="jumpTo(${i})"><span>${m[1]}</span><span class="pg">${i+1}쪽</span></button>`;
+    }
+  });
+  list.innerHTML = items;
+  document.getElementById('toc-bg').classList.add('show');
+}
+function closeToc(){
+  document.getElementById('toc-bg').classList.remove('show');
+}
+function jumpTo(i){
+  closeToc();
+  cur = i;
+  renderPage();
+}
+
+renderPage();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

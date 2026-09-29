@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>개미집</title>
+<style>
+  :root{
+    --paper:#f7f2e8; --ink:#3b3222; --soft:#8a7c64; --line:#e4dac6;
+    --accent:#b5622c; --leaf:#4f9d4b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:linear-gradient(180deg,#fbf8f1 0%,#efe6d4 100%);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px 12px 32px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{width:100%;max-width:960px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  h1{font-size:15px;font-weight:800;letter-spacing:.3em;color:var(--accent)}
+  .sub{font-size:11.5px;color:var(--soft);letter-spacing:.12em}
+
+  .bars{width:100%;max-width:960px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+  @media(max-width:700px){.bars{grid-template-columns:repeat(2,1fr)}}
+  .bar{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 11px}
+  .bar .t{display:flex;justify-content:space-between;gap:6px;font-size:11.5px;font-weight:700;margin-bottom:6px}
+  .bar .t i{font-style:normal;font-weight:600;color:var(--soft);font-size:10.5px;white-space:nowrap}
+  .track{height:7px;background:#efe7d8;border-radius:99px;overflow:hidden}
+  .fill{height:100%;width:0;border-radius:99px;transition:width .2s linear}
+  #fFood{background:var(--accent)} #fAnt{background:#6b5a42}
+  #fEgg{background:#e6d2a0} #fRoad{background:var(--leaf)} #fLeft{background:#c9a24a}
+
+  .stage{position:relative;width:100%;max-width:960px}
+  canvas{display:block;width:100%;height:auto;border-radius:16px;background:#e8d9bb;
+    border:1px solid var(--line);box-shadow:0 10px 30px rgba(120,95,55,.16);touch-action:none}
+
+  .intro{position:absolute;inset:0;border-radius:16px;background:rgba(247,242,232,.96);
+    display:flex;flex-direction:column;justify-content:flex-start;padding:4% 6%;gap:10px;overflow:hidden}
+  .intro.hide{display:none}
+  .intro h2{flex:none;font-size:clamp(16px,2.4vw,23px);line-height:1.3}
+  .intro ol{flex:1 1 auto;min-height:0;overflow:auto;list-style:none;display:flex;flex-direction:column;gap:7px}
+  .intro li{display:flex;gap:10px;font-size:clamp(11.5px,1.4vw,14px);line-height:1.5;color:#4a4130}
+  .intro li b{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px}
+  .intro em{font-style:normal;font-weight:700;color:var(--ink)}
+  .intro button{flex:none;align-self:stretch;background:var(--accent);color:#fff;border:0;
+    border-radius:10px;padding:13px 26px;font-size:15px;font-weight:700;cursor:pointer;
+    box-shadow:0 4px 14px rgba(181,98,44,.35)}
+
+  /* 알림은 그림을 가리지 않게 화면 아래에 따로 둡니다 */
+  .say{width:100%;max-width:960px;margin-top:10px;min-height:40px;display:flex;align-items:center;
+    gap:8px;font-size:13px;font-weight:700;color:#4a4130;background:#fffdf8;
+    border:1px solid var(--line);border-radius:10px;padding:9px 13px;line-height:1.4}
+  .say .dot{flex:none;width:8px;height:8px;border-radius:50%;background:#d9cdb4;transition:background .3s}
+  .say.on .dot{background:var(--accent)}
+  .say span{opacity:.45;transition:opacity .3s}
+  .say.on span{opacity:1}
+
+  .tools{display:flex;gap:6px;margin-top:10px;width:100%;max-width:960px;flex-wrap:wrap;justify-content:flex-end}
+  .tools button{font:700 12px/1 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+    color:var(--ink);background:#fff;border:1px solid var(--line);padding:9px 13px;border-radius:9px;cursor:pointer}
+  .tools button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .tip{width:100%;max-width:960px;margin-top:10px;font-size:11.5px;color:var(--soft);line-height:1.6}
+  .tip b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>개 미 집</h1>
+  <div class="sub">아무도 길을 안 알려 줬는데 길이 생겨요</div>
+</header>
+
+<div class="bars">
+  <div class="bar"><div class="t"><span>창고 먹이</span><i id="vFood">0</i></div>
+    <div class="track"><div class="fill" id="fFood"></div></div></div>
+  <div class="bar"><div class="t"><span>개미</span><i id="vAnt">0마리</i></div>
+    <div class="track"><div class="fill" id="fAnt"></div></div></div>
+  <div class="bar"><div class="t"><span>알</span><i id="vEgg">0개</i></div>
+    <div class="track"><div class="fill" id="fEgg"></div></div></div>
+  <div class="bar"><div class="t"><span>냄새길</span><i id="vRoad">없음</i></div>
+    <div class="track"><div class="fill" id="fRoad"></div></div></div>
+  <div class="bar"><div class="t"><span>땅에 남은 먹이</span><i id="vLeft">0</i></div>
+    <div class="track"><div class="fill" id="fLeft"></div></div></div>
+</div>
+
+<div class="stage">
+  <canvas id="c" width="960" height="640"></canvas>
+  <div class="intro" id="intro">
+    <h2>개미들이 스스로 길을 찾고 집을 넓히는 걸 가만히 보는 놀이예요</h2>
+    <ol>
+      <li><b style="background:#9a9282"></b><div>위쪽은 <em>땅 위</em>, 아래쪽은 <em>땅속을 반으로 잘라 본 모습</em>이에요.</div></li>
+      <li><b style="background:#6b5a42"></b><div>개미는 <em>먹이가 어디 있는지 몰라요.</em> 처음엔 그냥 아무 데나 돌아다녀요.</div></li>
+      <li><b style="background:#4f9d4b"></b><div>먹이를 찾은 개미는 집으로 오면서 <em>초록 냄새</em>를 흘려요. 다른 개미가 그 냄새를 따라가요.</div></li>
+      <li><b style="background:#b5622c"></b><div>많이 다닌 길일수록 냄새가 진해지고, 진한 길로 더 많은 개미가 몰려요. 그래서 <em>어느새 큰길이 하나 생겨요.</em></div></li>
+      <li><b style="background:#c9a24a"></b><div>가져온 먹이는 <em>땅속 창고</em>에 쌓여요. <em>여왕개미</em>가 그 먹이를 먹고 알을 낳아요.</div></li>
+      <li><b style="background:#e6d2a0"></b><div>알에서 깬 개미가 굴을 타고 올라와 또 먹이를 찾으러 가요. 창고가 차면 개미들이 <em>굴을 더 파요.</em></div></li>
+      <li><b style="background:#5f86c9"></b><div><em>땅 위쪽 화면을 누르면</em> 그 자리에 먹이를 놓을 수 있어요. 돌 뒤에 숨겨 놔도 돌아서 찾아와요.</div></li>
+    </ol>
+    <button id="startBtn">가만히 보기</button>
+  </div>
+</div>
+
+<div class="say" id="say"><i class="dot"></i><span id="sayText">가만히 보기를 누르면 개미들이 나와요.</span></div>
+
+<div class="tools">
+  <button id="foodBtn" class="on">🍎 먹이 놓기</button>
+  <button id="roadBtn" class="on">👃 냄새길 보기</button>
+  <button id="rainBtn">🌧️ 비 내리기</button>
+  <button id="fastBtn">⏩ 빠르게</button>
+  <button id="resetBtn">↺ 처음부터</button>
+</div>
+
+<div class="tip">
+  <b>비 내리기</b>를 누르면 냄새길이 전부 지워져요. 개미들이 다시 길을 찾는 걸 처음부터 볼 수 있어요.
+</div>
+
+<script>
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const W=cv.width, H=cv.height, DT=1/60;
+const GROUND=416;                 // 이 선 위는 땅 위, 아래는 땅속
+const CELL=6, GW=Math.floor(W/CELL), GH=Math.floor(GROUND/CELL), NG=GW*GH;
+
+// 냄새 두 가지. foodG = 먹이로 가는 길, homeG = 집으로 가는 길
+const foodG=new Float32Array(NG), homeG=new Float32Array(NG), tmpG=new Float32Array(NG);
+const rockMask=new Uint8Array(NG);
+
+// ---------- 땅 위 개미 규칙 ----------
+const SPEED=62, SPEED_C=54;      // 걷는 빠르기 (먹이를 들면 조금 느려져요)
+const SD=17, SA=0.62;            // 더듬이가 닿는 거리, 더듬이 벌어진 각도
+const TURN=5.0, NOISE=2.6;       // 냄새 쪽으로 꺾는 힘, 제멋대로 흔들리는 정도
+const DEPOSIT=0.055, LIFE=16;    // 냄새 흘리는 양, 몇 초 지나면 냄새가 약해지는지
+const DECAY=0.99760;             // 두 걸음마다 한 번, 남은 냄새가 이만큼 옅어져요
+const LOST=21, ERASE=0.988;      // 이만큼 헤매면 포기하고 집으로. 그때 헛길 냄새를 지워요
+const SCOUT=0.14;                // 이 비율만큼은 냄새를 안 따르는 정찰 개미예요
+
+// ---------- 땅속 규칙 ----------
+const USPEED=54;                 // 굴 안에서 걷는 빠르기
+const STORE_CAP=70;              // 창고 한 칸에 들어가는 먹이
+const EGG_COST=14, EGG_KEEP=20;  // 알 하나에 드는 먹이 / 창고에 이만큼은 남겨 둬요
+const EGG_TIME=11, MAX_EGGS=14;  // 알이 깨는 데 걸리는 시간
+const MAX_NODES=26, DIG_TIME=7;  // 굴 칸 수 한계 / 한 칸 파는 데 걸리는 시간
+const START_ANTS=70, MAX_ANTS=200, PILES=3;
+
+let ants=[], piles=[], rocks=[], nest={x:420,y:250,r:24};
+let nodes=[], eggs=[], digging=null, queen=null;
+let stored=0, brought=0, ticks=0, running=false, fast=false, showRoad=true, dropFood=true;
+let roadLevel=0, sayUntil=0, firstFind=false, pulse=0, layTimer=0, nextDigAt=110;
+let spawnQueue=[];
+
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+function say(t){ document.getElementById('sayText').textContent=t;
+  document.getElementById('say').classList.add('on'); sayUntil=performance.now()+4200; }
+
+// ================= 땅 위 =================
+function buildRocks(){
+  rocks=[]; rockMask.fill(0);
+  let tries=0;
+  while(rocks.length<5 && tries<400){
+    tries++;
+    const ang=rnd(0,Math.PI*2), d=rnd(140,340);
+    const cx=nest.x+Math.cos(ang)*d, cy=nest.y+Math.sin(ang)*d;
+    if(cx<60||cx>W-60||cy<60||cy>GROUND-60) continue;
+    if(Math.hypot(cx-nest.x,cy-nest.y)<110) continue;
+    const blob=[], n=3+Math.floor(rnd(0,3));
+    for(let i=0;i<n;i++) blob.push({x:cx+rnd(-26,26), y:cy+rnd(-20,20), r:rnd(15,29)});
+    rocks.push(blob);
+  }
+  for(let y=0;y<GH;y++) for(let x=0;x<GW;x++){
+    const px=x*CELL+CELL/2, py=y*CELL+CELL/2;
+    for(const blob of rocks) for(const c of blob)
+      if((px-c.x)**2+(py-c.y)**2 < c.r*c.r) rockMask[y*GW+x]=1;
+  }
+}
+function blockedPx(x,y){
+  if(x<0||y<0||x>=W||y>=GROUND) return true;
+  return rockMask[((y/CELL)|0)*GW+((x/CELL)|0)]===1;
+}
+function freeSpot(minD,maxD){
+  for(let i=0;i<300;i++){
+    const ang=rnd(0,Math.PI*2), d=rnd(minD,maxD);
+    const x=nest.x+Math.cos(ang)*d, y=nest.y+Math.sin(ang)*d;
+    if(x<50||x>W-50||y<50||y>GROUND-50) continue;
+    let ok=true;
+    for(let a=0;a<Math.PI*2;a+=Math.PI/6) if(blockedPx(x+Math.cos(a)*30,y+Math.sin(a)*30)){ ok=false; break; }
+    if(!ok) continue;
+    let near=false;
+    for(const p of piles) if(Math.hypot(p.x-x,p.y-y)<140) near=true;
+    if(near) continue;
+    return {x,y};
+  }
+  return null;
+}
+function makePile(x,y,count){
+  const crumbs=[];
+  for(let i=0;i<count;i++) for(let t=0;t<20;t++){
+    const a=rnd(0,Math.PI*2), r=Math.sqrt(Math.random())*24;
+    const cx=x+Math.cos(a)*r, cy=y+Math.sin(a)*r;
+    if(!blockedPx(cx,cy)){ crumbs.push({x:cx,y:cy,s:rnd(2.0,3.4),h:rnd(0,1)}); break; }
+  }
+  piles.push({x,y,crumbs});
+}
+function spawnPile(near){
+  const s=near?freeSpot(150,240):freeSpot(220,390);
+  if(s){ makePile(s.x,s.y,44); return true; }
+  return false;
+}
+
+function sampleAt(g,x,y){
+  const cx=(x/CELL)|0, cy=(y/CELL)|0;
+  if(cx<0||cy<0||cx>=GW||cy>=GH) return 0;
+  let s=0;
+  for(let j=-1;j<=1;j++){
+    const yy=cy+j; if(yy<0||yy>=GH) continue;
+    const yo=yy*GW;
+    for(let i=-1;i<=1;i++){ const xx=cx+i; if(xx<0||xx>=GW) continue; s+=g[yo+xx]; }
+  }
+  return s/9;
+}
+function senseDir(a,g,off){
+  const ang=a.ang+off, sx=a.x+Math.cos(ang)*SD, sy=a.y+Math.sin(ang)*SD;
+  // 정찰 개미는 남의 냄새길을 안 따라요. 그래서 아무도 모르던 먹이를 찾아내요
+  let v=(!a.carry && !a.lost && a.scout) ? 0 : sampleAt(g,sx,sy);
+  if(blockedPx(sx,sy)) v-=1.5;                       // 돌 쪽은 싫어해요
+  if(a.carry||a.lost){
+    const d=Math.hypot(sx-nest.x, sy-nest.y);        // 집 쪽으로 희미하게 끌려요
+    v += Math.max(0, 1-d/560)*0.30;
+  }
+  if(!a.carry) for(const p of piles){                // 먹이 가까이 오면 직접 냄새를 맡아요
+    if(!p.crumbs.length) continue;
+    const d=Math.hypot(sx-p.x, sy-p.y);
+    if(d<115) v += (1-d/115)*0.95;
+  }
+  return v;
+}
+function bounceAt(ang,px,py){
+  let bx=0,by=0,found=false;
+  for(const blob of rocks) for(const c of blob){
+    const dx=px-c.x, dy=py-c.y, d2=dx*dx+dy*dy;
+    if(d2 < (c.r+3)*(c.r+3)){ const d=Math.sqrt(d2)||1; bx=dx/d; by=dy/d; found=true; break; }
+  }
+  if(!found) return ang+Math.PI+rnd(-0.4,0.4);
+  const vx=Math.cos(ang), vy=Math.sin(ang), dot=vx*bx+vy*by;
+  return Math.atan2(vy-2*dot*by, vx-2*dot*bx)+rnd(-0.25,0.25);
+}
+
+function updateSurface(a){
+  a.age+=DT;
+  if(!a.carry && a.age>LOST) a.lost=true;            // 너무 오래 헤맸어요. 집에 갔다 다시 나와요
+  const g=(a.carry||a.lost)?homeG:foodG;
+  const s0=senseDir(a,g,-SA), s1=senseDir(a,g,0), s2=senseDir(a,g,SA);
+  if(s1>=s0 && s1>=s2){ /* 그대로 앞으로 */ }
+  else if(s0>s2) a.ang-=TURN*DT;
+  else a.ang+=TURN*DT;
+  a.ang+=(Math.random()-0.5)*NOISE*DT;
+
+  const sp=a.carry?SPEED_C:SPEED;
+  let nx=a.x+Math.cos(a.ang)*sp*DT, ny=a.y+Math.sin(a.ang)*sp*DT;
+  if(nx<6||nx>W-6){ a.ang=Math.PI-a.ang; nx=clamp(nx,6,W-6); }
+  if(ny<6||ny>GROUND-6){ a.ang=-a.ang; ny=clamp(ny,6,GROUND-6); }
+  if(blockedPx(nx,ny)) a.ang=bounceAt(a.ang,nx,ny);
+  else { a.x=nx; a.y=ny; }
+
+  // 냄새 흘리기 — 집(또는 먹이)을 떠난 지 오래될수록 흐릿해져요
+  const w=1-a.age/LIFE;
+  if(w>0){
+    const i=((a.y/CELL)|0)*GW+((a.x/CELL)|0);
+    if(i>=0&&i<NG){ const t=a.carry?foodG:homeG; const v=t[i]+DEPOSIT*w*w; t[i]=v>1?1:v; }
+  }
+  // 헛걸음한 개미는 지나가며 그 길 냄새를 지워요 (먹이 없는 길은 이렇게 사라져요)
+  if(a.lost){
+    const i=((a.y/CELL)|0)*GW+((a.x/CELL)|0);
+    if(i>=0&&i<NG) foodG[i]*=ERASE;
+  }
+
+  const atNest=(a.x-nest.x)**2+(a.y-nest.y)**2 < nest.r*nest.r;
+  if(a.carry){
+    if(atNest) goUnder(a);                           // 구멍으로 들어가요
+    return;
+  }
+  if(atNest){ a.age=0; a.lost=false; }
+  for(const p of piles){
+    if(!p.crumbs.length) continue;
+    if(Math.abs(a.x-p.x)>34||Math.abs(a.y-p.y)>34) continue;
+    for(let k=0;k<p.crumbs.length;k++){
+      const c=p.crumbs[k];
+      if((a.x-c.x)**2+(a.y-c.y)**2 < 30){
+        p.crumbs.splice(k,1);
+        a.carry=true; a.age=0; a.lost=false; a.ang+=Math.PI+rnd(-0.4,0.4);
+        if(!firstFind){ firstFind=true; say('개미 한 마리가 먹이를 찾았어요. 이제 집으로 가면서 냄새를 흘려요.'); }
+        if(!p.crumbs.length){ spawnQueue.push(ticks+300);
+          say('먹이를 다 옮겼어요! 저 길의 냄새는 이제 천천히 날아가요.'); }
+        break;
+      }
+    }
+  }
+}
+
+// ================= 땅속 =================
+function addNode(x,y,type,parent){
+  nodes.push({x,y,type,parent,food:0,grow:1,r:type==='tunnel'?0:(type==='queen'?26:22)});
+  return nodes.length-1;
+}
+function buildNest(){
+  nodes=[]; eggs=[]; digging=null;
+  const bx=clamp(nest.x,215,W-215);
+  addNode(bx, GROUND+14, 'entrance', -1);                 // 0 입구
+  const shaft=addNode(bx, GROUND+54, 'tunnel', 0);        // 1 세로굴
+  addNode(bx-132, GROUND+78, 'queen', shaft);             // 2 여왕방
+  addNode(bx+128, GROUND+74, 'egg', shaft);               // 3 알방
+  const mid=addNode(bx+4, GROUND+110, 'tunnel', shaft);   // 4
+  addNode(bx-76, GROUND+156, 'store', mid);               // 5 창고
+  addNode(bx+84, GROUND+152, 'store', mid);               // 6 창고
+  queen={node:2, x:nodes[2].x, y:nodes[2].y, ang:0, wob:0};
+}
+function pathTo(a,b){
+  const anc=[]; let x=b;
+  while(x!==-1){ anc.push(x); x=nodes[x].parent; }
+  const set=new Set(anc);
+  const up=[]; let y=a;
+  while(!set.has(y)){ up.push(y); y=nodes[y].parent; }
+  up.push(y);
+  const idx=anc.indexOf(y);
+  return up.concat(anc.slice(0,idx).reverse());
+}
+function storeNodes(){ return nodes.filter(n=>n.type==='store'&&n.grow>=1); }
+function capacity(){ return storeNodes().length*STORE_CAP; }
+function bestStore(){
+  let best=-1, bv=1e9;
+  for(let i=0;i<nodes.length;i++){
+    const n=nodes[i];
+    if(n.type!=='store'||n.grow<1) continue;
+    if(n.food<bv){ bv=n.food; best=i; }
+  }
+  return best;
+}
+function setPath(a,from,to){ a.path=pathTo(from,to); a.pi=0; a.t=0; a.off=rnd(-3.5,3.5); }
+function goUnder(a){
+  a.zone='under'; a.carry=true;
+  const s=bestStore();
+  if(s<0){ a.job='exit'; setPath(a,0,0); }
+  else { a.job='carry'; setPath(a,0,s); }
+  a.x=nodes[0].x; a.y=nodes[0].y;
+}
+function goUp(a){
+  a.zone='surface'; a.carry=false; a.lost=false; a.age=0;
+  a.x=nest.x+rnd(-7,7); a.y=nest.y+rnd(-7,7); a.ang=rnd(0,Math.PI*2);
+}
+function updateUnder(a){
+  const p=a.path;
+  if(!p || a.pi>=p.length-1){                       // 다 왔어요
+    if(a.job==='carry'){
+      const n=nodes[p[p.length-1]];
+      n.food++; stored++; brought++; pulse=1; onStore();
+      a.job='exit'; a.carry=false; setPath(a, p[p.length-1], 0);
+    }else if(a.job==='exit'){ goUp(a); }
+    else if(a.job==='indoor'){                       // 집 안에서 일하는 개미
+      const here=p[p.length-1];
+      a.wait-=DT;
+      if(a.wait<=0){
+        let t=here;
+        for(let k=0;k<12;k++){ const c=Math.floor(rnd(0,nodes.length));
+          if(nodes[c].grow>=1 && c!==here){ t=c; break; } }
+        setPath(a,here,t); a.wait=rnd(1.5,4.5);
+      }else{
+        const n=nodes[here];
+        a.wob+=DT*1.1;
+        const rr=n.r?a.rr*0.8:5;
+        a.x=n.x+Math.cos(a.wob)*rr; a.y=n.y+Math.sin(a.wob*1.2)*rr*0.6; a.ang=a.wob+1.57;
+      }
+    }
+    else if(a.job==='dig'){                          // 굴 끝에서 흙을 파요
+      if(digging!==null){
+        const n=nodes[digging], p0=nodes[n.parent];
+        if(p[p.length-1]!==n.parent){ setPath(a, p[p.length-1], n.parent); return; }
+        a.wob+=DT*3.2;
+        a.x=p0.x+(n.x-p0.x)*n.grow+Math.cos(a.wob)*4;
+        a.y=p0.y+(n.y-p0.y)*n.grow+Math.sin(a.wob)*3;
+        a.ang=Math.atan2(n.y-p0.y,n.x-p0.x);
+      }else{
+        const n=nodes[p[p.length-1]];
+        a.wob+=DT*1.2;
+        a.x=n.x+Math.cos(a.wob)*9; a.y=n.y+Math.sin(a.wob*1.2)*6; a.ang=a.wob+1.57;
+      }
+    }else{                                           // 알을 돌보는 개미
+      const n=nodes[3];
+      a.wob+=DT*1.4;
+      a.x=n.x+Math.cos(a.wob)*a.rr; a.y=n.y+Math.sin(a.wob*1.3)*a.rr*0.62;
+      a.ang=a.wob+1.57;
+    }
+    return;
+  }
+  const A=nodes[p[a.pi]], B=nodes[p[a.pi+1]];
+  const dx=B.x-A.x, dy=B.y-A.y, len=Math.hypot(dx,dy)||1;
+  a.t+=USPEED*DT/len;
+  if(a.t>=1){ a.pi++; a.t=0; return; }
+  a.x=A.x+dx*a.t - dy/len*a.off;
+  a.y=A.y+dy*a.t + dx/len*a.off;
+  a.ang=Math.atan2(dy,dx);
+}
+
+function digStep(){
+  if(digging!==null){
+    const n=nodes[digging];
+    n.grow+=DT/DIG_TIME;
+    if(n.grow>=1){
+      n.grow=1;
+      say(n.type==='store' ? '굴을 더 파서 창고를 새로 만들었어요.' : '개미들이 굴을 더 팠어요.');
+      digging=null;
+    }
+    return;
+  }
+  if(nodes.length>=MAX_NODES) return;
+  const needRoom = stored > capacity()-26;
+  const crowded  = ants.length > storeNodes().length*34;
+  const rich     = brought >= nextDigAt;          // 먹이가 쌓인 만큼 집을 넓혀요
+  if(!needRoom && !crowded && !rich) return;
+  if(rich) nextDigAt = brought + 110 + nodes.length*14;
+  // 이미 있는 굴에서 아래쪽·옆쪽으로 새 칸을 파요
+  for(let tries=0;tries<60;tries++){
+    const from=Math.floor(rnd(0,nodes.length));
+    if(nodes[from].grow<1 || nodes[from].type==='entrance') continue;
+    const ang=rnd(-0.35,Math.PI+0.35);              // 아래쪽 반원
+    const len=rnd(52,76);
+    const x=nodes[from].x+Math.cos(ang)*len, y=nodes[from].y+Math.sin(ang)*len;
+    if(x<46||x>W-46||y<GROUND+40||y>H-26) continue;
+    let ok=true;
+    for(const n of nodes) if(Math.hypot(n.x-x,n.y-y)<48){ ok=false; break; }
+    if(!ok) continue;
+    const type = (needRoom||rich) ? 'store' : (Math.random()<0.55?'store':'tunnel');
+    const id=addNode(x,y,type,from);
+    nodes[id].grow=0;
+    digging=id;
+    return;
+  }
+}
+function queenStep(){
+  layTimer-=DT;
+  if(layTimer>0) return;
+  layTimer=2.2;
+  if(eggs.length>=MAX_EGGS || ants.length>=MAX_ANTS) return;
+  if(stored < EGG_KEEP+EGG_COST) return;
+  let big=-1, bv=-1;
+  for(let i=0;i<nodes.length;i++) if(nodes[i].type==='store'&&nodes[i].food>bv){ bv=nodes[i].food; big=i; }
+  if(big<0 || nodes[big].food<EGG_COST) return;
+  nodes[big].food-=EGG_COST; stored-=EGG_COST;
+  const n=nodes[3];
+  eggs.push({x:n.x+rnd(-14,14), y:n.y+rnd(-9,9), t:0});
+  if(eggs.length===1) say('여왕개미가 먹이를 먹고 알을 낳았어요.');
+}
+function eggStep(){
+  for(let i=eggs.length-1;i>=0;i--){
+    eggs[i].t+=DT;
+    if(eggs[i].t>=EGG_TIME){
+      eggs.splice(i,1);
+      if(ants.length<MAX_ANTS){
+        const a=newAnt(); a.zone='under';
+        const inside=ants.filter(v=>v.zone==='under'&&(v.job==='indoor'||v.job==='nurse'||v.job==='dig')).length;
+        if(inside < 4+ants.length*0.10){         // 실제 개미집도 절반쯤은 안에서 일해요
+          a.job='indoor'; a.wait=rnd(0.5,3); a.path=[3]; a.pi=0;
+        }else{ a.job='exit'; setPath(a,3,0); }
+        a.x=nodes[3].x; a.y=nodes[3].y; ants.push(a);
+        if(ants.length%10===0) say('알에서 깬 개미가 일하러 가요. 지금 '+ants.length+'마리예요.');
+      }
+    }
+  }
+}
+function onStore(){
+  if(brought===1) say('첫 먹이가 땅속 창고에 들어갔어요.');
+  if(brought===15) say('냄새길이 생기기 시작했어요. 개미들이 같은 곳으로 몰려요.');
+  if(brought===70) say('이제 큰길이 됐어요. 아무도 길을 그리지 않았는데요.');
+}
+
+// ================= 냄새 퍼짐 =================
+function diffuse(g){
+  for(let y=0;y<GH;y++){
+    const yo=y*GW, up=(y>0?yo-GW:yo), dn=(y<GH-1?yo+GW:yo);
+    for(let x=0;x<GW;x++){
+      const i=yo+x, lf=(x>0?x-1:x), rt=(x<GW-1?x+1:x);
+      const c=g[i], nb=g[up+x]+g[dn+x]+g[yo+lf]+g[yo+rt];
+      if(c===0 && nb===0){ tmpG[i]=0; continue; }   // 냄새 없는 칸은 계산을 건너뛰어요
+      const v=(c*0.85 + nb*0.0375)*DECAY;
+      tmpG[i]= v>0.0012 ? v : 0;
+    }
+  }
+  g.set(tmpG);
+}
+
+function step(){
+  for(let i=0;i<ants.length;i++){
+    const a=ants[i];
+    if(a.zone==='surface') updateSurface(a); else updateUnder(a);
+  }
+  digStep(); queenStep(); eggStep();
+  ticks++;
+  if(ticks%2===0){ diffuse(foodG); diffuse(homeG); }
+  if(spawnQueue.length && ticks>=spawnQueue[0]){
+    spawnQueue.shift(); piles=piles.filter(p=>p.crumbs.length);
+    if(!spawnPile()) spawnQueue.push(ticks+120);
+  }
+  if(ticks%120===0 && !spawnQueue.length){          // 먹이가 아주 없으면 새로 놓아 줘요
+    let left=0; for(const p of piles) left+=p.crumbs.length;
+    if(left===0) spawnQueue.push(ticks+60);
+  }
+  if(ticks%20===0){ let s=0; for(let i=0;i<NG;i++) s+=foodG[i]; roadLevel=s; }
+}
+
+// ================= 그리기 =================
+const pc=document.createElement('canvas'); pc.width=GW; pc.height=GH;
+const pctx=pc.getContext('2d'); const pimg=pctx.createImageData(GW,GH);
+function drawRoads(){
+  const d=pimg.data;
+  for(let i=0;i<NG;i++){
+    const f=foodG[i], h=homeG[i], o=i*4;
+    if(f<0.004 && h<0.02){ d[o+3]=0; continue; }
+    const wf=Math.pow(f,0.62)*0.88, wh=Math.pow(h,0.9)*0.30, s=wf+wh;
+    d[o]  =(86*wf+122*wh)/s;
+    d[o+1]=(168*wf+150*wh)/s;
+    d[o+2]=(72*wf+208*wh)/s;
+    d[o+3]=Math.min(0.78,s)*255;
+  }
+  pctx.putImageData(pimg,0,0);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(pc,0,0,W,GH*CELL);
+}
+// 흙과 돌은 판이 바뀔 때 한 번만 그려서 사진처럼 저장해 둬요
+const gc=document.createElement('canvas'); gc.width=W; gc.height=H;
+const gctx=gc.getContext('2d');
+function bakeGround(){
+  let seed=12345;
+  const nr=()=> (seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff;
+  gctx.fillStyle='#e6d6b6'; gctx.fillRect(0,0,W,GROUND);
+  gctx.fillStyle='rgba(150,122,80,.10)';
+  for(let i=0;i<650;i++){ const x=nr()*W, y=nr()*GROUND, r=nr()*2.2+.4; gctx.beginPath(); gctx.arc(x,y,r,0,7); gctx.fill(); }
+  for(const blob of rocks){
+    gctx.fillStyle='rgba(120,100,70,.18)';
+    for(const c of blob){ gctx.beginPath(); gctx.arc(c.x+4,c.y+5,c.r,0,7); gctx.fill(); }
+    gctx.fillStyle='#a79d8c';
+    for(const c of blob){ gctx.beginPath(); gctx.arc(c.x,c.y,c.r,0,7); gctx.fill(); }
+    gctx.fillStyle='rgba(255,255,255,.22)';
+    for(const c of blob){ gctx.beginPath(); gctx.arc(c.x-c.r*0.25,c.y-c.r*0.3,c.r*0.55,0,7); gctx.fill(); }
+  }
+  // 땅속 단면
+  const g=gctx.createLinearGradient(0,GROUND,0,H);
+  g.addColorStop(0,'#8d6f4a'); g.addColorStop(.5,'#775a39'); g.addColorStop(1,'#5f472c');
+  gctx.fillStyle=g; gctx.fillRect(0,GROUND,W,H-GROUND);
+  gctx.fillStyle='rgba(255,255,255,.05)';
+  for(let i=0;i<4;i++){ const y=GROUND+28+i*54; gctx.fillRect(0,y,W,3+nr()*4); }
+  gctx.fillStyle='rgba(40,28,16,.28)';
+  for(let i=0;i<260;i++){ const x=nr()*W, y=GROUND+nr()*(H-GROUND), r=nr()*3+.8; gctx.beginPath(); gctx.arc(x,y,r,0,7); gctx.fill(); }
+  gctx.fillStyle='#4b3620'; gctx.fillRect(0,GROUND-3,W,5);
+  gctx.font='700 12px -apple-system,BlinkMacSystemFont,sans-serif';
+  gctx.fillStyle='rgba(75,54,32,.55)'; gctx.fillText('땅 위', 14, GROUND-12);
+  gctx.fillStyle='rgba(255,246,228,.45)'; gctx.fillText('땅속', 14, GROUND+22);
+}
+function drawPiles(){
+  for(const p of piles) for(const c of p.crumbs){
+    ctx.fillStyle = c.h<0.5 ? '#d8703a' : '#e39a3c';
+    ctx.beginPath(); ctx.arc(c.x,c.y,c.s,0,7); ctx.fill();
+  }
+}
+function drawEntrance(){
+  const g=ctx.createRadialGradient(nest.x,nest.y,2,nest.x,nest.y,46);
+  g.addColorStop(0,'#8a6a42'); g.addColorStop(.55,'#b39364'); g.addColorStop(1,'rgba(179,147,100,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(nest.x,nest.y,46,0,7); ctx.fill();
+  ctx.fillStyle='#4a3822'; ctx.beginPath(); ctx.arc(nest.x,nest.y,nest.r*0.62,0,7); ctx.fill();
+  ctx.fillStyle='#2e2313'; ctx.beginPath(); ctx.arc(nest.x,nest.y,nest.r*0.38,0,7); ctx.fill();
+  if(pulse>0.01){
+    ctx.strokeStyle='rgba(216,112,58,'+(pulse*0.55).toFixed(3)+')';
+    ctx.lineWidth=2.2; ctx.beginPath();
+    ctx.arc(nest.x,nest.y,nest.r*0.6+(1-pulse)*16,0,7); ctx.stroke();
+  }
+  // 이 구멍이 땅속 굴로 이어져요
+  ctx.save();
+  ctx.setLineDash([4,6]); ctx.strokeStyle='rgba(90,66,38,.30)'; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.moveTo(nest.x,nest.y+nest.r*0.7);
+  ctx.lineTo(nest.x, GROUND-4); ctx.lineTo(nodes[0].x, GROUND-4); ctx.stroke();
+  ctx.restore();
+}
+function drawTunnels(){
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  for(let pass=0;pass<2;pass++){
+    ctx.strokeStyle = pass? '#c9a978' : '#4a3520';
+    ctx.lineWidth   = pass? 15 : 21;
+    ctx.beginPath();
+    for(const n of nodes){
+      if(n.parent<0) continue;
+      const p=nodes[n.parent];
+      const ex=p.x+(n.x-p.x)*n.grow, ey=p.y+(n.y-p.y)*n.grow;
+      ctx.moveTo(p.x,p.y); ctx.lineTo(ex,ey);
+    }
+    ctx.stroke();
+  }
+  for(const n of nodes){
+    if(n.type==='tunnel'||n.type==='entrance'||n.grow<1) continue;
+    const r=n.r;
+    ctx.fillStyle='#4a3520'; ctx.beginPath(); ctx.ellipse(n.x,n.y,r+4,r*0.82+4,0,0,7); ctx.fill();
+    ctx.fillStyle= n.type==='queen'?'#d8bc8c':'#c9a978';
+    ctx.beginPath(); ctx.ellipse(n.x,n.y,r,r*0.82,0,0,7); ctx.fill();
+  }
+  // 창고에 쌓인 먹이
+  for(const n of nodes){
+    if(n.type!=='store'||n.grow<1) continue;
+    const k=Math.min(34, Math.round(n.food/2));
+    let s=n.x*7+n.y*13;
+    const nr=()=> (s=(s*1103515245+12345)&0x7fffffff)/0x7fffffff;
+    for(let i=0;i<k;i++){
+      const a=nr()*Math.PI*2, r=Math.sqrt(nr())*(n.r-5);
+      ctx.fillStyle= nr()<0.5 ? '#c2652f' : '#d99339';
+      ctx.beginPath(); ctx.arc(n.x+Math.cos(a)*r, n.y+Math.sin(a)*r*0.8, 2.3, 0, 7); ctx.fill();
+    }
+  }
+  // 알
+  for(const e of eggs){
+    const g=1-e.t/EGG_TIME*0.25;
+    ctx.fillStyle='#f6ecd2'; ctx.beginPath(); ctx.ellipse(e.x,e.y,4.4*g,3.1*g,0.4,0,7); ctx.fill();
+    ctx.fillStyle='rgba(180,150,100,.35)'; ctx.beginPath(); ctx.ellipse(e.x+1,e.y+0.6,2.0*g,1.3*g,0.4,0,7); ctx.fill();
+  }
+  // 여왕개미
+  if(queen){
+    const q=nodes[queen.node];
+    queen.wob+=DT*0.6;
+    const qx=q.x+Math.cos(queen.wob)*5, qy=q.y+Math.sin(queen.wob*0.7)*3;
+    ctx.fillStyle='#2f2413';
+    ctx.beginPath(); ctx.ellipse(qx-5,qy,8.5,5.2,0.1,0,7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(qx+4,qy,4.2,3.4,0,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(qx+9,qy,2.8,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,220,150,.30)';
+    ctx.beginPath(); ctx.ellipse(qx-6,qy-1.5,6,2.6,0.1,0,7); ctx.fill();
+  }
+}
+function drawAnts(){
+  ctx.fillStyle='#3a2d1c';
+  ctx.beginPath();
+  for(const a of ants){
+    const c=Math.cos(a.ang), s=Math.sin(a.ang);
+    ctx.moveTo(a.x-c*1.2+c*2.6, a.y-s*1.2+s*2.6);
+    ctx.ellipse(a.x-c*1.2, a.y-s*1.2, 2.6, 1.7, a.ang, 0, 7);
+    ctx.moveTo(a.x+c*2.4+1.35, a.y+s*2.4);
+    ctx.arc(a.x+c*2.4, a.y+s*2.4, 1.35, 0, 7);
+  }
+  ctx.fill();
+  ctx.fillStyle='#d8703a';
+  ctx.beginPath();
+  for(const a of ants){
+    if(!a.carry) continue;
+    const c=Math.cos(a.ang), s=Math.sin(a.ang);
+    ctx.moveTo(a.x+c*4.6+2.1, a.y+s*4.6);
+    ctx.arc(a.x+c*4.6, a.y+s*4.6, 2.1, 0, 7);
+  }
+  ctx.fill();
+}
+function draw(){
+  ctx.drawImage(gc,0,0);
+  if(showRoad) drawRoads();
+  drawPiles(); drawEntrance(); drawTunnels(); drawAnts();
+  pulse*=0.90;
+}
+
+// ================= 위쪽 막대 =================
+function hud(){
+  let left=0; for(const p of piles) left+=p.crumbs.length;
+  const cap=Math.max(1,capacity());
+  document.getElementById('vFood').textContent=stored;
+  document.getElementById('fFood').style.width=Math.min(100,stored/cap*100)+'%';
+  document.getElementById('vAnt').textContent=ants.length+'마리';
+  document.getElementById('fAnt').style.width=(ants.length/MAX_ANTS*100)+'%';
+  document.getElementById('vEgg').textContent=eggs.length+'개';
+  document.getElementById('fEgg').style.width=(eggs.length/MAX_EGGS*100)+'%';
+  const r=Math.min(100, roadLevel/4.2);
+  document.getElementById('fRoad').style.width=r+'%';
+  document.getElementById('vRoad').textContent = r<4?'없음':(r<25?'희미해요':(r<60?'뚜렷해요':'큰길이에요'));
+  document.getElementById('vLeft').textContent=left;
+  document.getElementById('fLeft').style.width=Math.min(100,left/1.5)+'%';
+  if(sayUntil && performance.now()>sayUntil){ document.getElementById('say').classList.remove('on'); sayUntil=0; }
+}
+
+// ================= 판 차리기 =================
+function newAnt(){
+  return {zone:'surface', x:nest.x+rnd(-8,8), y:nest.y+rnd(-8,8), ang:rnd(0,Math.PI*2),
+          carry:false, age:rnd(0,2), lost:false, scout:Math.random()<SCOUT,
+          job:'carry', path:null, pi:0, t:0, off:0, wob:rnd(0,6.3), rr:rnd(9,16), wait:rnd(0,3)};
+}
+function reset(){
+  foodG.fill(0); homeG.fill(0);
+  stored=0; brought=0; ticks=0; nextDigAt=110; roadLevel=0; firstFind=false; spawnQueue=[]; layTimer=0;
+  nest={x:rnd(260,W-260), y:rnd(150,GROUND-130), r:24};
+  piles=[];
+  buildRocks(); buildNest(); bakeGround();
+  spawnPile(true);                       // 첫 더미는 가까이 — 금방 찾는 맛이 있게
+  for(let i=1;i<PILES;i++) spawnPile();
+  ants=[];
+  for(let i=0;i<START_ANTS;i++) ants.push(newAnt());
+  // 땅속에 남아 일하는 개미들
+  for(let i=0;i<4;i++){ const a=newAnt(); a.zone='under'; a.job='nurse'; a.path=[3]; a.pi=0; ants.push(a); }
+  for(let i=0;i<2;i++){ const a=newAnt(); a.zone='under'; a.job='dig'; a.path=[1]; a.pi=0; ants.push(a); }
+  for(let i=0;i<6;i++){ const a=newAnt(); a.zone='under'; a.job='indoor';
+    a.path=[1+Math.floor(rnd(0,5))]; a.pi=0; ants.push(a); }
+  draw();
+}
+
+// ================= 한 장면씩 =================
+let acc=0, last=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.12,(now-last)/1000); last=now;
+  if(running){
+    acc+=dt*(fast?2.2:1);
+    let n=0;
+    while(acc>=DT && n<(fast?9:4)){ step(); acc-=DT; n++; }
+    if(acc>DT*10) acc=0;
+  }
+  draw(); hud();
+}
+
+// ================= 누르면 먹이 놓기 =================
+function addFoodAt(cx,cy){
+  if(cy>GROUND-20) return;               // 땅속에는 못 놓아요
+  if(blockedPx(cx,cy)) return;
+  if(Math.hypot(cx-nest.x,cy-nest.y)<60) return;
+  let hit=null;
+  for(const p of piles) if(Math.hypot(p.x-cx,p.y-cy)<40) hit=p;
+  if(hit){
+    for(let i=0;i<8;i++){
+      const a=rnd(0,Math.PI*2), r=Math.sqrt(Math.random())*24;
+      const x=hit.x+Math.cos(a)*r, y=hit.y+Math.sin(a)*r;
+      if(!blockedPx(x,y)) hit.crumbs.push({x,y,s:rnd(2.0,3.4),h:rnd(0,1)});
+    }
+  }else makePile(cx,cy,26);
+}
+let painting=false, lastPaint=0;
+function toCanvas(e){
+  const r=cv.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*W/r.width, y:(e.clientY-r.top)*H/r.height };
+}
+cv.addEventListener('pointerdown',e=>{
+  if(!running||!dropFood) return;
+  painting=true; cv.setPointerCapture(e.pointerId);
+  const p=toCanvas(e); addFoodAt(p.x,p.y); lastPaint=performance.now();
+});
+cv.addEventListener('pointermove',e=>{
+  if(!painting||!dropFood) return;
+  if(performance.now()-lastPaint<90) return;
+  const p=toCanvas(e); addFoodAt(p.x,p.y); lastPaint=performance.now();
+});
+cv.addEventListener('pointerup',()=>{painting=false});
+cv.addEventListener('pointercancel',()=>{painting=false});
+
+// ================= 단추 =================
+document.getElementById('startBtn').onclick=()=>{
+  document.getElementById('intro').classList.add('hide');
+  running=true; last=performance.now();
+  say('개미들이 나왔어요. 아직 먹이가 어디 있는지 몰라요.');
+};
+const foodBtn=document.getElementById('foodBtn');
+foodBtn.onclick=()=>{ dropFood=!dropFood; foodBtn.classList.toggle('on',dropFood); };
+const roadBtn=document.getElementById('roadBtn');
+roadBtn.onclick=()=>{ showRoad=!showRoad; roadBtn.classList.toggle('on',showRoad);
+  say(showRoad?'냄새길을 다시 보여 줘요.':'냄새길을 숨겼어요. 개미 눈에는 이게 다 보여요.'); };
+const fastBtn=document.getElementById('fastBtn');
+fastBtn.onclick=()=>{ fast=!fast; fastBtn.classList.toggle('on',fast); };
+document.getElementById('rainBtn').onclick=()=>{
+  foodG.fill(0); homeG.fill(0); roadLevel=0;
+  say('비가 와서 냄새길이 다 지워졌어요. 개미들이 처음부터 다시 찾아요.');
+};
+document.getElementById('resetBtn').onclick=()=>{ reset(); say('새 땅으로 옮겼어요.'); };
+
+reset();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
