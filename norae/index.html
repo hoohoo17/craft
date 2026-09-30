@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>노래 맞히기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky1:#8E7CF2; --sky2:#5C4DCB;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B; --ink:#101010; --red:#E4572E;
+  --card:#7A6AE0; --card-deep:#5C4DCB;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 100%);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;touch-action:manipulation;
+  user-select:none;height:100vh;display:flex;align-items:center;justify-content:center}
+#wrap{width:100%;max-width:460px;padding:16px;text-align:center}
+
+.mark{font-family:var(--disp);font-size:clamp(28px,8.5vw,42px);line-height:1.2;margin:0 0 8px;color:var(--cream);
+  text-shadow:4px 4px 0 var(--card-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.tag{font-size:clamp(12px,3.4vw,15px);opacity:.9;line-height:1.7;margin-bottom:16px;color:var(--cream)}
+
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,23px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:14px 36px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:15px;padding:11px 24px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+
+#hud{display:none;justify-content:space-between;font-family:var(--disp);font-size:15px;margin:0 4px 10px;color:var(--cream)}
+#hud.on{display:flex}
+
+#game{display:none}
+#game.on{display:block}
+
+.noteBtn{all:unset;pointer-events:auto;cursor:pointer;width:88px;height:88px;border-radius:50%;
+  background:var(--gold);border:3px solid var(--ink);box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);
+  font-size:38px;line-height:82px;display:inline-block;transition:transform .1s,box-shadow .1s;margin-bottom:10px}
+.noteBtn:active{transform:translateY(6px);box-shadow:0 1px 0 var(--gold-deep),0 1px 0 3px var(--ink)}
+.noteBtn.playing{animation:bob .3s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-8px) rotate(4deg)}}
+
+.hintRow{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:6px 0 4px;min-height:38px;align-items:center}
+.box{width:30px;height:34px;border-radius:8px;background:rgba(255,255,255,.16);border:2px solid rgba(255,255,255,.5)}
+.gap{width:12px}
+.lyricShown{font-family:var(--disp);font-size:clamp(16px,5vw,21px);color:var(--gold);
+  text-shadow:2px 2px 0 var(--ink)}
+
+.hintBtn{all:unset;pointer-events:auto;cursor:pointer;font-size:12px;color:var(--cream);opacity:.85;
+  text-decoration:underline;margin-top:2px;display:inline-block}
+
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.choice{all:unset;pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+  font-family:var(--disp);font-size:clamp(14px,4.2vw,17px);color:var(--ink);background:var(--cream);
+  padding:14px 8px;border-radius:14px;border:3px solid var(--ink);box-shadow:0 5px 0 #DCD6C4,0 5px 0 3px var(--ink);
+  transition:transform .1s,box-shadow .1s,background .15s}
+.choice:active{transform:translateY(4px);box-shadow:0 1px 0 #DCD6C4,0 1px 0 3px var(--ink)}
+.choice.right{background:#B9F0C4;box-shadow:0 5px 0 #6FCB84,0 5px 0 3px var(--ink)}
+.choice.wrong{background:#F7B4B4;box-shadow:0 5px 0 #E4572E,0 5px 0 3px var(--ink);opacity:.6}
+.choice.off{pointer-events:none}
+.choice .em{font-size:1.3em}
+
+.popup{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);font-family:var(--disp);
+  font-size:clamp(22px,7vw,32px);color:var(--gold);text-shadow:3px 3px 0 var(--ink);pointer-events:none;
+  opacity:0;transition:opacity .2s,transform .5s;z-index:5}
+.popup.on{opacity:1;transform:translate(-50%,-70%)}
+
+.big{font-family:var(--disp);font-size:clamp(28px,8vw,42px);margin:0 0 4px;color:var(--cream);
+  text-shadow:3px 3px 0 var(--card-deep)}
+.num{font-family:var(--disp);font-size:clamp(46px,14vw,78px);line-height:1;margin:4px 0;color:var(--cream)}
+.line{font-size:14px;opacity:.9;margin-top:4px;color:var(--cream)}
+.best{margin-top:8px;font-size:12px;opacity:.75;color:var(--cream)}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="head"></div>
+  <div id="hud"><span>라운드 <b id="roundTxt">1</b>/<b id="totalTxt">6</b></span><span>점수 <b id="scoreTxt">0</b></span></div>
+  <div id="game">
+    <button class="noteBtn" id="playBtn">🎵</button>
+    <div class="hintRow" id="hintRow"></div>
+    <button class="hintBtn" id="hintBtn">가사 보기</button>
+    <div class="choices" id="choices"></div>
+  </div>
+</div>
+<div class="popup" id="popup"></div>
+<script>
+const head = document.getElementById('head');
+const hud = document.getElementById('hud');
+const game = document.getElementById('game');
+const roundTxt = document.getElementById('roundTxt');
+const totalTxt = document.getElementById('totalTxt');
+const scoreTxt = document.getElementById('scoreTxt');
+const playBtn = document.getElementById('playBtn');
+const hintRow = document.getElementById('hintRow');
+const hintBtn = document.getElementById('hintBtn');
+const choicesEl = document.getElementById('choices');
+const popup = document.getElementById('popup');
+
+/* 노래마다: 제목, 그림, 첫 소절 가사, 계이름(도=0, 레=2, 미=4, 파=5, 솔=7, 라=9). 도=C5 */
+const SONGS = [
+  { id:'bell',  title:'학교종',           emoji:'🔔', lyric:'학교종이 땡땡땡',
+    notes:[7,7,9,9,7,7,4, 7,7,4,4,2] },
+  { id:'fly',   title:'나비야',           emoji:'🦋', lyric:'나비야 나비야',
+    notes:[4,2,0,2,4,4,4] },
+  { id:'rabbit',title:'산토끼',           emoji:'🐰', lyric:'산토끼 토끼야',
+    notes:[7,4,4, 7,4,0, 2,4] },
+  { id:'star',  title:'반짝반짝 작은 별', emoji:'⭐', lyric:'반짝반짝 작은별',
+    notes:[0,0,7,7,9,9,7] },
+  { id:'bear',  title:'곰 세 마리',       emoji:'🐻', lyric:'곰 세 마리가 한집에 있어',
+    notes:[0,0,0,0,0, 4,7,7,4,0] },
+  { id:'plane', title:'비행기',           emoji:'✈️', lyric:'떴다 떴다 비행기',
+    notes:[4,2,0,2,4,4,4] },
+];
+const TOTAL = SONGS.length;
+
+let AC = null;
+function ensureAC(){
+  if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)();
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+function tone(freq, at, dur, type, vol){
+  try{
+    const ac = ensureAC();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type||'triangle'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(vol||0.18, at+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, at+(dur||0.28));
+    o.connect(g); g.connect(ac.destination);
+    o.start(at); o.stop(at+(dur||0.3));
+  }catch(e){}
+}
+function beep(freq,dur,type,vol){
+  try{ const ac = ensureAC(); tone(freq, ac.currentTime, dur, type, vol); }catch(e){}
+}
+function noteFreq(deg){ return 440*Math.pow(2,(72+deg-69)/12); }
+
+let melodyTimer = null;
+function playMelody(notes){
+  try{
+    const ac = ensureAC();
+    let t = ac.currentTime + 0.05;
+    const step = 0.3;
+    notes.forEach((deg,i)=>{
+      const dur = (i===notes.length-1) ? 0.5 : 0.26;
+      tone(noteFreq(deg), t, dur, 'triangle', 0.2);
+      t += step;
+    });
+    playBtn.classList.add('playing');
+    clearTimeout(melodyTimer);
+    melodyTimer = setTimeout(()=>playBtn.classList.remove('playing'), (notes.length*step)*1000);
+  }catch(e){}
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+let order = [], roundIndex = 0, score = 0, wrong = 0, lyricShown = false, current = null;
+let best = 0;
+try{ best = parseInt(localStorage.getItem('norae_best'),10)||0; }catch(e){}
+
+function showTitle(){
+  game.classList.remove('on'); hud.classList.remove('on');
+  head.innerHTML = `
+    <div class="mark">🎵<br>노래 맞히기</div>
+    <div class="tag">짧은 노래를 듣고 무슨 노래인지 맞혀 보세요!<br>잘 모르겠으면 가사도 살짝 볼 수 있어요.</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>
+    ${best?`<div class="best">최고 점수 ${best}점</div>`:''}`;
+  document.getElementById('start').onclick = e=>{ e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  order = shuffle(SONGS);
+  roundIndex = 0; score = 0;
+  scoreTxt.textContent = 0;
+  totalTxt.textContent = TOTAL;
+  head.innerHTML = '';
+  hud.classList.add('on'); game.classList.add('on');
+  setupRound();
+}
+
+function setupRound(){
+  current = order[roundIndex];
+  wrong = 0; lyricShown = false;
+  roundTxt.textContent = roundIndex+1;
+  hintBtn.textContent = '가사 보기';
+  renderHintBoxes();
+  const decoys = shuffle(SONGS.filter(s=>s.id!==current.id)).slice(0,3);
+  const choices = shuffle([current, ...decoys]);
+  choicesEl.innerHTML = '';
+  choices.forEach(s=>{
+    const b = document.createElement('button');
+    b.className = 'choice';
+    b.innerHTML = `<span class="em">${s.emoji}</span><span>${s.title}</span>`;
+    b.onclick = e=>{ e.stopPropagation(); onAnswer(s, b); };
+    choicesEl.appendChild(b);
+  });
+  setTimeout(()=>playMelody(current.notes), 350);
+}
+
+function renderHintBoxes(){
+  if(lyricShown){
+    hintRow.innerHTML = `<span class="lyricShown">${current.lyric}</span>`;
+    return;
+  }
+  hintRow.innerHTML = '';
+  [...current.lyric].forEach(ch=>{
+    const el = document.createElement('div');
+    el.className = ch===' ' ? 'gap' : 'box';
+    hintRow.appendChild(el);
+  });
+}
+
+function showPopup(text, color){
+  popup.textContent = text;
+  popup.style.color = color || 'var(--gold)';
+  popup.classList.remove('on');
+  void popup.offsetWidth;
+  popup.classList.add('on');
+  setTimeout(()=>popup.classList.remove('on'), 550);
+}
+
+function onAnswer(song, btn){
+  if(btn.classList.contains('off')) return;
+  if(song.id === current.id){
+    btn.classList.add('right');
+    [...choicesEl.children].forEach(c=>c.classList.add('off'));
+    const pts = wrong===0 ? 3 : wrong===1 ? 2 : 1;
+    score += pts;
+    scoreTxt.textContent = score;
+    beep(880,.08,'triangle',.16);
+    setTimeout(()=>beep(1175,.14,'triangle',.16),90);
+    showPopup('+'+pts, '#FFD84D');
+    setTimeout(nextRound, 950);
+  } else {
+    btn.classList.add('wrong','off');
+    wrong++;
+    beep(220,.15,'sawtooth',.12);
+    if(wrong>=2 && !lyricShown){ lyricShown = true; renderHintBoxes(); hintBtn.textContent = '가사 숨기기'; }
+  }
+}
+
+function nextRound(){
+  roundIndex++;
+  if(roundIndex >= TOTAL){ showResult(); return; }
+  setupRound();
+}
+
+document.addEventListener('click', e=>{
+  if(e.target && e.target.id==='playBtn' && current){ playMelody(current.notes); }
+});
+hintBtn.onclick = e=>{
+  e.stopPropagation();
+  if(!current) return;
+  lyricShown = !lyricShown;
+  hintBtn.textContent = lyricShown ? '가사 숨기기' : '가사 보기';
+  renderHintBoxes();
+};
+
+function showResult(){
+  hud.classList.remove('on'); game.classList.remove('on');
+  const isBest = score > best;
+  if(isBest){ best = score; try{ localStorage.setItem('norae_best', best); }catch(e){} }
+  const max = TOTAL*3;
+  const rank = score >= max*0.8 ? '노래 박사!' : score >= max*0.5 ? '잘 맞혔어요' : '다음엔 더 잘할 수 있어요';
+  head.innerHTML = `
+    <div class="big">${isBest?'신기록!':'끝!'}</div>
+    <div class="num">${score}</div>
+    <div class="line">${rank}</div>
+    <div class="best">최고 점수 ${best}점</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e=>{ e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick = e=>{ e.stopPropagation(); showTitle(); };
+}
+
+showTitle();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
