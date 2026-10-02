@@ -201,6 +201,28 @@
   .card .cg .plus{color:var(--green);}
   .card .cg .minus{color:var(--red);}
   .card.poor{opacity:.42;}
+  .card.star{border-color:var(--gold);}
+  .card .tag{
+    position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+    background:var(--gold); color:#4A3410;
+    font-size:10px; font-weight:800; white-space:nowrap;
+    border-radius:8px; padding:1px 6px;
+  }
+  .card.lucky{
+    background:linear-gradient(#FFF6D8,#F7E2A0);
+    border-color:#E0A21C;
+    animation:dealIn .28s ease-out backwards, shine 1s ease-in-out infinite alternate;
+  }
+  .card.lucky .tag{background:var(--red); color:#fff;}
+  @keyframes shine{from{box-shadow:0 3px 0 rgba(58,46,34,.18);} to{box-shadow:0 0 14px 3px rgba(232,185,76,.85);}}
+  .realm{
+    margin-top:2px; min-height:1em;
+    font-size:clamp(17px,5.5vw,24px); letter-spacing:.08em;
+    filter:drop-shadow(0 2px 3px rgba(58,46,34,.2));
+  }
+  .realm .new{display:inline-block; animation:popIn .6s cubic-bezier(.2,1.6,.4,1);}
+  @keyframes popIn{from{transform:scale(0) rotate(-40deg);} to{transform:none;}}
+  .stars{font-size:28px; letter-spacing:.15em; margin-top:6px;}
 
   /* ---------- 사건 · 시험 · 즉위 ---------- */
   .veil{
@@ -303,6 +325,7 @@
     <span class="sun" id="sun">☀️</span>
     <div class="place" id="place">🛖 🌾 🌾</div>
     <div class="hero" id="hero">👨‍🌾</div>
+    <div class="realm" id="realm"></div>
     <div class="say" id="say">해 뜨면 밭에 나가는 평민. 언젠가 높은 사람이 되고 싶다!</div>
   </div>
 
@@ -347,6 +370,7 @@ const sfx = {
   lose: () => tone(200, .12, 'sine', .06),
   right:() => melody([784, 1046], 90, .14, .10),
   wrong:() => tone(170, .16, 'square', .06),
+  lucky:() => melody([880, 1175, 1568], 60, .12, .10),
   up:   () => melody([523, 659, 784, 1046], 110, .22, .11),
   king: () => melody([523, 659, 784, 1046, 1318, 1046, 1318], 150, .3, .12)
 };
@@ -458,18 +482,20 @@ const RANKS = [
 ];
 
 /* ---------- 임금이 되어 이룬 일(치적) ----------
-   즉위한 뒤에 얼마나 더 모았는지로 센다. */
+   즉위한 뒤에 얼마나 더 모았는지로 센다.
+   이룰 때마다 풍경에 그림이 하나씩 늘어 나라가 커지는 게 눈에 보인다. */
 const DEEDS = [
-  {k:'study', at:1000, ico:'📜', t:'백성을 위한 새 글자를 만들었다'},
-  {k:'study', at:2400, ico:'🏫', t:'집현전을 세워 학자를 길렀다'},
-  {k:'study', at:4200, ico:'📚', t:'나라의 역사책을 펴냈다'},
-  {k:'heart', at:1000, ico:'🍚', t:'굶는 백성에게 곳간을 열었다'},
-  {k:'heart', at:2400, ico:'🔔', t:'신문고를 달아 억울함을 들었다'},
-  {k:'heart', at:4200, ico:'❤️', t:'백성이 성군이라 불렀다'},
-  {k:'money', at:1000, ico:'💰', t:'나라 곳간을 가득 채웠다'},
-  {k:'money', at:2400, ico:'🌉', t:'큰 다리와 넓은 길을 놓았다'},
-  {k:'money', at:4200, ico:'🏯', t:'튼튼한 성을 쌓아 올렸다'}
+  {k:'study', at:500,  ico:'🏫', t:'집현전을 세워 학자를 길렀다'},
+  {k:'study', at:1200, ico:'📜', t:'백성을 위한 새 글자를 만들었다'},
+  {k:'study', at:2200, ico:'📚', t:'나라의 역사책을 펴냈다'},
+  {k:'heart', at:500,  ico:'🍚', t:'굶는 백성에게 곳간을 열었다'},
+  {k:'heart', at:1200, ico:'🔔', t:'신문고를 달아 억울함을 들었다'},
+  {k:'heart', at:2200, ico:'🎎', t:'백성이 성군이라 불렀다'},
+  {k:'money', at:500,  ico:'🌾', t:'나라 곳간을 가득 채웠다'},
+  {k:'money', at:1200, ico:'🌉', t:'큰 다리와 넓은 길을 놓았다'},
+  {k:'money', at:2200, ico:'🏰', t:'튼튼한 성을 쌓아 올렸다'}
 ];
+const REIGN = 20;   // 임금 노릇을 하는 해. 다 지나면 세자에게 왕위를 물려준다
 DEEDS.forEach((d, i) => { d.id = i; });
 
 
@@ -514,6 +540,37 @@ const EVENTS = [
          {l:'새 연을 만들어 준다', e:{money:-1, heart:4}, r:'더 잘 나는 연이 하늘 높이 떴다!'}]}
 ];
 
+/* 임금이 되면 겪는 일은 따로 있다. 임금이 임금님 행차를 구경하면 이상하니까. */
+const KING_EVENTS = [
+  {ico:'🚢', title:'왜구가 바닷가에 나타났어요!', text:'배를 타고 와서 마을을 노려요.',
+   opts:[{l:'수군을 보낸다', e:{money:-1, heart:4}, r:'수군이 왜구를 멀리 쫓아냈다!'},
+         {l:'바닷가에 성을 쌓는다', e:{money:-1, study:2, heart:2}, r:'튼튼한 성이 바닷가를 지킨다.'}]},
+  {ico:'🏮', title:'이웃 나라 사신이 왔어요', text:'귀한 선물을 들고 왔어요.',
+   opts:[{l:'잔치를 열어 맞이한다', e:{money:-1, heart:3, study:1}, r:'두 나라 사이가 더 좋아졌다.'},
+         {l:'그 나라 책을 얻는다', e:{study:3}, r:'새로운 지식이 가득한 책이었다!'}]},
+  {ico:'🔭', title:'장영실이 새 발명품을 가져왔어요', text:'하늘의 별을 재는 기구래요.',
+   opts:[{l:'큰 상을 내린다', e:{money:-1, study:4}, r:'장영실이 더 열심히 연구하기로 했다!'},
+         {l:'백성에게 보여 준다', e:{study:2, heart:2}, r:'백성들이 신기해하며 모여들었다.'}]},
+  {ico:'☀️', title:'비가 오지 않아요', text:'논바닥이 쩍쩍 갈라졌어요.',
+   opts:[{l:'저수지를 판다', e:{money:-1, heart:4}, r:'물이 고이자 농부들이 춤을 췄다!'},
+         {l:'측우기로 비를 잰다', e:{study:3, heart:1}, r:'비가 언제 오는지 미리 알게 되었다.'}]},
+  {ico:'🧒', title:'세자가 공부를 싫어해요', text:'책만 펴면 졸린대요.',
+   opts:[{l:'같이 책을 읽는다', e:{study:3}, r:'세자가 재미를 붙이기 시작했다.'},
+         {l:'백성 사는 곳에 데려간다', e:{heart:3}, r:'세자가 백성을 아끼는 마음을 배웠다.'}]},
+  {ico:'🌾', title:'풍년이 들었어요!', text:'곡식이 산더미처럼 쌓였어요.',
+   opts:[{l:'세금을 덜 걷는다', e:{heart:4}, r:'백성들이 임금님 만세를 불렀다!'},
+         {l:'곳간에 쌓아 둔다', e:{money:4}, r:'흉년이 와도 걱정 없다!'}]},
+  {ico:'🧑‍💼', title:'상인들이 부탁을 해요', text:'장사가 잘되게 도와 달래요.',
+   opts:[{l:'길을 넓혀 준다', e:{money:3, heart:1}, r:'길이 넓어지자 장사가 쑥쑥 늘었다.'},
+         {l:'저잣거리를 새로 연다', e:{money:2, heart:2}, r:'저잣거리가 사람으로 북적였다.'}]},
+  {ico:'📜', title:'신하들이 서로 다퉈요', text:'서로 자기 생각이 옳대요.',
+   opts:[{l:'끝까지 듣고 정한다', e:{study:2, heart:2}, r:'모두가 고개를 끄덕였다.'},
+         {l:'백성에게 물어본다', e:{heart:3, study:1}, r:'백성의 뜻대로 하자 모두 기뻐했다.'}]},
+  {ico:'🎨', title:'화원이 그림을 바쳤어요', text:'온 나라의 산과 강을 그렸대요.',
+   opts:[{l:'궁궐에 걸어 둔다', e:{study:2, heart:1}, r:'그림을 볼 때마다 나라를 생각했다.'},
+         {l:'상을 내리고 더 그리게 한다', e:{money:-1, study:3, heart:1}, r:'멋진 그림이 계속 나왔다!'}]}
+];
+
 /* ---------- 과거 시험 문제 ---------- */
 const QUIZ = [
   {q:'조선을 세운 사람은 누구일까요?', a:['이성계','이순신','김유신']},
@@ -546,7 +603,7 @@ let busy = false;
 function fresh(){
   return {rank:0, turn:0, age:15, money:0, study:0, heart:0,
           hand:null, say:RANKS[0].say,
-          deeds:[], crown:null, crownAge:0, crownTurn:0, deathAge:0};
+          deeds:[], crown:null, crownAge:0, crownTurn:0, star:null, lucky:null};
 }
 function isKing(){ return S.rank === RANKS.length - 1; }
 function madeSince(k){ return S[k] - (S.crown ? S.crown[k] : 0); }   // 임금이 된 뒤로 모은 것
@@ -588,7 +645,7 @@ function shuffled(a){
    아무 카드나 눌러도 이야기가 앞으로 가야 재미있다. */
 function dealHand(){
   const r = RANKS[S.rank];
-  if(!r || !r.cards.length){ S.hand = []; return; }   // 왕이 되면 더 할 일이 없다
+  if(!r || !r.cards.length){ S.hand = []; return; }
   const pool = r.cards;
   const need = r.need || {};
   const lack = STATS.map(s => s.k).filter(k => (need[k] || 0) > S[k]);
@@ -607,19 +664,53 @@ function dealHand(){
   shuffled(ok).forEach(push);
   shuffled(pool.map((c, i) => i)).forEach(push);
   S.hand = shuffled(take);
+  // 지금 제일 도움되는 카드에 ⭐. 고르는 법을 저절로 배운다
+  // 남은 만큼만 쳐 준다. 이미 다 모은 것을 더 주는 카드는 도움이 안 되니까
+  const left = remaining();
+  const score = i => Object.keys(left).reduce((t, k) => t + Math.min(pool[i].gain[k] || 0, left[k]), 0);
+  const playable = S.hand.filter(i => S.money + (pool[i].gain.money || 0) >= 0);
+  S.star = playable.length ? playable.reduce((a, b) => score(b) > score(a) ? b : a) : null;
+  // 다섯 번에 한 번쯤 반짝이는 두 배 카드가 섞인다
+  S.lucky = Math.random() < 0.22 ? S.hand[Math.floor(Math.random() * S.hand.length)] : null;
+}
+/* 아직 더 모아야 하는 양: 신하일 때는 다음 신분까지, 임금일 때는 마지막 치적까지 */
+function remaining(){
+  const out = {};
+  STATS.forEach(s => {
+    const goal = isKing() ? Math.max(...DEEDS.filter(d => d.k === s.k).map(d => d.at)) + S.crown[s.k]
+                          : (RANKS[S.rank].need || {})[s.k] || 0;
+    if(goal > S[s.k]) out[s.k] = goal - S[s.k];
+  });
+  return out;
+}
+function luckyGain(g){
+  const out = {};
+  Object.keys(g).forEach(k => { out[k] = g[k] > 0 ? g[k] * 2 : g[k]; });   // 좋은 것만 두 배
+  return out;
 }
 function drawTop(){
   const r = RANKS[S.rank];
   $('#badge').textContent = r.ico;
   $('#rankName').textContent = r.name;
   $('#ageLine').textContent = S.age + '살 · ' +
-    (isKing() ? '즉위 ' + (S.age - S.crownAge + 1) + '년'
+    (isKing() ? '다스린 해 ' + reignYears() + ' / ' + REIGN
               : (S.turn === 0 ? '첫해' : (S.turn + 1) + '년째'));
   $('#place').textContent = r.place;
   $('#hero').textContent = r.ico;
   $('#say').textContent = S.say;
   $('#sun').textContent = ['☀️','🌤️','⛅','🌙','⭐'][S.turn % 5];
+  drawRealm();
 }
+/* 임금이 이룬 일이 풍경에 하나씩 늘어난다 */
+let realmShown = 0;
+function drawRealm(){
+  const ds = isKing() ? S.deeds : [];
+  $('#realm').innerHTML = ds.map((id, i) =>
+    '<span' + (i >= realmShown ? ' class="new"' : '') + '>' +
+    DEEDS[id].ico + '</span>').join('');
+  realmShown = ds.length;
+}
+function reignYears(){ return S.turn - S.crownTurn; }
 function drawStats(){
   STATS.forEach(s => {
     document.getElementById('num' + s.k[0].toUpperCase() + s.k.slice(1)).textContent = S[s.k];
@@ -630,7 +721,7 @@ function drawGoal(){
   const bars = $('#bars');
   if(!r.need){                                   // 임금이 되면 신분 대신 치적을 쌓는다
     $('#goalLabel').textContent = '임금이 이룬 일';
-    $('#nextName').textContent = '📜 치적 ' + S.deeds.length + '개';
+    $('#nextName').textContent = '📜 치적 ' + S.deeds.length + ' / ' + DEEDS.length;
     bars.innerHTML = STATS.map(s => {
       const nd = nextDeed(s.k);
       if(!nd) return '<div class="bar done"><span>' + s.ic + '</span>' +
@@ -680,12 +771,15 @@ function drawHand(){
     const c = pool[idx];
     if(!c) return;
     const poor = (c.gain.money || 0) < 0 && S.money + c.gain.money < 0;
+    const lucky = !poor && idx === S.lucky;
+    const star = !poor && !lucky && idx === S.star;
     const b = document.createElement('button');
-    b.className = 'card' + (poor ? ' poor' : '');
+    b.className = 'card' + (poor ? ' poor' : '') + (lucky ? ' lucky' : '') + (star ? ' star' : '');
     b.type = 'button';
-    b.innerHTML = '<span class="ci">' + c.ico + '</span>' +
+    b.innerHTML = (lucky ? '<span class="tag">✨ 두 배!</span>' : star ? '<span class="tag">⭐ 추천</span>' : '') +
+                  '<span class="ci">' + c.ico + '</span>' +
                   '<span class="cn">' + c.name + '</span>' +
-                  '<span class="cg">' + (poor ? '엽전 부족' : gainText(c.gain)) + '</span>';
+                  '<span class="cg">' + (poor ? '엽전 부족' : gainText(lucky ? luckyGain(c.gain) : c.gain)) + '</span>';
     b.addEventListener('click', () => { if(!poor) playCard(idx); else sfx.wrong(); });
     hand.appendChild(b);
   });
@@ -723,8 +817,10 @@ function playCard(idx){
   sfx.tap();
   const c = RANKS[S.rank] && RANKS[S.rank].cards[idx];
   if(!c){ busy = false; return; }
-  apply(c.gain);
-  S.say = c.line;
+  const lucky = idx === S.lucky;
+  apply(lucky ? luckyGain(c.gain) : c.gain);
+  if(lucky){ setTimeout(sfx.lucky, 120); confetti(18); }
+  S.say = (lucky ? '✨ 운이 좋았다! ' : '') + c.line;
   S.turn++;
   S.age = isKing() ? S.age + 1 : 15 + Math.floor(S.turn * 0.7);
   const place = $('#place');
@@ -743,13 +839,13 @@ function playCard(idx){
   }, 420);
 }
 /* 한 턴이 끝나면 차례대로 살핀다: 이룬 일 → 돌아가실 때 → 마을에 생긴 일 */
-function afterTurn(){
+function afterTurn(noEvent){
   if(isKing()){
     const got = pendingDeeds();
     if(got.length){ showDeed(got[0]); return; }      // 치적은 한 번에 하나씩
-    if(S.age >= S.deathAge){ passAway(); return; }
+    if(S.deeds.length >= DEEDS.length || reignYears() >= REIGN){ passThrone(); return; }
   }
-  if(Math.random() < 0.34) showEvent();              // 세 번에 한 번쯤
+  if(!noEvent && Math.random() < 0.34) showEvent();  // 세 번에 한 번쯤
   else busy = false;
 }
 
@@ -776,8 +872,9 @@ function sheet(html){
    그래야 열두 가지가 다 나오기 전에 같은 일이 또 생기지 않는다. */
 let eventBag = [];
 function nextEvent(){
-  if(!eventBag.length) eventBag = shuffled(EVENTS.map((e, i) => i));
-  return EVENTS[eventBag.pop()];
+  const list = isKing() ? KING_EVENTS : EVENTS;
+  if(eventBag.list !== list || !eventBag.length){ eventBag = shuffled(list.map((e, i) => i)); eventBag.list = list; }
+  return list[eventBag.pop()];
 }
 function showEvent(){
   const ev = nextEvent();
@@ -801,6 +898,8 @@ function showEvent(){
       S.say = o.r;
       drawAll();
       save();
+      // 사건으로 치적을 이루면 바로 알려 준다
+      if(isKing() && pendingDeeds().length){ showDeed(pendingDeeds()[0]); return; }
       busy = false;
     });
   });
@@ -936,8 +1035,7 @@ function crownKing(){
   S.crownAge = S.age;
   S.crownTurn = S.turn;
   S.deeds = [];
-  // 임금 노릇을 적어도 열네 해는 하게 해 둔다
-  S.deathAge = S.age + 12 + Math.floor(Math.random() * 7);
+  realmShown = 0;
 
   let best = S.turn;
   try{
@@ -952,8 +1050,9 @@ function crownKing(){
     '<h3>전하 만세!</h3>' +
     '<p>밭을 갈던 아이가 ' + S.age + '살에 임금이 되었어요.</p>' +
     '<div class="gift">' + S.turn + '번 만에 해냈어요! (최고 기록 ' + best + '번)</div>' +
-    '<div class="note">이제부터는 나라를 다스려요.<br>' +
-    '좋은 일을 할 때마다 <b>치적</b>이 하나씩 쌓여요.</div>' +
+    '<div class="note">이제 <b>' + REIGN + '년</b> 동안 나라를 다스려요.<br>' +
+    '좋은 일을 할 때마다 <b>치적</b>이 쌓이고 나라에 새 건물이 생겨요.<br>' +
+    '치적 ' + DEEDS.length + '개를 모두 이루면 성군이에요! 👑</div>' +
     '<button class="ok" type="button">나라를 다스리러 가자!</button>'
   );
   veil.querySelector('.ok').addEventListener('click', () => {
@@ -966,6 +1065,7 @@ function crownKing(){
     busy = false;
   });
   setTimeout(() => confetti(50), 900);
+  dealHand();
   drawAll();
   save();
 }
@@ -982,42 +1082,56 @@ function showDeed(d){
     '<div class="kicker">치 적</div>' +
     '<div class="big">' + d.ico + '</div>' +
     '<h3>' + d.t + '!</h3>' +
-    '<p>실록에 길이 남을 일이에요.</p>' +
-    '<div class="gift">치적 ' + S.deeds.length + '개째</div>' +
+    '<p>실록에 길이 남을 일이에요.<br>나라에 ' + d.ico + ' 이(가) 생겼어요!</p>' +
+    '<div class="gift">치적 ' + S.deeds.length + ' / ' + DEEDS.length + '</div>' +
     '<button class="ok" type="button">좋아!</button>'
   );
   veil.querySelector('.ok').addEventListener('click', () => {
     if(veil.dataset.done) return;
     veil.dataset.done = '1';
     veil.remove();
-    afterTurn();                                 // 또 이룬 일이 있는지 이어서 살핀다
+    afterTurn(true);                             // 또 이룬 일이 있는지 이어서 살핀다 (사건은 한 턴에 한 번만)
   });
 }
 
-/* ---------- 승하 ---------- */
-function passAway(){
+/* ---------- 왕위를 물려주다 ----------
+   갑자기 돌아가시는 대신, 정해진 해가 다 지나거나 치적을 다 이루면
+   세자에게 왕위를 물려주고 끝난다. 남은 해가 화면에 늘 보인다. */
+function passThrone(){
   busy = true;
   S.hand = [];
-  S.say = '온 나라가 흰 옷을 입었다.';
-  const reign = S.age - S.crownAge + 1;
+  S.say = '세자에게 왕관을 씌워 주었다.';
+  const n = S.deeds.length;
+  const all = n >= DEEDS.length;
+  const stars = all ? '⭐⭐⭐' : n >= 6 ? '⭐⭐☆' : n >= 3 ? '⭐☆☆' : '☆☆☆';
   const top = STATS.slice().sort((a, b) => madeSince(b.k) - madeSince(a.k))[0].k;
-  const siho = top === 'study' ? '글을 밝힌 임금 📚'
-             : top === 'heart' ? '백성을 품은 임금 ❤️'
-             :                   '곳간을 채운 임금 💰';
-  const list = S.deeds.length
+  const siho = all                ? '모든 것을 이룬 성군 👑'
+             : top === 'study'    ? '글을 밝힌 임금 📚'
+             : top === 'heart'    ? '백성을 품은 임금 ❤️'
+             :                      '곳간을 채운 임금 💰';
+  const list = n
     ? S.deeds.map(id => '<div class="deed">' + DEEDS[id].ico + ' ' + DEEDS[id].t + '</div>').join('')
     : '<div class="deed">큰 일은 없었지만, 나라는 조용하고 평안했어요.</div>';
-  melody([392, 330, 262], 340, .5, .09);         // 조용한 종소리
+  let best = n;
+  try{
+    const b = parseInt(localStorage.getItem(KEY + '-deeds'));
+    if(!isNaN(b)) best = Math.max(b, n);
+    localStorage.setItem(KEY + '-deeds', String(best));
+  }catch(e){}
+  all ? sfx.king() : sfx.up();
+  confetti(all ? 120 : 40);
 
   const veil = sheet(
-    '<div class="kicker">승 하</div>' +
-    '<div class="big">🕯️</div>' +
-    '<h3>' + S.age + '살, 눈을 감다</h3>' +
-    '<p>' + reign + '해 동안 나라를 다스렸어요.<br><b>' + siho + '</b></p>' +
-    '<div class="gift">실록에 적힌 일 ' + S.deeds.length + '가지</div>' +
+    '<div class="kicker">왕 위 를 물 려 주 다</div>' +
+    '<div class="big">🤴➡️👦</div>' +
+    '<h3>' + siho + '</h3>' +
+    '<div class="stars">' + stars + '</div>' +
+    '<p>' + (reignYears()) + '해 동안 나라를 다스리고<br>세자에게 왕위를 물려주었어요.</p>' +
+    '<div class="gift">실록에 적힌 일 ' + n + ' / ' + DEEDS.length + ' (최고 ' + best + ')</div>' +
     '<div class="deeds">' + list + '</div>' +
-    '<div class="note">사실 진짜 조선에서는 평민이 임금이 되는 일은 없었어요.<br>' +
-    '임금의 아들이 임금이 되었거든요. 하지만 여기선 네가 해냈다! 👏</div>' +
+    '<div class="note">' + (all ? '' : '다음에는 ⭐ 추천 카드를 골라 보세요. 치적을 더 빨리 이뤄요!<br><br>') +
+    '진짜 조선에서는 평민이 임금이 될 수 없었어요. 임금의 아들이 임금이 되었거든요.<br>' +
+    '태종은 살아 있을 때 아들 세종에게 왕위를 물려주기도 했어요.</div>' +
     '<button class="ok" type="button">처음부터 다시</button>'
   );
   veil.querySelector('.ok').addEventListener('click', () => {
@@ -1045,8 +1159,12 @@ $('#restart').addEventListener('click', () => {
 
 S = load();
 if(S.rank >= RANKS.length && S.rank !== RANKS.length - 1) S = fresh();   // 알 수 없는 신분이면 새로
-if(isKing() && S.age >= S.deathAge) S = fresh();                         // 이미 승하한 판은 새로
+if(isKing() && (reignYears() >= REIGN || S.deeds.length >= DEEDS.length)) S = fresh();   // 이미 끝난 판은 새로
+if(S.deathAge && S.age >= S.deathAge) S = fresh();                       // 예전 방식으로 승하한 판도 새로
+delete S.deathAge;                                                       // 이제는 승하가 없으니 지운다
+if(isKing() && S.deeds.some(id => !DEEDS[id])) S.deeds = [];                    // 예전 저장이면 치적만 새로
 if(!S.hand || !S.hand.length) dealHand();
+realmShown = isKing() ? S.deeds.length : 0;
 drawAll();
 </script>
 </body>
