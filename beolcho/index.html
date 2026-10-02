@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>벌초 대작전</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#8FCBEA; --grass:#6FA85E; --grass-deep:#4C7C3F;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B; --ink:#101010; --red:#E4572E;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:linear-gradient(var(--sky) 0%, var(--sky) 22%, #79B368 22%, var(--grass) 60%, var(--grass-deep) 100%);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;touch-action:manipulation;
+  user-select:none;height:100vh;display:flex;align-items:center;justify-content:center}
+#wrap{width:100%;max-width:460px;padding:16px;text-align:center}
+
+.mark{font-family:var(--disp);font-size:clamp(30px,9vw,46px);line-height:1.15;margin:0 0 8px;color:var(--cream);
+  text-shadow:4px 4px 0 var(--grass-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.tag{font-size:clamp(12px,3.4vw,15px);opacity:.85;line-height:1.7;margin-bottom:16px;color:var(--cream)}
+
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,23px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:14px 36px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:15px;padding:11px 24px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+
+#hud{display:none;justify-content:space-between;font-family:var(--disp);font-size:15px;margin:0 4px 8px;color:var(--cream)}
+#hud.on{display:flex}
+
+#field{display:none;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+#field.on{display:grid}
+.plot{aspect-ratio:1;background:#5A8A4A;border:3px solid var(--ink);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;font-size:clamp(30px,9vw,42px);
+  cursor:pointer;overflow:hidden;position:relative}
+.plot .item{transform:scale(0);transition:transform .12s}
+.plot.up .item{transform:scale(1)}
+
+#timeWrap{height:10px;border-radius:6px;background:rgba(0,0,0,.25);overflow:hidden;margin-bottom:4px}
+#timeFill{height:100%;background:var(--gold);width:100%}
+
+.big{font-family:var(--disp);font-size:clamp(28px,8vw,42px);margin:0 0 4px;color:var(--cream);
+  text-shadow:3px 3px 0 var(--grass-deep)}
+.num{font-family:var(--disp);font-size:clamp(46px,14vw,78px);line-height:1;margin:4px 0;color:var(--cream)}
+.line{font-size:14px;opacity:.9;margin-top:4px;color:var(--cream)}
+.best{margin-top:8px;font-size:12px;opacity:.75;color:var(--cream)}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="head"></div>
+  <div id="hud"><span>점수 <b id="scoreTxt">0</b></span><span id="timeTxt">45초</span></div>
+  <div id="timeWrap"><div id="timeFill"></div></div>
+  <div id="field"></div>
+</div>
+<script>
+const head = document.getElementById('head');
+const hud = document.getElementById('hud');
+const field = document.getElementById('field');
+const scoreTxt = document.getElementById('scoreTxt');
+const timeTxt = document.getElementById('timeTxt');
+const timeFill = document.getElementById('timeFill');
+const N = 9;
+const DURATION = 45000;
+
+let AC=null;
+function beep(freq,dur,type,vol){
+  try{
+    if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||.13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+(dur||.12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime+(dur||.12));
+  }catch(e){}
+}
+
+let cells = [];
+let score = 0, mowed = 0, timeLeft = DURATION, playing = false, spawnTimer = null, raf = null, lastT = 0;
+let best = 0;
+try{ best = parseInt(localStorage.getItem('beolcho_best'),10)||0; }catch(e){}
+
+function buildField(){
+  field.innerHTML = '';
+  cells = [];
+  for (let i=0;i<N;i++){
+    const el = document.createElement('div');
+    el.className = 'plot';
+    const item = document.createElement('span');
+    item.className = 'item';
+    el.appendChild(item);
+    el.onclick = () => onTap(i);
+    field.appendChild(el);
+    cells.push({ el, item, kind:null, timeout:null });
+  }
+}
+
+function popRandom(){
+  if (!playing) return;
+  const empties = cells.map((c,i)=>c.kind?null:i).filter(i=>i!==null);
+  if (!empties.length) return;
+  const i = empties[(Math.random()*empties.length)|0];
+  const isBee = Math.random() < 0.18;
+  const c = cells[i];
+  c.kind = isBee ? 'bee' : 'grass';
+  c.item.textContent = isBee ? '🐝' : '🌾';
+  c.el.classList.add('up');
+  const life = isBee ? 900 : 1300;
+  c.timeout = setTimeout(()=>{ clearCell(i); }, life);
+}
+
+function clearCell(i){
+  const c = cells[i];
+  c.el.classList.remove('up');
+  clearTimeout(c.timeout);
+  setTimeout(()=>{ c.kind = null; c.item.textContent=''; }, 130);
+}
+
+function onTap(i){
+  if (!playing) return;
+  const c = cells[i];
+  if (!c.kind) return;
+  if (c.kind === 'bee'){
+    score = Math.max(0, score - 2);
+    beep(180,.15,'sawtooth',.12);
+    flashMsg(c.el, '아야!', '#FF9AAE');
+  } else {
+    score += 3; mowed++;
+    beep(700,.09,'triangle',.12);
+    flashMsg(c.el, '+3', '#FFD84D');
+  }
+  scoreTxt.textContent = score;
+  clearCell(i);
+}
+
+function flashMsg(el, text, color){
+  const f = document.createElement('div');
+  f.textContent = text;
+  f.style.cssText = 'position:absolute;left:50%;top:0;transform:translate(-50%,-6px);font-family:var(--disp);'+
+    'font-size:16px;color:'+color+';text-shadow:1px 1px 0 #000;pointer-events:none;transition:transform .5s,opacity .5s;opacity:1';
+  el.appendChild(f);
+  requestAnimationFrame(()=>{ f.style.transform = 'translate(-50%,-34px)'; f.style.opacity = '0'; });
+  setTimeout(()=>f.remove(), 520);
+}
+
+function showTitle(){
+  playing = false;
+  if (raf) cancelAnimationFrame(raf);
+  if (spawnTimer) clearInterval(spawnTimer);
+  hud.classList.remove('on'); field.classList.remove('on');
+  head.innerHTML = `
+    <div class="mark">🌾<br>벌초 대작전</div>
+    <div class="tag">할아버지 산소 앞 풀을 얼른 깎아요!<br>🐝 벌은 건드리지 않도록 조심해요</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>
+    ${best?`<div class="best">최고 점수 ${best}점</div>`:''}`;
+  document.getElementById('start').onclick = e=>{ e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  score = 0; mowed = 0; timeLeft = DURATION;
+  scoreTxt.textContent = 0;
+  head.innerHTML = '';
+  hud.classList.add('on'); field.classList.add('on');
+  buildField();
+  playing = true;
+  lastT = performance.now();
+  spawnTimer = setInterval(popRandom, 650);
+  raf = requestAnimationFrame(loop);
+}
+
+function loop(now){
+  const dt = now - lastT; lastT = now;
+  if (playing){
+    timeLeft -= dt;
+    if (timeLeft <= 0){ timeLeft = 0; endGame(); }
+    timeTxt.textContent = Math.ceil(timeLeft/1000) + '초';
+    timeFill.style.width = (timeLeft/DURATION*100) + '%';
+  }
+  if (playing) raf = requestAnimationFrame(loop);
+}
+
+function endGame(){
+  playing = false;
+  cancelAnimationFrame(raf);
+  clearInterval(spawnTimer);
+  setTimeout(showResult, 300);
+}
+
+function showResult(){
+  hud.classList.remove('on'); field.classList.remove('on');
+  const isBest = score > best;
+  if (isBest){ best = score; try{ localStorage.setItem('beolcho_best', best); }catch(e){} }
+  const rank = score >= 90 ? '벌초왕!' : score >= 50 ? '깔끔하게 잘했어요' : '조금 더 깎아볼까?';
+  head.innerHTML = `
+    <div class="big">${isBest?'신기록!':'끝!'}</div>
+    <div class="num">${score}</div>
+    <div class="line">${mowed}포기 깎았어요</div>
+    <div class="line">${rank}</div>
+    <div class="best">최고 점수 ${best}점</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e=>{ e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick = e=>{ e.stopPropagation(); showTitle(); };
+}
+
+showTitle();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>송편 빚기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#2B2140; --night-deep:#1B1530;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B;
+  --ink:#101010; --red:#E4572E; --green:#6FBE7A; --green-deep:#3F9553;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(circle at 50% -10%, #4A3A6B 0%, var(--night) 55%, var(--night-deep) 100%);
+  font-family:var(--body);color:var(--cream);
+  -webkit-font-smoothing:antialiased;touch-action:manipulation;user-select:none;
+  display:flex;align-items:center;justify-content:center;height:100vh}
+
+#wrap{width:100%;max-width:480px;padding:20px;text-align:center}
+
+.mark{font-family:var(--disp);font-size:clamp(34px,10vw,52px);line-height:1.15;
+  color:var(--cream);text-shadow:4px 4px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink);
+  margin:0 0 8px}
+.tag{font-size:clamp(13px,3.6vw,16px);opacity:.8;line-height:1.7;margin-bottom:18px}
+
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,24px);letter-spacing:.06em;
+  color:var(--ink);background:var(--gold);padding:14px 38px;border-radius:999px;
+  border:3px solid var(--ink);box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);
+  transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:16px;padding:11px 26px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;justify-content:center}
+
+#hud{display:none;justify-content:space-between;align-items:center;font-family:var(--disp);
+  font-size:15px;margin-bottom:6px;padding:0 4px}
+#hud.on{display:flex}
+#hud .r{opacity:.75;font-size:13px}
+
+/* 달 */
+.moon{width:74px;height:74px;border-radius:50%;margin:4px auto 14px;
+  background:radial-gradient(circle at 35% 32%, #FFF9E6, var(--gold) 60%, var(--gold-deep));
+  box-shadow:0 0 40px rgba(255,216,77,.55);display:none}
+.moon.on{display:block}
+
+/* 게이지 */
+#track{display:none;position:relative;height:56px;border-radius:28px;
+  background:#150F26;border:3px solid var(--ink);overflow:hidden;margin:6px 0 22px}
+#track.on{display:block}
+#zone{position:absolute;top:0;bottom:0;background:linear-gradient(var(--green),var(--green-deep));
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+#zone .core{position:absolute;top:0;bottom:0;left:30%;right:30%;background:rgba(255,255,255,.28)}
+#marker{position:absolute;top:-4px;bottom:-4px;width:10px;margin-left:-5px;
+  background:var(--cream);border-radius:5px;box-shadow:0 0 10px rgba(255,255,255,.8),0 0 0 2px var(--ink)}
+
+#tapBtn{display:none}
+#tapBtn.on{display:inline-block}
+
+/* 접시 */
+#tray{display:none;flex-wrap:wrap;gap:6px;justify-content:center;min-height:40px;margin-bottom:8px}
+#tray.on{display:flex}
+#tray span{font-size:26px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+#tray span.miss{opacity:.35;filter:grayscale(1)}
+
+#toast{font-family:var(--disp);font-size:clamp(20px,6vw,30px);min-height:1.4em;margin-bottom:2px;
+  color:var(--gold);text-shadow:2px 2px 0 var(--ink);opacity:0;transform:scale(.7);display:none}
+#toast.on{display:block}
+#toast.pop{animation:pop .55s ease-out}
+@keyframes pop{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:scale(1)}}
+
+.big{font-family:var(--disp);font-size:clamp(30px,9vw,48px);margin:0 0 4px;
+  text-shadow:3px 3px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.num{font-family:var(--disp);font-size:clamp(48px,15vw,84px);line-height:1;margin:4px 0}
+.line{font-size:14px;opacity:.85;margin-top:4px}
+.best{margin-top:8px;font-size:12px;opacity:.6}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="head"></div>
+  <div class="moon" id="moon"></div>
+  <div id="hud"><span>빚은 개수 <b id="cnt">0</b>/<b id="total">12</b></span><span class="r" id="scoreTxt">점수 0</span></div>
+  <div id="track"><div id="zone"><div class="core"></div></div><div id="marker"></div></div>
+  <div id="toast"></div>
+  <div id="tray"></div>
+  <div class="row"><button class="btn" id="tapBtn">빚기!</button></div>
+  <div id="foot"></div>
+</div>
+
+<script>
+const head = document.getElementById('head');
+const foot = document.getElementById('foot');
+const moon = document.getElementById('moon');
+const hud = document.getElementById('hud');
+const track = document.getElementById('track');
+const zoneEl = document.getElementById('zone');
+const markerEl = document.getElementById('marker');
+const tapBtn = document.getElementById('tapBtn');
+const tray = document.getElementById('tray');
+const toast = document.getElementById('toast');
+const cntEl = document.getElementById('cnt');
+const scoreTxt = document.getElementById('scoreTxt');
+
+const TOTAL = 12;
+let round = 0, score = 0, perfectN = 0, goodN = 0, missN = 0;
+let best = 0;
+try{ best = parseInt(localStorage.getItem('songpyeon_best'), 10) || 0; }catch(e){}
+
+let AC = null;
+function beep(freq, dur, type, vol){
+  try{
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + (dur || .12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + (dur || .12));
+  }catch(e){}
+}
+
+let pos = 0, dir = 1, speed = 0.9;
+let zoneStart = 30, zoneWidth = 36;
+let raf = null, playing = false;
+
+function newZone(){
+  zoneWidth = Math.max(24, 40 - round * 1.3);
+  zoneStart = 6 + Math.random() * (94 - zoneWidth - 6);
+  zoneEl.style.left = zoneStart + '%';
+  zoneEl.style.width = zoneWidth + '%';
+  speed = 0.85 + round * 0.045;
+  pos = Math.random() < .5 ? 0 : 100;
+  dir = pos === 0 ? 1 : -1;
+}
+
+function loop(){
+  if (!playing) return;
+  pos += dir * speed;
+  if (pos >= 100){ pos = 100; dir = -1; }
+  if (pos <= 0){ pos = 0; dir = 1; }
+  markerEl.style.left = pos + '%';
+  raf = requestAnimationFrame(loop);
+}
+
+function showToast(text, color){
+  toast.textContent = text;
+  toast.style.color = color || 'var(--gold)';
+  toast.classList.remove('pop'); void toast.offsetWidth; toast.classList.add('pop');
+}
+
+function addTray(kind){
+  const s = document.createElement('span');
+  s.textContent = '🥮';
+  if (kind === 'miss') s.classList.add('miss');
+  tray.appendChild(s);
+}
+
+function doTap(){
+  if (!playing) return;
+  const inZone = pos >= zoneStart && pos <= zoneStart + zoneWidth;
+  const core0 = zoneStart + zoneWidth * .3, core1 = zoneStart + zoneWidth * .7;
+  const perfect = pos >= core0 && pos <= core1;
+  if (perfect){
+    score += 3; perfectN++;
+    showToast('예쁘다! +3', '#FFD84D');
+    beep(880, .12, 'triangle', .14);
+    addTray('perfect');
+  } else if (inZone){
+    score += 1; goodN++;
+    showToast('좋아요! +1', '#8ED9B4');
+    beep(600, .1, 'triangle', .12);
+    addTray('good');
+  } else {
+    missN++;
+    showToast('다음에 잘하자', '#FF9AAE');
+    beep(200, .16, 'sawtooth', .1);
+    addTray('miss');
+  }
+  round++;
+  cntEl.textContent = round;
+  scoreTxt.textContent = '점수 ' + score;
+  if (round >= TOTAL){
+    playing = false;
+    cancelAnimationFrame(raf);
+    setTimeout(showResult, 550);
+  } else {
+    newZone();
+  }
+}
+
+function showTitle(){
+  playing = false;
+  if (raf) cancelAnimationFrame(raf);
+  moon.classList.remove('on'); hud.classList.remove('on'); track.classList.remove('on');
+  tapBtn.classList.remove('on'); tray.classList.remove('on'); toast.classList.remove('on');
+  tray.innerHTML = ''; toast.textContent = '';
+  head.innerHTML = `
+    <div class="mark">🥮<br>송편 빚기</div>
+    <div class="tag">막대가 초록 칸에 있을 때 [빚기!]를 눌러요<br>가운데 밝은 곳을 맞히면 더 예뻐요</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>
+    ${best ? `<div class="best">최고 점수 ${best}점</div>` : ''}`;
+  document.getElementById('start').onclick = e => { e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  head.innerHTML = '';
+  round = 0; score = 0; perfectN = 0; goodN = 0; missN = 0;
+  cntEl.textContent = 0; scoreTxt.textContent = '점수 0';
+  tray.innerHTML = '';
+  moon.classList.add('on'); hud.classList.add('on'); track.classList.add('on');
+  tapBtn.classList.add('on'); tray.classList.add('on'); toast.classList.add('on');
+  newZone();
+  playing = true;
+  raf = requestAnimationFrame(loop);
+}
+
+function showResult(){
+  const isBest = score > best;
+  if (isBest){ best = score; try{ localStorage.setItem('songpyeon_best', best); }catch(e){} }
+  moon.classList.remove('on'); hud.classList.remove('on'); track.classList.remove('on');
+  tapBtn.classList.remove('on'); tray.classList.add('on'); toast.classList.remove('on');
+  const rank = score >= 32 ? '송편 장인!' : score >= 22 ? '제법인데?' : score >= 12 ? '그럭저럭' : '다음엔 더 잘할 거야';
+  head.innerHTML = `
+    <div class="big">${isBest ? '신기록!' : '완성!'}</div>
+    <div class="num">${score}</div>
+    <div class="line">예쁘게 ${perfectN}개 · 좋게 ${goodN}개 · 놓친 것 ${missN}개</div>
+    <div class="line">${rank}</div>
+    <div class="best">최고 점수 ${best}점</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e => { e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick = e => { e.stopPropagation(); showTitle(); };
+}
+
+tapBtn.addEventListener('click', doTap);
+addEventListener('keydown', e => {
+  if (e.code === 'Space' && playing){ e.preventDefault(); doTap(); }
+});
+
+showTitle();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

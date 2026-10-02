@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>윷놀이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6EAD2; --paper-deep:#E4D2A8;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B; --ink:#101010; --red:#E4572E; --blue:#3A78C2;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:radial-gradient(circle at 50% 0%, #FFF8E6 0%, var(--paper) 60%, var(--paper-deep) 100%);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;user-select:none;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+#wrap{width:100%;max-width:480px;text-align:center}
+
+.mark{font-family:var(--disp);font-size:clamp(30px,9vw,46px);line-height:1.15;margin:0 0 8px;color:var(--red);
+  text-shadow:4px 4px 0 var(--gold)}
+.tag{font-size:clamp(12px,3.4vw,15px);opacity:.8;line-height:1.7;margin-bottom:16px}
+
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,23px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:14px 36px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:15px;padding:11px 24px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.btn:disabled{opacity:.4;cursor:default;transform:none!important;box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink)!important}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+
+#hud{display:none;justify-content:space-between;font-family:var(--disp);font-size:14px;margin:0 2px 8px}
+#hud.on{display:flex}
+
+#boardWrap{display:none;margin-bottom:12px}
+#boardWrap.on{display:block}
+#board{position:relative;display:flex;height:52px;border-radius:10px;overflow:hidden;
+  border:3px solid var(--ink);background:var(--cream)}
+.cell{flex:1;border-right:1px solid rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;
+  font-size:9px;color:rgba(0,0,0,.35);position:relative}
+.cell:last-child{border-right:none;background:#FFE7A8}
+#tokMe,#tokAi{position:absolute;top:50%;font-size:22px;transition:left .35s ease;transform:translate(-50%,-50%)}
+#tokMe{margin-top:-9px}
+#tokAi{margin-top:9px}
+
+#result{font-family:var(--disp);font-size:clamp(16px,5vw,22px);min-height:1.6em;color:var(--red);margin-bottom:2px}
+#throwBtn{margin-top:4px}
+#sticks{font-size:34px;letter-spacing:4px;min-height:44px;margin:6px 0}
+
+.big{font-family:var(--disp);font-size:clamp(28px,8vw,42px);margin:0 0 4px;color:var(--red);
+  text-shadow:3px 3px 0 var(--gold)}
+.line{font-size:14px;opacity:.85;margin-top:4px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="head"></div>
+  <div id="hud"><span>🧑 나 : <b id="meCell">0</b>/20</span><span>🤖 상대 : <b id="aiCell">0</b>/20</span></div>
+  <div id="boardWrap"><div id="board"><span id="tokMe">🧑</span><span id="tokAi">🤖</span></div></div>
+  <div id="sticks"></div>
+  <div id="result"></div>
+  <div class="row"><button class="btn" id="throwBtn">윷 던지기!</button></div>
+</div>
+<script>
+const head=document.getElementById('head');
+const hud=document.getElementById('hud');
+const boardWrap=document.getElementById('boardWrap');
+const board=document.getElementById('board');
+const tokMe=document.getElementById('tokMe');
+const tokAi=document.getElementById('tokAi');
+const sticksEl=document.getElementById('sticks');
+const resultEl=document.getElementById('result');
+const throwBtn=document.getElementById('throwBtn');
+const meCellEl=document.getElementById('meCell');
+const aiCellEl=document.getElementById('aiCell');
+const N=20;
+
+let AC=null;
+function beep(freq,dur,type,vol){
+  try{
+    if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||.13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+(dur||.12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime+(dur||.12));
+  }catch(e){}
+}
+
+const THROWS = [
+  {name:'도', n:1, w:35, extra:false},
+  {name:'개', n:2, w:30, extra:false},
+  {name:'걸', n:3, w:20, extra:false},
+  {name:'윷', n:4, w:10, extra:true},
+  {name:'모', n:5, w:5,  extra:true},
+];
+function rollThrow(){
+  const total = THROWS.reduce((s,t)=>s+t.w,0);
+  let r = Math.random()*total;
+  for (const t of THROWS){ if (r < t.w) return t; r -= t.w; }
+  return THROWS[0];
+}
+
+function buildBoard(){
+  board.innerHTML = '';
+  for (let i=0;i<N;i++){
+    const c = document.createElement('div');
+    c.className = 'cell';
+    if (i === N-1) c.textContent = '도착';
+    board.appendChild(c);
+  }
+  board.appendChild(tokMe);
+  board.appendChild(tokAi);
+}
+
+let meCell=0, aiCell=0, busy=false;
+
+function place(){
+  const w = board.clientWidth / N;
+  tokMe.style.left = (Math.min(meCell,N-1)+.5)*w + 'px';
+  tokAi.style.left = (Math.min(aiCell,N-1)+.5)*w + 'px';
+}
+
+function showTitle(){
+  hud.classList.remove('on'); boardWrap.classList.remove('on');
+  sticksEl.textContent=''; resultEl.textContent=''; throwBtn.style.display='none';
+  head.innerHTML = `
+    <div class="mark">🪄<br>윷놀이</div>
+    <div class="tag">[윷 던지기]를 눌러서<br>상대보다 먼저 도착점에 가요<br>윷/모가 나오면 한 번 더!</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>`;
+  document.getElementById('start').onclick = e=>{ e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  meCell=0; aiCell=0; busy=false;
+  head.innerHTML='';
+  hud.classList.add('on'); boardWrap.classList.add('on'); throwBtn.style.display='inline-block';
+  throwBtn.disabled=false;
+  meCellEl.textContent=0; aiCellEl.textContent=0;
+  buildBoard();
+  requestAnimationFrame(place);
+  resultEl.textContent = '내 차례예요!';
+}
+
+function myTurn(){
+  if (busy) return;
+  busy = true; throwBtn.disabled = true;
+  const t = rollThrow();
+  sticksEl.textContent = t.name + ' (' + t.n + '칸)';
+  beep(500,.1,'triangle',.1);
+  meCell = Math.min(N-1, meCell + t.n);
+  meCellEl.textContent = meCell;
+  place();
+  beep(700,.08,'square',.08);
+  setTimeout(()=>{
+    if (meCell >= N-1){ finishGame(true); return; }
+    if (t.extra){
+      resultEl.textContent = t.name + '! 한 번 더 던져요';
+      busy = false; throwBtn.disabled = false;
+    } else {
+      resultEl.textContent = '상대 차례예요...';
+      setTimeout(aiTurn, 700);
+    }
+  }, 450);
+}
+
+function aiTurn(){
+  const t = rollThrow();
+  sticksEl.textContent = t.name + ' (' + t.n + '칸)';
+  beep(360,.1,'triangle',.1);
+  aiCell = Math.min(N-1, aiCell + t.n);
+  aiCellEl.textContent = aiCell;
+  place();
+  setTimeout(()=>{
+    if (aiCell >= N-1){ finishGame(false); return; }
+    if (t.extra){
+      resultEl.textContent = '상대가 ' + t.name + '! 한 번 더 던져요';
+      setTimeout(aiTurn, 700);
+    } else {
+      resultEl.textContent = '내 차례예요!';
+      busy = false; throwBtn.disabled = false;
+    }
+  }, 450);
+}
+
+function finishGame(won){
+  busy = true; throwBtn.disabled = true;
+  beep(won?880:200, won?.2:.25, won?'triangle':'sawtooth', .14);
+  setTimeout(()=>{
+    hud.classList.remove('on'); boardWrap.classList.remove('on');
+    sticksEl.textContent=''; resultEl.textContent=''; throwBtn.style.display='none';
+    head.innerHTML = `
+      <div class="big">${won ? '내가 이겼다!' : '상대가 이겼어요'}</div>
+      <div class="line">${won ? '도착점에 제일 먼저 왔어요' : '다음엔 더 좋은 윷이 나올 거야'}</div>
+      <div class="row">
+        <button class="btn" id="again">다시하기</button>
+        <button class="btn small" id="home">처음으로</button>
+      </div>`;
+    document.getElementById('again').onclick = e=>{ e.stopPropagation(); startGame(); };
+    document.getElementById('home').onclick = e=>{ e.stopPropagation(); showTitle(); };
+  }, 900);
+}
+
+throwBtn.addEventListener('click', myTurn);
+addEventListener('resize', place);
+showTitle();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

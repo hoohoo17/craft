@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>성묘 가는 길</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --hill:#DDEAC8; --hill-deep:#BFD9A0;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B; --ink:#101010; --red:#E4572E; --path:#FFFDF5; --wall:#5C7A46;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:linear-gradient(#EAF3DC 0%, var(--hill) 55%, var(--hill-deep) 100%);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;user-select:none;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:14px}
+#wrap{width:100%;max-width:460px;text-align:center}
+
+.mark{font-family:var(--disp);font-size:clamp(28px,8.5vw,42px);line-height:1.15;margin:0 0 8px;color:#4C7C3F;
+  text-shadow:3px 3px 0 var(--gold)}
+.tag{font-size:clamp(12px,3.4vw,15px);opacity:.8;line-height:1.7;margin-bottom:16px}
+
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,23px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:14px 36px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:15px;padding:11px 24px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+
+#hud{display:none;justify-content:space-between;font-family:var(--disp);font-size:14px;margin:0 2px 8px;color:#4C7C3F}
+#hud.on{display:flex}
+
+#mazeWrap{display:none;margin-bottom:12px}
+#mazeWrap.on{display:block}
+#maze{display:grid;margin:0 auto;border:4px solid var(--wall);border-radius:6px;overflow:hidden;background:var(--wall)}
+.mcell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10px}
+.mcell.wall{background:var(--wall)}
+.mcell.path{background:var(--path)}
+.mcell.player{font-size:12px}
+.mcell.player span, .mcell.goal span, .mcell.flower span{font-size:1.6vw;line-height:1}
+
+#pad{display:none;margin-top:14px}
+#pad.on{display:grid}
+#pad{grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px;gap:6px;justify-content:center}
+#pad button{all:unset;cursor:pointer;background:var(--cream);border:3px solid var(--ink);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 0 var(--ink)}
+#pad button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+#up{grid-column:2;grid-row:1}
+#left{grid-column:1;grid-row:2}
+#down{grid-column:2;grid-row:2}
+#right{grid-column:3;grid-row:2}
+
+.big{font-family:var(--disp);font-size:clamp(28px,8vw,42px);margin:0 0 4px;color:#4C7C3F;text-shadow:3px 3px 0 var(--gold)}
+.line{font-size:14px;opacity:.85;margin-top:4px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="head"></div>
+  <div id="hud"><span>🌸 <b id="flowerTxt">0</b>/<b id="flowerTot">0</b></span><span>⏱ <b id="timeTxt">0</b>초</span></div>
+  <div id="mazeWrap"><div id="maze"></div></div>
+  <div id="pad">
+    <button id="up">⬆️</button>
+    <button id="left">⬅️</button>
+    <button id="down">⬇️</button>
+    <button id="right">➡️</button>
+  </div>
+</div>
+<script>
+const head=document.getElementById('head');
+const hud=document.getElementById('hud');
+const mazeWrap=document.getElementById('mazeWrap');
+const mazeEl=document.getElementById('maze');
+const pad=document.getElementById('pad');
+const flowerTxt=document.getElementById('flowerTxt');
+const flowerTot=document.getElementById('flowerTot');
+const timeTxt=document.getElementById('timeTxt');
+
+let AC=null;
+function beep(freq,dur,type,vol){
+  try{
+    if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||.13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+(dur||.12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime+(dur||.12));
+  }catch(e){}
+}
+
+const MCOLS = 8, MROWS = 6;   // 방 칸 수 (실제 격자는 2배+1)
+const GW = MCOLS*2+1, GH = MROWS*2+1;
+let grid = [];        // 'wall' | 'path'
+let cellEls = [];
+let player = {r:1,c:1};
+let goal = {r:GH-2,c:GW-2};
+let flowers = [];
+let flowerCount = 0, collected = 0;
+let timer = 0, timerId = null, playing = false;
+
+function genMaze(){
+  grid = Array.from({length:GH}, ()=>Array(GW).fill('wall'));
+  const visited = Array.from({length:MROWS}, ()=>Array(MCOLS).fill(false));
+  function carve(r,c){
+    visited[r][c] = true;
+    grid[r*2+1][c*2+1] = 'path';
+    const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+    for (let i=dirs.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [dirs[i],dirs[j]]=[dirs[j],dirs[i]]; }
+    for (const [dr,dc] of dirs){
+      const nr=r+dr, nc=c+dc;
+      if (nr>=0 && nr<MROWS && nc>=0 && nc<MCOLS && !visited[nr][nc]){
+        grid[r*2+1+dr][c*2+1+dc] = 'path';
+        carve(nr,nc);
+      }
+    }
+  }
+  carve(0,0);
+}
+
+function placeFlowers(){
+  flowers = [];
+  const cands = [];
+  for (let r=1;r<GH;r+=2) for (let c=1;c<GW;c+=2){
+    if ((r===1&&c===1) || (r===GH-2&&c===GW-2)) continue;
+    cands.push({r,c});
+  }
+  for (let i=cands.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cands[i],cands[j]]=[cands[j],cands[i]]; }
+  flowers = cands.slice(0, Math.min(6, cands.length)).map(p=>({...p, got:false}));
+  flowerCount = flowers.length; collected = 0;
+}
+
+function buildDom(){
+  mazeEl.style.gridTemplateColumns = 'repeat(' + GW + ', 1fr)';
+  mazeEl.style.width = 'min(92vw, 380px)';
+  mazeEl.innerHTML = '';
+  cellEls = [];
+  for (let r=0;r<GH;r++){
+    const row = [];
+    for (let c=0;c<GW;c++){
+      const d = document.createElement('div');
+      d.className = 'mcell ' + (grid[r][c]==='wall' ? 'wall' : 'path');
+      mazeEl.appendChild(d);
+      row.push(d);
+    }
+    cellEls.push(row);
+  }
+  cellEls[goal.r][goal.c].innerHTML = '<span>🪦</span>';
+  cellEls[goal.r][goal.c].classList.add('goal');
+  flowers.forEach(f=>{
+    if (!f.got){ cellEls[f.r][f.c].innerHTML = '<span>🌸</span>'; cellEls[f.r][f.c].classList.add('flower'); }
+  });
+  renderPlayer();
+}
+
+let prevPlayerCell = null;
+function renderPlayer(){
+  if (prevPlayerCell){
+    prevPlayerCell.classList.remove('player');
+    if (prevPlayerCell === cellEls[goal.r][goal.c]) prevPlayerCell.innerHTML = '<span>🪦</span>';
+    else {
+      const f = flowers.find(fl=>cellEls[fl.r][fl.c]===prevPlayerCell && !fl.got);
+      prevPlayerCell.innerHTML = f ? '<span>🌸</span>' : '';
+    }
+  }
+  const cell = cellEls[player.r][player.c];
+  cell.classList.add('player');
+  cell.innerHTML = '<span>🧒</span>';
+  prevPlayerCell = cell;
+}
+
+function showTitle(){
+  playing = false;
+  if (timerId) clearInterval(timerId);
+  hud.classList.remove('on'); mazeWrap.classList.remove('on'); pad.classList.remove('on');
+  head.innerHTML = `
+    <div class="mark">🪦<br>성묘 가는 길</div>
+    <div class="tag">화살표 버튼으로 길을 찾아<br>산소까지 가요. 🌸꽃도 모아봐요!</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>`;
+  document.getElementById('start').onclick = e=>{ e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  head.innerHTML = '';
+  hud.classList.add('on'); mazeWrap.classList.add('on'); pad.classList.add('on');
+  genMaze();
+  placeFlowers();
+  player = {r:1,c:1};
+  prevPlayerCell = null;
+  buildDom();
+  flowerTxt.textContent = 0; flowerTot.textContent = flowerCount;
+  timer = 0; timeTxt.textContent = 0;
+  playing = true;
+  timerId = setInterval(()=>{ timer++; timeTxt.textContent = timer; }, 1000);
+}
+
+function tryMove(dr,dc){
+  if (!playing) return;
+  const nr = player.r + dr, nc = player.c + dc;
+  if (nr<0 || nr>=GH || nc<0 || nc>=GW) return;
+  if (grid[nr][nc] === 'wall') return;
+  player = {r:nr,c:nc};
+  renderPlayer();
+  beep(500,.05,'triangle',.06);
+  const f = flowers.find(fl=>fl.r===nr && fl.c===nc && !fl.got);
+  if (f){ f.got = true; collected++; flowerTxt.textContent = collected; beep(880,.12,'triangle',.12); }
+  if (nr===goal.r && nc===goal.c){ arrive(); }
+}
+
+function arrive(){
+  playing = false;
+  clearInterval(timerId);
+  beep(1000,.25,'triangle',.16);
+  setTimeout(showResult, 500);
+}
+
+function showResult(){
+  hud.classList.remove('on'); mazeWrap.classList.remove('on'); pad.classList.remove('on');
+  const rank = timer<=25 ? '정말 빨리 도착했어요!' : timer<=50 ? '잘 찾아왔어요' : '천천히 잘 도착했어요';
+  head.innerHTML = `
+    <div class="big">도착!</div>
+    <div class="line">${timer}초 만에 성묘를 다녀왔어요</div>
+    <div class="line">🌸 꽃 ${collected}/${flowerCount}개를 모았어요</div>
+    <div class="line">${rank}</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e=>{ e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick = e=>{ e.stopPropagation(); showTitle(); };
+}
+
+document.getElementById('up').onclick    = ()=>tryMove(-1,0);
+document.getElementById('down').onclick  = ()=>tryMove(1,0);
+document.getElementById('left').onclick  = ()=>tryMove(0,-1);
+document.getElementById('right').onclick = ()=>tryMove(0,1);
+addEventListener('keydown', e=>{
+  if (!playing) return;
+  if (e.key==='ArrowUp'){ e.preventDefault(); tryMove(-1,0); }
+  if (e.key==='ArrowDown'){ e.preventDefault(); tryMove(1,0); }
+  if (e.key==='ArrowLeft'){ e.preventDefault(); tryMove(0,-1); }
+  if (e.key==='ArrowRight'){ e.preventDefault(); tryMove(0,1); }
+});
+
+showTitle();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

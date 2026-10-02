@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>선물 포장하기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --room:#F6E7C8; --room-deep:#E7CE9C;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B; --ink:#101010; --red:#E4572E; --green:#6FBE7A;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:linear-gradient(#FFF6E0 0%, var(--room) 60%, var(--room-deep) 100%);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;touch-action:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;text-align:center;padding:24px}
+#ui.hide{display:none}
+.mark{font-family:var(--disp);font-size:clamp(30px,9vw,48px);line-height:1.15;color:var(--red);
+  text-shadow:4px 4px 0 var(--gold)}
+.tag{margin-top:12px;font-size:clamp(13px,3.6vw,16px);opacity:.85;line-height:1.7}
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,24px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:14px 38px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:16px;padding:11px 26px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap;justify-content:center}
+#hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:none;justify-content:space-between;pointer-events:none}
+#hud.on{display:flex}
+.score{font-family:var(--disp);font-size:clamp(30px,9vw,48px);line-height:.9;color:var(--red);
+  text-shadow:3px 3px 0 var(--gold)}
+.score small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.2em;opacity:.7;margin-top:5px;color:var(--ink)}
+.cnt{font-family:var(--disp);font-size:16px;color:var(--ink)}
+.big{font-family:var(--disp);font-size:clamp(34px,10vw,54px);line-height:1;color:var(--red);
+  text-shadow:4px 4px 0 var(--gold)}
+.num{font-family:var(--disp);font-size:clamp(56px,17vw,96px);line-height:1;margin:4px 0}
+.line{font-size:15px;opacity:.9;margin-top:6px}
+.best{margin-top:10px;font-size:13px;opacity:.75}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><div class="score" id="scoreEl">0<small>점수</small></div><div class="cnt" id="cntEl">1/15</div></div>
+<div id="ui"></div>
+<script>
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+let W,H,DPR,S;
+function resize(){
+  DPR=Math.min(devicePixelRatio||1,2);
+  W=innerWidth; H=innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  S=Math.min(1.25,Math.max(.8,Math.min(W,H)/430));
+}
+const rand=(a,b)=>a+Math.random()*(b-a);
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+let AC=null;
+function beep(freq,dur,type,vol){
+  try{
+    if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||.13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+(dur||.12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime+(dur||.12));
+  }catch(e){}
+}
+
+const CATS = [
+  {key:'fruit', icon:'🍎', label:'과일'},
+  {key:'cloth', icon:'👕', label:'옷'},
+  {key:'toy',   icon:'🧸', label:'장난감'}
+];
+
+const fx = [];
+function sparkle(x,y,color,n){
+  for(let i=0;i<(n||10);i++) fx.push({t:1,x,y,vx:rand(-4,4),vy:rand(-6,-1),r:rand(2.5,5.5)*S,color});
+}
+function drawFx(){
+  for(let i=fx.length-1;i>=0;i--){
+    const f=fx[i]; f.t-=.026;
+    if(f.t<=0){fx.splice(i,1); continue;}
+    f.x+=f.vx; f.y+=f.vy; f.vy+=.3; f.vx*=.98;
+    ctx.save(); ctx.globalAlpha=Math.max(0,f.t);
+    ctx.fillStyle=f.color; ctx.beginPath(); ctx.arc(f.x,f.y,f.r*f.t,0,7); ctx.fill();
+    ctx.restore();
+  }
+}
+
+let mode='title';
+let boxOrder = [];
+let boxY = 0, boxW = 0;
+let item = null;
+let round = 0, score = 0, correctN = 0, TOTAL = 15;
+let best = 0;
+try{ best = parseInt(localStorage.getItem('giftwrap_best'),10)||0; }catch(e){}
+
+const ui=document.getElementById('ui');
+const hud=document.getElementById('hud');
+const scoreEl=document.getElementById('scoreEl');
+const cntEl=document.getElementById('cntEl');
+
+function layoutBoxes(){
+  boxY = H - 70*S;
+  boxW = Math.min(W/3.4, 130*S);
+}
+
+function newItem(){
+  boxOrder = shuffle(CATS);
+  const cat = CATS[(Math.random()*CATS.length)|0];
+  const fallTime = Math.max(2600, 4200 - round*80);
+  item = { cat, x: W/2, tx: W/2, y: -40*S, startY:-40*S, vy: 0, fallTime, born: performance.now(), landed:false };
+}
+
+function showTitle(){
+  mode='title'; hud.classList.remove('on'); ui.classList.remove('hide');
+  ui.innerHTML = `
+    <div class="mark">🎁<br>선물 포장하기</div>
+    <div class="tag">떨어지는 선물을 옮겨서<br>같은 그림 상자에 쏙 담아줘</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>
+    ${best?`<div class="best">최고 점수 ${best}점</div>`:''}`;
+  document.getElementById('start').onclick = e=>{ e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  mode='play'; round=0; score=0; correctN=0;
+  scoreEl.firstChild.nodeValue = 0; cntEl.textContent = '1/'+TOTAL;
+  ui.classList.add('hide'); hud.classList.add('on');
+  layoutBoxes();
+  newItem();
+}
+
+function land(){
+  item.landed = true;
+  const slotW = W/3;
+  const slotIdx = Math.min(2, Math.max(0, Math.floor(item.x / slotW)));
+  const hit = boxOrder[slotIdx];
+  if (hit.key === item.cat.key){
+    score += 3; correctN++;
+    sparkle(item.x, boxY, '#FFD84D', 16);
+    beep(880,.14,'triangle',.14);
+  } else {
+    sparkle(item.x, boxY, '#B9C2E0', 8);
+    beep(220,.14,'sawtooth',.1);
+  }
+  scoreEl.firstChild.nodeValue = score;
+  round++;
+  cntEl.textContent = Math.min(round+1,TOTAL) + '/' + TOTAL;
+  setTimeout(()=>{
+    if (round >= TOTAL) showResult();
+    else newItem();
+  }, 450);
+}
+
+function showResult(){
+  mode='over';
+  const isBest = score > best;
+  if (isBest){ best=score; try{ localStorage.setItem('giftwrap_best', best); }catch(e){} }
+  hud.classList.remove('on'); ui.classList.remove('hide');
+  const max = TOTAL*3;
+  const rank = score>=max*.8 ? '선물 포장의 달인!' : score>=max*.5 ? '제법 잘 담았어요' : '다음엔 더 잘 담아보자';
+  ui.innerHTML = `
+    <div class="big">${isBest?'신기록!':'포장 끝!'}</div>
+    <div class="num">${score}</div>
+    <div class="line">${TOTAL}개 중 ${correctN}개를 알맞은 상자에 담았어요</div>
+    <div class="line">${rank}</div>
+    <div class="best">최고 점수 ${best}점</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e=>{ e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick = e=>{ e.stopPropagation(); showTitle(); };
+}
+
+function drawRoom(){
+  ctx.fillStyle = 'rgba(0,0,0,.05)';
+  ctx.fillRect(0, boxY - 6*S, W, 4*S);
+}
+
+function drawBoxes(){
+  const slotW = W/3;
+  for (let i=0;i<3;i++){
+    const cx = slotW*i + slotW/2;
+    ctx.save();
+    ctx.translate(cx, boxY);
+    ctx.fillStyle = '#D9A25B'; ctx.strokeStyle='#101010'; ctx.lineWidth = 3.4*S;
+    const w = boxW, h = 60*S;
+    ctx.beginPath(); ctx.roundRect(-w/2, -h*.4, w, h, 10*S); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#B8362E';
+    ctx.fillRect(-w/2, -h*.4, w, 10*S);
+    ctx.font = (30*S)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(boxOrder[i] ? boxOrder[i].icon : '', 0, -h*.05);
+    ctx.restore();
+  }
+}
+
+function drawItem(){
+  if (!item) return;
+  ctx.save();
+  ctx.translate(item.x, item.y);
+  ctx.font = (36*S)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🎁', 0, 0);
+  ctx.font = (18*S)+'px serif';
+  ctx.fillText(item.cat.icon, 0, -30*S);
+  ctx.restore();
+}
+
+let lastT = performance.now();
+function loop(now){
+  const dt = Math.min(40, now-lastT); lastT = now;
+  ctx.clearRect(0,0,W,H);
+  drawRoom(); drawBoxes();
+
+  if (mode==='play' && item && !item.landed){
+    const nx = item.x + (item.tx - item.x) * .18;
+    item.x = Math.min(Math.max(nx, boxW*.4), W - boxW*.4);
+    const t = Math.min(1, (performance.now() - item.born) / item.fallTime);
+    item.y = item.startY + (boxY - item.startY) * t;
+    if (t >= 1) land();
+  }
+  drawItem();
+  drawFx();
+  requestAnimationFrame(loop);
+}
+
+function movePt(e){
+  const t = e.touches ? e.touches[0] : e;
+  if (item) item.tx = t.clientX;
+}
+addEventListener('pointerdown', e=>{ if(mode==='play') movePt(e); }, {passive:true});
+addEventListener('pointermove', e=>{ if(mode==='play') movePt(e); }, {passive:true});
+addEventListener('touchmove', e=>{ if(mode==='play') movePt(e); }, {passive:true});
+addEventListener('keydown', e=>{
+  if (mode!=='play' || !item) return;
+  const step = 44*S;
+  if (e.key==='ArrowLeft') item.tx = Math.max(boxW*.4, item.tx - step);
+  if (e.key==='ArrowRight') item.tx = Math.min(W - boxW*.4, item.tx + step);
+});
+addEventListener('resize', ()=>{ resize(); layoutBoxes(); });
+resize(); layoutBoxes();
+showTitle();
+requestAnimationFrame(loop);
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

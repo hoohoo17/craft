@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>보름달 소원 잡기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#1B2145; --night-deep:#0E1230;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B;
+  --ink:#101010; --red:#E4572E;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:linear-gradient(#141A3C 0%,var(--night) 55%,var(--night-deep) 100%);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;touch-action:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+#ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;text-align:center;padding:24px;color:var(--cream)}
+#ui.hide{display:none}
+.mark{font-family:var(--disp);font-size:clamp(36px,11vw,74px);line-height:1.1;color:var(--cream);
+  text-shadow:5px 5px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.tag{margin-top:14px;font-size:clamp(13px,3.6vw,16px);letter-spacing:.05em;opacity:.85;line-height:1.7}
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(19px,5vw,25px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:15px 42px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:17px;padding:12px 30px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap;justify-content:center}
+#hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:none;justify-content:space-between;
+  align-items:flex-start;pointer-events:none;color:var(--cream)}
+#hud.on{display:flex}
+.score{font-family:var(--disp);font-size:clamp(34px,10vw,56px);line-height:.9;
+  text-shadow:3px 3px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.score small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.2em;opacity:.7;margin-top:5px}
+.lives{font-size:22px;letter-spacing:2px;line-height:1}
+#combo{position:fixed;left:0;right:0;top:34%;text-align:center;pointer-events:none;font-family:var(--disp);
+  font-size:clamp(30px,9vw,54px);color:var(--cream);
+  text-shadow:3px 3px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink);
+  opacity:0;transform:scale(.6)}
+#combo.pop{animation:pop .7s ease-out}
+@keyframes pop{0%{opacity:0;transform:scale(.5) rotate(-6deg)}25%{opacity:1;transform:scale(1.15) rotate(3deg)}
+  60%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:0;transform:scale(1.05)}}
+.big{font-family:var(--disp);font-size:clamp(38px,11vw,62px);line-height:1;
+  text-shadow:4px 4px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.num{font-family:var(--disp);font-size:clamp(64px,19vw,116px);line-height:1;margin:4px 0}
+.line{font-size:15px;letter-spacing:.04em;opacity:.85;margin-top:6px}
+.best{margin-top:10px;font-size:13px;letter-spacing:.14em;opacity:.7}
+.how{margin-top:16px;font-size:14px;line-height:1.9;opacity:.9}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div class="score" id="scoreEl">0<small>점수</small></div>
+  <div class="lives" id="livesEl"></div>
+</div>
+<div id="combo"></div>
+<div id="ui"></div>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let W, H, DPR, S;
+function resize(){
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  S = Math.min(1.25, Math.max(.8, Math.min(W, H) / 430));
+  basket.y = H - 66 * S;
+  basket.x = Math.min(Math.max(basket.x, edge()), W - edge());
+}
+const rand = (a,b) => a + Math.random()*(b-a);
+const pick = a => a[(Math.random()*a.length)|0];
+
+let AC = null;
+function beep(freq, dur, type, vol){
+  try{
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + (dur || .12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + (dur || .12));
+  }catch(e){}
+}
+
+/* ================= 소원 바구니 ================= */
+const basket = { x:0, y:0, tx:0, tilt:0, squash:1, glow:0 };
+function bktR(){ return 44 * S; }
+function edge(){ return bktR() * .85; }
+
+function drawBasket(){
+  const R = bktR();
+  ctx.save();
+  ctx.translate(basket.x, basket.y);
+  ctx.rotate(basket.tilt);
+  ctx.scale(1/basket.squash, basket.squash);
+  if (basket.glow > 0){
+    ctx.shadowColor = '#FFD84D'; ctx.shadowBlur = 26 * basket.glow;
+  }
+  /* 바구니 몸통 */
+  ctx.fillStyle = '#C98B3A'; ctx.strokeStyle = '#101010'; ctx.lineWidth = 3.4*S;
+  ctx.beginPath();
+  ctx.moveTo(-R, -R*.28);
+  ctx.quadraticCurveTo(-R*.9, R*.62, 0, R*.7);
+  ctx.quadraticCurveTo(R*.9, R*.62, R, -R*.28);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  /* 짜임 무늬 */
+  ctx.strokeStyle = 'rgba(80,45,10,.55)'; ctx.lineWidth = 2*S;
+  for (let i=-2;i<=2;i++){
+    ctx.beginPath();
+    ctx.moveTo(i*R*.34, -R*.2);
+    ctx.quadraticCurveTo(i*R*.3, R*.3, i*R*.18, R*.62);
+    ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(-R*.92,-R*.02); ctx.quadraticCurveTo(0,R*.28,R*.92,-R*.02); ctx.stroke();
+  /* 테두리 */
+  ctx.strokeStyle = '#101010'; ctx.lineWidth = 4.4*S;
+  ctx.beginPath(); ctx.moveTo(-R, -R*.28); ctx.quadraticCurveTo(0, -R*.5, R, -R*.28); ctx.stroke();
+  ctx.fillStyle = '#E4A855';
+  ctx.beginPath(); ctx.moveTo(-R, -R*.28); ctx.quadraticCurveTo(0, -R*.5, R, -R*.28);
+  ctx.quadraticCurveTo(0,-R*.36,-R,-R*.28); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+/* ================= 떨어지는 것들 ================= */
+const GOOD = ['⭐','🏮','🌰'];
+const BAD  = ['☁️'];
+class Drop{
+  constructor(kind){
+    this.kind = kind;
+    this.emoji = kind === 'gold' ? '✨' : kind === 'bad' ? pick(BAD) : pick(GOOD);
+    this.r = (kind === 'gold' ? 20 : 19) * S;
+    this.x = rand(this.r + 16, W - this.r - 16);
+    this.y = -this.r - 10;
+    this.vy = fallSpeed() * rand(.92, 1.08);
+    this.rot = rand(-.25,.25);
+    this.vr = rand(-.015,.015);
+    this.dead = false;
+  }
+  step(){ this.y += this.vy; this.rot += this.vr; }
+  draw(){
+    ctx.save();
+    ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+    if (this.kind === 'gold'){ ctx.shadowColor = '#FFD84D'; ctx.shadowBlur = 18; }
+    ctx.font = `${this.r*2}px 'Apple Color Emoji','Segoe UI Emoji',serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(this.emoji, 0, 0);
+    ctx.restore();
+  }
+}
+
+const fx = [];
+function sparkle(x, y, color, n){
+  for (let i=0;i<(n||9);i++) fx.push({t:1,type:'p',x,y,vx:rand(-4,4),vy:rand(-6,1),r:rand(2.5,5.5)*S,color});
+}
+function floater(x, y, text, color, size){
+  fx.push({t:1,type:'t',x,y,vy:-1.5,text,color,size:(size||22)*S});
+}
+function drawFx(){
+  for (let i=fx.length-1;i>=0;i--){
+    const f = fx[i];
+    f.t -= f.type === 't' ? .016 : .026;
+    if (f.t <= 0){ fx.splice(i,1); continue; }
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, f.t*1.4));
+    if (f.type === 'p'){
+      f.x += f.vx; f.y += f.vy; f.vy += .3; f.vx *= .98;
+      ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(f.x, f.y, f.r*f.t, 0, 7); ctx.fill();
+    } else {
+      f.y += f.vy; f.vy *= .97;
+      ctx.font = `${f.size}px 'Black Han Sans','Apple SD Gothic Neo',sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5*S; ctx.strokeStyle = '#101010';
+      ctx.strokeText(f.text, f.x, f.y);
+      ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.restore();
+  }
+}
+
+/* ================= 밤하늘 배경 ================= */
+const stars = [];
+for (let i=0;i<60;i++) stars.push({x:Math.random(), y:Math.random()*.7, r:rand(.6,1.8), t:rand(0,7)});
+function drawSky(){
+  const t = performance.now()/1000;
+  ctx.save();
+  for (const s of stars){
+    const tw = .55 + Math.sin(t*1.6 + s.t) * .45;
+    ctx.globalAlpha = tw;
+    ctx.fillStyle = '#FFFDF5';
+    ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r*S, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+  /* 보름달 */
+  const mr = 46*S, mx = W*.82, my = H*.16;
+  ctx.save();
+  ctx.shadowColor = '#FFF4D6'; ctx.shadowBlur = 50;
+  ctx.fillStyle = '#FFF4D6';
+  ctx.beginPath(); ctx.arc(mx, my, mr, 0, 7); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = 'rgba(220,200,150,.35)';
+  ctx.beginPath(); ctx.arc(mx-mr*.3, my-mr*.2, mr*.16, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx+mr*.28, my+mr*.18, mr*.12, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx+mr*.05, my+mr*.35, mr*.09, 0, 7); ctx.fill();
+}
+function drawGround(){
+  const gy = H - 30*S;
+  ctx.fillStyle = '#2A2E52';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  ctx.lineTo(0, gy+14*S);
+  for (let x=0;x<=W;x+=W/6) ctx.lineTo(x, gy + Math.sin(x*.01)*8*S);
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+}
+
+/* ================= 게임 상태 ================= */
+let mode = 'title';
+let score = 0, lives = 4, combo = 0, bestCombo = 0, caught = 0, level = 1;
+let drops = [], spawnT = 0, shake = 0;
+let best = 0;
+try{ best = parseInt(localStorage.getItem('moonwish_best'),10) || 0; }catch(e){}
+
+const ui = document.getElementById('ui');
+const hud = document.getElementById('hud');
+const scoreEl = document.getElementById('scoreEl');
+const livesEl = document.getElementById('livesEl');
+const comboEl = document.getElementById('combo');
+
+function fallSpeed(){ return 1.9*S + Math.min(2.0*S, level * .15*S); }
+function spawnGap(){ return Math.max(38, 76 - level * 3); }
+function badChance(){ return level < 2 ? .06 : Math.min(.22, .06 + (level-1) * .03); }
+
+function drawHud(){
+  scoreEl.firstChild.nodeValue = score;
+  const L = Math.max(0, Math.min(4, lives));
+  livesEl.textContent = '🌕'.repeat(L) + '⚫'.repeat(4 - L);
+}
+function showCombo(text){
+  comboEl.textContent = text;
+  comboEl.classList.remove('pop'); void comboEl.offsetWidth; comboEl.classList.add('pop');
+}
+
+function showTitle(){
+  mode = 'title'; drops = []; fx.length = 0;
+  hud.classList.remove('on'); ui.classList.remove('hide');
+  ui.innerHTML = `
+    <div class="mark">보름달<br>소원 잡기</div>
+    <div class="tag">손가락을 좌우로 움직여 바구니를 옮겨줘</div>
+    <div class="how">
+      <b>⭐ 🏮 🌰</b> 를 받으면 소원 점수!<br>
+      <b>✨</b> 는 한 번에 +5<br>
+      <b>☁️</b> 구름은 피해야 해
+    </div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>
+    ${best ? `<div class="best">최고 기록 ${best}점</div>` : ''}`;
+  document.getElementById('start').onclick = e => { e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  mode = 'play';
+  score = 0; lives = 4; combo = 0; bestCombo = 0; caught = 0; level = 1;
+  drops = []; fx.length = 0; spawnT = 0; shake = 0;
+  basket.x = W/2; basket.tx = W/2;
+  ui.classList.add('hide'); hud.classList.add('on');
+  drawHud();
+  floater(W/2, H*.42, '보름달이 떴다!', '#FFFDF5', 24);
+}
+
+function gameOver(){
+  mode = 'over';
+  const isBest = score > best;
+  if (isBest){ best = score; try{ localStorage.setItem('moonwish_best', best); }catch(e){} }
+  hud.classList.remove('on'); ui.classList.remove('hide');
+  ui.innerHTML = `
+    <div class="big">${isBest ? '신기록!' : '끝!'}</div>
+    <div class="num">${score}</div>
+    <div class="line">${caught}개 받았고 · 최고 ${bestCombo}콤보</div>
+    <div class="line">${
+      score < 10 ? '소원이 조금 이뤄질 것 같다' :
+      score < 30 ? '꽤 잡는데?' :
+      score < 60 ? '달님이 흐뭇하게 웃는다' : '소원의 달인'
+    }</div>
+    <div class="best">최고 기록 ${best}점</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e => { e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick  = e => { e.stopPropagation(); showTitle(); };
+}
+
+function tryCatch(d){
+  const R = bktR();
+  if (d.vy <= 0) return false;
+  if (d.y < basket.y - 26*S || d.y > basket.y + 30*S) return false;
+  const dx = Math.abs(d.x - basket.x);
+  return dx <= R + d.r*.4;
+}
+
+function onCatch(d){
+  d.dead = true;
+  basket.squash = .74; basket.glow = 1;
+  if (d.kind === 'bad'){
+    lives--; combo = 0; shake = 14;
+    beep(120, .25, 'sawtooth', .16);
+    floater(d.x, basket.y - 24*S, '가렸다!', '#B9C2E0', 24);
+    sparkle(d.x, basket.y, '#8892C0', 12);
+    drawHud();
+    if (lives <= 0){ mode = 'over'; setTimeout(gameOver, 450); }
+    return;
+  }
+  caught++; combo++;
+  if (combo > bestCombo) bestCombo = combo;
+  const bonus = Math.min(4, Math.floor(combo/5));
+  const gain = (d.kind === 'gold' ? 5 : 1) + bonus;
+  score += gain;
+  level = 1 + Math.floor(caught / 8);
+  drawHud();
+  const col = d.kind === 'gold' ? '#FFD84D' : '#FFFDF5';
+  floater(d.x, basket.y - 20*S, '+' + gain, col, d.kind === 'gold' ? 30 : 22);
+  sparkle(d.x, basket.y, col, d.kind === 'gold' ? 20 : 9);
+  beep(520 + Math.min(12, combo) * 42, .09, 'triangle', .12);
+  if (d.kind === 'gold'){ shake = 8; beep(1180, .18, 'sine', .12); }
+  if (combo > 0 && combo % 5 === 0){ showCombo(combo + '콤보!'); beep(880, .14, 'triangle', .1); }
+  if (caught % 8 === 0) floater(W/2, H*.5, '소원이 쏟아진다!', '#FFD84D', 22);
+}
+
+function loop(){
+  ctx.save();
+  if (shake > 0){
+    ctx.translate(rand(-shake,shake)*.5, rand(-shake,shake)*.5);
+    shake *= .86; if (shake < .4) shake = 0;
+  }
+  ctx.clearRect(-40,-40,W+80,H+80);
+  drawSky(); drawGround();
+
+  const nx = basket.x + (basket.tx - basket.x) * .22;
+  basket.tilt = Math.max(-.16, Math.min(.16, (nx - basket.x) * .022));
+  basket.x = Math.min(Math.max(nx, edge()), W - edge());
+  basket.squash += (1 - basket.squash) * .16;
+  basket.glow *= .92; if (basket.glow < .02) basket.glow = 0;
+
+  if (mode === 'play'){
+    spawnT++;
+    if (spawnT >= spawnGap()){
+      spawnT = 0;
+      const r = Math.random();
+      drops.push(new Drop(r < badChance() ? 'bad' : r < badChance() + .09 ? 'gold' : 'good'));
+    }
+    for (const d of drops){
+      d.step();
+      if (!d.dead && tryCatch(d)) onCatch(d);
+      else if (!d.dead && d.y - d.r > H){
+        d.dead = true;
+        if (d.kind !== 'bad'){
+          if (combo >= 5) floater(d.x, H - 60*S, '아깝다', '#FFFDF5', 18);
+          combo = 0;
+          beep(180, .08, 'sine', .07);
+        }
+      }
+    }
+    drops = drops.filter(d => !d.dead);
+  }
+  for (const d of drops) d.draw();
+  drawBasket();
+  drawFx();
+  ctx.restore();
+  requestAnimationFrame(loop);
+}
+
+function movePt(e){
+  const t = e.touches ? e.touches[0] : e;
+  basket.tx = t.clientX;
+}
+addEventListener('pointerdown', e => { if (mode === 'play') movePt(e); }, {passive:true});
+addEventListener('pointermove', e => { if (mode === 'play') movePt(e); }, {passive:true});
+addEventListener('touchmove', e => { if (mode === 'play') movePt(e); }, {passive:true});
+addEventListener('keydown', e => {
+  if (mode !== 'play') return;
+  const step = 46*S;
+  if (e.key === 'ArrowLeft')  basket.tx = Math.max(edge(), basket.tx - step);
+  if (e.key === 'ArrowRight') basket.tx = Math.min(W - edge(), basket.tx + step);
+});
+addEventListener('resize', resize);
+basket.x = innerWidth/2; basket.tx = innerWidth/2;
+resize();
+showTitle();
+loop();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

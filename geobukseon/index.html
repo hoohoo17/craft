@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>거북선 대작전</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sea-top:#1E6FA8; --sea-bot:#0E3E63; --sea-line:rgba(255,255,255,.18);
+  --wood:#8A5A34; --wood-dark:#5C3A20; --cream:#FFF7E4; --gold:#FFD84D; --gold-deep:#E8A83D;
+  --ink:#1A1410; --red:#E4572E; --green:#2F5D3A;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:linear-gradient(180deg,#EFE2C4,#DCC79A);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:14px;
+  user-select:none;
+}
+#wrap{width:100%;max-width:440px}
+h1{
+  font-family:var(--disp);text-align:center;font-size:clamp(22px,6vw,28px);
+  margin:0 0 8px;color:var(--wood-dark);
+  text-shadow:2px 2px 0 var(--cream);
+}
+.frame{
+  position:relative;border-radius:16px;padding:8px;
+  background:linear-gradient(180deg,var(--wood),var(--wood-dark));
+  box-shadow:0 10px 22px rgba(60,40,20,.28);
+}
+.stage{
+  position:relative;width:100%;aspect-ratio:400/620;border-radius:10px;overflow:hidden;
+  touch-action:none;
+}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+.hud{position:absolute;top:8px;left:10px;right:10px;display:flex;justify-content:space-between;
+     align-items:flex-start;pointer-events:none;font-family:var(--disp);color:#fff;
+     text-shadow:0 2px 3px rgba(0,0,0,.45)}
+#hearts{font-size:18px;letter-spacing:2px;color:#FF6B6B}
+#stageName{position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  font-family:var(--disp);color:#fff;font-size:13px;text-shadow:0 2px 3px rgba(0,0,0,.45);
+  pointer-events:none;opacity:.9}
+#sinks{font-size:16px}
+
+.banner{position:absolute;left:0;right:0;top:38%;text-align:center;pointer-events:none;
+  opacity:0;transition:opacity .35s}
+.banner.show{opacity:1}
+.banner .bname{font-family:var(--disp);font-size:clamp(24px,7vw,32px);color:var(--gold);
+  text-shadow:2px 2px 0 var(--ink),0 0 14px rgba(0,0,0,.5)}
+.banner .bnote{margin-top:4px;font-size:14px;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.5);
+  padding:0 24px}
+
+.card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:10px;text-align:center;padding:0 26px;background:rgba(10,30,48,.62);backdrop-filter:blur(1px);}
+.card.hide{display:none}
+.title{font-family:var(--disp);font-size:clamp(28px,8vw,40px);color:var(--gold);
+  text-shadow:2px 2px 0 var(--ink)}
+.sub{font-size:14px;color:#fff;line-height:1.6}
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;margin-top:6px;
+  font-family:var(--disp);font-size:18px;letter-spacing:.04em;color:var(--ink);
+  background:var(--gold);padding:12px 30px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 6px 0 var(--gold-deep),0 6px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:active{transform:translateY(6px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.big{font-family:var(--disp);font-size:clamp(22px,6vw,30px);color:#fff}
+.fact{margin-top:2px;font-size:13px;color:var(--gold);line-height:1.6;padding:0 10px}
+.best{font-size:12px;color:#cfe6f7}
+.blink{animation:blink 1.1s steps(2,end) infinite}
+@keyframes blink{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.blink{animation:none}}
+
+.rank{margin-top:10px;background:var(--cream);border:3px solid var(--wood-dark);border-radius:14px;
+  padding:10px 12px 12px}
+.rank h2{margin:0 0 6px;font-family:var(--disp);font-size:16px;color:var(--wood-dark);
+  display:flex;align-items:center;justify-content:space-between;gap:6px}
+.rank h2 button{font-family:inherit;font-size:16px;background:transparent;border:0;color:var(--wood-dark);
+  cursor:pointer;padding:2px 6px}
+.rank h2 button.spin{animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rank h2 .count{flex:1;font-size:12px;font-weight:400;color:#8a7a5c}
+.rank ol{list-style:none;margin:0;padding:0;font-size:14px;color:var(--ink);line-height:1.7;
+  max-height:170px;overflow-y:auto}
+.rank li{display:flex;gap:6px;align-items:baseline;border-bottom:1px dotted #d8c9a3;padding:2px 0}
+.rank li .no{width:20px;color:#8a7a5c;font-size:13px;text-align:center}
+.rank li .nm{flex:1;min-width:3.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank li .st{color:var(--red);font-weight:700}
+.rank li.empty{color:#8a7a5c;border:0}
+.rank li.fresh .nm{color:var(--red)}
+.rank-note{margin-top:6px;font-size:12px;color:#8a7a5c}
+.rank-note.warn{color:var(--red)}
+.save{display:flex;gap:6px;margin-top:8px}
+.save input{flex:1;min-width:0;font-family:inherit;font-size:14px;background:#fff;
+  border:1.5px solid var(--wood-dark);border-radius:8px;color:var(--ink);padding:6px 8px;outline:none}
+.save button{font-family:var(--disp);font-size:13px;background:var(--wood-dark);color:var(--cream);
+  border:0;border-radius:8px;padding:6px 12px;cursor:pointer}
+.save.done{display:none}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>🐢 거북선 대작전</h1>
+  <div class="frame">
+    <div class="stage" id="stage">
+      <canvas id="cv"></canvas>
+      <div class="hud"><span id="hearts">🚢 12척</span><span id="sinks">격침 0</span></div>
+      <div id="stageName"></div>
+      <div class="banner" id="banner"><div class="bname" id="bname"></div><div class="bnote" id="bnote"></div></div>
+
+      <div class="card" id="startCard">
+        <div class="title">거북선 대작전</div>
+        <div class="sub">12척의 배를 이끌고 왜선 아래로 가서<br>대포를 쏘세요.<br>바다에 떨어지는 포탄은 피하세요!</div>
+        <button class="btn blink" id="startBtn">시작하기</button>
+      </div>
+
+      <div class="card hide" id="overCard">
+        <div class="sub">수고했어요, 장군님!</div>
+        <div class="big">격침 <span id="finalSinks">0</span>척</div>
+        <div class="best" id="bestLine">최고 기록 0척</div>
+        <div class="fact" id="factLine"></div>
+        <button class="btn" id="retryBtn">다시 하기</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="rank">
+    <h2>격침 순위 <span class="count" id="rankCount"></span>
+      <button id="refreshBtn" title="새로고침" aria-label="새로고침">↻</button></h2>
+    <ol id="rankList"><li class="empty">아직 기록 없음</li></ol>
+    <div class="rank-note" id="rankNote"></div>
+    <div class="save" id="saveRow" style="display:none">
+      <input id="nameInput" maxlength="6" placeholder="이름" autocomplete="off">
+      <button id="saveBtn">등록</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  const W = 400, H = 620, FLOOR = H - 80, STATION = H * 0.32;
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const stage = document.getElementById('stage');
+  const elHearts = document.getElementById('hearts'), elSinks = document.getElementById('sinks');
+  const elStageName = document.getElementById('stageName');
+  const banner = document.getElementById('banner'), bname = document.getElementById('bname'), bnote = document.getElementById('bnote');
+  const startCard = document.getElementById('startCard'), overCard = document.getElementById('overCard');
+  const startBtn = document.getElementById('startBtn'), retryBtn = document.getElementById('retryBtn');
+
+  function fit(){
+    const r = stage.getBoundingClientRect();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width = Math.round(r.width * dpr);
+    cv.height = Math.round(r.height * dpr);
+    const s = cv.width / W;
+    ctx.setTransform(s, 0, 0, s, 0, 0);
+  }
+  addEventListener('resize', fit);
+
+  /* ---------- 순위판 ---------- */
+  const RKEY = 'geobukseon:ranking:1';
+  const API = 'https://craft-comments.jaehoo.workers.dev?page=rank-geobukseon-1';
+  const rankList = document.getElementById('rankList');
+  const rankNote = document.getElementById('rankNote');
+  const rankCount = document.getElementById('rankCount');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const saveRow = document.getElementById('saveRow');
+  const nameInput = document.getElementById('nameInput');
+  const saveBtn = document.getElementById('saveBtn');
+  const TOP = 5;
+  let ranking = [], lastRun = null, lastName = '', busy = false;
+
+  function renderRank(freshIdx = -1){
+    rankCount.textContent = ranking.length ? `TOP ${TOP}` : '';
+    if (!ranking.length){ rankList.innerHTML = '<li class="empty">아직 기록 없음</li>'; return; }
+    const MEDAL = ['🥇', '🥈', '🥉'];
+    rankList.innerHTML = ranking.map((r, i) =>
+      `<li class="${i === freshIdx ? 'fresh' : ''}">` +
+      `<span class="no">${MEDAL[i] || (i + 1)}</span>` +
+      `<span class="nm">${String(r.n).replace(/[<>&]/g, '')}</span>` +
+      `<span class="st">${r.s}척</span></li>`).join('');
+  }
+  function note(msg, warn){ rankNote.textContent = msg || ''; rankNote.classList.toggle('warn', !!warn); }
+  function sane(list){
+    return Array.isArray(list)
+      ? list.filter(r => r && typeof r.n === 'string' && Number.isFinite(+r.s))
+            .map(r => ({ n: r.n, s: +r.s })).slice(0, TOP)
+      : [];
+  }
+  function readLocal(){ try { return sane(JSON.parse(localStorage.getItem(RKEY))); } catch (e) { return []; } }
+  function writeLocal(){ try { localStorage.setItem(RKEY, JSON.stringify(ranking)); } catch (e) {} }
+  const encode = (e) => `${e.n.replace(/[|]/g, '')}|${e.s}`.slice(0, 18);
+  function decode(name){
+    const m = /^(.*)\|(\d+)$/.exec(String(name || ''));
+    return m && m[1] ? { n: m[1], s: +m[2] } : null;
+  }
+  const sortRank = (list) => list.sort((a, b) => b.s - a.s).slice(0, TOP);
+
+  async function fetchBoard(){
+    const res = await fetch(API, { cache: 'no-store' });
+    if (!res.ok) throw new Error('http ' + res.status);
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('bad payload');
+    return sortRank(data.map(c => decode(c && c.name)).filter(Boolean));
+  }
+  async function loadRank(){
+    if (busy) return;
+    busy = true;
+    refreshBtn.classList.add('spin');
+    if (!ranking.length){ ranking = readLocal(); renderRank(); }
+    try { ranking = await fetchBoard(); writeLocal(); note(''); }
+    catch (e) { ranking = readLocal(); note('오프라인 · 이 기기 기록만 표시', true); }
+    renderRank();
+    busy = false;
+    refreshBtn.classList.remove('spin');
+  }
+  async function submitScore(){
+    if (!lastRun || busy) return;
+    busy = true;
+    const n = (nameInput.value || '').trim().slice(0, 6) || '이름없음';
+    lastName = n;
+    const entry = { n, s: lastRun.s };
+    lastRun = null;
+    saveRow.style.display = 'none';
+    ranking = sortRank(ranking.concat([entry]));
+    writeLocal();
+    renderRank(ranking.indexOf(entry));
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: encode(entry), message: `격침 ${entry.s}척` }),
+      });
+      if (!res.ok) throw new Error('http ' + res.status);
+      ranking = await fetchBoard();
+      writeLocal();
+      note('');
+      renderRank(ranking.findIndex(r => r.n === entry.n && r.s === entry.s));
+    } catch (e) { note('저장 실패 · 이 기기에만 기록됨', true); }
+    busy = false;
+  }
+  refreshBtn.addEventListener('click', e => { e.stopPropagation(); loadRank(); });
+  saveBtn.addEventListener('click', e => { e.stopPropagation(); submitScore(); });
+  saveRow.addEventListener('pointerdown', e => e.stopPropagation());
+  nameInput.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') submitScore(); });
+  loadRank();
+
+  /* ---------- 전투 단계 ---------- */
+  const STAGES = [
+    { need: 0,   name: '옥포해전',   cap: 1, spawn: 2.6, hp: 2, fMin: 2.0, fMax: 3.0, bs: 300, note: '이순신 장군의 첫 승리예요.' },
+    { need: 5,   name: '사천해전',   cap: 2, spawn: 2.2, hp: 2, fMin: 1.8, fMax: 2.8, bs: 320, note: '거북선이 처음으로 싸운 전투예요.' },
+    { need: 15,  name: '한산도대첩', cap: 2, spawn: 2.0, hp: 3, fMin: 1.6, fMax: 2.6, bs: 340, note: '학이 날개를 편 모양으로 적을 크게 무찔렀어요.' },
+    { need: 65,  name: '명량대첩',   cap: 3, spawn: 1.8, hp: 3, fMin: 1.4, fMax: 2.4, bs: 360, note: '배 12척으로 훨씬 많은 적을 물리쳤어요.' },
+    { need: 165, name: '노량해전',   cap: 3, spawn: 1.6, hp: 4, fMin: 1.3, fMax: 2.2, bs: 380, note: '마지막 전투예요. 나라를 끝까지 지켜낸 장군님이에요.' },
+  ];
+  function stageFor(sinks){
+    let s = STAGES[0];
+    for (const st of STAGES) if (sinks >= st.need) s = st;
+    return s;
+  }
+
+  /* ---------- 함대(12척) 대형 : 학이 날개를 편 모양 ---------- */
+  const FLEET = 12;
+  const FORM = [];
+  for (let r = 0; r < FLEET / 2; r++){
+    const dx = 12 + r * 15, dy = r * 7;
+    FORM.push({ dx: -dx, dy });
+    FORM.push({ dx: dx, dy });
+  }
+  const FORM_HALFW = Math.max(...FORM.map(f => Math.abs(f.dx))) + 10;
+  const BOUND = FORM_HALFW + 3;
+
+  /* ---------- 상태 ---------- */
+  let state = 'start', best = 0;
+  let P, alive, inv, sinks, curStageIdx, spawnT, enemies, cannons, bombs, hearts, parts, texts, idSeed, t, bannerT;
+  const keys = { left: false, right: false };
+  let dragging = false;
+
+  const aliveCount = () => alive.reduce((n, a) => n + (a ? 1 : 0), 0);
+  function updateHud(){ elHearts.textContent = '🚢 ' + aliveCount() + '척'; }
+
+  function reset(silent){
+    P = { x: W / 2, y: FLOOR };
+    alive = new Array(FLEET).fill(true);
+    inv = 0; sinks = 0; curStageIdx = -1;
+    spawnT = 0.6; enemies = []; cannons = []; bombs = []; hearts = []; parts = []; texts = [];
+    idSeed = 1; t = 0; bannerT = 0;
+    updateHud();
+    elSinks.textContent = '격침 0';
+    checkStage(silent);
+  }
+
+  function checkStage(silent){
+    const idx = STAGES.indexOf(stageFor(sinks));
+    if (idx !== curStageIdx){
+      curStageIdx = idx;
+      const st = STAGES[idx];
+      elStageName.textContent = st.name;
+      if (!silent){
+        bname.textContent = st.name;
+        bnote.textContent = st.note;
+        banner.classList.add('show');
+        bannerT = 2.2;
+      }
+    }
+  }
+
+  function spawnEnemy(){
+    const st = STAGES[curStageIdx];
+    const x = 60 + Math.random() * (W - 120);
+    enemies.push({
+      x, y: -40, spawnX: x, phase: Math.random() * 10,
+      hp: st.hp, maxHp: st.hp, fireT: st.fMin + Math.random() * (st.fMax - st.fMin),
+      id: idSeed++, arrived: false,
+    });
+  }
+
+  const CANNON_RANGE = 380;
+  function fireCannons(){
+    for (let i = 0; i < FLEET; i++){
+      if (!alive[i]) continue;
+      const f = FORM[i];
+      const y = P.y + f.dy - 14;
+      cannons.push({ x: P.x + f.dx, y, minY: y - CANNON_RANGE, vy: -480, id: idSeed++ });
+    }
+  }
+
+  function enemyFire(e){
+    const st = STAGES[curStageIdx];
+    const liveIdx = alive.map((a, i) => a ? i : -1).filter(i => i >= 0);
+    if (!liveIdx.length) return;
+    const f = FORM[liveIdx[Math.floor(Math.random() * liveIdx.length)]];
+    const tx = Math.max(BOUND, Math.min(W - BOUND, P.x)) + f.dx;
+    const ty = P.y + f.dy;
+    const dx = tx - e.x, dy = ty - e.y, dist = Math.hypot(dx, dy) || 1;
+    const speed = st.bs;
+    bombs.push({ x: e.x, y: e.y + 12, vx: dx / dist * speed, vy: dy / dist * speed, tx, ty, id: idSeed++ });
+  }
+
+  function popText(x, y, s, col){
+    texts.push({ x, y, s, col, life: .8, id: idSeed++ });
+  }
+  function burst(x, y, col, n){
+    for (let i = 0; i < n; i++)
+      parts.push({ x, y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, life: .5, col, id: idSeed++ });
+  }
+
+  function sinkEnemy(e){
+    sinks++;
+    elSinks.textContent = '격침 ' + sinks;
+    burst(e.x, e.y, '#fff', 14);
+    popText(e.x, e.y - 10, '격침!', '#FFD84D');
+    if (Math.random() < .15) hearts.push({ x: e.x, y: e.y, vy: 90, id: idSeed++ });
+    checkStage();
+  }
+
+  function hitPlayer(idx){
+    if (inv > 0) return;
+    alive[idx] = false;
+    updateHud();
+    const f = FORM[idx];
+    burst(P.x + f.dx, P.y + f.dy, '#FF6B6B', 12);
+    popText(P.x + f.dx, P.y + f.dy - 10, '침몰!', '#FF6B6B');
+    if (aliveCount() <= 0){ gameOver(); return; }
+    inv = 1.0;
+  }
+
+  function gameOver(){
+    state = 'over';
+    best = Math.max(best, sinks);
+    document.getElementById('finalSinks').textContent = sinks;
+    document.getElementById('bestLine').textContent = '최고 기록 ' + best + '척';
+    document.getElementById('factLine').textContent = '이순신 장군은 모두 23번 싸워서 23번 다 이겼어요!';
+    overCard.classList.remove('hide');
+    lastRun = { s: sinks };
+    nameInput.value = lastName;
+    saveRow.style.display = 'flex';
+  }
+
+  function start(){
+    startCard.classList.add('hide');
+    reset();
+    state = 'play';
+  }
+  function retry(){
+    overCard.classList.add('hide');
+    saveRow.style.display = 'none';
+    reset();
+    state = 'play';
+  }
+  startBtn.addEventListener('click', e => { e.stopPropagation(); start(); });
+  retryBtn.addEventListener('click', e => { e.stopPropagation(); retry(); });
+
+  /* ---------- 조작 ---------- */
+  function xFromEvent(e){
+    const r = stage.getBoundingClientRect();
+    return (e.clientX - r.left) / r.width * W;
+  }
+  stage.addEventListener('pointerdown', e => {
+    if (state !== 'play') return;
+    dragging = true;
+    P.x = Math.max(BOUND, Math.min(W - BOUND, xFromEvent(e)));
+  });
+  addEventListener('pointermove', e => {
+    if (!dragging || state !== 'play') return;
+    P.x = Math.max(BOUND, Math.min(W - BOUND, xFromEvent(e)));
+  });
+  addEventListener('pointerup', () => { dragging = false; });
+  addEventListener('keydown', e => {
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'BUTTON')) return;
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+    if (e.code === 'Space' || e.code === 'Enter'){
+      e.preventDefault();
+      if (state === 'start') start();
+      else if (state === 'over') retry();
+    }
+  });
+  addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+  });
+
+  /* ---------- 업데이트 ---------- */
+  let fireTimer = 0;
+  function update(dt){
+    if (state !== 'play'){
+      parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
+      parts = parts.filter(p => p.life > 0);
+      return;
+    }
+    t += dt;
+    if (bannerT > 0){ bannerT -= dt; if (bannerT <= 0) banner.classList.remove('show'); }
+    if (inv > 0) inv -= dt;
+
+    if (keys.left) P.x -= 240 * dt;
+    if (keys.right) P.x += 240 * dt;
+    P.x = Math.max(BOUND, Math.min(W - BOUND, P.x));
+
+    fireTimer -= dt;
+    if (fireTimer <= 0){ fireCannons(); fireTimer = 0.5; }
+
+    const st = STAGES[curStageIdx];
+    spawnT -= dt;
+    if (spawnT <= 0 && enemies.length < st.cap){ spawnEnemy(); spawnT = st.spawn * (0.7 + Math.random() * 0.6); }
+
+    for (const e of enemies){
+      if (!e.arrived){
+        e.y += 70 * dt;
+        if (e.y >= STATION){ e.y = STATION; e.arrived = true; }
+      } else {
+        e.y = STATION + Math.sin(t * 1.6 + e.phase) * 10;
+        e.x = Math.max(40, Math.min(W - 40, e.spawnX + Math.sin(t * 0.9 + e.phase) * 26));
+        e.fireT -= dt;
+        if (e.fireT <= 0){ enemyFire(e); e.fireT = st.fMin + Math.random() * (st.fMax - st.fMin); }
+      }
+    }
+
+    cannons.forEach(c => c.y += c.vy * dt);
+    cannons = cannons.filter(c => c.y > -20 && c.y > c.minY);
+    bombs.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; });
+    bombs = bombs.filter(b => b.y < H + 20);
+    hearts.forEach(h => h.y += h.vy * dt);
+    hearts = hearts.filter(h => h.y < H + 20);
+    parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
+    parts = parts.filter(p => p.life > 0);
+    texts.forEach(x => { x.y -= 30 * dt; x.life -= dt; });
+    texts = texts.filter(x => x.life > 0);
+
+    // 대포알 vs 적선
+    for (const c of cannons){
+      for (const e of enemies){
+        if (Math.hypot(c.x - e.x, c.y - e.y) < 26){
+          c.y = -999;
+          e.hp--;
+          burst(c.x, c.y > -999 ? c.y : e.y, '#fff', 4);
+          break;
+        }
+      }
+    }
+    cannons = cannons.filter(c => c.y > -900);
+    const dead = enemies.filter(e => e.hp <= 0);
+    dead.forEach(sinkEnemy);
+    enemies = enemies.filter(e => e.hp > 0);
+
+    // 포탄 vs 함대
+    if (state === 'play'){
+      for (const b of bombs){
+        if (b.y > H + 900 || inv > 0) continue;
+        for (let i = 0; i < FLEET; i++){
+          if (!alive[i]) continue;
+          const f = FORM[i];
+          if (Math.hypot(b.x - (P.x + f.dx), b.y - (P.y + f.dy)) < 15){
+            b.y = H + 999;
+            hitPlayer(i);
+            break;
+          }
+        }
+      }
+    }
+    bombs = bombs.filter(b => b.y < H + 100);
+
+    // 하트 획득 : 가라앉은 배를 하나 되살린다 (다 살아있으면 그냥 먹기만 한다)
+    for (const h of hearts){
+      if (Math.hypot(h.x - P.x, h.y - P.y) < 70){
+        h.y = H + 999;
+        const sunk = alive.indexOf(false);
+        if (sunk !== -1){
+          alive[sunk] = true;
+          updateHud();
+          popText(P.x + FORM[sunk].dx, P.y + FORM[sunk].dy - 10, '+1', '#FF6B6B');
+        } else {
+          popText(P.x, P.y - 40, '가득 찼어요!', '#FF6B6B');
+        }
+      }
+    }
+    hearts = hearts.filter(h => h.y < H + 100);
+  }
+
+  /* ---------- 그리기 ---------- */
+  function drawSea(){
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#2C86B8'); g.addColorStop(1, '#0E3E63');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++){
+      const y = 60 + i * 95 + Math.sin(t * 0.8 + i) * 6;
+      ctx.beginPath();
+      for (let x = -20; x <= W + 20; x += 20){
+        const yy = y + Math.sin((x + t * 40) * 0.03 + i) * 4;
+        x === -20 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function drawShip(x, y, hue, flag, scale = 1){
+    ctx.save();
+    ctx.translate(x, y);
+    if (scale !== 1) ctx.scale(scale, scale);
+    // 그림자
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.beginPath(); ctx.ellipse(0, 20, 34, 8, 0, 0, Math.PI * 2); ctx.fill();
+    // 선체
+    ctx.fillStyle = hue.hull;
+    ctx.beginPath();
+    ctx.moveTo(-32, 6); ctx.quadraticCurveTo(-34, 20, -14, 20);
+    ctx.lineTo(14, 20); ctx.quadraticCurveTo(34, 20, 32, 6);
+    ctx.quadraticCurveTo(0, -2, -32, 6);
+    ctx.fill();
+    // 갑판/돛
+    ctx.fillStyle = hue.deck;
+    ctx.beginPath(); ctx.ellipse(0, 2, 30, 12, 0, Math.PI, Math.PI * 2); ctx.fill();
+    if (hue.spikes){
+      ctx.strokeStyle = hue.deckDark; ctx.lineWidth = 2;
+      for (let i = -22; i <= 22; i += 8){
+        ctx.beginPath(); ctx.moveTo(i, -6); ctx.lineTo(i, -12); ctx.stroke();
+      }
+    }
+    if (hue.sail){
+      ctx.fillStyle = hue.sail;
+      ctx.fillRect(-3, -34, 6, 30);
+      ctx.beginPath(); ctx.moveTo(3, -34); ctx.lineTo(24, -26); ctx.lineTo(3, -14); ctx.fill();
+    }
+    if (flag){
+      ctx.fillStyle = '#C43B2B';
+      ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(-14, -18); ctx.lineTo(0, -22); ctx.fill();
+      ctx.strokeStyle = '#3d2a1a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(0, -24); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+    drawSea();
+
+    // 하트 아이템
+    for (const h of hearts){
+      ctx.font = '20px serif'; ctx.textAlign = 'center';
+      ctx.fillText('❤️', h.x, h.y);
+    }
+
+    // 적선
+    for (const e of enemies){
+      drawShip(e.x, e.y, { hull: '#6b4a2f', deck: '#E7DCC0', deckDark: '#c9bb95', sail: '#F2E9D6' }, false);
+      // 체력바
+      const w = 30;
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(e.x - w / 2, e.y - 40, w, 5);
+      ctx.fillStyle = '#E4572E'; ctx.fillRect(e.x - w / 2, e.y - 40, w * (e.hp / e.maxHp), 5);
+    }
+
+    // 포탄 착탄 경고 + 포탄
+    for (const b of bombs){
+      const prog = Math.max(0, Math.min(1, (b.y - STATION) / (FLOOR - STATION)));
+      ctx.strokeStyle = `rgba(228,87,46,${0.35 + prog * 0.5})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(b.tx, b.ty, 14 - prog * 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#1A1410';
+      ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // 대포알
+    ctx.fillStyle = '#1A1410';
+    for (const c of cannons){ ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI * 2); ctx.fill(); }
+
+    // 12척 함대
+    ctx.globalAlpha = inv > 0 ? (Math.sin(inv * 26) > 0 ? .35 : 1) : 1;
+    for (let i = 0; i < FLEET; i++){
+      if (!alive[i]) continue;
+      const f = FORM[i];
+      drawShip(P.x + f.dx, P.y + f.dy, { hull: '#3B2A1E', deck: '#2F5D3A', deckDark: '#1f4028', spikes: true }, i < 2, 0.4);
+    }
+    ctx.globalAlpha = 1;
+
+    // 파편
+    for (const p of parts){
+      ctx.globalAlpha = Math.max(0, p.life * 2);
+      ctx.fillStyle = p.col;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 점수 텍스트
+    ctx.textAlign = 'center'; ctx.font = "700 15px 'Black Han Sans'";
+    for (const x of texts){
+      ctx.globalAlpha = Math.max(0, x.life);
+      ctx.fillStyle = x.col;
+      ctx.fillText(x.s, x.x, x.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(.033, (now - last) / 1000); last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  fit(); reset(true); state = 'start'; requestAnimationFrame(loop);
+})();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

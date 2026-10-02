@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>차례상 차리기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wood:#7A4E2A; --wood-deep:#5A3618; --cloth:#B8362E; --cloth-deep:#8C231D;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B; --ink:#101010;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:radial-gradient(circle at 50% 0%, #FFF6E0 0%, #F4E3C2 60%, #E8D3A6 100%);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;user-select:none;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+#wrap{width:100%;max-width:440px;text-align:center}
+
+.mark{font-family:var(--disp);font-size:clamp(30px,9vw,44px);line-height:1.15;margin:0 0 8px;
+  color:var(--cloth);text-shadow:3px 3px 0 var(--gold)}
+.tag{font-size:clamp(12px,3.4vw,15px);opacity:.75;line-height:1.7;margin-bottom:16px}
+
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,23px);letter-spacing:.06em;color:var(--cream);
+  background:var(--cloth);padding:14px 36px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--cloth-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--cloth-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--cloth-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:15px;padding:11px 24px;color:var(--ink);background:var(--cream);
+  box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+
+#hud{display:none;justify-content:space-between;font-family:var(--disp);font-size:14px;margin:0 2px 8px;color:var(--cloth-deep)}
+#hud.on{display:flex}
+
+#table{display:none;background:var(--wood);border:4px solid var(--wood-deep);border-radius:14px;
+  padding:14px;margin-bottom:14px;box-shadow:0 8px 0 var(--wood-deep)}
+#table.on{display:block}
+#grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cell{aspect-ratio:1;background:var(--cream);border:3px solid var(--ink);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:clamp(24px,8vw,34px);
+  cursor:pointer;transition:transform .12s;position:relative}
+.cell.empty{background:rgba(255,253,245,.35);font-size:16px;color:rgba(0,0,0,.3)}
+.cell.filled:active{transform:scale(.92)}
+.cell.correct{background:#C9F0CC;border-color:#3F9553}
+.cell.wrong{background:#FFD3D3;border-color:var(--cloth)}
+
+#msg{font-family:var(--disp);font-size:clamp(16px,5vw,22px);min-height:1.6em;color:var(--cloth);margin-bottom:6px}
+
+#tray{display:none;flex-wrap:wrap;gap:8px;justify-content:center;min-height:52px;margin-bottom:6px}
+#tray.on{display:flex}
+.chip{width:46px;height:46px;background:var(--cream);border:3px solid var(--ink);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer}
+.chip.sel{outline:3px dashed var(--cloth);outline-offset:2px}
+.chip.used{visibility:hidden}
+
+.big{font-family:var(--disp);font-size:clamp(28px,8vw,42px);margin:0 0 4px;color:var(--cloth)}
+.num{font-family:var(--disp);font-size:clamp(46px,14vw,78px);line-height:1;margin:4px 0}
+.line{font-size:14px;opacity:.8;margin-top:4px}
+.best{margin-top:8px;font-size:12px;opacity:.65}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="head"></div>
+  <div id="hud"><span>차례 <b id="roundTxt">1</b>/<b id="roundTotal">5</b></span><span>점수 <b id="scoreTxt">0</b></span></div>
+  <div id="msg"></div>
+  <div id="table"><div id="grid"></div></div>
+  <div id="tray"></div>
+  <div class="row"><button class="btn" id="startBtn" style="display:none">시작하기</button></div>
+</div>
+<script>
+const ITEMS = ['🍎','🍐','🍇','🍊','🥮','🍚','🍲','🐟','🍶'];
+const head = document.getElementById('head');
+const hud = document.getElementById('hud');
+const table = document.getElementById('table');
+const grid = document.getElementById('grid');
+const tray = document.getElementById('tray');
+const msg = document.getElementById('msg');
+const roundTxt = document.getElementById('roundTxt');
+const roundTotal = document.getElementById('roundTotal');
+const scoreTxt = document.getElementById('scoreTxt');
+const ROUNDS = 5;
+
+let AC = null;
+function beep(freq, dur, type, vol){
+  try{
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + (dur || .12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + (dur || .12));
+  }catch(e){}
+}
+function shuffle(a){ a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+let round = 0, score = 0, best = 0;
+try{ best = parseInt(localStorage.getItem('jaryesang_best'),10) || 0; }catch(e){}
+let target = [], placed = [], trayItems = [], selected = -1;
+
+roundTotal.textContent = ROUNDS;
+
+function showTitle(){
+  table.classList.remove('on'); hud.classList.remove('on'); tray.classList.remove('on');
+  msg.textContent = ''; grid.innerHTML = ''; tray.innerHTML = '';
+  head.innerHTML = `
+    <div class="mark">🍽️<br>차례상 차리기</div>
+    <div class="tag">상 위 음식 자리를 외운 다음<br>가려지면 그대로 다시 놓아요</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>
+    ${best ? `<div class="best">최고 점수 ${best}점</div>` : ''}`;
+  document.getElementById('start').onclick = e => { e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  round = 0; score = 0;
+  scoreTxt.textContent = 0;
+  hud.classList.add('on'); table.classList.add('on'); tray.classList.add('on');
+  head.innerHTML = '';
+  nextRound();
+}
+
+function buildGrid(showAll){
+  grid.innerHTML = '';
+  for (let i=0;i<9;i++){
+    const c = document.createElement('div');
+    c.className = 'cell ' + (showAll ? 'filled' : 'empty');
+    c.dataset.i = i;
+    if (showAll){ c.textContent = target[i]; }
+    else { c.textContent = placed[i] || ''; if (placed[i]) c.classList.add('filled'); else c.classList.remove('filled'); }
+    c.onclick = () => onCellClick(i);
+    grid.appendChild(c);
+  }
+}
+
+function nextRound(){
+  round++;
+  roundTxt.textContent = round;
+  target = shuffle(ITEMS);
+  placed = new Array(9).fill(null);
+  trayItems = shuffle(ITEMS);
+  selected = -1;
+  renderTray();
+  buildGrid(true);
+  const memTime = Math.max(2600, 4200 - round * 260);
+  msg.textContent = '외워보세요!';
+  let left = Math.ceil(memTime/1000);
+  const cd = setInterval(()=>{
+    left--;
+    if (left > 0) msg.textContent = '외워보세요! ' + left;
+  }, 1000);
+  setTimeout(()=>{
+    clearInterval(cd);
+    msg.textContent = '이제 그대로 놓아보세요';
+    buildGrid(false);
+  }, memTime);
+}
+
+function renderTray(){
+  tray.innerHTML = '';
+  trayItems.forEach((item, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (placed.includes(item) ? ' used' : '') + (selected === idx ? ' sel' : '');
+    chip.textContent = item;
+    chip.onclick = () => {
+      if (placed.includes(item)) return;
+      selected = (selected === idx) ? -1 : idx;
+      beep(500,.06,'triangle',.08);
+      renderTray();
+    };
+    tray.appendChild(chip);
+  });
+}
+
+function onCellClick(i){
+  if (msg.textContent.indexOf('외워') === 0) return;
+  if (placed[i]){
+    placed[i] = null;
+    buildGrid(false); renderTray();
+    beep(300,.08,'sine',.08);
+    return;
+  }
+  if (selected < 0) return;
+  placed[i] = trayItems[selected];
+  selected = -1;
+  buildGrid(false); renderTray();
+  beep(700,.08,'triangle',.1);
+  if (placed.every(p => p)) setTimeout(checkRound, 250);
+}
+
+function checkRound(){
+  let correct = 0;
+  const cells = grid.children;
+  for (let i=0;i<9;i++){
+    const ok = placed[i] === target[i];
+    cells[i].classList.remove('empty');
+    cells[i].classList.add(ok ? 'correct' : 'wrong');
+    if (ok) correct++;
+  }
+  score += correct;
+  scoreTxt.textContent = score;
+  msg.textContent = correct === 9 ? '완벽해요! 9/9' : correct + '/9 자리를 맞혔어요';
+  beep(correct === 9 ? 1000 : 600, .18, 'triangle', .12);
+  tray.classList.remove('on');
+  setTimeout(()=>{
+    tray.classList.add('on');
+    if (round >= ROUNDS) showResult();
+    else nextRound();
+  }, 1400);
+}
+
+function showResult(){
+  const isBest = score > best;
+  if (isBest){ best = score; try{ localStorage.setItem('jaryesang_best', best); }catch(e){} }
+  hud.classList.remove('on'); table.classList.remove('on'); tray.classList.remove('on'); msg.textContent = '';
+  const max = ROUNDS * 9;
+  const rank = score >= max*.9 ? '차례상의 달인!' : score >= max*.6 ? '제법인데?' : '다음엔 더 잘 외워보자';
+  head.innerHTML = `
+    <div class="big">${isBest ? '신기록!' : '차례상 완성!'}</div>
+    <div class="num">${score}</div>
+    <div class="line">${ROUNDS}번 중 총 ${max}자리 가운데 ${score}자리</div>
+    <div class="line">${rank}</div>
+    <div class="best">최고 점수 ${best}점</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e => { e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick = e => { e.stopPropagation(); showTitle(); };
+}
+
+showTitle();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

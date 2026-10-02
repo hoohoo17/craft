@@ -73,14 +73,20 @@
         }
         .map-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px;
+            /* 게임이 많아서 작은 칸으로 한 줄에 5개씩 (좁은 폰은 4개) */
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        @media (max-width: 400px) {
+            .map-container { grid-template-columns: repeat(4, 1fr); }
         }
         .map-container a {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 10px;
-            padding: 14px 12px;
+            gap: 4px;
+            padding: 10px 4px 8px;
+            text-align: center;
             text-decoration: none;
             color: #2C3560;
             background: #fff;
@@ -158,8 +164,8 @@
 
         .map-container .title {
             font-weight: 700;
-            font-size: 14px;
-            line-height: 1.3;
+            font-size: 11.5px;
+            line-height: 1.25;
             word-break: keep-all;
         }
 
@@ -501,6 +507,7 @@
         <a class="chat-jump" href="#chat">💬 대화방 가기</a>
         <button class="chat-jump video-open" id="videoOpen" type="button">🎬 소개 영상 보기</button>
         <button class="chat-jump video-open" id="roulOpen" type="button">🎲 오늘 뭐 하지</button>
+        <button class="chat-jump video-open" id="bookVideoOpen" type="button">📚 진짜 책 나왔어요!</button>
     </div>
 
     <div class="video-overlay" id="videoOverlay" hidden>
@@ -508,6 +515,13 @@
             <video id="trailerVideo" src="trailer/craft-trailer.mp4" poster="trailer/poster.jpg"
                    controls playsinline preload="none"></video>
             <button class="video-close" id="videoClose" type="button" aria-label="닫기">✕</button>
+        </div>
+    </div>
+    <div class="video-overlay" id="bookVideoOverlay" hidden>
+        <div class="video-box">
+            <video id="bookTrailerVideo" src="trailer/book-trailer.mp4" poster="trailer/book-poster.jpg"
+                   controls playsinline preload="none"></video>
+            <button class="video-close" id="bookVideoClose" type="button" aria-label="닫기">✕</button>
         </div>
     </div>
     <div class="roul-overlay" id="roulOverlay" hidden>
@@ -542,6 +556,46 @@
         <a data-cat="puzzle" href="https://hoohoo17.github.io/craft/norae">
             <span class="ico">🎵</span>
             <span class="title">노래 맞히기</span>
+        </a>
+        <a data-cat="puzzle" href="https://hoohoo17.github.io/craft/songpyeon">
+            <span class="ico">🥮</span>
+            <span class="title">송편 빚기</span>
+        </a>
+        <a data-cat="action" href="https://hoohoo17.github.io/craft/moonwish">
+            <span class="ico">🌕</span>
+            <span class="title">보름달 소원 잡기</span>
+        </a>
+        <a data-cat="puzzle" href="https://hoohoo17.github.io/craft/jaryesang">
+            <span class="ico">🍽️</span>
+            <span class="title">차례상 차리기</span>
+        </a>
+        <a data-cat="action" href="https://hoohoo17.github.io/craft/ssireum">
+            <span class="ico">🤼</span>
+            <span class="title">씨름 대결</span>
+        </a>
+        <a data-cat="action" href="https://hoohoo17.github.io/craft/ganggang">
+            <span class="ico">💃</span>
+            <span class="title">강강술래</span>
+        </a>
+        <a data-cat="action" href="https://hoohoo17.github.io/craft/beolcho">
+            <span class="ico">🌾</span>
+            <span class="title">벌초 대작전</span>
+        </a>
+        <a data-cat="action" href="https://hoohoo17.github.io/craft/giftwrap">
+            <span class="ico">🎁</span>
+            <span class="title">선물 포장하기</span>
+        </a>
+        <a data-cat="puzzle" href="https://hoohoo17.github.io/craft/buchimgae">
+            <span class="ico">🥞</span>
+            <span class="title">부침개 뒤집기</span>
+        </a>
+        <a data-cat="puzzle" href="https://hoohoo17.github.io/craft/yut">
+            <span class="ico">🪄</span>
+            <span class="title">윷놀이</span>
+        </a>
+        <a data-cat="puzzle" href="https://hoohoo17.github.io/craft/seongmyo-maze">
+            <span class="ico">🪦</span>
+            <span class="title">성묘 가는 길</span>
         </a>
         <a data-cat="make" href="https://hoohoo17.github.io/craft/ant">
             <span class="ico">🐜</span>
@@ -646,6 +700,10 @@
         <a data-cat="action" href="https://hoohoo17.github.io/craft/history">
             <span class="ico">🏛️</span>
             <span class="title">역사 술래잡기</span>
+        </a>
+        <a data-cat="action" href="https://hoohoo17.github.io/craft/geobukseon">
+            <span class="ico">🐢</span>
+            <span class="title">거북선 대작전</span>
         </a>
         <a data-cat="story" href="https://hoohoo17.github.io/craft/story10">
             <span class="ico">📖</span>
@@ -943,6 +1001,26 @@
         });
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && !videoOverlay.hidden) closeVideo();
+        });
+
+        // 진짜 책이 된 『나의 이야기』 소개 영상도 같은 방식으로 연다
+        const bookVideoOverlay = document.getElementById('bookVideoOverlay');
+        const bookTrailerVideo = document.getElementById('bookTrailerVideo');
+        function openBookVideo() {
+            bookVideoOverlay.hidden = false;
+            bookTrailerVideo.play().catch(() => {});
+        }
+        function closeBookVideo() {
+            bookTrailerVideo.pause();
+            bookVideoOverlay.hidden = true;
+        }
+        document.getElementById('bookVideoOpen').addEventListener('click', openBookVideo);
+        document.getElementById('bookVideoClose').addEventListener('click', closeBookVideo);
+        bookVideoOverlay.addEventListener('click', (e) => {
+            if (e.target === bookVideoOverlay) closeBookVideo();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !bookVideoOverlay.hidden) closeBookVideo();
         });
 
         // 오늘 뭐 하지 룰렛: 지금 보이는 게임 중에서 하나를 뽑아 준다

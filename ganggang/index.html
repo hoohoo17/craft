@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>강강술래</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#20194A; --night-deep:#120E33;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B; --ink:#101010; --red:#E4572E; --green:#6FBE7A;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(circle at 50% 30%, #392C6E 0%, var(--night) 60%, var(--night-deep) 100%);
+  font-family:var(--body);color:var(--cream);-webkit-font-smoothing:antialiased;touch-action:manipulation;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;text-align:center;padding:24px}
+#ui.hide{display:none}
+.mark{font-family:var(--disp);font-size:clamp(34px,10vw,58px);line-height:1.15;
+  text-shadow:4px 4px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.tag{margin-top:12px;font-size:clamp(13px,3.6vw,16px);opacity:.85;line-height:1.7}
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,24px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:14px 38px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:16px;padding:11px 26px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap;justify-content:center}
+#hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:none;justify-content:space-between;pointer-events:none}
+#hud.on{display:flex}
+.score{font-family:var(--disp);font-size:clamp(30px,9vw,48px);line-height:.9;
+  text-shadow:3px 3px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.score small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.2em;opacity:.7;margin-top:5px}
+#judge{position:fixed;left:0;right:0;top:30%;text-align:center;pointer-events:none;font-family:var(--disp);
+  font-size:clamp(24px,7vw,38px);opacity:0;transform:scale(.6)}
+#judge.pop{animation:pop .5s ease-out}
+@keyframes pop{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(1)}}
+.big{font-family:var(--disp);font-size:clamp(34px,10vw,54px);line-height:1;
+  text-shadow:4px 4px 0 var(--gold-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.num{font-family:var(--disp);font-size:clamp(56px,17vw,96px);line-height:1;margin:4px 0}
+.line{font-size:15px;opacity:.85;margin-top:6px}
+.best{margin-top:10px;font-size:13px;opacity:.7}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><div class="score" id="scoreEl">0<small>점수</small></div><div class="score" id="comboEl" style="font-size:22px"></div></div>
+<div id="judge"></div>
+<div id="ui"></div>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let W, H, DPR, cx, cy, S;
+function resize(){
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W*DPR; cv.height = H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  cx = W/2; cy = H*.52;
+  S = Math.min(1.3, Math.max(.75, Math.min(W,H)/430));
+}
+const rand=(a,b)=>a+Math.random()*(b-a);
+
+let AC=null;
+function beep(freq,dur,type,vol){
+  try{
+    if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||.13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime+(dur||.12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime+(dur||.12));
+  }catch(e){}
+}
+
+const DANCERS = 10;
+let ringAngle = 0;
+
+function drawMoon(){
+  const mr = 40*S, mx = W*.5, my = H*.12;
+  ctx.save(); ctx.shadowColor='#FFF4D6'; ctx.shadowBlur=40;
+  ctx.fillStyle='#FFF4D6'; ctx.beginPath(); ctx.arc(mx,my,mr,0,7); ctx.fill();
+  ctx.restore();
+}
+
+function drawDancers(){
+  const R = Math.min(W,H)*.32;
+  for (let i=0;i<DANCERS;i++){
+    const a = ringAngle + (Math.PI*2/DANCERS)*i;
+    const x = cx + Math.cos(a)*R, y = cy + Math.sin(a)*R*.72;
+    ctx.font = (26*S)+'px serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🧑‍🤝‍🧑', x, y);
+  }
+}
+
+const TARGET_R = 58;
+const MAX_R = 150;
+let mode = 'title';
+let beatDur = 1150, beatT = 0, beatActive = false;
+let beatN = 0, TOTAL_BEATS = 18;
+let score = 0, combo = 0, bestCombo = 0, perfectN = 0, goodN = 0, missN = 0;
+let best = 0;
+try{ best = parseInt(localStorage.getItem('ganggang_best'),10)||0; }catch(e){}
+
+const ui = document.getElementById('ui');
+const hud = document.getElementById('hud');
+const scoreEl = document.getElementById('scoreEl');
+const comboEl = document.getElementById('comboEl');
+const judgeEl = document.getElementById('judge');
+
+function showJudge(text,color){
+  judgeEl.textContent = text; judgeEl.style.color = color;
+  judgeEl.classList.remove('pop'); void judgeEl.offsetWidth; judgeEl.classList.add('pop');
+}
+
+function showTitle(){
+  mode = 'title'; hud.classList.remove('on'); ui.classList.remove('hide');
+  ui.innerHTML = `
+    <div class="mark">강강술래</div>
+    <div class="tag">둥근 원이 가운데 고리에 딱 맞을 때<br>화면을 톡 눌러줘</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>
+    ${best?`<div class="best">최고 점수 ${best}점</div>`:''}`;
+  document.getElementById('start').onclick = e=>{ e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function startGame(){
+  mode='play'; score=0; combo=0; bestCombo=0; perfectN=0; goodN=0; missN=0; beatN=0;
+  beatDur = 1150; beatT = 0; beatActive = true;
+  ui.classList.add('hide'); hud.classList.add('on');
+  scoreEl.firstChild.nodeValue = 0; comboEl.textContent='';
+}
+
+function endBeat(hit, diffRatio){
+  beatActive = false;
+  if (!hit){
+    combo = 0; missN++;
+    showJudge('놓쳤다','#B9C2E0');
+    beep(160,.15,'sawtooth',.1);
+  } else if (diffRatio < .12){
+    perfectN++; combo++; score += 3;
+    showJudge('딱이야!','#FFD84D');
+    beep(920,.12,'triangle',.14);
+  } else if (diffRatio < .32){
+    goodN++; combo++; score += 1;
+    showJudge('좋아요','#8ED9B4');
+    beep(620,.1,'triangle',.12);
+  } else {
+    combo = 0; missN++;
+    showJudge('아쉽다','#FF9AAE');
+    beep(220,.12,'sawtooth',.1);
+  }
+  if (combo > bestCombo) bestCombo = combo;
+  scoreEl.firstChild.nodeValue = score;
+  comboEl.textContent = combo >= 3 ? combo+'콤보' : '';
+  beatN++;
+  if (beatN >= TOTAL_BEATS){
+    setTimeout(showResult, 500);
+  } else {
+    beatDur = Math.max(760, 1150 - beatN * 18);
+    beatT = 0; beatActive = true;
+  }
+}
+
+function tryTap(){
+  if (mode !== 'play' || !beatActive) return;
+  const ratio = beatT / beatDur;
+  const diff = Math.abs(ratio - 1);
+  endBeat(true, diff);
+}
+
+function showResult(){
+  mode = 'over';
+  const isBest = score > best;
+  if (isBest){ best = score; try{ localStorage.setItem('ganggang_best', best); }catch(e){} }
+  hud.classList.remove('on'); ui.classList.remove('hide');
+  const rank = perfectN >= TOTAL_BEATS*.7 ? '강강술래의 달인!' : score >= TOTAL_BEATS*1.5 ? '박자를 잘 타는데?' : '다음엔 더 잘 맞혀보자';
+  ui.innerHTML = `
+    <div class="big">${isBest?'신기록!':'끝!'}</div>
+    <div class="num">${score}</div>
+    <div class="line">딱이야 ${perfectN} · 좋아요 ${goodN} · 놓침 ${missN} · 최고 ${bestCombo}콤보</div>
+    <div class="line">${rank}</div>
+    <div class="best">최고 점수 ${best}점</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e=>{ e.stopPropagation(); startGame(); };
+  document.getElementById('home').onclick = e=>{ e.stopPropagation(); showTitle(); };
+}
+
+let lastT = performance.now();
+function loop(now){
+  const dt = Math.min(40, now-lastT); lastT = now;
+  ringAngle += 0.0006*dt;
+  ctx.clearRect(0,0,W,H);
+  drawMoon();
+  drawDancers();
+
+  if (mode === 'play' && beatActive){
+    beatT += dt;
+    if (beatT >= beatDur + 260){ endBeat(false, 1); }
+  }
+
+  const R = Math.min(W,H)*.32;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 3*S;
+  ctx.beginPath(); ctx.arc(cx, cy, TARGET_R*S, 0, 7); ctx.stroke();
+  if (mode === 'play' && beatActive){
+    const t = Math.min(1, beatT/beatDur);
+    const r = MAX_R - (MAX_R-TARGET_R)*t;
+    ctx.strokeStyle = '#FFD84D'; ctx.lineWidth = 5*S;
+    ctx.beginPath(); ctx.arc(cx, cy, Math.max(TARGET_R*.3,r)*S, 0, 7); ctx.stroke();
+  }
+  ctx.fillStyle='#FFD84D';
+  ctx.font=(30*S)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🌙', cx, cy);
+  ctx.restore();
+
+  requestAnimationFrame(loop);
+}
+
+addEventListener('pointerdown', e=>{ tryTap(); }, {passive:true});
+addEventListener('keydown', e=>{ if (e.code==='Space'){ e.preventDefault(); tryTap(); } });
+addEventListener('resize', resize);
+resize();
+showTitle();
+requestAnimationFrame(loop);
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>

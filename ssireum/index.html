@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>씨름 대결</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#E8C888; --sand-deep:#C9A55E; --sky:#8FCBEA;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B; --ink:#101010; --red:#E4572E; --blue:#3A78C2;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:linear-gradient(var(--sky) 0%, var(--sky) 46%, var(--sand) 46%, var(--sand-deep) 100%);
+  font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;touch-action:manipulation;
+  user-select:none;height:100vh;display:flex;align-items:center;justify-content:center}
+#wrap{width:100%;max-width:480px;padding:18px;text-align:center}
+
+.mark{font-family:var(--disp);font-size:clamp(32px,10vw,50px);line-height:1.15;margin:0 0 8px;
+  color:var(--cream);text-shadow:4px 4px 0 var(--red),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.tag{font-size:clamp(12px,3.4vw,15px);opacity:.8;line-height:1.7;margin-bottom:16px;color:var(--ink)}
+
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,23px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:14px 36px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:15px;padding:11px 24px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+
+#hud{display:none;justify-content:space-between;font-family:var(--disp);font-size:15px;margin:0 4px 6px;color:var(--ink)}
+#hud.on{display:flex}
+
+#ring{display:none;margin:10px 0 18px}
+#ring.on{display:block}
+#chars{display:flex;justify-content:space-between;align-items:flex-end;padding:0 6px;margin-bottom:8px}
+#you{font-size:52px;transition:transform .15s}
+#foe{font-size:52px;transform:scaleX(-1);transition:transform .15s}
+#track{position:relative;height:30px;border-radius:15px;background:#5A3618;border:3px solid var(--ink);overflow:hidden}
+#fillYou{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(var(--blue),#2A5A94)}
+#knot{position:absolute;top:-6px;bottom:-6px;width:8px;margin-left:-4px;background:var(--cream);
+  border-radius:4px;box-shadow:0 0 8px rgba(255,255,255,.7),0 0 0 2px var(--ink)}
+#timeWrap{margin-top:10px;height:8px;border-radius:5px;background:rgba(0,0,0,.15);overflow:hidden}
+#timeFill{height:100%;background:var(--red);width:100%}
+
+#pushBtn{display:none}
+#pushBtn.on{display:inline-block}
+#pushBtn.hit{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+
+.big{font-family:var(--disp);font-size:clamp(28px,8vw,42px);margin:0 0 4px}
+.num{font-family:var(--disp);font-size:clamp(24px,7vw,36px);line-height:1;margin:4px 0}
+.line{font-size:14px;opacity:.85;margin-top:4px}
+.best{margin-top:8px;font-size:12px;opacity:.65}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="head"></div>
+  <div id="hud"><span>승리 <b id="wins">0</b> : <b id="losses">0</b></span><span id="roundTxt">1판</span></div>
+  <div id="ring">
+    <div id="chars"><span id="you">🧑‍🦱</span><span id="foe">🧔</span></div>
+    <div id="track"><div id="fillYou"></div><div id="knot"></div></div>
+    <div id="timeWrap"><div id="timeFill"></div></div>
+  </div>
+  <div class="row"><button class="btn" id="pushBtn">밀기!</button></div>
+</div>
+<script>
+const head = document.getElementById('head');
+const hud = document.getElementById('hud');
+const ring = document.getElementById('ring');
+const fillYou = document.getElementById('fillYou');
+const knot = document.getElementById('knot');
+const timeFill = document.getElementById('timeFill');
+const pushBtn = document.getElementById('pushBtn');
+const winsEl = document.getElementById('wins');
+const lossesEl = document.getElementById('losses');
+const roundTxt = document.getElementById('roundTxt');
+const you = document.getElementById('you');
+const foe = document.getElementById('foe');
+
+let AC = null;
+function beep(freq, dur, type, vol){
+  try{
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + (dur || .12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + (dur || .12));
+  }catch(e){}
+}
+
+let wins = 0, losses = 0, round = 0;
+let pos = 50, timeLeft = 12000, playing = false, raf = null, last = 0;
+let foePull = 0.014;
+
+function showTitle(){
+  playing = false; if (raf) cancelAnimationFrame(raf);
+  hud.classList.remove('on'); ring.classList.remove('on'); pushBtn.classList.remove('on');
+  head.innerHTML = `
+    <div class="mark">🤼<br>씨름 대결</div>
+    <div class="tag">[밀기!]를 빠르게 눌러서<br>상대를 모래판 밖으로 밀어내요<br>3판 2선승제!</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>`;
+  document.getElementById('start').onclick = e => { e.stopPropagation(); beep(660,.1,'triangle'); startMatch(); };
+}
+
+function startMatch(){
+  wins = 0; losses = 0; round = 0;
+  head.innerHTML = '';
+  hud.classList.add('on'); ring.classList.add('on'); pushBtn.classList.add('on');
+  winsEl.textContent = 0; lossesEl.textContent = 0;
+  nextRound();
+}
+
+function nextRound(){
+  round++;
+  roundTxt.textContent = round + '판';
+  pos = 50; timeLeft = 12000; last = performance.now();
+  foePull = 0.011 + (round-1) * 0.003;
+  playing = true;
+  updateBar();
+  raf = requestAnimationFrame(loop);
+}
+
+function updateBar(){
+  fillYou.style.width = pos + '%';
+  knot.style.left = pos + '%';
+  you.style.transform = 'scale(' + (1 + Math.max(0,(pos-50))/220) + ')';
+  foe.style.transform = 'scaleX(-1) scale(' + (1 + Math.max(0,(50-pos))/220) + ')';
+}
+
+function loop(now){
+  if (!playing) return;
+  const dt = Math.min(40, now - last); last = now;
+  pos -= foePull * dt;
+  pos = Math.max(0, Math.min(100, pos));
+  timeLeft -= dt;
+  timeFill.style.width = Math.max(0, timeLeft/12000*100) + '%';
+  updateBar();
+  if (pos >= 96){ endRound(true); return; }
+  if (pos <= 4){ endRound(false); return; }
+  if (timeLeft <= 0){ endRound(pos > 50); return; }
+  raf = requestAnimationFrame(loop);
+}
+
+function push(){
+  if (!playing) return;
+  pos = Math.min(100, pos + 3.2);
+  updateBar();
+  pushBtn.classList.add('hit'); setTimeout(()=>pushBtn.classList.remove('hit'), 90);
+  beep(420 + Math.random()*80, .05, 'square', .07);
+}
+
+function endRound(won){
+  playing = false; cancelAnimationFrame(raf);
+  if (won){ wins++; winsEl.textContent = wins; beep(880,.2,'triangle',.14); }
+  else { losses++; lossesEl.textContent = losses; beep(160,.25,'sawtooth',.14); }
+  const msg = document.createElement('div');
+  msg.className = 'mark';
+  msg.style.position = 'fixed'; msg.style.left = '0'; msg.style.right = '0';
+  msg.style.top = '40%'; msg.style.textAlign = 'center'; msg.style.pointerEvents = 'none';
+  msg.textContent = won ? '이겼다!' : '졌다!';
+  document.body.appendChild(msg);
+  setTimeout(()=>{
+    msg.remove();
+    if (wins >= 2 || losses >= 2) showResult(wins >= 2);
+    else nextRound();
+  }, 1100);
+}
+
+function showResult(champion){
+  hud.classList.remove('on'); ring.classList.remove('on'); pushBtn.classList.remove('on');
+  head.innerHTML = `
+    <div class="big">${champion ? '천하장사!' : '아쉽다!'}</div>
+    <div class="num">${wins} : ${losses}</div>
+    <div class="line">${champion ? '모래판을 씩씩하게 지켰어요' : '다음엔 더 빠르게 밀어보자'}</div>
+    <div class="row">
+      <button class="btn" id="again">다시하기</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  document.getElementById('again').onclick = e => { e.stopPropagation(); startMatch(); };
+  document.getElementById('home').onclick = e => { e.stopPropagation(); showTitle(); };
+}
+
+pushBtn.addEventListener('pointerdown', e => { e.preventDefault(); push(); });
+addEventListener('keydown', e => {
+  if (e.code === 'Space' && playing){ e.preventDefault(); push(); }
+});
+
+showTitle();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
