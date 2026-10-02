@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>금강산 오르기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#8FD0F2; --cream:#FFFDF5; --leaf:#E4572E; --leaf-deep:#A8331A;
+  --ink:#101010; --gold:#FFD84D; --gold-deep:#F0B90B;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--sky);font-family:var(--body);color:var(--ink);
+  -webkit-font-smoothing:antialiased;touch-action:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+#ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;text-align:center;padding:24px;color:var(--cream);background:rgba(16,24,48,.38)}
+#ui.hide{display:none}
+.mark{font-family:var(--disp);font-size:clamp(40px,12vw,78px);line-height:1.1;color:var(--cream);
+  text-shadow:5px 5px 0 var(--leaf-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.tag{margin-top:14px;font-size:clamp(14px,3.8vw,17px);letter-spacing:.03em;line-height:1.7;
+  text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.how{margin-top:14px;font-size:15px;line-height:1.9;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.btn{all:unset;pointer-events:auto;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(19px,5vw,25px);letter-spacing:.06em;color:var(--ink);
+  background:var(--gold);padding:15px 42px;border-radius:999px;border:3px solid var(--ink);
+  box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translateY(3px);box-shadow:0 4px 0 var(--gold-deep),0 4px 0 3px var(--ink)}
+.btn:active{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:17px;padding:12px 30px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:hover{box-shadow:0 3px 0 #DCD6C4,0 3px 0 3px var(--ink)}
+.row{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;justify-content:center}
+.big{font-family:var(--disp);font-size:clamp(36px,10vw,60px);line-height:1.1;
+  text-shadow:4px 4px 0 var(--leaf-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.num{font-family:var(--disp);font-size:clamp(56px,16vw,100px);line-height:1;margin:6px 0;
+  text-shadow:4px 4px 0 rgba(0,0,0,.35)}
+.line{font-size:16px;margin-top:6px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.best{margin-top:12px;font-size:14px;letter-spacing:.06em;opacity:.85;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+
+#hud{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:none;justify-content:space-between;
+  align-items:flex-start;pointer-events:none;color:var(--cream)}
+#hud.on{display:flex}
+.alt{font-family:var(--disp);font-size:clamp(30px,9vw,48px);line-height:.95;
+  text-shadow:3px 3px 0 rgba(0,0,0,.35),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.alt small{font-size:.5em}
+.leaves{margin-top:6px;font-size:18px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.lives{font-size:24px;letter-spacing:2px;line-height:1}
+#banner{position:fixed;left:0;right:0;top:30%;text-align:center;pointer-events:none;font-family:var(--disp);
+  font-size:clamp(30px,9vw,52px);color:var(--cream);line-height:1.15;
+  text-shadow:3px 3px 0 var(--leaf-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink);
+  opacity:0}
+#banner small{display:block;font-family:var(--body);font-size:.42em;font-weight:700;margin-top:6px;
+  text-shadow:0 1px 3px rgba(0,0,0,.8)}
+#banner.pop{animation:pop 2.2s ease-out}
+@keyframes pop{0%{opacity:0;transform:scale(.5)}12%{opacity:1;transform:scale(1.12)}
+  22%{transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div>
+    <div class="alt" id="altEl">0<small>m</small></div>
+    <div class="leaves" id="leafEl">🍁 0</div>
+  </div>
+  <div class="lives" id="livesEl"></div>
+</div>
+<div id="banner"></div>
+<div id="ui"></div>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let W, H, DPR, S;
+function resize(){
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  S = Math.min(1.25, Math.max(.8, Math.min(W, H) / 430));
+  me.y = H * .74;
+  me.x = clampX(me.x); me.tx = clampX(me.tx);
+}
+const rand = (a,b) => a + Math.random()*(b-a);
+
+let AC = null;
+function beep(freq, dur, type, vol){
+  try{
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .13, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + (dur || .12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + (dur || .12));
+  }catch(e){}
+}
+
+/* ================= 산 ================= */
+const TOP = 1638;          // 비로봉 높이
+const CLIMB = 24;          // 1초에 오르는 높이(m) — 꼭대기까지 약 68초
+const PX_PER_M = 5.5;      // 화면이 1m에 몇 칸 내려가는지
+const PLACES = [
+  { m: 350,  name: '구룡폭포', sub: '물소리가 시원해요' },
+  { m: 850,  name: '만물상',   sub: '바위가 온갖 모양이에요' },
+  { m: 1350, name: '거의 다 왔어요!', sub: '비로봉이 보여요' },
+];
+
+function wallW(){ return Math.max(26, W * .09); }
+function clampX(x){ const e = wallW() + 22*S; return Math.min(Math.max(x, e), W - e); }
+
+/* ================= 등산가 ================= */
+const me = { x: 0, y: 0, tx: 0, r: 22, inv: 0, bob: 0 };
+
+/* ================= 게임 상태 ================= */
+let mode = 'title';
+let alt = 0, lives = 3, leaves = 0, hits = 0, time = 0;
+let rocks = [], warns = [], items = [];
+let rockT = 0, leafT = 0, riceT = 0, placeI = 0, shake = 0, winT = 0;
+const MAXL = 3;
+let best = { alt: 0, leaves: -1 };
+try{ best = Object.assign(best, JSON.parse(localStorage.getItem('geumgang_best')) || {}); }catch(e){}
+function saveBest(){ try{ localStorage.setItem('geumgang_best', JSON.stringify(best)); }catch(e){} }
+
+const ui = document.getElementById('ui');
+const hud = document.getElementById('hud');
+const altEl = document.getElementById('altEl');
+const leafEl = document.getElementById('leafEl');
+const livesEl = document.getElementById('livesEl');
+const banner = document.getElementById('banner');
+
+const prog = () => Math.min(1, alt / TOP);
+function rockGap(){ return 1.4 - .5 * prog(); }            // 바위가 나오는 간격(초)
+function rockSpeed(){ return (220 + 150 * prog()) * S; }     // 바위 떨어지는 빠르기
+const WARN = .85;                                             // "!"가 먼저 떠 있는 시간(초)
+
+function drawHud(){
+  altEl.innerHTML = Math.floor(alt).toLocaleString() + '<small>m</small>';
+  leafEl.textContent = '🍁 ' + leaves;
+  livesEl.textContent = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, MAXL - lives));
+}
+function showBanner(text, sub){
+  banner.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
+  banner.classList.remove('pop'); void banner.offsetWidth; banner.classList.add('pop');
+}
+
+/* ================= 반짝이·글씨 ================= */
+const fx = [];
+function sparkle(x, y, color, n){
+  for (let i=0;i<(n||9);i++) fx.push({t:1,type:'p',x,y,vx:rand(-240,240),vy:rand(-360,60),r:rand(2.5,5.5)*S,color});
+}
+function floater(x, y, text, color, size){
+  fx.push({t:1,type:'t',x,y,vy:-90,text,color,size:(size||22)*S});
+}
+function stepFx(dt){
+  for (let i=fx.length-1;i>=0;i--){
+    const f = fx[i];
+    f.t -= dt * (f.type === 't' ? 1 : 1.6);
+    if (f.t <= 0){ fx.splice(i,1); continue; }
+    if (f.type === 'p'){ f.x += f.vx*dt; f.y += f.vy*dt; f.vy += 1100*dt; }
+    else { f.y += f.vy*dt; f.vy *= .95; }
+  }
+}
+
+/* ================= 한 걸음씩 움직이기 ================= */
+function update(dt){
+  time += dt;
+  me.bob += dt;
+  me.inv = Math.max(0, me.inv - dt);
+  me.x += (me.tx - me.x) * Math.min(1, dt * 14);
+  me.x = clampX(me.x);
+  stepFx(dt);
+  if (mode === 'win'){ winT += dt; return; }
+  if (mode !== 'play') return;
+
+  const scroll = CLIMB * PX_PER_M * dt;
+  alt = Math.min(TOP, alt + CLIMB * dt);
+
+  if (placeI < PLACES.length && alt >= PLACES[placeI].m){
+    const p = PLACES[placeI++];
+    showBanner(p.name, p.sub);
+    beep(660,.12,'triangle',.1); setTimeout(() => beep(880,.16,'triangle',.1), 120);
+  }
+
+  // 꼭대기가 가까우면 바위는 그만 나온다
+  const nearTop = alt > TOP - 70;
+
+  // 바위: 먼저 "!"를 띄우고, 잠깐 뒤에 그 자리로 굴러온다
+  rockT -= dt;
+  if (rockT <= 0 && !nearTop){
+    rockT = rockGap() * rand(.85, 1.15);
+    const r = rand(20, 28) * S;
+    let x = clampX(rand(0, W));
+    // 바로 앞 바위와 너무 붙어 나오지 않게 해서 피할 길을 남긴다
+    const last = warns[warns.length - 1];
+    if (last && Math.abs(last.x - x) < 30*S) x = clampX(x + (x < W/2 ? 90 : -90) * S);
+    warns.push({ x, r, t: WARN });
+  }
+  for (const w of warns){
+    w.t -= dt;
+    if (w.t <= 0){
+      w.dead = true;
+      rocks.push({ x: w.x, y: -w.r, r: w.r, vy: rockSpeed(), rot: 0, near: false });
+    }
+  }
+  warns = warns.filter(w => !w.dead);
+
+  // 단풍잎과 주먹밥은 산에 붙어 있어서 화면과 같이 내려온다
+  leafT -= dt;
+  if (leafT <= 0 && !nearTop){
+    leafT = rand(.55, .9);
+    items.push({ kind: 'leaf', x: clampX(rand(0, W)), y: -20*S, r: 17*S, rot: rand(-.4,.4) });
+  }
+  riceT -= dt;
+  if (riceT <= 0 && !nearTop){
+    riceT = rand(10, 13);
+    if (lives < MAXL) items.push({ kind: 'rice', x: clampX(rand(0, W)), y: -20*S, r: 19*S, rot: 0 });
+  }
+
+  for (const it of items){
+    it.y += scroll;
+    if (!it.dead && Math.hypot(it.x - me.x, it.y - me.y) < it.r + me.r*S*.9){
+      it.dead = true;
+      if (it.kind === 'leaf'){
+        leaves++;
+        beep(700 + (leaves % 6) * 60, .08, 'triangle', .1);
+        floater(it.x, it.y - 18*S, '+1', '#FFE3A8', 20);
+        sparkle(it.x, it.y, '#E4572E', 8);
+      } else {
+        lives = Math.min(MAXL, lives + 1);
+        beep(523,.1,'sine',.12); setTimeout(() => beep(784,.16,'sine',.12), 90);
+        floater(it.x, it.y - 18*S, '힘이 나요!', '#FFFDF5', 22);
+        sparkle(it.x, it.y, '#FFFDF5', 14);
+      }
+    }
+    if (it.y > H + 40) it.dead = true;
+  }
+  items = items.filter(i => !i.dead);
+
+  for (const k of rocks){
+    k.y += k.vy * dt;
+    k.rot += k.vy * dt / k.r;
+    const d = Math.hypot(k.x - me.x, k.y - me.y);
+    // 부딪힘은 눈에 보이는 것보다 조금 너그럽게 잡는다
+    if (!k.dead && me.inv <= 0 && d < k.r * .7 + me.r*S * .5){
+      k.dead = true;
+      lives--; hits++;
+      me.inv = 1.6; shake = 16;
+      beep(110, .28, 'sawtooth', .16);
+      floater(me.x, me.y - 40*S, '아야!', '#FFFDF5', 26);
+      sparkle(k.x, k.y, '#9A8F86', 14);
+      if (lives <= 0){ lose(); return; }
+    } else if (!k.dead && !k.near && me.inv <= 0 && k.y > me.y && d < k.r + 46*S){
+      k.near = true;
+      floater(me.x, me.y - 44*S, '휴!', '#BFF0FF', 18);
+    }
+    if (k.y > H + 60) k.dead = true;
+  }
+  rocks = rocks.filter(k => !k.dead);
+
+  if (alt >= TOP) win();
+}
+
+/* ================= 그리기 ================= */
+function lerpColor(a, b, t){
+  const pa = a.match(/\w\w/g).map(h => parseInt(h,16)), pb = b.match(/\w\w/g).map(h => parseInt(h,16));
+  return 'rgb(' + pa.map((v,i) => Math.round(v + (pb[i]-v)*t)).join(',') + ')';
+}
+// 같은 높이에서는 늘 같은 모양이 나오게 하는 가짜 무작위
+function noise(n){ const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); }
+
+function drawSky(){
+  const p = prog();
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, lerpColor('5FB3E6', '3E7BD6', p));
+  g.addColorStop(1, lerpColor('BFE6F7', 'FFD9A8', p));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+function drawFace(){
+  const scrollPx = alt * PX_PER_M;
+  // 꼭대기 선: 이 위로는 하늘
+  const summitY = me.y + 18*S - (TOP - alt) * PX_PER_M;
+  const top = Math.max(-10, summitY);
+  if (top >= H) return;
+
+  // 화강암 바위벽 (금강산은 하얀 바위산)
+  ctx.fillStyle = '#D9D2C7';
+  ctx.fillRect(0, top, W, H - top);
+
+  // 바위 결: 높이에 따라 정해진 자리에 그어져 있어서 올라가면 아래로 흘러간다
+  const step = 70;
+  const first = Math.floor((scrollPx - H) / step) - 1, last = Math.ceil((scrollPx + 40) / step) + 1;
+  ctx.lineWidth = 2*S; ctx.strokeStyle = 'rgba(120,108,96,.35)';
+  for (let i = first; i <= last; i++){
+    const y = me.y - (i*step - scrollPx);
+    if (y < top || y > H + 20) continue;
+    const x = wallW() + noise(i) * (W - wallW()*2);
+    const len = (30 + noise(i+.5) * 70) * S;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len*.4, y + 10*S);
+    ctx.lineTo(x + len, y + 4*S);
+    ctx.stroke();
+  }
+
+  // 구룡폭포 근처에서는 물줄기가 흐른다
+  const fallY = me.y - (PLACES[0].m * PX_PER_M - scrollPx);
+  if (fallY > -400 && fallY < H + 600){
+    const fx0 = W * .62, fw = 34*S;
+    ctx.fillStyle = 'rgba(150,215,245,.85)';
+    ctx.fillRect(fx0, Math.max(top, fallY - 380), fw, 600);
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2*S;
+    for (let k=0;k<4;k++){
+      const yy = (time * 300 + k * 150) % 600;
+      ctx.beginPath(); ctx.moveTo(fx0 + 6*S + k*7*S, Math.max(top, fallY - 380 + yy));
+      ctx.lineTo(fx0 + 6*S + k*7*S, Math.max(top, fallY - 380 + yy + 40)); ctx.stroke();
+    }
+  }
+
+  // 양쪽 낭떠러지와 소나무
+  for (const side of [0, 1]){
+    ctx.fillStyle = '#8C8076';
+    ctx.beginPath();
+    const ww = wallW();
+    const ex = side ? W : 0;
+    ctx.moveTo(ex, top);
+    for (let y = top; y <= H + 30; y += 30){
+      const n = Math.floor((scrollPx - (y - me.y)) / 30);
+      const jag = ww * (.75 + noise(n + side*99) * .45);
+      ctx.lineTo(side ? W - jag : jag, y);
+    }
+    ctx.lineTo(ex, H + 30); ctx.closePath(); ctx.fill();
+  }
+  ctx.font = `${30*S}px 'Apple Color Emoji','Segoe UI Emoji',serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const tstep = 160;
+  for (let i = Math.floor((scrollPx - H) / tstep) - 1; i <= Math.ceil((scrollPx + 40)/tstep) + 1; i++){
+    const y = me.y - (i*tstep - scrollPx);
+    if (y < top + 10 || y > H + 30) continue;
+    const side = noise(i + 7) < .5;
+    ctx.fillText(noise(i + 3) < .55 ? '🌲' : '🍁', side ? wallW()*.55 : W - wallW()*.55, y);
+  }
+
+  // 꼭대기 바위 끝과 깃발
+  if (summitY > -60){
+    ctx.fillStyle = '#C9C0B3';
+    ctx.fillRect(0, summitY - 4*S, W, 10*S);
+    ctx.font = `${46*S}px 'Apple Color Emoji','Segoe UI Emoji',serif`;
+    ctx.fillText('🚩', W/2 + 4*S, summitY - 26*S);
+    ctx.font = `bold ${15*S}px 'Gowun Dodum',sans-serif`;
+    ctx.fillStyle = '#101010';
+    ctx.fillText('비로봉 1,638m', W/2, summitY + 22*S);
+  }
+}
+
+function drawClouds(){
+  // 높이 올라갈수록 구름이 발밑으로 지나간다
+  const p = prog();
+  if (p < .45) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(.75, (p - .45) * 2);
+  ctx.fillStyle = '#FFFFFF';
+  for (let i=0;i<4;i++){
+    const y = ((time * 40 + i * H/4) % (H + 120)) - 60;
+    const x = (noise(i + Math.floor((time*40 + i*H/4) / (H+120))) * W);
+    ctx.beginPath();
+    ctx.ellipse(x, y, 70*S, 22*S, 0, 0, 7);
+    ctx.ellipse(x + 40*S, y - 10*S, 46*S, 20*S, 0, 0, 7);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawRock(k){
+  ctx.save();
+  ctx.translate(k.x, k.y); ctx.rotate(k.rot);
+  ctx.fillStyle = '#7A6F66'; ctx.strokeStyle = '#101010'; ctx.lineWidth = 3*S;
+  ctx.beginPath();
+  for (let i=0;i<8;i++){
+    const a = i/8 * Math.PI*2, rr = k.r * (.86 + noise(k.r + i) * .2);
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a)*rr, Math.sin(a)*rr);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.18)';
+  ctx.beginPath(); ctx.arc(-k.r*.3, -k.r*.3, k.r*.3, 0, 7); ctx.fill();
+  ctx.restore();
+}
+
+function drawWarn(w){
+  const blink = Math.floor(w.t * 10) % 2 === 0;
+  ctx.save();
+  ctx.globalAlpha = .9;
+  ctx.fillStyle = blink ? '#FFD84D' : '#E4572E';
+  ctx.strokeStyle = '#101010'; ctx.lineWidth = 3*S;
+  const y = 92*S, s = 17*S;
+  ctx.beginPath(); ctx.moveTo(w.x, y - s); ctx.lineTo(w.x + s, y + s*.8); ctx.lineTo(w.x - s, y + s*.8); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#101010';
+  ctx.font = `${17*S}px 'Black Han Sans',sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('!', w.x, y + 3*S);
+  // 바위가 떨어질 길을 흐리게 보여 준다
+  ctx.globalAlpha = .13;
+  ctx.fillStyle = '#E4572E';
+  ctx.fillRect(w.x - w.r, y + s, w.r*2, H);
+  ctx.restore();
+}
+
+function drawEmoji(e, x, y, size, rot){
+  ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot);
+  ctx.font = `${size}px 'Apple Color Emoji','Segoe UI Emoji',serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(e, 0, 0);
+  ctx.restore();
+}
+
+function drawMe(){
+  if (me.inv > 0 && Math.floor(me.inv * 12) % 2 === 0) return;   // 다친 뒤 잠깐 깜빡깜빡
+  const bobY = mode === 'play' ? Math.sin(me.bob * 9) * 3*S : 0;
+  if (mode === 'win'){
+    const jump = Math.abs(Math.sin(winT * 6)) * 18*S;
+    drawEmoji('🙌', me.x, me.y - jump, 50*S);
+    return;
+  }
+  drawEmoji('🧗', me.x, me.y + bobY, 50*S);
+}
+
+function drawProgress(){
+  if (mode !== 'play') return;
+  const x = W - 8*S, y0 = 120*S, y1 = H - 40*S;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(16,16,16,.35)'; ctx.lineWidth = 8*S;
+  ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+  ctx.strokeStyle = '#FFD84D'; ctx.lineWidth = 5*S;
+  const yy = y1 - (y1 - y0) * prog();
+  ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, yy); ctx.stroke();
+  ctx.fillStyle = '#FFFDF5'; ctx.strokeStyle = '#101010'; ctx.lineWidth = 2*S;
+  ctx.beginPath(); ctx.arc(x, yy, 6*S, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function drawFx(){
+  for (const f of fx){
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, f.t*1.4));
+    if (f.type === 'p'){
+      ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(f.x, f.y, f.r*f.t, 0, 7); ctx.fill();
+    } else {
+      ctx.font = `${f.size}px 'Black Han Sans','Apple SD Gothic Neo',sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5*S; ctx.strokeStyle = '#101010';
+      ctx.strokeText(f.text, f.x, f.y);
+      ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.restore();
+  }
+}
+
+function render(){
+  ctx.save();
+  if (shake > 0){
+    ctx.translate(rand(-shake,shake)*.5, rand(-shake,shake)*.5);
+    shake *= .86; if (shake < .4) shake = 0;
+  }
+  drawSky();
+  drawFace();
+  drawClouds();
+  for (const it of items) drawEmoji(it.kind === 'leaf' ? '🍁' : '🍙', it.x, it.y, it.r*2, it.rot);
+  drawMe();
+  for (const k of rocks) drawRock(k);
+  for (const w of warns) drawWarn(w);
+  drawProgress();
+  drawFx();
+  ctx.restore();
+}
+
+/* ================= 화면 바꾸기 ================= */
+function showTitle(){
+  mode = 'title'; resetRun();
+  hud.classList.remove('on'); ui.classList.remove('hide');
+  ui.innerHTML = `
+    <div class="mark">금강산<br>오르기</div>
+    <div class="tag">손가락을 좌우로 움직여서 꼭대기까지 올라가요</div>
+    <div class="how">
+      <b>⚠️</b> 가 뜨면 곧 바위가 굴러와요. 비켜 주세요!<br>
+      <b>🍁</b> 단풍잎을 모아요<br>
+      <b>🍙</b> 주먹밥을 먹으면 ❤️ 가 하나 생겨요
+    </div>
+    <div class="row"><button class="btn" id="start">출발!</button></div>
+    ${best.alt ? `<div class="best">${best.alt >= TOP ? `비로봉 도착 · 단풍잎 최고 ${best.leaves}장` : `최고 기록 ${best.alt.toLocaleString()}m`}</div>` : ''}`;
+  document.getElementById('start').onclick = e => { e.stopPropagation(); beep(660,.1,'triangle'); startGame(); };
+}
+
+function resetRun(){
+  alt = 0; lives = MAXL; leaves = 0; hits = 0; time = 0;
+  rocks = []; warns = []; items = []; fx.length = 0;
+  rockT = 1.6; leafT = .4; riceT = 11; placeI = 0; shake = 0; winT = 0;
+  me.inv = 0; me.x = me.tx = W/2;
+}
+
+function startGame(){
+  resetRun();
+  mode = 'play';
+  ui.classList.add('hide'); hud.classList.add('on');
+  drawHud();
+  showBanner('출발!', '비로봉까지 1,638m');
+}
+
+function lose(){
+  mode = 'over';
+  const a = Math.floor(alt);
+  const isBest = best.alt < TOP && a > best.alt;
+  if (isBest){ best.alt = a; saveBest(); }
+  setTimeout(() => {
+    hud.classList.remove('on'); ui.classList.remove('hide'); banner.classList.remove('pop');
+    ui.innerHTML = `
+      <div class="big">${isBest ? '신기록!' : '조금만 쉬었다 가요'}</div>
+      <div class="num">${a.toLocaleString()}m</div>
+      <div class="line">꼭대기까지 ${(TOP - a).toLocaleString()}m 남았어요 · 🍁 ${leaves}장</div>
+      <div class="line">${
+        a < 350 ? '구룡폭포까지 가 봐요!' :
+        a < 850 ? '구룡폭포를 지났어요. 다음은 만물상이에요!' :
+        a < 1350 ? '만물상까지 왔어요. 정말 잘했어요!' : '비로봉이 바로 앞이었어요!'
+      }</div>
+      <div class="row">
+        <button class="btn" id="again">다시 오르기</button>
+        <button class="btn small" id="home">처음으로</button>
+      </div>`;
+    document.getElementById('again').onclick = e => { e.stopPropagation(); startGame(); };
+    document.getElementById('home').onclick  = e => { e.stopPropagation(); showTitle(); };
+  }, 600);
+}
+
+function win(){
+  mode = 'win';
+  rocks = []; warns = [];
+  const first = best.alt < TOP;
+  const isBest = leaves > best.leaves;
+  best.alt = TOP;
+  if (isBest) best.leaves = leaves;
+  saveBest();
+  showBanner('비로봉 도착!', '금강산 꼭대기예요');
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .22, 'triangle', .12), i * 130));
+  for (let i=0;i<5;i++) setTimeout(() => sparkle(rand(W*.2, W*.8), rand(H*.2, H*.5), ['#FFD84D','#E4572E','#FFFDF5'][i%3], 26), i * 220);
+  setTimeout(() => {
+    hud.classList.remove('on'); ui.classList.remove('hide'); banner.classList.remove('pop');
+    ui.innerHTML = `
+      <div class="big">${first ? '처음으로 꼭대기!' : isBest ? '단풍잎 신기록!' : '꼭대기 도착!'}</div>
+      <div class="num">🍁 ${leaves}</div>
+      <div class="line">${hits === 0 ? '바위에 한 번도 안 맞았어요!' : `바위에 ${hits}번 맞았지만 끝까지 올랐어요`}</div>
+      <div class="best">단풍잎 최고 기록 ${best.leaves}장</div>
+      <div class="row">
+        <button class="btn" id="again">또 오르기</button>
+        <button class="btn small" id="home">처음으로</button>
+      </div>`;
+    document.getElementById('again').onclick = e => { e.stopPropagation(); startGame(); };
+    document.getElementById('home').onclick  = e => { e.stopPropagation(); showTitle(); };
+  }, 2600);
+}
+
+/* ================= 돌리기 ================= */
+let lastT = performance.now(), hudAlt = -1, hudLeaves = -1, hudLives = -1;
+function loop(now){
+  const dt = Math.min(.05, (now - lastT) / 1000);
+  lastT = now;
+  update(dt);
+  if (mode === 'play' && (Math.floor(alt) !== hudAlt || leaves !== hudLeaves || lives !== hudLives)){
+    hudAlt = Math.floor(alt); hudLeaves = leaves; hudLives = lives;
+    drawHud();
+  }
+  render();
+  requestAnimationFrame(loop);
+}
+
+function movePt(e){
+  const t = e.touches ? e.touches[0] : e;
+  me.tx = clampX(t.clientX);
+}
+addEventListener('pointerdown', e => { if (mode === 'play') movePt(e); }, {passive:true});
+addEventListener('pointermove', e => { if (mode === 'play') movePt(e); }, {passive:true});
+addEventListener('touchmove', e => { if (mode === 'play') movePt(e); }, {passive:true});
+addEventListener('keydown', e => {
+  if (mode !== 'play') return;
+  const step = 50*S;
+  if (e.key === 'ArrowLeft')  me.tx = clampX(me.tx - step);
+  if (e.key === 'ArrowRight') me.tx = clampX(me.tx + step);
+});
+addEventListener('resize', resize);
+me.x = me.tx = innerWidth/2;
+resize();
+showTitle();
+requestAnimationFrame(loop);
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
