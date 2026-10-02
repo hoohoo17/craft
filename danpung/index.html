@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>단풍잎 잡기</title>
+<style>
+  :root{
+    --ink:#4A2E1A; --dim:#8C6A4E;
+    --paper:#FFF6E6;
+    --red:#D9472B; --gold:#F2B233; --green:#4E8A3E;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:#F4DDB8;
+    color:var(--ink);
+    display:flex; justify-content:center;
+    touch-action:none; user-select:none;
+  }
+  .wrap{width:100%; max-width:480px; height:100dvh; padding:10px; display:flex; flex-direction:column; gap:8px;}
+
+  /* ---------- 위쪽 점수판 ---------- */
+  .hud{
+    display:flex; justify-content:space-between; align-items:center; gap:6px;
+    background:var(--paper);
+    border-radius:14px;
+    padding:8px 12px;
+    font-weight:900; font-size:1.02rem;
+    box-shadow:0 3px 10px rgba(74,46,26,.16);
+  }
+  .hud span{white-space:nowrap;}
+  .combo{color:var(--red); transition:transform .15s;}
+  .combo.pop{transform:scale(1.3);}
+  .time.low{color:var(--red); animation:blinkT .5s infinite;}
+  @keyframes blinkT{50%{opacity:.35}}
+
+  /* ---------- 단풍이 떨어지는 마당 ---------- */
+  #field{
+    position:relative; flex:1; min-height:0; overflow:hidden;
+    border-radius:18px;
+    box-shadow:inset 0 2px 10px rgba(74,46,26,.18);
+  }
+  #field.shake{animation:shake .3s;}
+  @keyframes shake{20%{transform:translateX(-7px)}50%{transform:translateX(6px)}80%{transform:translateX(-3px)}}
+  canvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  .banner{
+    position:absolute; left:50%; top:30%; transform:translate(-50%,-50%);
+    background:rgba(255,255,255,.88);
+    border-radius:16px; padding:10px 18px;
+    font-size:clamp(20px,6vw,28px); font-weight:900; white-space:nowrap;
+    box-shadow:0 6px 18px rgba(74,46,26,.25);
+    pointer-events:none;
+    animation:bannerIn 1.6s ease-out forwards;
+  }
+  @keyframes bannerIn{
+    0%{opacity:0; transform:translate(-50%,-50%) scale(.6);}
+    15%{opacity:1; transform:translate(-50%,-50%) scale(1.08);}
+    25%{transform:translate(-50%,-50%) scale(1);}
+    80%{opacity:1;}
+    100%{opacity:0; transform:translate(-50%,-70%);}
+  }
+
+  /* ---------- 시작 · 끝 창 ---------- */
+  .veil{
+    position:absolute; inset:0; z-index:5;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(74,46,26,.35);
+    padding:16px;
+  }
+  .veil[hidden]{display:none;}
+  .sheet{
+    width:100%; max-width:340px;
+    background:var(--paper);
+    border-radius:20px;
+    padding:20px 18px;
+    text-align:center;
+    box-shadow:0 12px 34px rgba(74,46,26,.35);
+    animation:rise .3s cubic-bezier(.2,.9,.3,1);
+  }
+  @keyframes rise{from{opacity:0; transform:translateY(20px) scale(.95);} to{opacity:1; transform:none;}}
+  .sheet .big{font-size:52px; line-height:1.1;}
+  .sheet h1{font-size:26px; margin:6px 0 8px;}
+  .sheet h2{font-size:22px; margin:6px 0 4px;}
+  .sheet p{font-size:14px; line-height:1.6; color:#6B4A30; word-break:keep-all;}
+  .rules{text-align:left; margin:10px auto 0; display:inline-block; font-size:14px; line-height:1.8;}
+  .score-big{font-size:46px; font-weight:900; color:var(--red); line-height:1.1; margin:4px 0;}
+  .title-get{font-size:17px; font-weight:900; margin-top:4px;}
+  .new-best{color:var(--green); font-weight:900; font-size:15px; margin-top:6px; animation:blinkT .6s 4;}
+  .best-line{font-size:14px; color:var(--dim); margin-top:8px;}
+  .go{
+    margin-top:14px; width:100%;
+    border:none; border-radius:14px;
+    padding:13px;
+    font-family:inherit; font-size:18px; font-weight:900;
+    background:linear-gradient(#F4A340,#D9472B); color:#fff;
+    box-shadow:0 4px 0 #9E2F1A;
+    cursor:pointer;
+  }
+  .go:active{transform:translateY(3px); box-shadow:0 1px 0 #9E2F1A;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud">
+    <span>🍁 <b id="score">0</b>점</span>
+    <span class="combo" id="combo"></span>
+    <span class="time" id="time">⏱ 60</span>
+  </div>
+
+  <div id="field">
+    <canvas id="cv"></canvas>
+
+    <div class="veil" id="startVeil">
+      <div class="sheet">
+        <div class="big">🍁🧺</div>
+        <h1>단풍잎 잡기</h1>
+        <p>손가락으로 바구니를 움직여<br>떨어지는 단풍잎을 받아 보세요!</p>
+        <div class="rules">
+          🍁 🍂 단풍잎 <b>1점</b><br>
+          ✨ 황금 단풍 <b>5점</b><br>
+          🌰 알밤 <b>3점</b><br>
+          🟢 밤송이는 피하세요. 아야!
+        </div>
+        <p class="best-line">최고 점수 <b id="bestStart">0</b>점</p>
+        <button class="go" id="startBtn" type="button">시작!</button>
+      </div>
+    </div>
+
+    <div class="veil" id="endVeil" hidden>
+      <div class="sheet">
+        <div class="big" id="endIco">🍁</div>
+        <h2>시간 끝!</h2>
+        <div class="score-big"><span id="endScore">0</span>점</div>
+        <div class="title-get" id="endTitle"></div>
+        <p id="endInfo"></p>
+        <div class="new-best" id="newBest" hidden>🎉 최고 점수를 새로 세웠어요!</div>
+        <p class="best-line">최고 점수 <b id="bestEnd">0</b>점</p>
+        <button class="go" id="againBtn" type="button">한 번 더!</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const cv = $('#cv'), ctx = cv.getContext('2d');
+const field = $('#field');
+
+/* ---------- 소리 ---------- */
+let ac = null;
+function ensureAudio(){
+  if(!ac){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(AC) ac = new AC();
+  }
+  if(ac && ac.state === 'suspended') ac.resume();
+}
+function tone(freq, dur, type, vol, delay){
+  if(!ac) return;
+  const at = ac.currentTime + (delay || 0);
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(at); o.stop(at + dur + 0.05);
+}
+const sfx = {
+  // 연속으로 받을수록 음이 조금씩 올라간다
+  leaf: n => tone(520 + Math.min(n, 24) * 22, .09, 'triangle', .08),
+  gold: () => [880, 1175, 1568].forEach((f, i) => tone(f, .14, 'triangle', .1, i * .06)),
+  nut:  () => [660, 990].forEach((f, i) => tone(f, .1, 'square', .05, i * .05)),
+  ouch: () => { tone(220, .18, 'sawtooth', .07); tone(150, .22, 'sine', .08, .05); },
+  wind: () => { for(let i = 0; i < 6; i++) tone(300 + i * 60, .25, 'sine', .035, i * .05); },
+  level:() => [784, 988, 1175].forEach((f, i) => tone(f, .16, 'triangle', .09, i * .08)),
+  end:  () => [523, 659, 784, 1046].forEach((f, i) => tone(f, .25, 'triangle', .1, i * .12))
+};
+
+/* ---------- 크기 ---------- */
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  const r = field.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  basket.y = H - 46;
+  basket.x = Math.min(Math.max(basket.x || W / 2, basket.w / 2), W - basket.w / 2);
+}
+
+/* ---------- 떨어지는 것들 ----------
+   pts: 받으면 얻는 점수. bad: 받으면 아야. weight: 나오는 비율 */
+const KINDS = {
+  red:  {ico:'🍁', pts:1, size:34, weight:46},
+  brown:{ico:'🍂', pts:1, size:34, weight:30},
+  gold: {ico:'🍁', pts:5, size:40, weight:7, gold:true},
+  nut:  {ico:'🌰', pts:3, size:30, weight:7, heavy:true},
+  burr: {pts:0, size:34, weight:10, bad:true, heavy:true}
+};
+const GAME_TIME = 60;
+const basket = {x:0, y:0, w:96, h:44, tx:null, wobble:0, pile:0};
+let things = [], bits = [], floats = [];
+let score = 0, combo = 0, bestCombo = 0, caught = 0, golds = 0;
+let timeLeft = GAME_TIME, spawnT = 0, windT = 0, windLeft = 0, windDir = 1;
+let playing = false, lastT = 0;
+
+function pickKind(){
+  let total = 0;
+  for(const k in KINDS) total += (windLeft > 0 && KINDS[k].bad) ? 0 : KINDS[k].weight;   // 바람 불 때는 밤송이가 없다
+  let r = Math.random() * total;
+  for(const k in KINDS){
+    const w = (windLeft > 0 && KINDS[k].bad) ? 0 : KINDS[k].weight;
+    if((r -= w) < 0) return k;
+  }
+  return 'red';
+}
+function spawn(kind){
+  const k = KINDS[kind];
+  const elapsed = GAME_TIME - timeLeft;
+  // 처음엔 천천히, 끝으로 갈수록 조금 빨라진다
+  const speed = (k.heavy ? 95 : 62) + elapsed * 0.9 + Math.random() * 20;
+  things.push({
+    kind, k,
+    x: 24 + Math.random() * (W - 48),
+    y: -30,
+    vy: speed,
+    sway: k.heavy ? 0 : 26 + Math.random() * 22,   // 잎은 살랑살랑, 밤은 똑바로
+    phase: Math.random() * Math.PI * 2,
+    rot: Math.random() * 6, spin: (Math.random() - .5) * 3
+  });
+}
+
+/* ---------- 받았을 때 ---------- */
+function popText(x, y, text, color, big){
+  floats.push({x, y, text, color, life:1, big});
+}
+function burst(x, y, colors, n){
+  for(let i = 0; i < n; i++){
+    const a = Math.random() * Math.PI * 2, s = 60 + Math.random() * 160;
+    bits.push({x, y, vx:Math.cos(a) * s, vy:Math.sin(a) * s - 90,
+               c:colors[i % colors.length], life:1, r:2 + Math.random() * 3});
+  }
+}
+function mult(){ return combo >= 25 ? 3 : combo >= 10 ? 2 : 1; }
+function catchIt(t){
+  if(t.k.bad){
+    combo = 0;
+    basket.wobble = 1;
+    field.classList.remove('shake'); void field.offsetWidth; field.classList.add('shake');
+    sfx.ouch();
+    popText(t.x, basket.y - 40, '아야!', '#4E8A3E', true);
+    burst(t.x, basket.y - 10, ['#6BA34F', '#3E6E2E'], 10);
+    drawCombo();
+    return;
+  }
+  const before = mult();
+  combo++; caught++;
+  if(combo > bestCombo) bestCombo = combo;
+  const got = t.k.pts * mult();
+  score += got;
+  basket.pile = Math.min(basket.pile + 1, 30);
+  basket.wobble = .5;
+  if(t.k.gold){
+    golds++;
+    sfx.gold();
+    popText(t.x, basket.y - 36, '+' + got + ' 황금!', '#E09B12', true);
+    burst(t.x, basket.y - 10, ['#FFD34D', '#FFF1A8', '#F2B233'], 22);
+  }else if(t.kind === 'nut'){
+    sfx.nut();
+    popText(t.x, basket.y - 36, '+' + got + ' 알밤!', '#8A4B22', true);
+    burst(t.x, basket.y - 10, ['#A0602E', '#E3B07A'], 12);
+  }else{
+    sfx.leaf(combo);
+    popText(t.x, basket.y - 34, '+' + got, t.kind === 'red' ? '#D9472B' : '#B0672A');
+    burst(t.x, basket.y - 10, t.kind === 'red' ? ['#E8532F', '#F39A3D'] : ['#C98A3E', '#E8B86A'], 7);
+  }
+  if(mult() > before){
+    sfx.level();
+    banner(mult() === 2 ? '🔥 연속 10개! 점수 두 배' : '🔥🔥 연속 25개! 점수 세 배');
+  }
+  $('#score').textContent = score;
+  drawCombo(true);
+}
+function drawCombo(pop){
+  const el = $('#combo');
+  el.textContent = combo >= 3 ? combo + '연속' + (mult() > 1 ? ' ×' + mult() : '') : '';
+  if(pop && combo >= 3){
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    setTimeout(() => el.classList.remove('pop'), 150);
+  }
+}
+function banner(text){
+  const b = document.createElement('div');
+  b.className = 'banner';
+  b.textContent = text;
+  field.appendChild(b);
+  setTimeout(() => b.remove(), 1600);
+}
+
+/* ---------- 한 장면씩 ---------- */
+function step(dt){
+  timeLeft -= dt;
+  if(timeLeft <= 0){ timeLeft = 0; $('#time').textContent = '⏱ 0'; finish(); return; }
+
+  // 바람: 열여덟 초쯤마다 한 번, 잎이 우수수
+  windT -= dt;
+  if(windT <= 0 && timeLeft > 6){
+    windT = 16 + Math.random() * 5;
+    windLeft = 4.5;
+    windDir = Math.random() < .5 ? -1 : 1;
+    sfx.wind();
+    banner('🍃 바람이 불어요!');
+  }
+  if(windLeft > 0) windLeft -= dt;
+
+  spawnT -= dt;
+  if(spawnT <= 0){
+    spawn(pickKind());
+    const elapsed = GAME_TIME - timeLeft;
+    spawnT = windLeft > 0 ? 0.16 : Math.max(0.45, 0.85 - elapsed * 0.006);
+  }
+
+  // 바구니는 손가락을 부드럽게 따라온다
+  if(basket.tx !== null) basket.x += (basket.tx - basket.x) * Math.min(1, dt * 18);
+  basket.x = Math.min(Math.max(basket.x, basket.w / 2), W - basket.w / 2);
+  basket.wobble = Math.max(0, basket.wobble - dt * 3);
+
+  const top = basket.y - basket.h / 2, reach = basket.w / 2 + 10;   // 가장자리에 걸쳐도 받아 준다
+  for(let i = things.length - 1; i >= 0; i--){
+    const t = things[i];
+    t.phase += dt * 2.2;
+    t.y += t.vy * dt;
+    t.x += Math.cos(t.phase) * t.sway * dt + (windLeft > 0 && !t.k.heavy ? windDir * 40 * dt : 0);
+    t.rot += t.spin * dt;
+    if(t.x < 14) t.x = 14;
+    if(t.x > W - 14) t.x = W - 14;
+    if(t.y > top - 6 && t.y < top + 22 && Math.abs(t.x - basket.x) < reach){
+      catchIt(t);
+      things.splice(i, 1);
+    }else if(t.y > H + 30){
+      things.splice(i, 1);                     // 놓쳐도 깎이지 않는다
+    }
+  }
+  for(let i = bits.length - 1; i >= 0; i--){
+    const b = bits[i];
+    b.vy += 420 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt * 1.6;
+    if(b.life <= 0) bits.splice(i, 1);
+  }
+  for(let i = floats.length - 1; i >= 0; i--){
+    const f = floats[i];
+    f.y -= 46 * dt; f.life -= dt * 1.2;
+    if(f.life <= 0) floats.splice(i, 1);
+  }
+
+  const sec = Math.ceil(timeLeft);
+  $('#time').textContent = '⏱ ' + sec;
+  $('#time').classList.toggle('low', sec <= 10);
+}
+
+/* ---------- 그리기 ---------- */
+function drawBg(){
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#BFE1F2'); g.addColorStop(.62, '#F6E3C4'); g.addColorStop(1, '#F6E3C4');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // 먼 산
+  ctx.fillStyle = '#E9A86A';
+  ctx.beginPath(); ctx.moveTo(0, H * .62);
+  ctx.quadraticCurveTo(W * .25, H * .46, W * .5, H * .6);
+  ctx.quadraticCurveTo(W * .75, H * .44, W, H * .58);
+  ctx.lineTo(W, H * .7); ctx.lineTo(0, H * .7); ctx.fill();
+  // 땅
+  ctx.fillStyle = '#D9A066'; ctx.fillRect(0, H - 22, W, 22);
+  ctx.fillStyle = '#C98B4F'; ctx.fillRect(0, H - 22, W, 3);
+  // 위쪽 단풍나무 가지
+  const blobs = [[.05,.02,.16],[.24,-.01,.17],[.45,.03,.15],[.66,-.02,.18],[.88,.02,.16],[.15,.08,.11],[.56,.09,.11],[.8,.09,.1]];
+  blobs.forEach(([x, y, r], i) => {
+    ctx.fillStyle = ['#E0552E','#F08A2C','#D9472B','#F3B33D'][i % 4];
+    ctx.beginPath(); ctx.arc(W * x, H * y, W * r, 0, Math.PI * 2); ctx.fill();
+  });
+}
+function drawBurr(x, y, r, rot){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.strokeStyle = '#3E6E2E'; ctx.lineWidth = 2;
+  for(let i = 0; i < 16; i++){
+    const a = i / 16 * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * .5, Math.sin(a) * r * .5);
+    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); ctx.stroke();
+  }
+  ctx.fillStyle = '#6BA34F';
+  ctx.beginPath(); ctx.arc(0, 0, r * .6, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+function drawThing(t){
+  if(t.k.bad){ drawBurr(t.x, t.y, t.k.size / 2, t.rot); return; }
+  ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.k.heavy ? 0 : Math.sin(t.phase) * .6 + t.rot * .2);
+  if(t.k.gold){
+    // 황금 단풍은 반짝반짝 빛난다
+    const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, t.k.size * .9);
+    glow.addColorStop(0, 'rgba(255,230,120,.95)'); glow.addColorStop(1, 'rgba(255,210,80,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, t.k.size * .9, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.font = t.k.size + 'px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(t.k.ico, 0, 0);
+  if(t.k.gold){
+    ctx.font = '16px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+    ctx.fillText('✨', 16 * Math.cos(t.phase * 2), -18);
+  }
+  ctx.restore();
+}
+function drawBasket(){
+  const {x, y, w, h} = basket;
+  const tilt = Math.sin(performance.now() / 40) * basket.wobble * .12;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
+  // 바구니 안에 쌓인 잎
+  ctx.font = '20px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const rows = Math.min(3, Math.ceil(basket.pile / 6));
+  for(let r = 0; r < rows; r++){
+    for(let i = 0; i < 4; i++){
+      if(r * 6 + i >= basket.pile) break;
+      ctx.fillText(i % 2 ? '🍂' : '🍁', -27 + i * 18 + (r % 2) * 8, -h / 2 - 2 - r * 8);
+    }
+  }
+  // 바구니
+  ctx.fillStyle = '#B9773A';
+  ctx.beginPath();
+  ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, -h / 2);
+  ctx.lineTo(w / 2 - 12, h / 2); ctx.lineTo(-w / 2 + 12, h / 2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#8E5524'; ctx.lineWidth = 2;
+  for(let i = 1; i < 4; i++){
+    const yy = -h / 2 + i * h / 4;
+    ctx.beginPath(); ctx.moveTo(-w / 2 + 3 * i, yy); ctx.lineTo(w / 2 - 3 * i, yy); ctx.stroke();
+  }
+  for(let i = -3; i <= 3; i++){
+    ctx.beginPath(); ctx.moveTo(i * 13, -h / 2); ctx.lineTo(i * 10, h / 2); ctx.stroke();
+  }
+  ctx.fillStyle = '#8E5524';
+  ctx.fillRect(-w / 2 - 4, -h / 2 - 5, w + 8, 8);
+  ctx.restore();
+}
+function draw(){
+  drawBg();
+  if(windLeft > 0){                              // 바람 줄
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2;
+    const t = performance.now() / 1000;
+    for(let i = 0; i < 5; i++){
+      const yy = H * (.25 + i * .1), xx = ((t * 260 * windDir + i * 140) % (W + 120) + W + 120) % (W + 120) - 60;
+      ctx.beginPath(); ctx.moveTo(xx, yy); ctx.quadraticCurveTo(xx + 30, yy - 8, xx + 60, yy); ctx.stroke();
+    }
+  }
+  things.forEach(drawThing);
+  drawBasket();
+  bits.forEach(b => {
+    ctx.globalAlpha = Math.max(0, b.life);
+    ctx.fillStyle = b.c;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  floats.forEach(f => {
+    ctx.globalAlpha = Math.max(0, Math.min(1, f.life * 1.5));
+    ctx.font = '900 ' + (f.big ? 24 : 19) + 'px "Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#fff';
+    ctx.strokeText(f.text, f.x, f.y);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+  });
+  ctx.globalAlpha = 1;
+}
+function loop(now){
+  const dt = Math.min(0.05, (now - lastT) / 1000 || 0);
+  lastT = now;
+  if(playing) step(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- 손가락 · 마우스 · 화살표 ---------- */
+function pointTo(e){
+  const r = field.getBoundingClientRect();
+  basket.tx = e.clientX - r.left;
+}
+field.addEventListener('pointerdown', e => { pointTo(e); });
+field.addEventListener('pointermove', e => { if(e.pointerType === 'mouse' || e.buttons || e.pressure > 0) pointTo(e); });
+const keys = {};
+window.addEventListener('keydown', e => {
+  if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ keys[e.key] = true; e.preventDefault(); }
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+setInterval(() => {
+  if(!playing) return;
+  const d = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0);
+  if(d) basket.tx = Math.min(Math.max((basket.tx ?? basket.x) + d * 9, basket.w / 2), W - basket.w / 2);
+}, 16);
+
+/* ---------- 시작 · 끝 ---------- */
+const BEST_KEY = 'danpungBest';
+function loadBest(){ try{ return +(localStorage.getItem(BEST_KEY) || 0); }catch(e){ return 0; } }
+function saveBest(v){ try{ localStorage.setItem(BEST_KEY, v); }catch(e){} }
+
+function start(){
+  ensureAudio();
+  things = []; bits = []; floats = [];
+  score = 0; combo = 0; bestCombo = 0; caught = 0; golds = 0;
+  timeLeft = GAME_TIME; spawnT = 0.3; windT = 14; windLeft = 0;
+  basket.pile = 0; basket.x = W / 2; basket.tx = null;
+  $('#score').textContent = '0';
+  drawCombo();
+  $('#startVeil').hidden = true;
+  $('#endVeil').hidden = true;
+  playing = true;
+}
+const TITLES = [
+  [0,   '🌱', '단풍 새싹'],
+  [50,  '🍂', '낙엽 줍는 아이'],
+  [120, '🍁', '단풍 바구니'],
+  [200, '🧺', '단풍 수집가'],
+  [300, '🌳', '가을 숲 지킴이'],
+  [400, '👑', '단풍 임금님']
+];
+function finish(){
+  playing = false;
+  sfx.end();
+  const prev = loadBest();
+  const best = Math.max(prev, score);
+  saveBest(best);
+  const t = TITLES.filter(t => score >= t[0]).pop();
+  $('#endIco').textContent = t[1];
+  $('#endTitle').textContent = '"' + t[2] + '"';
+  $('#endScore').textContent = score;
+  $('#endInfo').innerHTML = '받은 것 ' + caught + '개 · 황금 단풍 ' + golds + '개<br>가장 길게 이어 받기 ' + bestCombo + '연속';
+  $('#newBest').hidden = !(score > prev && score > 0);
+  $('#bestEnd').textContent = best;
+  $('#bestStart').textContent = best;
+  $('#endVeil').hidden = false;
+  if(score > prev && score > 0) burst(W / 2, H * .3, ['#E8532F', '#F2B233', '#F39A3D', '#FFD34D'], 40);
+}
+
+$('#startBtn').addEventListener('click', start);
+$('#againBtn').addEventListener('click', start);
+window.addEventListener('resize', resize);
+$('#bestStart').textContent = loadBest();
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
