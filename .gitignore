@@ -2,3 +2,5 @@
 /.claude/
 .DS_Store
 trailer/music.wav
+.wrangler/
+__pycache__/
