@@ -199,6 +199,12 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .player .st { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .player .st b { color: var(--ink); font-weight: 800; }
+  .player .del {
+    font: inherit; font-size: 12px; font-weight: 800; color: var(--muted);
+    background: #F4F6FD; border: 1px solid var(--line); border-radius: 8px;
+    width: 30px; height: 28px; padding: 0; cursor: pointer; flex: none;
+  }
+  .player .del:disabled { opacity: .35; cursor: default; }
   .picker { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
   .picker button {
     font: inherit; font-size: 12px; font-weight: 700;
@@ -815,7 +821,7 @@ function duelSection(title, arr, set, stats, gate, gateText) {
         const card = CARDS()[side === 0 ? g.x : g.y][side === 0 ? v.a : v.b];
         const chip = document.createElement('button');
         chip.className = 'chip' + (v.w === side ? ' win' : '');
-        chip.innerHTML = '<span class="nm">' + esc(card ? card.n : '?') + '</span>' +
+        chip.innerHTML = '<span class="nm">' + esc(card ? card.n : '삭제된 선수') + '</span>' +
                          '<b>' + (card ? card[stat] : '-') + '</b>';
         chip.addEventListener('click', function () {
           set(i, null);
@@ -934,7 +940,9 @@ function pkSection(m) {
       const p2 = document.createElement('div');
       p2.className = 'note';
       p2.style.margin = '6px 0 0';
-      p2.innerHTML = '방금 — <b>' + esc(lc.n) + '</b> 속도 ' + lc.s + ' → ' + (last.ok ? '성공!' : '실패');
+      p2.innerHTML = lc
+        ? '방금 — <b>' + esc(lc.n) + '</b> 속도 ' + lc.s + ' → ' + (last.ok ? '성공!' : '실패')
+        : '방금 — 삭제된 선수 → ' + (last.ok ? '성공!' : '실패');
       box.appendChild(p2);
     }
 
@@ -1409,6 +1417,19 @@ function renderCards() {
       '<span class="pos ' + c.p + '">' + c.p + '</span>' +
       '<span class="nm">' + esc(c.n) + '</span>' +
       '<span class="st">공 <b>' + c.a + '</b> 수 <b>' + c.d + '</b> 속 <b>' + c.s + '</b></span>';
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', c.n + ' 삭제');
+    del.disabled = squad.length <= 1;      // 경기를 하려면 한 명은 남아야 한다
+    del.addEventListener('click', function () {
+      ask(NAMES()[st.look] + '의 ' + c.n + ' 선수를 삭제할까? 이미 끝난 경기 결과는 그대로 남아.', function () {
+        removeCard(st.look, i);
+        save();
+        renderAll();
+      });
+    });
+    row.appendChild(del);
     list.appendChild(row);
   });
   view.appendChild(list);
@@ -1439,6 +1460,37 @@ function renderCards() {
   btns.appendChild(one);
   btns.appendChild(all);
   view.appendChild(btns);
+}
+
+/* 선수 한 명 삭제. 기록은 선수 번호로 남아 있어서 뒤 번호를 한 칸씩 당기고,
+   지운 선수가 나왔던 판은 결과(누가 이겼는지)만 두고 선수 번호를 -1로 바꾼다 */
+function allGames() {
+  const out = [];
+  if (st.mode === 'cup') {
+    st.cup.groups.forEach(function (_, gi) { groupGames(gi).forEach(function (g) { out.push(g); }); });
+    koRounds().forEach(function (n) { (koGames(n) || []).forEach(function (g) { out.push(g); }); });
+  } else {
+    fullSchedule().forEach(function (r) { r.forEach(function (g) { out.push(g); }); });
+  }
+  return out;
+}
+function removeCard(team, idx) {
+  function fix(i) { return i === idx ? -1 : (i > idx ? i - 1 : i); }
+  allGames().forEach(function (g) {
+    if (g.x !== team && g.y !== team) return;
+    const m = RES()[mkey(g)];
+    if (!m) return;
+    m.h.concat(m.s, m.e).forEach(function (v) {
+      if (!v || typeof v !== 'object') return;
+      if (g.x === team) v.a = fix(v.a);
+      if (g.y === team) v.b = fix(v.b);
+    });
+    [['a', g.x], ['b', g.y]].forEach(function (pr) {
+      if (pr[1] !== team) return;
+      m.p[pr[0]].forEach(function (v) { if (v && typeof v === 'object') v.c = fix(v.c); });
+    });
+  });
+  CARDS()[team].splice(idx, 1);
 }
 
 /* ---------- 그리기: 팀 ---------- */
