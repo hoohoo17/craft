@@ -343,7 +343,7 @@ const ET_DUELS   = 2;   // 연장 2판
 const PK_ROUNDS  = 5;   // 승부차기 기본 5번씩
 
 let st = { n: 8, names: DEFAULT_NAMES.slice(), legs: 1, res: {}, hall: [], open: null,
-           cards: {}, look: 0, mode: 'league', cup: null, lookG: 0 };
+           cards: {}, look: 0, mode: 'league', cup: null, lookG: 0, tap: false };
 
 /* ---------- 선수 만들기 ---------- */
 const SURNAME = ['김','이','박','최','정','강','조','윤','장','임','한','오','서','신','권','황','안','송','전','홍','문','손','배','백','허'];
@@ -388,6 +388,8 @@ function RES()   { return st.mode === 'cup' ? st.cup.res   : st.res; }
 function NTEAMS(){ return st.mode === 'cup' ? st.cup.size  : st.n; }
 
 function hasCards(i) { const c = CARDS(); return !!(c[i] && c[i].length); }
+/* 선수가 있어도 '직접 누르기'를 고르면 카드 없이 손으로 기록한다 */
+function useCardsFor(g) { return !st.tap && hasCards(g.x) && hasCards(g.y); }
 function anyCards() {
   for (let i = 0; i < NTEAMS(); i++) if (hasCards(i)) return true;
   return false;
@@ -421,6 +423,7 @@ function load() {
       st.cup = o.cup || null;
       st.lookG = o.lookG || 0;
       st.openFrom = o.openFrom || 'games';
+      st.tap = !!o.tap;
       if (st.mode === 'cup' && !st.cup) st.mode = 'league';
     }
   } catch (e) {}
@@ -692,6 +695,23 @@ function renderBoard(view) {
     '<div class="t" style="text-align:left">' + esc(NAMES()[g.y]) + '</div>';
   board.appendChild(vs);
 
+  if (hasCards(g.x) && hasCards(g.y)) {
+    const how = document.createElement('div');
+    how.className = 'seg';
+    [[false, '🃏 카드 뽑기'], [true, '✋ 직접 누르기']].forEach(function (opt) {
+      const b = document.createElement('button');
+      b.textContent = opt[1];
+      b.setAttribute('aria-pressed', st.tap === opt[0] ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        st.tap = opt[0];
+        save();
+        renderGames();
+      });
+      how.appendChild(b);
+    });
+    board.appendChild(how);
+  }
+
   const firstDone = m.h.every(function (v) { return v !== null && v !== undefined; });
   board.appendChild(duelSection('전반전', m.h, function (i, v) { m.h[i] = v; }, ['a','d','s'], true, ''));
   board.appendChild(duelSection('후반전', m.s, function (i, v) { m.s[i] = v; }, ['a','d','s'], firstDone, '전반전 먼저'));
@@ -732,7 +752,7 @@ function renderBoard(view) {
   const rule = document.createElement('p');
   rule.className = 'note';
   rule.style.marginTop = '12px';
-  rule.innerHTML = (hasCards(g.x) && hasCards(g.y))
+  rule.innerHTML = useCardsFor(g)
     ? '<b>어떻게 되는 거냐면</b><br>' +
       '판마다 양 팀에서 선수가 한 명씩 나와서 그 판의 능력치로 붙어. ' +
       '전반·후반은 <b>공격력 → 수비력 → 속도</b> 순서고, 한 번 나온 선수는 그 안에서 또 안 나와.<br>' +
@@ -748,7 +768,7 @@ function renderBoard(view) {
 
 function duelSection(title, arr, set, stats, gate, gateText) {
   const g = st.open;
-  const useCards = hasCards(g.x) && hasCards(g.y);
+  const useCards = useCardsFor(g);
   const box = document.createElement('div');
   box.className = 'half';
   const h = document.createElement('h3');
@@ -764,7 +784,7 @@ function duelSection(title, arr, set, stats, gate, gateText) {
     no.textContent = useCards ? (i + 1) + '판 · ' + STAT_NAME[stat] : (i + 1) + '판';
     row.appendChild(no);
 
-    if (!useCards) {
+    if (!useCards || typeof v === 'number') {   // 손으로 누른 기록은 카드 모드에서도 버튼으로 보여준다
       [0, 1].forEach(function (side) {
         const b = document.createElement('button');
         b.textContent = NAMES()[side === 0 ? g.x : g.y];
@@ -881,7 +901,7 @@ function pkSection(m) {
 
     const row = document.createElement('div');
     row.className = 'duel';
-    if (hasCards(g.x) && hasCards(g.y)) {
+    if (useCardsFor(g)) {
       const b = document.createElement('button');
       b.className = 'draw';
       b.textContent = '카드 뽑아서 차기';
