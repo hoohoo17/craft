@@ -1090,6 +1090,7 @@ $('speed').addEventListener('click', function (e) {
 });
 $('again').addEventListener('click', function () {
   if (G.over || G.time < 5) { start(); return; }
+  const before = G.speed;               // 계속하기를 누르면 원래 속도(멈춤 포함)로 되돌린다
   G.speed = 0;
   syncSpeed();
   $('cover').querySelector('.box').innerHTML =
@@ -1099,7 +1100,7 @@ $('again').addEventListener('click', function () {
   fillPick();
   $('cover').hidden = false;
   $('start').addEventListener('click', start);
-  $('no').addEventListener('click', function () { $('cover').hidden = true; G.speed = 1; syncSpeed(); });
+  $('no').addEventListener('click', function () { $('cover').hidden = true; G.speed = before; syncSpeed(); });
 });
 function syncSpeed() {
   document.querySelectorAll('#speed button').forEach(function (x) {
