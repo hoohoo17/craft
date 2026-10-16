@@ -936,7 +936,7 @@ function pkSection(m) {
     const last = m.p.b.length ? m.p.b[m.p.b.length - 1] : (m.p.a.length ? m.p.a[m.p.a.length - 1] : null);
     if (last && typeof last === 'object') {
       const lastTeam = m.p.b.length >= m.p.a.length ? g.y : g.x;
-      const lc = CARDS()[lastTeam][last.c];
+      const lc = (CARDS()[lastTeam] || [])[last.c];
       const p2 = document.createElement('div');
       p2.className = 'note';
       p2.style.margin = '6px 0 0';
@@ -1149,7 +1149,7 @@ function gameRow(g, showAuto) {
   main.addEventListener('click', function () { openMatch(g); });
   box.appendChild(main);
 
-  if (showAuto && ph !== 'done') {
+  if (showAuto && ph !== 'done' && hasCards(g.x) && hasCards(g.y)) {
     const b = document.createElement('button');
     b.className = 'auto';
     b.textContent = '자동';
@@ -1177,7 +1177,7 @@ function renderCupGroups() {
     (groupsAllDone() ? ' 이제 ' + KO_NAME[firstKo()] + '이야!' : '');
   view.appendChild(head);
 
-  if (done < total) {
+  if (done < total && anyCards()) {
     const all = document.createElement('button');
     all.className = 'big';
     all.style.marginBottom = '10px';
@@ -1288,7 +1288,7 @@ function renderCupKo() {
   if (!games) return;
 
   const left = games.filter(function (g) { return !isDone(g); }).length;
-  if (left) {
+  if (left && anyCards()) {
     const all = document.createElement('button');
     all.className = 'big';
     all.style.marginBottom = '10px';
@@ -1460,6 +1460,22 @@ function renderCards() {
   btns.appendChild(one);
   btns.appendChild(all);
   view.appendChild(btns);
+
+  const wipeRow = document.createElement('div');
+  wipeRow.className = 'btns';
+  wipeRow.style.marginTop = '8px';
+  const wipe = document.createElement('button');
+  wipe.className = 'big ghost';
+  wipe.textContent = '전체 카드 지우기';
+  wipe.addEventListener('click', function () {
+    ask('모든 팀의 선수 카드를 지울까? 경기 결과는 남고, 앞으로는 카드 없이 직접 눌러서 기록해.', function () {
+      removeAllCards();
+      save();
+      renderAll();
+    });
+  });
+  wipeRow.appendChild(wipe);
+  view.appendChild(wipeRow);
 }
 
 /* 선수 한 명 삭제. 기록은 선수 번호로 남아 있어서 뒤 번호를 한 칸씩 당기고,
@@ -1491,6 +1507,19 @@ function removeCard(team, idx) {
     });
   });
   CARDS()[team].splice(idx, 1);
+}
+/* 모든 팀의 선수를 지운다. 경기 결과는 남기고, 기록 속 선수 번호는 전부 -1(삭제된 선수)로 바꾼다.
+   선수가 없으면 경기는 직접 누르기로만 기록한다 */
+function removeAllCards() {
+  allGames().forEach(function (g) {
+    const m = RES()[mkey(g)];
+    if (!m) return;
+    m.h.concat(m.s, m.e).forEach(function (v) {
+      if (v && typeof v === 'object') { v.a = -1; v.b = -1; }
+    });
+    m.p.a.concat(m.p.b).forEach(function (v) { if (v && typeof v === 'object') v.c = -1; });
+  });
+  if (st.mode === 'cup') st.cup.cards = {}; else st.cards = {};
 }
 
 /* ---------- 그리기: 팀 ---------- */
@@ -1575,8 +1604,8 @@ function renderAll() {
   const labels = cup ? ['조별리그','토너먼트','카드','대회'] : ['순위표','경기','카드','팀'];
   document.querySelectorAll('#tabs button').forEach(function (b, i) { b.textContent = labels[i]; });
 
-  if (cup) fillMissingSquads();          // 대회는 항상 선수가 있어야 한다
-  else if (anyCards()) fillMissingSquads();
+  // 선수가 한 팀이라도 있으면 빈 팀을 채운다. 전체 카드를 지웠으면 카드 없이(직접 누르기) 진행한다
+  if (anyCards()) fillMissingSquads();
 
   if (cup) {
     renderCupGroups();
