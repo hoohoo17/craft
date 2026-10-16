@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>신의 성 전쟁</title>
+<meta name="description" content="열 나라가 성을 쌓고 대포를 쏴서 땅을 뺏는다. 나는 신이라 벼락도 내리고 저주도 건다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#1E1B33; --night2:#2B2748; --cream:#FFF8E8; --ink:#1A1626;
+  --gold:#FFC93C; --gold-deep:#D99A00; --curse:#8E44FF; --muted:#A7A0C8;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--night);color:var(--cream);font-family:var(--body);
+  -webkit-font-smoothing:antialiased;user-select:none;min-height:100vh;
+  background-image:radial-gradient(circle at 20% 0%,rgba(255,201,60,.14),transparent 45%),
+                   radial-gradient(circle at 90% 10%,rgba(142,68,255,.18),transparent 40%)}
+main{max-width:760px;margin:0 auto;padding:12px 12px 28px}
+
+header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+h1{font-family:var(--disp);font-weight:400;font-size:24px;margin:0;flex:1;letter-spacing:.02em;
+  color:var(--gold);text-shadow:0 2px 0 #00000055}
+.speed{display:flex;gap:3px;background:var(--night2);border-radius:12px;padding:3px}
+.speed button,.tool{font:inherit;font-weight:700;cursor:pointer;border:none}
+.speed button{background:none;color:var(--muted);font-size:13px;padding:6px 8px;border-radius:9px}
+.speed button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
+
+.mapwrap{position:relative;border-radius:16px;overflow:hidden;
+  box-shadow:0 0 0 3px #00000040,0 10px 30px #00000066}
+canvas{display:block;width:100%;touch-action:none;cursor:crosshair}
+#toast{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);
+  background:#1A1626dd;color:var(--cream);font-size:13px;font-weight:700;
+  padding:6px 12px;border-radius:999px;white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .25s}
+#toast.on{opacity:1}
+
+.godbar{display:flex;align-items:center;gap:8px;margin:10px 0 6px}
+.godbar .who{font-family:var(--disp);font-size:15px;color:var(--gold);white-space:nowrap}
+.mana{flex:1;height:14px;border-radius:999px;background:var(--night2);overflow:hidden;position:relative}
+.mana i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#FFE58A,var(--gold));
+  border-radius:999px;transition:width .2s}
+.mana b{position:absolute;right:8px;top:-1px;font-size:11px;color:var(--cream);text-shadow:0 1px 2px #000}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tool{background:var(--night2);color:var(--cream);border-radius:14px;padding:8px 2px 7px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid transparent}
+.tool .e{font-size:24px;line-height:1.1}
+.tool .n{font-size:13px}
+.tool .c{font-size:11px;color:var(--muted)}
+.tool[aria-pressed="true"]{border-color:var(--gold);background:#3A3460}
+.tool:disabled{opacity:.4;cursor:default}
+.hint{font-size:13px;color:var(--muted);margin:8px 2px 10px;min-height:20px;line-height:1.5}
+.hint b{color:var(--cream)}
+
+.panel{background:var(--night2);border-radius:16px;padding:8px 10px}
+.panel h2{font-family:var(--disp);font-weight:400;font-size:15px;margin:2px 2px 6px;color:var(--gold)}
+.rank{display:flex;align-items:center;gap:8px;padding:5px 2px;border-top:1px solid #ffffff12;cursor:pointer}
+.rank:first-of-type{border-top:none}
+.rank.dead{opacity:.35}
+.rank.sel{background:#ffffff10;border-radius:8px}
+.rank .no{width:16px;font-size:12px;color:var(--muted);text-align:right}
+.rank .fl{font-size:18px;width:24px;text-align:center}
+.rank .nm{width:58px;font-size:14px;font-weight:700;white-space:nowrap}
+.rank .bar{flex:1;height:10px;border-radius:999px;background:#ffffff14;overflow:hidden}
+.rank .bar i{display:block;height:100%;border-radius:999px}
+.rank .num{width:32px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.rank .lv{width:44px;font-size:11px;color:var(--gold);text-align:right;white-space:nowrap}
+.rank .st{width:28px;font-size:14px;text-align:center}
+.log{margin-top:10px;font-size:13px;line-height:1.7;color:var(--muted)}
+.log div:first-child{color:var(--cream)}
+
+.btn{all:unset;cursor:pointer;display:inline-block;font-family:var(--disp);font-size:20px;
+  color:var(--ink);background:var(--gold);padding:13px 34px;border-radius:999px;
+  box-shadow:0 6px 0 var(--gold-deep);transition:transform .1s,box-shadow .1s}
+.btn:active{transform:translateY(6px);box-shadow:0 0 0 var(--gold-deep)}
+.btn.ghost{background:var(--cream);box-shadow:0 6px 0 #CFC6AE}
+.btn.ghost:active{box-shadow:0 0 0 #CFC6AE}
+.btn:focus-visible,.tool:focus-visible,.speed button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+#cover{position:fixed;inset:0;z-index:20;background:rgba(20,17,36,.88);display:flex;
+  align-items:center;justify-content:center;padding:20px;text-align:center}
+#cover[hidden]{display:none}
+#cover .box{max-width:420px}
+#cover .big{font-family:var(--disp);font-size:clamp(34px,10vw,52px);line-height:1.15;color:var(--gold);
+  text-shadow:0 4px 0 #00000066}
+#cover .sub{margin:12px 0 4px;font-size:15px;line-height:1.8}
+#cover .how{text-align:left;background:#ffffff10;border-radius:14px;padding:10px 14px;margin:14px 0 20px;
+  font-size:14px;line-height:1.9}
+#cover .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>⚡ 신의 성 전쟁</h1>
+    <div class="speed" id="speed" role="group" aria-label="빠르기">
+      <button data-s="0" aria-pressed="false" aria-label="멈춤">⏸</button>
+      <button data-s="1" aria-pressed="true">1×</button>
+      <button data-s="2" aria-pressed="false">2×</button>
+      <button data-s="4" aria-pressed="false">4×</button>
+    </div>
+  </header>
+
+  <div class="mapwrap">
+    <canvas id="map" aria-label="열 나라 지도"></canvas>
+    <div id="toast"></div>
+  </div>
+
+  <div class="godbar">
+    <span class="who">🙏 신의 힘</span>
+    <div class="mana"><i id="manaFill"></i><b id="manaNum"></b></div>
+  </div>
+  <div class="tools" id="tools">
+    <button class="tool" data-p="bolt"  aria-pressed="false"><span class="e">⚡</span><span class="n">벼락</span><span class="c">30</span></button>
+    <button class="tool" data-p="curse" aria-pressed="false"><span class="e">☠️</span><span class="n">저주</span><span class="c">40</span></button>
+    <button class="tool" data-p="bless" aria-pressed="false"><span class="e">✨</span><span class="n">축복</span><span class="c">35</span></button>
+    <button class="tool" data-p="build" aria-pressed="false"><span class="e">🏰</span><span class="n">성 쌓기</span><span class="c">25</span></button>
+  </div>
+  <p class="hint" id="hint"></p>
+
+  <div class="panel">
+    <h2>🏆 나라 순위</h2>
+    <div id="ranks"></div>
+    <div class="log" id="log"></div>
+  </div>
+  <div style="text-align:center;margin-top:14px">
+    <button class="btn ghost" id="again">새 판</button>
+  </div>
+</main>
+
+<div id="cover">
+  <div class="box">
+    <div class="big">⚡ 신의 성 전쟁</div>
+    <p class="sub">열 나라가 성을 쌓고 대포를 쏴서 서로 땅을 뺏어.<br>너는 <b>신</b>이야. 하늘에서 지켜보다가 마음대로 끼어들어.</p>
+    <div class="how">
+      ⚡ <b>벼락</b> — 맞은 성은 크게 다치고, 둘레 땅은 주인 없는 땅이 돼<br>
+      ☠️ <b>저주</b> — 15초 동안 그 동네 대포알은 터지지 않아. 저주 안의 성은 대포가 빗나가고 조금씩 무너져<br>
+      ✨ <b>축복</b> — 15초 동안 그 나라는 대포가 빠르고 세지고, 성이 낫는다<br>
+      🏰 <b>성 쌓기</b> — 그 나라 성을 한 층 더 쌓아 줘 (최대 5층)<br>
+      신의 힘은 시간이 지나면 다시 차. 마지막에 남는 한 나라가 천하통일!
+    </div>
+    <div class="row"><button class="btn" id="start">전쟁 시작</button></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================== 설정 ================== */
+const W = 20, H = 14;                 // 지도 칸 수
+const TEAMS = [
+  { name:'사자',   e:'🦁', c:'#F2994A' },
+  { name:'호랑이', e:'🐯', c:'#EB5757' },
+  { name:'곰',     e:'🐻', c:'#8D5B3E' },
+  { name:'여우',   e:'🦊', c:'#F2C94C' },
+  { name:'늑대',   e:'🐺', c:'#6C7A89' },
+  { name:'독수리', e:'🦅', c:'#2D9CDB' },
+  { name:'용',     e:'🐉', c:'#27AE60' },
+  { name:'거북',   e:'🐢', c:'#56CCB2' },
+  { name:'토끼',   e:'🐰', c:'#F78FB3' },
+  { name:'부엉이', e:'🦉', c:'#9B51E0' }
+];
+const LV = {                         // 성 층수(1~5)에 따라
+  hp:     [0, 50, 70, 95, 125, 160],
+  reload: [0, 3.0, 2.6, 2.2, 1.9, 1.6],
+  dmg:    [0, 5, 6, 7, 8, 9],
+  cost:   [0, 14, 22, 32, 46, Infinity]   // 다음 층으로 올리는 데 드는 금
+};
+const POWER = {
+  bolt:  { cost:30, name:'벼락',   r:1.6, tip:'지도에서 벼락 내릴 곳을 눌러. 성 근처면 성이 크게 다쳐.' },
+  curse: { cost:40, name:'저주',   r:3.0, tip:'저주를 걸 곳을 눌러. 15초 동안 그 동네가 저주받아.' },
+  bless: { cost:35, name:'축복',   r:0,   tip:'축복할 나라의 성을 눌러.' },
+  build: { cost:25, name:'성 쌓기', r:0,   tip:'한 층 더 쌓아 줄 성을 눌러.' }
+};
+const CURSE_T = 15, BLESS_T = 15;
+const MANA_MAX = 100, MANA_REGEN = 4;  // 1초에 4씩
+const STEP = 1 / 30;
+
+/* ================== 상태 ================== */
+let G = null;
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
+function idx(x, y) { return y * W + x; }
+function inMap(x, y) { return x >= 0 && y >= 0 && x < W && y < H; }
+
+/* 성 자리 10곳: 서로 멀리 떨어지게 여러 번 뽑아 제일 고른 걸 쓴다 */
+function placeCastles() {
+  let best = null, bestMin = -1;
+  for (let t = 0; t < 400; t++) {
+    const pts = [];
+    for (let i = 0; i < TEAMS.length; i++) {
+      pts.push({ x: Math.floor(rnd(1, W - 1)), y: Math.floor(rnd(2, H - 1)) });   // 맨 윗줄은 깃발이 잘려서 뺀다
+    }
+    let mn = Infinity;
+    for (let i = 0; i < pts.length; i++)
+      for (let j = i + 1; j < pts.length; j++)
+        mn = Math.min(mn, dist(pts[i].x, pts[i].y, pts[j].x, pts[j].y));
+    if (mn > bestMin) { bestMin = mn; best = pts; }
+  }
+  return best;
+}
+
+function newGame() {
+  const pos = placeCastles();
+  const own = new Int8Array(W * H).fill(-1);
+  const teams = TEAMS.map(function (t, i) {
+    return { id: i, name: t.name, e: t.e, c: t.c, cx: pos[i].x, cy: pos[i].y,
+             lvl: 1, hp: LV.hp[1], gold: 0, cool: rnd(0.5, 3), alive: true,
+             blessT: 0, kills: 0, cells: 0, fall: 0 };
+  });
+  // 처음 땅: 성 둘레 마름모 2칸. 겹치면 가까운 나라 땅
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let bi = -1, bd = 99;
+    teams.forEach(function (t) {
+      const d = Math.abs(t.cx - x) + Math.abs(t.cy - y);
+      if (d <= 2 && d < bd) { bd = d; bi = t.id; }
+    });
+    own[idx(x, y)] = bi;
+  }
+  teams.forEach(function (t) { own[idx(t.cx, t.cy)] = t.id; });
+  G = { own: own, teams: teams, shots: [], fx: [], curses: [], marks: [],
+        mana: 60, time: 0, over: false, winner: -1, log: [], sel: -1,
+        power: null, hover: null, speed: 1, shake: 0 };
+  recount();
+  renderSide(true);
+}
+
+function recount() {
+  G.teams.forEach(function (t) { t.cells = 0; });
+  for (let i = 0; i < G.own.length; i++) if (G.own[i] >= 0) G.teams[G.own[i]].cells++;
+}
+
+function cursedAt(x, y) {
+  for (let i = 0; i < G.curses.length; i++) {
+    const c = G.curses[i];
+    if (dist(x, y, c.x, c.y) <= c.r) return true;
+  }
+  return false;
+}
+function castleAt(x, y) {
+  for (let i = 0; i < G.teams.length; i++) {
+    const t = G.teams[i];
+    if (t.alive && t.cx === x && t.cy === y) return t;
+  }
+  return null;
+}
+/* (x,y) 바로 옆(상하좌우)에 그 나라 땅이 있나 */
+function touches(team, x, y) {
+  const d = [[1,0],[-1,0],[0,1],[0,-1]];
+  for (let i = 0; i < 4; i++) {
+    const nx = x + d[i][0], ny = y + d[i][1];
+    if (inMap(nx, ny) && G.own[idx(nx, ny)] === team) return true;
+  }
+  return false;
+}
+function say(msg) {
+  G.log.unshift(msg);
+  if (G.log.length > 4) G.log.pop();
+  toast(msg);
+  logDirty = true;
+}
+
+/* ================== 나라들의 생각 ================== */
+function chooseTarget(t) {
+  // 1) 내 땅이 적의 성 가까이(3칸) 와 있으면 그 성을 노리기도 한다
+  const foes = G.teams.filter(function (o) { return o.alive && o.id !== t.id; });
+  const near = foes.filter(function (o) {
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const x = o.cx + dx, y = o.cy + dy;
+      if (inMap(x, y) && G.own[idx(x, y)] === t.id) return true;
+    }
+    return false;
+  });
+  if (near.length && G.time > 20 && Math.random() < 0.4) {   // 처음 20초는 땅만 다툰다
+    near.sort(function (a, b) { return a.hp - b.hp; });
+    const o = Math.random() < 0.7 ? near[0] : near[Math.floor(Math.random() * near.length)];
+    return { x: o.cx, y: o.cy };
+  }
+  // 2) 아니면 내 땅 바로 옆 칸 중 하나 — 내 성에서 가깝거나, 적의 성 쪽으로 가는 칸을 잘 고른다
+  let sum = 0;
+  const cand = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const o = G.own[idx(x, y)];
+    if (o === t.id || castleAt(x, y)) continue;
+    if (!touches(t.id, x, y)) continue;
+    const d = dist(t.cx, t.cy, x, y);
+    let de = 99;
+    foes.forEach(function (f) { de = Math.min(de, dist(f.cx, f.cy, x, y)); });
+    const w = (o >= 0 ? 1.5 : 1) * (1 / (1 + d * d * 0.06) + 1.5 / (1 + de * de * 0.15));
+    sum += w;
+    cand.push({ x: x, y: y, w: w });
+  }
+  if (!cand.length) return null;
+  let r = Math.random() * sum;
+  for (let i = 0; i < cand.length; i++) { r -= cand[i].w; if (r <= 0) return cand[i]; }
+  return cand[cand.length - 1];
+}
+
+function fire(t) {
+  const tg = chooseTarget(t);
+  if (!tg) return;
+  const d = dist(t.cx, t.cy, tg.x, tg.y);
+  let spread = 0.25 + d * 0.035;
+  if (cursedAt(t.cx, t.cy)) spread *= 4;          // 저주받은 성은 엉뚱한 데로 쏜다
+  const a = Math.random() * Math.PI * 2, s = Math.random() * spread;
+  const lx = Math.round(tg.x + Math.cos(a) * s), ly = Math.round(tg.y + Math.sin(a) * s);
+  G.shots.push({ team: t.id, sx: t.cx, sy: t.cy, tx: Math.max(0, Math.min(W - 1, lx)),
+                 ty: Math.max(0, Math.min(H - 1, ly)), t: 0, dur: 0.7 + d * 0.06,
+                 dmg: LV.dmg[t.lvl] * (t.blessT > 0 ? 1.5 : 1) });
+  burst(t.cx, t.cy - 0.4, '#FFFFFF', 4, 0.6);
+}
+
+function land(s) {
+  const x = s.tx, y = s.ty;
+  const me = G.teams[s.team];
+  if (cursedAt(x, y)) { burst(x, y, '#B48CFF', 6, 0.8); return; }   // 저주 땅에서는 불발
+  boom(x, y);
+  if (!me.alive) return;
+  const c = castleAt(x, y);
+  if (c) {
+    if (c.id === me.id) return;
+    hurt(c, s.dmg, me);
+    return;
+  }
+  const o = G.own[idx(x, y)];
+  if (o !== me.id && touches(me.id, x, y)) {
+    G.own[idx(x, y)] = me.id;
+    if (o >= 0) G.teams[o].cells--;
+    me.cells++;
+  }
+}
+
+/* by: 무너뜨린 나라, 없으면 신이 한 것 */
+function hurt(c, dmg, by) {
+  c.hp -= dmg;
+  c.fall = 0.25;
+  if (c.hp > 0) return;
+  c.hp = 0; c.alive = false;
+  for (let i = 0; i < G.own.length; i++) {
+    if (G.own[i] === c.id) G.own[i] = by ? by.id : -1;
+  }
+  G.marks.push({ x: c.cx, y: c.cy, c: c.c });   // 무너진 성 자리
+  if (by) { by.kills++; by.gold += 10; say(by.e + ' ' + by.name + '가 ' + c.e + ' ' + c.name + ' 성을 무너뜨렸어!'); }
+  else say(c.e + ' ' + c.name + ' 성이 신의 힘에 무너졌어!');
+  bigBoom(c.cx, c.cy);
+  if (G.sel === c.id) G.sel = -1;
+  recount();
+  checkEnd();
+}
+
+function checkEnd() {
+  const alive = G.teams.filter(function (t) { return t.alive; });
+  if (alive.length > 1 || G.over) return;
+  G.over = true;
+  G.winner = alive.length ? alive[0].id : -1;
+  setTimeout(showEnd, 1400);
+}
+
+/* ================== 신의 힘 ================== */
+function nearestCastle(x, y, within) {
+  let best = null, bd = within;
+  G.teams.forEach(function (t) {
+    if (!t.alive) return;
+    const d = dist(t.cx, t.cy, x, y);
+    if (d <= bd) { bd = d; best = t; }
+  });
+  return best;
+}
+
+function usePower(p, x, y) {
+  const P = POWER[p];
+  if (G.mana < P.cost || G.over) return false;
+  if (p === 'bolt') {
+    G.mana -= P.cost;
+    G.fx.push({ k: 'bolt', x: x, y: y, t: 0, life: 0.6 });
+    G.shake = 0.35;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (!inMap(nx, ny) || dist(nx, ny, x, y) > 1.2) continue;
+      if (castleAt(nx, ny)) continue;
+      G.own[idx(nx, ny)] = -1;
+    }
+    G.teams.forEach(function (t) {
+      if (t.alive && dist(t.cx, t.cy, x, y) <= P.r) hurt(t, 25, null);
+    });
+    burst(x, y, '#FFF3A0', 26, 1.6);
+    recount();
+    return true;
+  }
+  if (p === 'curse') {
+    G.mana -= P.cost;
+    G.curses.push({ x: x, y: y, r: P.r, t: CURSE_T });
+    const hit = G.teams.filter(function (t) { return t.alive && dist(t.cx, t.cy, x, y) <= P.r; });
+    say('☠️ 신이 저주를 내렸어' + (hit.length ? ' — ' + hit.map(function (t) { return t.e + t.name; }).join(', ') + ' 벌벌' : ''));
+    burst(x, y, '#B48CFF', 30, 2.2);
+    return true;
+  }
+  const t = nearestCastle(x, y, 2.2);
+  if (!t) { toast('성을 눌러야 해'); return false; }
+  if (p === 'bless') {
+    G.mana -= P.cost;
+    t.blessT = BLESS_T;
+    say('✨ 신이 ' + t.e + ' ' + t.name + '를 축복했어!');
+    burst(t.cx, t.cy, '#FFE58A', 30, 1.8);
+    return true;
+  }
+  if (p === 'build') {
+    if (t.lvl >= 5) { toast(t.e + ' ' + t.name + ' 성은 벌써 5층이야'); return false; }
+    G.mana -= P.cost;
+    levelUp(t, true);
+    return true;
+  }
+  return false;
+}
+
+function levelUp(t, byGod) {
+  t.lvl++;
+  t.hp = Math.min(LV.hp[t.lvl], t.hp + (LV.hp[t.lvl] - LV.hp[t.lvl - 1]) + (byGod ? 15 : 0));
+  burst(t.cx, t.cy - 0.3, byGod ? '#FFE58A' : '#FFFFFF', byGod ? 24 : 10, 1.2);
+  if (byGod) say('🏰 신이 ' + t.e + ' ' + t.name + ' 성을 ' + t.lvl + '층으로 쌓아 줬어');
+  else if (t.lvl >= 4) say(t.e + ' ' + t.name + '가 성을 ' + t.lvl + '층까지 쌓았어');
+}
+
+/* ================== 한 걸음 ================== */
+function step(dt) {
+  if (G.over && !G.fx.length && !G.shots.length) return;
+  G.time += dt;
+  G.mana = Math.min(MANA_MAX, G.mana + MANA_REGEN * dt);
+
+  G.curses.forEach(function (c) { c.t -= dt; });
+  G.curses = G.curses.filter(function (c) { return c.t > 0; });
+
+  G.teams.forEach(function (t) {
+    if (!t.alive) return;
+    const cursed = cursedAt(t.cx, t.cy);
+    if (t.fall > 0) t.fall -= dt;
+    // 금: 저주 안 받은 땅 한 칸에 1초마다 0.04
+    let good = 0;
+    for (let i = 0; i < G.own.length; i++) {
+      if (G.own[i] === t.id && !cursedCell[i]) good++;
+    }
+    t.gold += good * 0.04 * dt;
+    if (t.gold >= LV.cost[t.lvl]) { t.gold -= LV.cost[t.lvl]; levelUp(t, false); }
+    if (t.blessT > 0) { t.blessT -= dt; t.hp = Math.min(LV.hp[t.lvl], t.hp + 2 * dt); }
+    if (cursed && !G.over) {
+      t.hp -= 1 * dt;
+      if (t.hp <= 0) { hurt(t, 1, null); return; }
+    }
+    if (G.over) return;
+    const rate = (t.blessT > 0 ? 2 : 1) / (cursed ? 2 : 1);
+    t.cool -= dt * rate;
+    if (t.cool <= 0) { t.cool = LV.reload[t.lvl] * rnd(0.85, 1.15); fire(t); }
+  });
+
+  G.shots.forEach(function (s) { s.t += dt; });
+  const landed = G.shots.filter(function (s) { return s.t >= s.dur; });
+  G.shots = G.shots.filter(function (s) { return s.t < s.dur; });
+  landed.forEach(land);
+
+  G.fx.forEach(function (f) {
+    f.t += dt;
+    if (f.k === 'p') { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 3 * dt; }
+  });
+  G.fx = G.fx.filter(function (f) { return f.t < f.life; });
+  if (G.shake > 0) G.shake -= dt;
+}
+
+/* 저주 칸 표시는 매 걸음 한 번만 계산 */
+let cursedCell = new Uint8Array(W * H);
+function updateCursedCells() {
+  cursedCell.fill(0);
+  if (!G.curses.length) return;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (cursedAt(x, y)) cursedCell[idx(x, y)] = 1;
+}
+
+/* ================== 효과 ================== */
+function burst(x, y, color, n, power) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = rnd(0.3, 1) * power;
+    G.fx.push({ k: 'p', x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - power * 0.6,
+                c: color, t: 0, life: rnd(0.35, 0.8), s: rnd(0.06, 0.14) });
+  }
+}
+function boom(x, y) {
+  G.fx.push({ k: 'ring', x: x, y: y, t: 0, life: 0.35 });
+  burst(x, y, '#FFB347', 7, 1.1);
+  burst(x, y, '#5A5A5A', 4, 0.6);
+}
+function bigBoom(x, y) {
+  G.fx.push({ k: 'ring', x: x, y: y, t: 0, life: 0.7, big: true });
+  burst(x, y, '#FF6B3D', 30, 2.4);
+  burst(x, y, '#FFD84D', 20, 1.8);
+  G.shake = 0.4;
+}
+
+/* ================== 그리기 ================== */
+const cv = document.getElementById('map');
+const ctx = cv.getContext('2d');
+let cs = 20, dpr = 1;
+function resize() {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = cv.parentElement.clientWidth;
+  cs = w / W;
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(cs * H * dpr);
+  cv.style.height = (cs * H) + 'px';
+}
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  if (f < 0) { r *= 1 + f; g *= 1 + f; b *= 1 + f; }
+  else { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
+  return 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+}
+
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (G.shake > 0) ctx.translate(rnd(-3, 3), rnd(-3, 3));
+  // 땅
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const o = G.own[idx(x, y)];
+    ctx.fillStyle = o >= 0 ? shade(G.teams[o].c, 0.45) : ((x + y) % 2 ? '#BFD99A' : '#C8E0A4');
+    ctx.fillRect(x * cs, y * cs, cs + 0.5, cs + 0.5);
+  }
+  // 나라 사이 경계선
+  ctx.lineWidth = Math.max(1.5, cs * 0.09);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const o = G.own[idx(x, y)];
+    if (o < 0) continue;
+    ctx.strokeStyle = shade(G.teams[o].c, -0.15);
+    ctx.beginPath();
+    if (x + 1 >= W || G.own[idx(x + 1, y)] !== o) { ctx.moveTo((x + 1) * cs, y * cs); ctx.lineTo((x + 1) * cs, (y + 1) * cs); }
+    if (x - 1 < 0 || G.own[idx(x - 1, y)] !== o) { ctx.moveTo(x * cs, y * cs); ctx.lineTo(x * cs, (y + 1) * cs); }
+    if (y + 1 >= H || G.own[idx(x, y + 1)] !== o) { ctx.moveTo(x * cs, (y + 1) * cs); ctx.lineTo((x + 1) * cs, (y + 1) * cs); }
+    if (y - 1 < 0 || G.own[idx(x, y - 1)] !== o) { ctx.moveTo(x * cs, y * cs); ctx.lineTo((x + 1) * cs, y * cs); }
+    ctx.stroke();
+  }
+  // 무너진 성 자리
+  G.marks.forEach(function (m) {
+    const px = (m.x + 0.5) * cs, py = (m.y + 0.5) * cs;
+    ctx.fillStyle = '#00000033';
+    ctx.beginPath(); ctx.ellipse(px, py + cs * 0.15, cs * 0.45, cs * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#8A8378';
+    for (let i = 0; i < 4; i++) ctx.fillRect(px + (i - 2) * cs * 0.18, py - cs * (0.05 + (i % 2) * 0.12), cs * 0.15, cs * 0.2);
+  });
+  // 저주
+  G.curses.forEach(function (c) {
+    const px = (c.x + 0.5) * cs, py = (c.y + 0.5) * cs, r = (c.r + 0.5) * cs;
+    const a = Math.min(1, c.t / 1.5, (CURSE_T - c.t) / 0.5 + 0.3);
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, 'rgba(60,20,110,' + 0.55 * a + ')');
+    g.addColorStop(1, 'rgba(110,50,200,' + 0.12 * a + ')');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(190,150,255,' + 0.7 * a + ')';
+    ctx.setLineDash([cs * 0.3, cs * 0.2]); ctx.lineWidth = 2;
+    ctx.lineDashOffset = -G.time * cs;
+    ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = (cs * 0.9) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.8 * a;
+    ctx.fillText('☠️', px, py + Math.sin(G.time * 3) * cs * 0.1);
+    ctx.globalAlpha = 1;
+  });
+  // 성
+  G.teams.forEach(function (t) { if (t.alive) drawCastle(t); });
+  // 대포알
+  G.shots.forEach(function (s) {
+    const k = s.t / s.dur;
+    const gx = (s.sx + (s.tx - s.sx) * k + 0.5) * cs, gy = (s.sy + (s.ty - s.sy) * k + 0.5) * cs;
+    const h = Math.sin(Math.PI * k) * (0.6 + dist(s.sx, s.sy, s.tx, s.ty) * 0.25) * cs;
+    ctx.fillStyle = '#00000030';
+    ctx.beginPath(); ctx.ellipse(gx, gy, cs * 0.16, cs * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#26232F';
+    ctx.beginPath(); ctx.arc(gx, gy - h, cs * 0.16, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = G.teams[s.team].c;
+    ctx.beginPath(); ctx.arc(gx - cs * 0.05, gy - h - cs * 0.05, cs * 0.06, 0, Math.PI * 2); ctx.fill();
+  });
+  // 효과
+  G.fx.forEach(function (f) {
+    const k = f.t / f.life;
+    if (f.k === 'p') {
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = f.c;
+      ctx.beginPath(); ctx.arc((f.x + 0.5) * cs, (f.y + 0.5) * cs, f.s * cs, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (f.k === 'ring') {
+      ctx.strokeStyle = 'rgba(255,200,120,' + (1 - k) + ')';
+      ctx.lineWidth = f.big ? 4 : 2;
+      ctx.beginPath(); ctx.arc((f.x + 0.5) * cs, (f.y + 0.5) * cs, (f.big ? 2.2 : 0.7) * k * cs + 2, 0, Math.PI * 2); ctx.stroke();
+    } else if (f.k === 'bolt') {
+      ctx.fillStyle = 'rgba(255,255,230,' + 0.35 * (1 - k) + ')';
+      ctx.fillRect(0, 0, W * cs, H * cs);
+      ctx.strokeStyle = 'rgba(255,245,170,' + (1 - k) + ')';
+      ctx.lineWidth = cs * 0.18;
+      ctx.lineJoin = 'round';
+      let px = (f.x + 0.5) * cs, py = -10;
+      const ex = (f.x + 0.5) * cs, ey = (f.y + 0.5) * cs;
+      ctx.beginPath(); ctx.moveTo(px, py);
+      const n = 7;
+      for (let i = 1; i <= n; i++) {
+        const yy = py + (ey - py) * i / n;
+        const xx = i === n ? ex : ex + Math.sin(i * 12.9 + f.x * 3.1) * cs * 0.8;
+        ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+    }
+  });
+  // 신의 손 미리보기
+  if (G.power && G.hover) {
+    const P = POWER[G.power];
+    const px = (G.hover.x + 0.5) * cs, py = (G.hover.y + 0.5) * cs;
+    ctx.strokeStyle = G.mana >= P.cost ? '#FFE58A' : '#FF7A7A';
+    ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.arc(px, py, Math.max(0.6, P.r + 0.5) * cs, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawCastle(t) {
+  const u = cs * 1.45;            // 성은 칸보다 크게 그려야 폰에서도 보인다
+  const px = (t.cx + 0.5) * cs, base = (t.cy + 0.8) * cs;
+  const wob = t.fall > 0 ? Math.sin(t.fall * 60) * u * 0.05 : 0;
+  const w = u * 0.95, tier = u * 0.2;
+  // 축복 빛
+  if (t.blessT > 0) {
+    const g = ctx.createRadialGradient(px, base - u * 0.5, 0, px, base - u * 0.5, u * 1.3);
+    g.addColorStop(0, 'rgba(255,229,138,.75)'); g.addColorStop(1, 'rgba(255,229,138,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(px, base - u * 0.5, u * 1.3, 0, Math.PI * 2); ctx.fill();
+  }
+  if (G.sel === t.id) {
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(px, base - u * 0.4, u * 1.05, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.fillStyle = '#00000035';
+  ctx.beginPath(); ctx.ellipse(px, base, w * 0.6, u * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+  // 층마다 조금씩 좁아지며 쌓인다
+  let y = base;
+  for (let i = 0; i < t.lvl; i++) {
+    const ww = w * (1 - i * 0.12);
+    const x0 = px - ww / 2 + wob;
+    ctx.fillStyle = i % 2 ? '#E9E1CF' : '#D9CFB8';
+    ctx.fillRect(x0, y - tier, ww, tier);
+    ctx.fillStyle = '#B9AE95';
+    ctx.fillRect(x0, y - tier, ww, tier * 0.18);
+    y -= tier;
+  }
+  // 성가퀴
+  const top = w * (1 - (t.lvl - 1) * 0.12);
+  ctx.fillStyle = '#D9CFB8';
+  for (let i = 0; i < 3; i++) ctx.fillRect(px - top / 2 + wob + i * top * 0.4, y - tier * 0.5, top * 0.2, tier * 0.5);
+  // 문
+  ctx.fillStyle = '#5A4632';
+  ctx.beginPath(); ctx.arc(px + wob, base - tier * 0.55, u * 0.11, Math.PI, 0); ctx.lineTo(px + wob + u * 0.11, base); ctx.lineTo(px + wob - u * 0.11, base); ctx.fill();
+  // 깃발
+  const fy = y - tier * 0.5;
+  ctx.strokeStyle = '#4A4038'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(px + wob, fy); ctx.lineTo(px + wob, fy - u * 0.55); ctx.stroke();
+  ctx.fillStyle = t.c;
+  const fl = Math.sin(G.time * 6 + t.id) * u * 0.05;
+  ctx.beginPath(); ctx.moveTo(px + wob, fy - u * 0.55); ctx.lineTo(px + wob + u * 0.42, fy - u * 0.45 + fl);
+  ctx.lineTo(px + wob, fy - u * 0.33); ctx.fill();
+  // 동물 얼굴
+  ctx.font = (u * 0.55) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(t.e, px + wob - u * 0.62, base - u * 0.55);
+  // 체력
+  const hb = u * 1.1, k = Math.max(0, t.hp / LV.hp[t.lvl]);
+  ctx.fillStyle = '#00000055';
+  ctx.fillRect(px - hb / 2, base + u * 0.06, hb, u * 0.12);
+  ctx.fillStyle = k > 0.5 ? '#5BD17A' : k > 0.25 ? '#FFC93C' : '#FF5A5A';
+  ctx.fillRect(px - hb / 2, base + u * 0.06, hb * k, u * 0.12);
+}
+
+/* ================== 옆 화면 ================== */
+const $ = function (id) { return document.getElementById(id); };
+let toastT = 0, logDirty = true;
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(function () { el.classList.remove('on'); }, 2200);
+}
+let sideClock = 0;
+function renderSide(force) {
+  sideClock -= 1;
+  if (!force && sideClock > 0) return;
+  sideClock = 8;
+  // 신의 힘
+  $('manaFill').style.width = (G.mana / MANA_MAX * 100) + '%';
+  $('manaNum').textContent = Math.floor(G.mana);
+  document.querySelectorAll('.tool').forEach(function (b) {
+    const p = b.dataset.p;
+    b.disabled = G.over || G.mana < POWER[p].cost;
+    b.setAttribute('aria-pressed', G.power === p ? 'true' : 'false');
+  });
+  // 순위: 살아 있는 나라 먼저, 땅 많은 순
+  const most = Math.max(1, Math.max.apply(null, G.teams.map(function (t) { return t.cells; })));
+  const list = G.teams.slice().sort(function (a, b) {
+    return (b.alive - a.alive) || (b.cells - a.cells) || (b.hp - a.hp);
+  });
+  $('ranks').innerHTML = list.map(function (t, i) {
+    const st = !t.alive ? '💀' : t.blessT > 0 ? '✨' : cursedAt(t.cx, t.cy) ? '☠️' : '';
+    return '<div class="rank' + (t.alive ? '' : ' dead') + (G.sel === t.id ? ' sel' : '') + '" data-id="' + t.id + '">' +
+      '<span class="no">' + (i + 1) + '</span>' +
+      '<span class="fl">' + t.e + '</span>' +
+      '<span class="nm">' + t.name + '</span>' +
+      '<span class="bar"><i style="width:' + (t.cells / most * 100).toFixed(1) + '%;background:' + t.c + '"></i></span>' +
+      '<span class="num">' + t.cells + '칸</span>' +
+      '<span class="lv">' + (t.alive ? '🏰' + t.lvl + '층' : '무너짐') + '</span>' +
+      '<span class="st">' + st + '</span></div>';
+  }).join('');
+  if (logDirty) {
+    $('log').innerHTML = G.log.map(function (m) { return '<div>' + m + '</div>'; }).join('');
+    logDirty = false;
+  }
+  updateHint();
+}
+function updateHint() {
+  const h = $('hint');
+  if (G.power) {
+    const P = POWER[G.power];
+    h.innerHTML = G.mana >= P.cost
+      ? '<b>' + P.name + '</b> — ' + P.tip
+      : '<b>' + P.name + '</b> — 신의 힘이 ' + P.cost + ' 모여야 해. 조금만 기다려.';
+  } else if (G.sel >= 0) {
+    const t = G.teams[G.sel];
+    const next = LV.cost[t.lvl];
+    h.innerHTML = t.e + ' <b>' + t.name + '</b> — 성 ' + t.lvl + '층 · 체력 ' + Math.ceil(t.hp) + '/' + LV.hp[t.lvl] +
+      ' · 땅 ' + t.cells + '칸 · 무너뜨린 성 ' + t.kills + '개' +
+      (isFinite(next) ? ' · 다음 층까지 금 ' + Math.floor(t.gold) + '/' + next : ' · 다 쌓았어');
+  } else {
+    h.innerHTML = '아래에서 신의 힘을 고르고 지도를 눌러. 성을 누르면 그 나라 소식을 볼 수 있어.';
+  }
+}
+
+function showEnd() {
+  const w = G.winner >= 0 ? G.teams[G.winner] : null;
+  $('cover').querySelector('.box').innerHTML =
+    '<div class="big">' + (w ? w.e + ' ' + w.name + '<br>천하통일!' : '모두 무너졌어') + '</div>' +
+    '<p class="sub">' + (w ? '마지막까지 버틴 나라야. 성 ' + w.lvl + '층, 무너뜨린 성 ' + w.kills + '개.'
+                         : '신의 힘이 너무 셌나 봐. 남은 나라가 하나도 없어.') +
+    '<br>' + Math.floor(G.time / 60) + '분 ' + Math.floor(G.time % 60) + '초 걸렸어.</p>' +
+    '<div class="row" style="margin-top:20px"><button class="btn" id="start">한 판 더</button></div>';
+  $('cover').hidden = false;
+  $('start').addEventListener('click', start);
+}
+
+/* ================== 조작 ================== */
+function cellFromEvent(e) {
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / r.width * W);
+  const y = Math.floor((e.clientY - r.top) / r.height * H);
+  return inMap(x, y) ? { x: x, y: y } : null;
+}
+cv.addEventListener('pointermove', function (e) { G.hover = cellFromEvent(e); });
+cv.addEventListener('pointerleave', function () { G.hover = null; });
+cv.addEventListener('pointerdown', function (e) {
+  const c = cellFromEvent(e);
+  if (!c || G.over) return;
+  G.hover = c;
+  if (G.power) {
+    if (G.mana < POWER[G.power].cost) { toast('신의 힘이 모자라'); return; }
+    if (usePower(G.power, c.x, c.y)) G.power = null;
+    renderSide(true);
+    return;
+  }
+  const t = nearestCastle(c.x, c.y, 1.5);
+  G.sel = t ? (G.sel === t.id ? -1 : t.id) : -1;
+  renderSide(true);
+});
+$('tools').addEventListener('click', function (e) {
+  const b = e.target.closest('.tool');
+  if (!b || b.disabled) return;
+  G.power = G.power === b.dataset.p ? null : b.dataset.p;
+  renderSide(true);
+});
+$('ranks').addEventListener('click', function (e) {
+  const r = e.target.closest('.rank');
+  if (!r) return;
+  const id = +r.dataset.id;
+  if (!G.teams[id].alive) return;
+  G.sel = G.sel === id ? -1 : id;
+  renderSide(true);
+});
+$('speed').addEventListener('click', function (e) {
+  const b = e.target.closest('button');
+  if (!b) return;
+  G.speed = +b.dataset.s;
+  document.querySelectorAll('#speed button').forEach(function (x) {
+    x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+  });
+});
+$('again').addEventListener('click', function () {
+  if (G.over || G.time < 5) { start(); return; }
+  G.speed = 0;
+  syncSpeed();
+  $('cover').querySelector('.box').innerHTML =
+    '<div class="big">새 판?</div><p class="sub">지금 전쟁은 사라지고 성 자리를 새로 뽑아.</p>' +
+    '<div class="row" style="margin-top:20px"><button class="btn ghost" id="no">계속하기</button><button class="btn" id="start">새 판</button></div>';
+  $('cover').hidden = false;
+  $('start').addEventListener('click', start);
+  $('no').addEventListener('click', function () { $('cover').hidden = true; G.speed = 1; syncSpeed(); });
+});
+function syncSpeed() {
+  document.querySelectorAll('#speed button').forEach(function (x) {
+    x.setAttribute('aria-pressed', +x.dataset.s === G.speed ? 'true' : 'false');
+  });
+}
+function start() {
+  newGame();
+  $('cover').hidden = true;
+  syncSpeed();
+  say('⚔️ 열 나라 전쟁 시작!');
+  renderSide(true);
+}
+$('start').addEventListener('click', start);
+window.addEventListener('resize', resize);
+window.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { G.power = null; renderSide(true); }
+});
+
+/* ================== 돌리기 ================== */
+let acc = 0, last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000);
+  last = now;
+  if ($('cover').hidden) {
+    acc += dt * G.speed;
+    let n = 0;
+    while (acc >= STEP && n < 20) { updateCursedCells(); step(STEP); acc -= STEP; n++; }
+    if (n === 20) acc = 0;
+  }
+  draw();
+  renderSide(false);
+  requestAnimationFrame(frame);
+}
+
+/* 테스트에서 빨리 돌려 보려고 열어 둔다 */
+window.GODWAR = {
+  get state() { return G; },
+  run: function (sec) {
+    for (let t = 0; t < sec; t += STEP) { updateCursedCells(); step(STEP); }
+    renderSide(true);
+  },
+  use: usePower
+};
+
+newGame();
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
