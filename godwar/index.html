@@ -316,7 +316,7 @@ function newGame(n) {
     own[idx(x, y)] = bi;
   }
   teams.forEach(function (t) { own[idx(t.cx, t.cy)] = t.id; });
-  G = { own: own, sea: sea, teams: teams, shots: [], fx: [], curses: [], marks: [], men: [],
+  G = { own: own, sea: sea, teams: teams, shots: [], fx: [], curses: [], men: [],
         fields: {}, fieldT: 0,
         mana: 60, time: 0, over: false, winner: -1, log: [], sel: -1,
         power: null, hover: null, speed: 1, shake: 0 };
@@ -439,11 +439,10 @@ function hurt(c, dmg, by) {
   c.hp -= dmg;
   c.fall = 0.25;
   if (c.hp > 0) return;
-  c.hp = 0; c.alive = false;
+  c.hp = 0; c.alive = false; c.fall = 0;
   for (let i = 0; i < G.own.length; i++) {
     if (G.own[i] === c.id) G.own[i] = by ? by.id : -1;
   }
-  G.marks.push({ x: c.cx, y: c.cy, c: c.c });   // 무너진 성 자리
   G.men.forEach(function (m) { if (m.team === c.id) { m.hp = 0; burst(m.dx, m.dy, c.c, 3, 0.5); } });   // 성이 무너지면 군사도 흩어진다
   c.army = 0;
   if (by) { by.kills++; by.gold += 10; say(by.e + ' ' + by.name + '가 ' + c.e + ' ' + c.name + ' 성을 무너뜨렸어!'); }
@@ -791,14 +790,6 @@ function draw() {
     if (y - 1 < 0 || G.own[idx(x, y - 1)] !== o) { ctx.moveTo(x * cs, y * cs); ctx.lineTo((x + 1) * cs, y * cs); }
     ctx.stroke();
   }
-  // 무너진 성 자리
-  G.marks.forEach(function (m) {
-    const px = (m.x + 0.5) * cs, py = (m.y + 0.5) * cs;
-    ctx.fillStyle = '#00000033';
-    ctx.beginPath(); ctx.ellipse(px, py + cs * 0.15, cs * 0.45, cs * 0.22, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#8A8378';
-    for (let i = 0; i < 4; i++) ctx.fillRect(px + (i - 2) * cs * 0.18, py - cs * (0.05 + (i % 2) * 0.12), cs * 0.15, cs * 0.2);
-  });
   // 저주
   G.curses.forEach(function (c) {
     const px = (c.x + 0.5) * cs, py = (c.y + 0.5) * cs, r = (c.r + 0.5) * cs;
@@ -819,6 +810,7 @@ function draw() {
     ctx.globalAlpha = 1;
   });
   // 성과 군사 (아래쪽에 있는 게 앞에 보이게)
+  G.teams.forEach(function (t) { if (!t.alive) drawCastle(t); });   // 무너진 성: 깃발만 차지한 나라 것으로
   G.teams.forEach(function (t) { if (t.alive) drawCastle(t); });
   G.men.forEach(drawMan);
   // 대포알
@@ -917,14 +909,17 @@ function drawCastle(t) {
   const px = (t.cx + 0.5) * cs, base = (t.cy + 0.8) * cs;
   const wob = t.fall > 0 ? Math.sin(t.fall * 60) * u * 0.05 : 0;
   const w = u * 0.95, tier = u * 0.2;
+  // 무너진 성은 그 칸을 차지한 나라 깃발을 단다. 주인 없는 땅이면 흰 깃발
+  const dead = !t.alive, owner = G.own[idx(t.cx, t.cy)];
+  const flag = !dead ? t.c : owner >= 0 ? G.teams[owner].c : '#F4F1EA';
   // 축복 빛
-  if (t.blessT > 0) {
+  if (!dead && t.blessT > 0) {
     const g = ctx.createRadialGradient(px, base - u * 0.5, 0, px, base - u * 0.5, u * 1.3);
     g.addColorStop(0, 'rgba(255,229,138,.75)'); g.addColorStop(1, 'rgba(255,229,138,0)');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(px, base - u * 0.5, u * 1.3, 0, Math.PI * 2); ctx.fill();
   }
-  if (G.sel === t.id) {
+  if (!dead && G.sel === t.id) {
     ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(px, base - u * 0.4, u * 1.05, 0, Math.PI * 2); ctx.stroke();
   }
@@ -952,7 +947,7 @@ function drawCastle(t) {
   const fy = y - tier * 0.5;
   ctx.strokeStyle = '#4A4038'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(px + wob, fy); ctx.lineTo(px + wob, fy - u * 0.55); ctx.stroke();
-  ctx.fillStyle = t.c;
+  ctx.fillStyle = flag;
   const fl = Math.sin(G.time * 6 + t.id) * u * 0.05;
   ctx.beginPath(); ctx.moveTo(px + wob, fy - u * 0.55); ctx.lineTo(px + wob + u * 0.42, fy - u * 0.45 + fl);
   ctx.lineTo(px + wob, fy - u * 0.33); ctx.fill();
@@ -960,6 +955,7 @@ function drawCastle(t) {
   ctx.font = (u * 0.55) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(t.e, px + wob - u * 0.62, base - u * 0.55);
   // 체력
+  if (dead) return;
   const hb = u * 1.1, k = Math.max(0, t.hp / LV.hp[t.lvl]);
   ctx.fillStyle = '#00000055';
   ctx.fillRect(px - hb / 2, base + u * 0.06, hb, u * 0.12);
