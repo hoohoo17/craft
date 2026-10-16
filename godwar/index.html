@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>신의 성 전쟁</title>
-<meta name="description" content="열 나라가 성을 쌓고 대포를 쏴서 땅을 뺏는다. 나는 신이라 벼락도 내리고 저주도 건다.">
+<meta name="description" content="나라들이 성을 쌓고 대포와 군사로 땅을 뺏는다. 바다도 있다. 나는 신이라 벼락도 내리고 저주도 건다.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
@@ -69,7 +69,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair}
 .rank .bar{flex:1;height:10px;border-radius:999px;background:#ffffff14;overflow:hidden}
 .rank .bar i{display:block;height:100%;border-radius:999px}
 .rank .num{width:32px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
-.rank .lv{width:44px;font-size:11px;color:var(--gold);text-align:right;white-space:nowrap}
+.rank .lv{width:58px;font-size:11px;color:var(--gold);text-align:right;white-space:nowrap}
 .rank .st{width:28px;font-size:14px;text-align:center}
 .log{margin-top:10px;font-size:13px;line-height:1.7;color:var(--muted)}
 .log div:first-child{color:var(--cream)}
@@ -92,6 +92,10 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair}
 #cover .how{text-align:left;background:#ffffff10;border-radius:14px;padding:10px 14px;margin:14px 0 20px;
   font-size:14px;line-height:1.9}
 #cover .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.pick{display:flex;gap:6px;justify-content:center;margin:0 0 18px}
+.pick button{font:inherit;font-weight:700;font-size:14px;cursor:pointer;color:var(--cream);
+  background:#ffffff14;border:2px solid transparent;border-radius:12px;padding:8px 14px}
+.pick button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
 </style>
 </head>
 <body>
@@ -107,7 +111,7 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair}
   </header>
 
   <div class="mapwrap">
-    <canvas id="map" aria-label="열 나라 지도"></canvas>
+    <canvas id="map" aria-label="나라 지도"></canvas>
     <div id="toast"></div>
   </div>
 
@@ -136,14 +140,17 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair}
 <div id="cover">
   <div class="box">
     <div class="big">⚡ 신의 성 전쟁</div>
-    <p class="sub">열 나라가 성을 쌓고 대포를 쏴서 서로 땅을 뺏어.<br>너는 <b>신</b>이야. 하늘에서 지켜보다가 마음대로 끼어들어.</p>
+    <p class="sub">나라들이 성을 쌓고 대포를 쏘고 군사를 보내서 서로 땅을 뺏어.<br>너는 <b>신</b>이야. 하늘에서 지켜보다가 마음대로 끼어들어.</p>
     <div class="how">
       ⚡ <b>벼락</b> — 맞은 성은 크게 다치고, 둘레 땅은 주인 없는 땅이 돼<br>
       ☠️ <b>저주</b> — 15초 동안 그 동네 대포알은 터지지 않아. 저주 안의 성은 대포가 빗나가고 조금씩 무너져<br>
       ✨ <b>축복</b> — 15초 동안 그 나라는 대포가 빠르고 세지고, 성이 낫는다<br>
       🏰 <b>성 쌓기</b> — 그 나라 성을 한 층 더 쌓아 줘 (최대 5층)<br>
+      💂 <b>군사</b>는 성에서 나와 걸어가서 남의 땅에 깃발을 꽂고, 적의 성을 두드려. 성이 높을수록 많이 나와<br>
+      🌊 <b>바다</b>는 군사가 못 건너고, 대포알도 풍덩 빠져<br>
       신의 힘은 시간이 지나면 다시 차. 마지막에 남는 한 나라가 천하통일!
     </div>
+    <div class="pick" id="pick0"></div>
     <div class="row"><button class="btn" id="start">전쟁 시작</button></div>
   </div>
 </div>
@@ -151,19 +158,36 @@ canvas{display:block;width:100%;touch-action:none;cursor:crosshair}
 <script>
 'use strict';
 /* ================== 설정 ================== */
-const W = 20, H = 14;                 // 지도 칸 수
+let W = 26, H = 18;                   // 지도 칸 수 (나라 수에 따라 바뀐다)
+const SIZES = { 10: [20, 14], 16: [26, 18], 20: [30, 20] };
+/* 나라 색은 바다(파랑)랑 헷갈리지 않게 하늘색 계열을 뺐다 */
 const TEAMS = [
   { name:'사자',   e:'🦁', c:'#F2994A' },
   { name:'호랑이', e:'🐯', c:'#EB5757' },
   { name:'곰',     e:'🐻', c:'#8D5B3E' },
   { name:'여우',   e:'🦊', c:'#F2C94C' },
   { name:'늑대',   e:'🐺', c:'#6C7A89' },
-  { name:'독수리', e:'🦅', c:'#2D9CDB' },
+  { name:'독수리', e:'🦅', c:'#5C6BC0' },
   { name:'용',     e:'🐉', c:'#27AE60' },
   { name:'거북',   e:'🐢', c:'#56CCB2' },
   { name:'토끼',   e:'🐰', c:'#F78FB3' },
-  { name:'부엉이', e:'🦉', c:'#9B51E0' }
+  { name:'부엉이', e:'🦉', c:'#9B51E0' },
+  { name:'코끼리', e:'🐘', c:'#B0A08A' },
+  { name:'판다',   e:'🐼', c:'#3A3A48' },
+  { name:'펭귄',   e:'🐧', c:'#C2185B' },
+  { name:'원숭이', e:'🐵', c:'#C98A4B' },
+  { name:'개구리', e:'🐸', c:'#8CC63F' },
+  { name:'유니콘', e:'🦄', c:'#E0A3F5' },
+  { name:'게',     e:'🦀', c:'#7B1E1E' },
+  { name:'뱀',     e:'🐍', c:'#4E7D3A' },
+  { name:'기린',   e:'🦒', c:'#C0CA33' },
+  { name:'고래',   e:'🐳', c:'#00796B' }
 ];
+const SOLDIER = {                    // 성 층수에 따라 군사를 얼마나 자주, 몇 명까지
+  every: [0, 6.0, 5.2, 4.5, 3.9, 3.4],
+  max:   [0, 2, 3, 4, 5, 6],
+  hp: 3, step: 0.7, take: 0.8, hit: 1.2, siege: 1.0
+};
 const LV = {                         // 성 층수(1~5)에 따라
   hp:     [0, 50, 70, 95, 125, 160],
   reload: [0, 3.0, 2.6, 2.2, 1.9, 1.6],
@@ -187,13 +211,72 @@ function dist(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
 function idx(x, y) { return y * W + x; }
 function inMap(x, y) { return x >= 0 && y >= 0 && x < W && y < H; }
 
-/* 성 자리 10곳: 서로 멀리 떨어지게 여러 번 뽑아 제일 고른 걸 쓴다 */
-function placeCastles() {
+/* 바다: 가장자리와 가운데 몇 군데에서 물을 번지게 한다.
+   땅이 끊겨서 섬이 생기면 군사가 못 가니까, 제일 큰 땅덩이 하나만 남기고 작은 섬은 바다로 만든다 */
+function makeSea() {
+  const sea = new Uint8Array(W * H);
+  const target = Math.floor(W * H * rnd(0.2, 0.27));
+  const seeds = [];
+  const edges = 2 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < edges; i++) {
+    const s = Math.floor(Math.random() * 4);
+    seeds.push(s === 0 ? [0, Math.floor(rnd(0, H))] : s === 1 ? [W - 1, Math.floor(rnd(0, H))]
+             : s === 2 ? [Math.floor(rnd(0, W)), 0] : [Math.floor(rnd(0, W)), H - 1]);
+  }
+  seeds.push([Math.floor(rnd(W * 0.3, W * 0.7)), Math.floor(rnd(H * 0.3, H * 0.7))]);   // 가운데 호수
+  let made = 0, guard = 0;
+  const walkers = seeds.map(function (s) { return { x: s[0], y: s[1] }; });
+  while (made < target && guard++ < 20000) {
+    const w = walkers[Math.floor(Math.random() * walkers.length)];
+    if (!sea[idx(w.x, w.y)]) { sea[idx(w.x, w.y)] = 1; made++; }
+    const d = [[1,0],[-1,0],[0,1],[0,-1]][Math.floor(Math.random() * 4)];
+    const nx = w.x + d[0], ny = w.y + d[1];
+    if (inMap(nx, ny)) { w.x = nx; w.y = ny; }
+  }
+  // 제일 큰 땅덩이만 남긴다
+  const comp = new Int16Array(W * H).fill(-1);
+  let best = -1, bestN = 0, id = 0;
+  for (let i = 0; i < W * H; i++) {
+    if (sea[i] || comp[i] >= 0) continue;
+    let n = 0;
+    const q = [i]; comp[i] = id;
+    while (q.length) {
+      const c = q.pop(); n++;
+      const cx = c % W, cy = (c - cx) / W;
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(function (d) {
+        const nx = cx + d[0], ny = cy + d[1];
+        if (!inMap(nx, ny)) return;
+        const j = idx(nx, ny);
+        if (!sea[j] && comp[j] < 0) { comp[j] = id; q.push(j); }
+      });
+    }
+    if (n > bestN) { bestN = n; best = id; }
+    id++;
+  }
+  for (let i = 0; i < W * H; i++) if (!sea[i] && comp[i] !== best) sea[i] = 1;
+  return sea;
+}
+
+/* 성 자리: 땅 위에서, 서로 멀리 떨어지게 여러 번 뽑아 제일 고른 걸 쓴다 */
+function placeCastles(n, sea) {
+  const spots = [];
+  for (let y = 2; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {   // 맨 윗줄은 깃발이 잘려서 뺀다
+    let land = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (!sea[idx(x + dx, y + dy)]) land++;
+    if (land >= 7) spots.push({ x: x, y: y });
+  }
+  if (spots.length < n * 2) return null;
+  // 하나씩 고르되, 이미 고른 성들에서 제일 먼 자리 몇 곳 중에 하나를 고른다
   let best = null, bestMin = -1;
-  for (let t = 0; t < 400; t++) {
-    const pts = [];
-    for (let i = 0; i < TEAMS.length; i++) {
-      pts.push({ x: Math.floor(rnd(1, W - 1)), y: Math.floor(rnd(2, H - 1)) });   // 맨 윗줄은 깃발이 잘려서 뺀다
+  for (let t = 0; t < 30; t++) {
+    const pts = [spots[Math.floor(Math.random() * spots.length)]];
+    while (pts.length < n) {
+      const scored = spots.map(function (s) {
+        let m = Infinity;
+        pts.forEach(function (p) { m = Math.min(m, dist(p.x, p.y, s.x, s.y)); });
+        return { s: s, m: m };
+      }).sort(function (a, b) { return b.m - a.m; });
+      pts.push(scored[Math.floor(Math.random() * Math.min(3, scored.length))].s);
     }
     let mn = Infinity;
     for (let i = 0; i < pts.length; i++)
@@ -201,19 +284,30 @@ function placeCastles() {
         mn = Math.min(mn, dist(pts[i].x, pts[i].y, pts[j].x, pts[j].y));
     if (mn > bestMin) { bestMin = mn; best = pts; }
   }
-  return best;
+  return bestMin >= 3 ? best : null;
 }
 
-function newGame() {
-  const pos = placeCastles();
+let nations = 16;
+function newGame(n) {
+  if (n) nations = n;
+  W = SIZES[nations][0]; H = SIZES[nations][1];
+  cursedCell = new Uint8Array(W * H);
+  let sea = null, pos = null;
+  for (let t = 0; t < 50 && !pos; t++) {
+    sea = makeSea();
+    if (sea.reduce(function (a, b) { return a + b; }, 0) > W * H * 0.4) continue;   // 섬을 지우다 바다가 너무 커지면 다시
+    pos = placeCastles(nations, sea);
+  }
+  if (!pos) { sea = new Uint8Array(W * H); pos = placeCastles(nations, sea); }
   const own = new Int8Array(W * H).fill(-1);
-  const teams = TEAMS.map(function (t, i) {
+  const teams = TEAMS.slice(0, nations).map(function (t, i) {
     return { id: i, name: t.name, e: t.e, c: t.c, cx: pos[i].x, cy: pos[i].y,
              lvl: 1, hp: LV.hp[1], gold: 0, cool: rnd(0.5, 3), alive: true,
-             blessT: 0, kills: 0, cells: 0, fall: 0 };
+             blessT: 0, kills: 0, cells: 0, fall: 0, spawn: rnd(1, 3), army: 0 };
   });
-  // 처음 땅: 성 둘레 마름모 2칸. 겹치면 가까운 나라 땅
+  // 처음 땅: 성 둘레 마름모 2칸(바다 빼고). 겹치면 가까운 나라 땅
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (sea[idx(x, y)]) continue;
     let bi = -1, bd = 99;
     teams.forEach(function (t) {
       const d = Math.abs(t.cx - x) + Math.abs(t.cy - y);
@@ -222,10 +316,12 @@ function newGame() {
     own[idx(x, y)] = bi;
   }
   teams.forEach(function (t) { own[idx(t.cx, t.cy)] = t.id; });
-  G = { own: own, teams: teams, shots: [], fx: [], curses: [], marks: [],
+  G = { own: own, sea: sea, teams: teams, shots: [], fx: [], curses: [], marks: [], men: [],
+        fields: {}, fieldT: 0,
         mana: 60, time: 0, over: false, winner: -1, log: [], sel: -1,
         power: null, hover: null, speed: 1, shake: 0 };
   recount();
+  resize();
   renderSide(true);
 }
 
@@ -268,8 +364,9 @@ function say(msg) {
 function chooseTarget(t) {
   // 1) 내 땅이 적의 성 가까이(3칸) 와 있으면 그 성을 노리기도 한다
   const foes = G.teams.filter(function (o) { return o.alive && o.id !== t.id; });
+  const reach = fewLeft() ? 5 : 3;         // 몇 나라 안 남으면 더 멀리서도 성을 노린다
   const near = foes.filter(function (o) {
-    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+    for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) {
       const x = o.cx + dx, y = o.cy + dy;
       if (inMap(x, y) && G.own[idx(x, y)] === t.id) return true;
     }
@@ -285,7 +382,7 @@ function chooseTarget(t) {
   const cand = [];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const o = G.own[idx(x, y)];
-    if (o === t.id || castleAt(x, y)) continue;
+    if (G.sea[idx(x, y)] || o === t.id || castleAt(x, y)) continue;
     if (!touches(t.id, x, y)) continue;
     const d = dist(t.cx, t.cy, x, y);
     let de = 99;
@@ -318,8 +415,11 @@ function land(s) {
   const x = s.tx, y = s.ty;
   const me = G.teams[s.team];
   if (cursedAt(x, y)) { burst(x, y, '#B48CFF', 6, 0.8); return; }   // 저주 땅에서는 불발
+  if (G.sea[idx(x, y)]) { splash(x, y); return; }                     // 바다에 풍덩
   boom(x, y);
   if (!me.alive) return;
+  // 떨어진 칸에 있던 적 군사는 쓰러진다
+  G.men.forEach(function (m) { if (m.team !== me.id && m.x === x && m.y === y) m.hp = 0; });
   const c = castleAt(x, y);
   if (c) {
     if (c.id === me.id) return;
@@ -344,6 +444,8 @@ function hurt(c, dmg, by) {
     if (G.own[i] === c.id) G.own[i] = by ? by.id : -1;
   }
   G.marks.push({ x: c.cx, y: c.cy, c: c.c });   // 무너진 성 자리
+  G.men.forEach(function (m) { if (m.team === c.id) { m.hp = 0; burst(m.dx, m.dy, c.c, 3, 0.5); } });   // 성이 무너지면 군사도 흩어진다
+  c.army = 0;
   if (by) { by.kills++; by.gold += 10; say(by.e + ' ' + by.name + '가 ' + c.e + ' ' + c.name + ' 성을 무너뜨렸어!'); }
   else say(c.e + ' ' + c.name + ' 성이 신의 힘에 무너졌어!');
   bigBoom(c.cx, c.cy);
@@ -384,6 +486,7 @@ function usePower(p, x, y) {
       if (castleAt(nx, ny)) continue;
       G.own[idx(nx, ny)] = -1;
     }
+    G.men.forEach(function (m) { if (dist(m.x, m.y, x, y) <= P.r) m.hp = 0; });
     G.teams.forEach(function (t) {
       if (t.alive && dist(t.cx, t.cy, x, y) <= P.r) hurt(t, 25, null);
     });
@@ -454,6 +557,16 @@ function step(dt) {
     const rate = (t.blessT > 0 ? 2 : 1) / (cursed ? 2 : 1);
     t.cool -= dt * rate;
     if (t.cool <= 0) { t.cool = LV.reload[t.lvl] * rnd(0.85, 1.15); fire(t); }
+    // 군사 내보내기 (저주받은 성은 못 내보낸다)
+    t.spawn -= dt * (t.blessT > 0 ? 1.5 : 1);
+    if (t.spawn <= 0 && !cursed) {
+      t.spawn = SOLDIER.every[t.lvl] * rnd(0.85, 1.15);
+      if (t.army < SOLDIER.max[t.lvl]) {
+        G.men.push({ team: t.id, x: t.cx, y: t.cy, fx: t.cx, fy: t.cy, k: 1, dx: t.cx, dy: t.cy,
+                     hp: SOLDIER.hp, act: 0, raid: Math.random() < (fewLeft() ? 0.75 : 0.35) });
+        t.army++;
+      }
+    }
   });
 
   G.shots.forEach(function (s) { s.t += dt; });
@@ -461,12 +574,125 @@ function step(dt) {
   G.shots = G.shots.filter(function (s) { return s.t < s.dur; });
   landed.forEach(land);
 
+  G.fieldT -= dt;
+  if (G.fieldT <= 0) { G.fieldT = 0.5; makeFields(); }
+  moveMen(dt);
+
   G.fx.forEach(function (f) {
     f.t += dt;
     if (f.k === 'p') { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 3 * dt; }
   });
   G.fx = G.fx.filter(function (f) { return f.t < f.life; });
   if (G.shake > 0) G.shake -= dt;
+}
+
+/* ================== 군사 ================== */
+/* 세 나라 이하로 남거나 7분이 지나면 군사들이 성을 치러 더 많이 간다 (안 끝나고 땅만 주고받는 걸 막으려고) */
+function fewLeft() { return G.time > 420 || G.teams.filter(function (t) { return t.alive; }).length <= 3; }
+/* 나라마다 길잡이 지도 두 장: '남의 땅까지 몇 걸음'(take), '적의 성 앞까지 몇 걸음'(raid).
+   바다는 못 건넌다. 군사는 숫자가 작아지는 쪽으로 한 칸씩 걷는다 */
+function bfs(sources) {
+  const d = new Int16Array(W * H).fill(9999);
+  const q = [];
+  sources.forEach(function (i) { if (d[i] > 0) { d[i] = 0; q.push(i); } });
+  for (let h = 0; h < q.length; h++) {
+    const c = q[h], cx = c % W, cy = (c - cx) / W;
+    const nd = d[c] + 1;
+    if (cx + 1 < W) visit(c + 1);
+    if (cx > 0) visit(c - 1);
+    if (cy + 1 < H) visit(c + W);
+    if (cy > 0) visit(c - W);
+    function visit(j) { if (!G.sea[j] && d[j] > nd) { d[j] = nd; q.push(j); } }
+  }
+  return d;
+}
+function makeFields() {
+  G.fields = {};
+  G.teams.forEach(function (t) {
+    if (!t.alive || !t.army) return;
+    const take = [], raid = [];
+    for (let i = 0; i < W * H; i++) if (!G.sea[i] && G.own[i] !== t.id) take.push(i);
+    G.teams.forEach(function (o) {
+      if (!o.alive || o.id === t.id) return;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const x = o.cx + dx, y = o.cy + dy;
+        if (inMap(x, y) && !G.sea[idx(x, y)]) raid.push(idx(x, y));
+      }
+    });
+    G.fields[t.id] = { take: bfs(take), raid: bfs(raid) };
+  });
+}
+function enemyManNear(m) {
+  for (let i = 0; i < G.men.length; i++) {
+    const o = G.men[i];
+    if (o.team !== m.team && o.hp > 0 && o.k >= 1 &&
+        Math.abs(o.x - m.x) <= 1 && Math.abs(o.y - m.y) <= 1) return o;
+  }
+  return null;
+}
+function enemyCastleNear(m) {
+  for (let i = 0; i < G.teams.length; i++) {
+    const c = G.teams[i];
+    if (c.alive && c.id !== m.team && Math.abs(c.cx - m.x) <= 1 && Math.abs(c.cy - m.y) <= 1) return c;
+  }
+  return null;
+}
+function moveMen(dt) {
+  G.men.forEach(function (m) {
+    if (m.hp <= 0) return;
+    const t = G.teams[m.team];
+    if (!t.alive || G.over) { m.hp = 0; return; }
+    if (cursedCell[idx(m.x, m.y)]) m.hp -= dt;          // 저주 속 군사는 시들시들
+    const fast = t.blessT > 0 ? 1.6 : 1;
+    if (m.k < 1) {                                        // 걷는 중
+      m.k = Math.min(1, m.k + dt * fast / SOLDIER.step);
+      m.dx = m.fx + (m.x - m.fx) * m.k; m.dy = m.fy + (m.y - m.fy) * m.k;
+      return;
+    }
+    m.dx = m.x; m.dy = m.y;
+    // 1) 옆에 적 군사가 있으면 싸운다
+    const foe = enemyManNear(m);
+    if (foe) { foe.hp -= SOLDIER.hit * dt * fast; return; }
+    // 2) 적의 성 앞이면 성을 친다 (처음 20초는 안 친다)
+    const castle = G.time > 20 ? enemyCastleNear(m) : null;
+    if (castle) { hurt(castle, SOLDIER.siege * dt * fast, t); return; }
+    // 3) 남의 땅에 서 있으면 깃발을 꽂는다
+    const i = idx(m.x, m.y), o = G.own[i];
+    if (o !== m.team && !castleAt(m.x, m.y)) {
+      m.act += dt * fast;
+      if (m.act >= SOLDIER.take) {
+        m.act = 0;
+        G.own[i] = m.team;
+        if (o >= 0) G.teams[o].cells--;
+        t.cells++;
+      }
+      return;
+    }
+    // 4) 한 걸음 걷는다
+    const f = G.fields[m.team];
+    if (!f) return;
+    let fld = m.raid && G.time > 20 ? f.raid : f.take;
+    if (fld[i] >= 9999) fld = f.take;
+    let best = -1, bd = fld[i];
+    [[1,0],[-1,0],[0,1],[0,-1]].sort(function () { return Math.random() - 0.5; }).forEach(function (d) {
+      const nx = m.x + d[0], ny = m.y + d[1];
+      if (!inMap(nx, ny)) return;
+      const j = idx(nx, ny);
+      if (G.sea[j] || castleAt(nx, ny)) return;
+      if (fld[j] < bd) { bd = fld[j]; best = j; }
+    });
+    if (best < 0) return;
+    m.fx = m.x; m.fy = m.y;
+    m.x = best % W; m.y = (best - m.x) / W;
+    m.k = 0;
+  });
+  const dead = G.men.filter(function (m) { return m.hp <= 0; });
+  if (!dead.length) return;
+  dead.forEach(function (m) {
+    burst(m.dx, m.dy, G.teams[m.team].c, 4, 0.5);
+    G.teams[m.team].army = Math.max(0, G.teams[m.team].army - 1);
+  });
+  G.men = G.men.filter(function (m) { return m.hp > 0; });
 }
 
 /* 저주 칸 표시는 매 걸음 한 번만 계산 */
@@ -489,6 +715,10 @@ function boom(x, y) {
   G.fx.push({ k: 'ring', x: x, y: y, t: 0, life: 0.35 });
   burst(x, y, '#FFB347', 7, 1.1);
   burst(x, y, '#5A5A5A', 4, 0.6);
+}
+function splash(x, y) {
+  G.fx.push({ k: 'wave', x: x, y: y, t: 0, life: 0.6 });
+  burst(x, y, '#E8F6FF', 8, 1.2);
 }
 function bigBoom(x, y) {
   G.fx.push({ k: 'ring', x: x, y: y, t: 0, life: 0.7, big: true });
@@ -522,10 +752,32 @@ function draw() {
   if (G.shake > 0) ctx.translate(rnd(-3, 3), rnd(-3, 3));
   // 땅
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const o = G.own[idx(x, y)];
+    const i = idx(x, y);
+    if (G.sea[i]) {
+      // 땅에 붙은 바다는 얕은 물빛
+      const shore = (x > 0 && !G.sea[i - 1]) || (x < W - 1 && !G.sea[i + 1]) ||
+                    (y > 0 && !G.sea[i - W]) || (y < H - 1 && !G.sea[i + W]);
+      ctx.fillStyle = shore ? '#4F9FD6' : '#2C6DB5';
+      ctx.fillRect(x * cs, y * cs, cs + 0.5, cs + 0.5);
+      continue;
+    }
+    const o = G.own[i];
     ctx.fillStyle = o >= 0 ? shade(G.teams[o].c, 0.45) : ((x + y) % 2 ? '#BFD99A' : '#C8E0A4');
     ctx.fillRect(x * cs, y * cs, cs + 0.5, cs + 0.5);
   }
+  // 물결
+  ctx.strokeStyle = 'rgba(255,255,255,.45)';
+  ctx.lineWidth = Math.max(1, cs * 0.06);
+  ctx.beginPath();
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!G.sea[idx(x, y)] || (x * 7 + y * 13) % 5) continue;
+    const ox = Math.sin(G.time * 1.3 + x + y * 0.7) * cs * 0.15;
+    const wx = x * cs + cs * 0.25 + ox, wy = y * cs + cs * 0.55;
+    ctx.moveTo(wx, wy);
+    ctx.quadraticCurveTo(wx + cs * 0.12, wy - cs * 0.14, wx + cs * 0.25, wy);
+    ctx.quadraticCurveTo(wx + cs * 0.37, wy + cs * 0.14, wx + cs * 0.5, wy);
+  }
+  ctx.stroke();
   // 나라 사이 경계선
   ctx.lineWidth = Math.max(1.5, cs * 0.09);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -566,8 +818,9 @@ function draw() {
     ctx.fillText('☠️', px, py + Math.sin(G.time * 3) * cs * 0.1);
     ctx.globalAlpha = 1;
   });
-  // 성
+  // 성과 군사 (아래쪽에 있는 게 앞에 보이게)
   G.teams.forEach(function (t) { if (t.alive) drawCastle(t); });
+  G.men.forEach(drawMan);
   // 대포알
   G.shots.forEach(function (s) {
     const k = s.t / s.dur;
@@ -588,6 +841,10 @@ function draw() {
       ctx.fillStyle = f.c;
       ctx.beginPath(); ctx.arc((f.x + 0.5) * cs, (f.y + 0.5) * cs, f.s * cs, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
+    } else if (f.k === 'wave') {
+      ctx.strokeStyle = 'rgba(255,255,255,' + (1 - k) + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse((f.x + 0.5) * cs, (f.y + 0.5) * cs, (0.2 + k * 0.6) * cs, (0.1 + k * 0.3) * cs, 0, 0, Math.PI * 2); ctx.stroke();
     } else if (f.k === 'ring') {
       ctx.strokeStyle = 'rgba(255,200,120,' + (1 - k) + ')';
       ctx.lineWidth = f.big ? 4 : 2;
@@ -618,6 +875,40 @@ function draw() {
     ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
     ctx.beginPath(); ctx.arc(px, py, Math.max(0.6, P.r + 0.5) * cs, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
+  }
+}
+
+/* 군사: 나라 색 몸통 + 투구 + 창. 걸을 때 통통 튄다 */
+function drawMan(m) {
+  const t = G.teams[m.team];
+  const u = Math.max(cs, 14);
+  const hop = m.k < 1 ? Math.abs(Math.sin(m.k * Math.PI)) * u * 0.12 : 0;
+  const px = (m.dx + 0.5) * cs, py = (m.dy + 0.62) * cs - hop;
+  const fight = m.k >= 1 && (enemyManNear(m) || (G.time > 20 && enemyCastleNear(m)));
+  const swing = fight ? Math.sin(G.time * 18 + m.x) * 0.5 : 0;
+  ctx.fillStyle = '#00000030';
+  ctx.beginPath(); ctx.ellipse(px, (m.dy + 0.66) * cs, u * 0.16, u * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+  // 창
+  ctx.strokeStyle = '#5B4A3A'; ctx.lineWidth = Math.max(1, u * 0.05);
+  ctx.beginPath();
+  ctx.moveTo(px + u * 0.12, py);
+  ctx.lineTo(px + u * 0.12 + Math.sin(swing) * u * 0.3, py - u * 0.38 * Math.cos(swing));
+  ctx.stroke();
+  // 몸
+  ctx.fillStyle = t.c;
+  ctx.strokeStyle = shade(t.c, -0.4); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(px, py, u * 0.14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // 머리와 투구
+  ctx.fillStyle = '#FFE2C2';
+  ctx.beginPath(); ctx.arc(px, py - u * 0.17, u * 0.08, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#9AA0AE';
+  ctx.beginPath(); ctx.arc(px, py - u * 0.19, u * 0.085, Math.PI, 0); ctx.fill();
+  // 깃발 꽂는 중
+  if (m.act > 0) {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(px - u * 0.15, py + u * 0.17, u * 0.3, u * 0.05);
+    ctx.fillStyle = t.c;
+    ctx.fillRect(px - u * 0.15, py + u * 0.17, u * 0.3 * Math.min(1, m.act / SOLDIER.take), u * 0.05);
   }
 }
 
@@ -711,7 +1002,7 @@ function renderSide(force) {
       '<span class="nm">' + t.name + '</span>' +
       '<span class="bar"><i style="width:' + (t.cells / most * 100).toFixed(1) + '%;background:' + t.c + '"></i></span>' +
       '<span class="num">' + t.cells + '칸</span>' +
-      '<span class="lv">' + (t.alive ? '🏰' + t.lvl + '층' : '무너짐') + '</span>' +
+      '<span class="lv">' + (t.alive ? '🏰' + t.lvl + ' 💂' + t.army : '무너짐') + '</span>' +
       '<span class="st">' + st + '</span></div>';
   }).join('');
   if (logDirty) {
@@ -731,7 +1022,7 @@ function updateHint() {
     const t = G.teams[G.sel];
     const next = LV.cost[t.lvl];
     h.innerHTML = t.e + ' <b>' + t.name + '</b> — 성 ' + t.lvl + '층 · 체력 ' + Math.ceil(t.hp) + '/' + LV.hp[t.lvl] +
-      ' · 땅 ' + t.cells + '칸 · 무너뜨린 성 ' + t.kills + '개' +
+      ' · 땅 ' + t.cells + '칸 · 군사 ' + t.army + '/' + SOLDIER.max[t.lvl] + ' · 무너뜨린 성 ' + t.kills + '개' +
       (isFinite(next) ? ' · 다음 층까지 금 ' + Math.floor(t.gold) + '/' + next : ' · 다 쌓았어');
   } else {
     h.innerHTML = '아래에서 신의 힘을 고르고 지도를 눌러. 성을 누르면 그 나라 소식을 볼 수 있어.';
@@ -745,7 +1036,9 @@ function showEnd() {
     '<p class="sub">' + (w ? '마지막까지 버틴 나라야. 성 ' + w.lvl + '층, 무너뜨린 성 ' + w.kills + '개.'
                          : '신의 힘이 너무 셌나 봐. 남은 나라가 하나도 없어.') +
     '<br>' + Math.floor(G.time / 60) + '분 ' + Math.floor(G.time % 60) + '초 걸렸어.</p>' +
-    '<div class="row" style="margin-top:20px"><button class="btn" id="start">한 판 더</button></div>';
+    '<div class="pick" style="margin-top:18px"></div>' +
+    '<div class="row"><button class="btn" id="start">한 판 더</button></div>';
+  fillPick();
   $('cover').hidden = false;
   $('start').addEventListener('click', start);
 }
@@ -800,8 +1093,10 @@ $('again').addEventListener('click', function () {
   G.speed = 0;
   syncSpeed();
   $('cover').querySelector('.box').innerHTML =
-    '<div class="big">새 판?</div><p class="sub">지금 전쟁은 사라지고 성 자리를 새로 뽑아.</p>' +
-    '<div class="row" style="margin-top:20px"><button class="btn ghost" id="no">계속하기</button><button class="btn" id="start">새 판</button></div>';
+    '<div class="big">새 판?</div><p class="sub">지금 전쟁은 사라지고 지도랑 성 자리를 새로 뽑아.</p>' +
+    '<div class="pick" style="margin-top:18px"></div>' +
+    '<div class="row"><button class="btn ghost" id="no">계속하기</button><button class="btn" id="start">새 판</button></div>';
+  fillPick();
   $('cover').hidden = false;
   $('start').addEventListener('click', start);
   $('no').addEventListener('click', function () { $('cover').hidden = true; G.speed = 1; syncSpeed(); });
@@ -811,11 +1106,26 @@ function syncSpeed() {
     x.setAttribute('aria-pressed', +x.dataset.s === G.speed ? 'true' : 'false');
   });
 }
+/* 몇 나라로 할지 고르는 단추 */
+let chosen = 16;
+function fillPick() {
+  document.querySelectorAll('#cover .pick').forEach(function (p) {
+    p.innerHTML = [10, 16, 20].map(function (n) {
+      return '<button data-n="' + n + '" aria-pressed="' + (n === chosen) + '">' + n + '나라</button>';
+    }).join('');
+  });
+}
+$('cover').addEventListener('click', function (e) {
+  const b = e.target.closest('.pick button');
+  if (!b) return;
+  chosen = +b.dataset.n;
+  fillPick();
+});
 function start() {
-  newGame();
+  newGame(chosen);
   $('cover').hidden = true;
   syncSpeed();
-  say('⚔️ 열 나라 전쟁 시작!');
+  say('⚔️ ' + nations + '나라 전쟁 시작!');
   renderSide(true);
 }
 $('start').addEventListener('click', start);
@@ -850,8 +1160,8 @@ window.GODWAR = {
   use: usePower
 };
 
-newGame();
-resize();
+fillPick();
+newGame(chosen);
 requestAnimationFrame(frame);
 </script>
 </body>
