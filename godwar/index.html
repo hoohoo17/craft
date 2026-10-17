@@ -1016,7 +1016,7 @@ function updateHint() {
   if (G.power) {
     const P = POWER[G.power];
     h.innerHTML = G.mana >= P.cost
-      ? '<b>' + P.name + '</b> — ' + P.tip
+      ? '<b>' + P.name + '</b> — ' + P.tip + (MANA_INFINITE ? ' 계속 누르면 계속 써져. 그만하려면 단추를 한 번 더 눌러.' : '')
       : '<b>' + P.name + '</b> — 신의 힘이 ' + P.cost + ' 모여야 해. 조금만 기다려.';
   } else if (G.sel >= 0) {
     const t = G.teams[G.sel];
@@ -1058,7 +1058,8 @@ cv.addEventListener('pointerdown', function (e) {
   G.hover = c;
   if (G.power) {
     if (G.mana < POWER[G.power].cost) { toast('신의 힘이 모자라'); return; }
-    if (usePower(G.power, c.x, c.y)) G.power = null;
+    // 무한일 때는 고른 힘이 그대로 남아 계속 칠 수 있다 (단추를 다시 누르거나 Esc로 끈다)
+    if (usePower(G.power, c.x, c.y) && !MANA_INFINITE) G.power = null;
     renderSide(true);
     return;
   }
