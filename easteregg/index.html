@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="숨은 이스터애그를 찾아 200개 스테이지를 넘기는 게임. 소리·힌트·한/영 버튼도 수상해요.">
-<title>이스터애그 200</title>
+<meta name="description" content="숨은 이스터애그를 찾아 300개 스테이지를 넘기는 게임. 소리·힌트·한/영 버튼도 수상해요.">
+<title>이스터애그 300</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -299,6 +299,9 @@ h1 .logo{width:18px;height:24px;border-radius:50%/60% 60% 40% 40%;background:lin
 .dicon{display:grid;place-items:center;margin:0 auto 2cqw;width:12cqw;height:15cqw;border-radius:50%/60% 60% 40% 40%;background:#f6c443;color:#7a5200;font-family:var(--disp);font-size:9cqw;cursor:pointer}
 .dicon.hatch{background:#ffe9a8;scale:1.3;transition:scale .3s}
 .drow{display:flex;gap:3cqw;justify-content:center}
+.geg2{position:absolute;left:14%;top:-14%;width:13cqw;height:17cqw;border-radius:50%/60% 60% 40% 40%;background:#ffd86b;box-shadow:inset -1.2cqw -1.6cqw 0 rgba(0,0,0,.1);cursor:pointer;z-index:3;animation:geg2 2.6s cubic-bezier(.4,0,.6,1) forwards}
+.geg2::before{content:"";position:absolute;inset:-3cqw}
+@keyframes geg2{70%{top:76%}82%{top:70%}100%{top:78%}}
 .geg{width:8cqw!important;height:10.6cqw;background:#ffd86b!important;cursor:pointer;animation-duration:2.4s!important;z-index:2}
 .bsod{background:#1f5fbf;color:#fff;padding:9cqw 8cqw;box-sizing:border-box;font-size:4.6cqw;line-height:1.5;z-index:10}
 .bsod b{font-size:16cqw;font-weight:400;display:block}
@@ -378,8 +381,8 @@ h1 .logo{width:18px;height:24px;border-radius:50%/60% 60% 40% 40%;background:lin
 <body>
 <div class="wrap">
   <div class="top">
-    <h1><span class="logo"></span><span id="ttl">이스터애그 200</span></h1>
-    <div class="count"><span class="hx" id="hx"></span><span id="cnt">1 / 200</span></div>
+    <h1><span class="logo"></span><span id="ttl">이스터애그 300</span></h1>
+    <div class="count"><span class="hx" id="hx"></span><span id="cnt">1 / 300</span></div>
   </div>
   <div class="prog"><i id="bar"></i></div>
   <div class="ctrl">
@@ -1882,7 +1885,655 @@ st(['토끼가 덤불에 숨었어요','The bunny is hiding in a bush'],['자주
     a.tap(b,()=>{if(i===k){b.textContent='🐰';a.say(a.T(['들켰다! 알 줄게','You found me! Have an egg']));const e=a.egg(16+i*17,(i%2?44:66)+14,7,pick(EC),{cls:'popin'});a.tap(e,a.win)}else{a.say(a.T(['바람이었어요','Just the wind']));sfx.tap()}})}
   a.every(700,()=>{a.wob(bs[k]);if(R()<.3)a.wob(pick(bs))});
 });
-// 200
+/* ===== 201–300: easter-egg stages (surprises, secrets, jokes) ===== */
+function D(a,x,y,css,html='',cls=''){const e=a.put(x,y,html,{size:1,cls});e.style.cssText+=css;return e}
+function seqTap(a,el,steps,onEnd){let i=0;a.tap(el,()=>{if(i>=steps.length)return;const s=steps[i++];s();if(i>=steps.length&&onEnd)onEnd()})}
+function eggThen(a,x,y,w,c,msg){const e=a.egg(x,y,w,c||pick(EC),{cls:'popin'});if(msg)a.say(msg);a.tap(e,a.win);return e}
+
+// 200 logo
+st(['알이 이 상자에서 탈출했대요','The egg broke out of this box'],['맨 위 제목 옆 알록달록한 그림을 봐요','Look at the colorful thing next to the title'],a=>{
+  a.put(50,48,'📦',{size:34});a.say(a.T(['텅 비었어요… 알은 어디로?','Empty… where did it go?']));
+  const lg=document.querySelector('h1 .logo');lg.classList.add('lgegg');a.fin(()=>lg.classList.remove('lgegg'));
+  a.on(lg,'click',()=>{if(a.done)return;sfx.pop();a.win()});
+});
+// 201 progress bar
+st(['알이 길을 따라 굴러가 버렸어요','The egg rolled away down the road'],['노란 진행 막대 위를 보세요','Look on top of the yellow progress bar'],a=>{
+  a.put(50,48,'👣',{size:22});a.say(a.T(['데굴데굴 소리가 났어요','I heard rolling…']));
+  const pr=document.querySelector('.prog'),c=mk('div','pegz'),e=mk('span','hegg');c.appendChild(e);pr.before(c);a.fin(()=>c.remove());
+  let x=0;a.raf(()=>{x=(x+.18)%100;e.style.left=x+'%';e.style.rotate=x*20+'deg'});
+  e.addEventListener('click',()=>{if(!a.done){sfx.pop();a.win()}});
+});
+// 202 counter
+st(['스테이지 번호가 사라졌어요!','The stage number vanished!'],['오른쪽 위 숫자 자리를 봐요','Look where the number used to be, top right'],a=>{
+  a.put(50,48,'🔢',{size:30});a.say(a.T(['몇 번째 판이더라?','Which stage is this?']));
+  $('cnt').innerHTML=`<span class="hegg" id="cegg"></span> / ${S.length}`;
+  $('cegg').addEventListener('click',()=>{if(!a.done){sfx.pop();a.win()}});
+});
+// 203 egg inside the hint box
+st(['이번 판은 힌트 없이는 절대 못 깨요','You can’t beat this one without a hint'],['힌트: 이 상자에는 알이 없어요. 여기 있지롱 →','Hint: there’s no egg in the box. It’s right here →'],a=>{
+  a.put(50,46,'🙈',{size:30});
+  a.onHint=()=>{const h=$('hint');if(h.querySelector('.hegg'))return;const e=mk('span','hegg');e.style.marginLeft='6px';h.appendChild(e);e.addEventListener('click',()=>{if(!a.done){sfx.pop();a.win()}})};
+});
+// 204 the hint button hatches
+st(['힌트 버튼이 좀 이상해요','The hint button is acting weird'],['계속 눌러 봐요','Keep pressing it'],a=>{
+  a.put(50,46,'🤔',{size:30});let n=0;
+  const H=a.T([['알을 찾아요','진짜로 찾아요','힌트 버튼이 따뜻해요…?','안에서 뭔가 움직여요!','삐약!'],['Find the egg','Really, find it','The hint button feels warm…?','Something’s moving inside!','Cheep!']]);
+  const B=['💡','🥚','🥚','🐣','🐥'];
+  a.onHint=()=>{if(n>=5)return;$('hint').innerHTML=`<b>${a.T(['힌트','Hint'])}</b>${H[n]}`;$('bHint').textContent=B[n]+' '+a.T(['힌트','Hint']);n++;sfx.tap();
+    if(n===5){a.say(a.T(['힌트 버튼에서 병아리가 나왔어요!','A chick hatched from the hint button!']));a.after(700,a.win)}};
+});
+// 205 chicken language
+st(['닭이 하는 말을 못 알아듣겠어요','I can’t understand the chicken'],['언어 버튼을 눌러 봐요','Press the language button'],a=>{
+  const c=a.put(50,46,'🐔',{size:32});a.say('꼬꼬? 꼬꼬댁?');
+  a.onLang=()=>{a.onLang=null;$('inst').textContent='꼬꼬댁 꼬꼬 꼬끼오!';$('bLang').textContent='🐔 꼬꼬어';a.wob(c);tone(700,.2,'sawtooth',.05);
+    a.say(a.T(['꼬꼬꼬! (알 줄게!)','Bawk bawk! (Here, an egg!)']));eggThen(a,74,70,11)};
+});
+// 206 sound disco
+st(['파티가 너무 조용해요','The party is way too quiet'],['소리 버튼을 빠르게 4번 눌러요','Press the sound button 4 times, fast'],a=>{
+  a.put(30,60,'🕺',{size:18});a.put(70,60,'💃',{size:18});a.say('…');let ts=[],on=false;
+  a.onSound=()=>{if(on)return;const t=Date.now();ts=ts.filter(x=>t-x<3000);ts.push(t);
+    if(ts.length>=4){on=true;snd=true;save();ui();box.classList.add('disco');[523,659,784,1047,784,659].forEach((f,i)=>tone(f,.15,'square',.06,i*.12));
+      a.say(a.T(['디스코 타임!','Disco time!']));const e=a.egg(50,24,14,'#c9a7f5',{cls:'popin discob'});a.tap(e,a.win)}};
+});
+// 207 fell through the floor
+st(['알이 바닥을 뚫고 떨어졌어요!','The egg fell through the floor!'],['화면을 아래로 쭉 내려 봐요','Scroll way down the page'],a=>{
+  const e=a.egg(50,30,12,'#ffb38a');a.after(500,()=>{e.classList.add('drop');tone(600,.6,'sine',.1);a.after(700,()=>e.remove())});
+  a.put(50,82,'🕳️',{size:16});a.say(a.T(['으아아아…','Aaaaah…']));
+  const c=mk('div','below');c.innerHTML=`<p>⬇ ${a.T(['쿵! 여기까지 떨어졌어요','Thud! It landed down here'])}</p><span class="begg"></span>`;
+  document.querySelector('.wrap').appendChild(c);a.fin(()=>c.remove());c.querySelector('.begg').addEventListener('click',()=>{if(!a.done){sfx.pop();window.scrollTo({top:0,behavior:'smooth'});a.win()}});
+});
+// 208 trampoline
+st(['알이 트램펄린을 타요','The egg is on a trampoline'],['알을 여러 번 눌러 높이 튀게 해요. 너무 높이 가면 제목 줄을 찾아봐요','Bounce it higher. If it flies off, check the title bar'],a=>{
+  D(a,50,84,'width:44cqw;height:3cqw;border-radius:2cqw;background:#3a86ff;box-shadow:0 2cqw 0 -1cqw #222');const e=a.egg(50,70,11,'#f7a8c4');e.style.transition='top .3s ease-out';let n=0;
+  a.tap(e,()=>{if(n>=3)return;n++;tone(300+n*150,.15,'triangle',.12);a.move(e,50,70-n*18);a.after(320,()=>{if(n<3)a.move(e,50,70)});
+    if(n===3){a.after(250,()=>{e.classList.add('launch');a.say(a.T(['너무 높이 날아갔다!','It flew way too high!']));
+      a.after(900,()=>{const h=mk('span','hegg');h.classList.add('popin');a.outside(h);h.addEventListener('click',()=>{if(!a.done){sfx.pop();a.win()}})})})}});
+});
+// 209 system dialog
+st(['경고 창이 떴어요','A warning popped up'],['경고 표시를 자세히 봐요','Look closely at the warning icon'],a=>{
+  const ad=a.layer('ad');
+  ad.innerHTML=`<div class="adc"><span class="dicon">!</span><p>${a.T(['알을 찾으시겠습니까?','Do you want to find the egg?'])}</p><div class="drow"><button class="adbig" type="button">${a.T(['예','Yes'])}</button><button class="adbig" type="button">${a.T(['아니요','No'])}</button></div></div>`;
+  const [y,n]=ad.querySelectorAll('.adbig'),p=ad.querySelector('p');
+  y.addEventListener('click',ev=>{ev.stopPropagation();a.no();p.textContent=a.T(['그럼 찾아보세요 😏','Then go find it 😏'])});
+  n.addEventListener('click',ev=>{ev.stopPropagation();a.no();p.textContent=a.T(['그래도 찾아보세요 😏','Find it anyway 😏'])});
+  ad.querySelector('.dicon').addEventListener('click',ev=>{ev.stopPropagation();if(a.done)return;ad.querySelector('.dicon').classList.add('hatch');sfx.pop();a.after(500,a.win)});
+});
+// 210 fake clear (April fools)
+st(['벌써 통과?!','Already cleared?!'],['다음 버튼은 가짜예요. 한 번 눌러 보고, 그다음 떨어지는 걸 잘 봐요','The Next button is fake. Press it once, then watch what falls'],a=>{
+  const o=mk('div','clear');o.innerHTML=`<div class="conf"></div><div class="cc"><div class="big">${a.T(['통과!','Clear!'])}</div><p>${a.T(['정말 잘했어요!','Great job!'])}</p><button class="sbtn" type="button">${a.T(['다음 스테이지 →','Next stage →'])}</button></div>`;
+  box.appendChild(o);const b=o.querySelector('.sbtn'),cc=o.querySelector('.cc'),big=o.querySelector('.big'),pp=o.querySelector('p'),cf=o.querySelector('.conf');let fooled=false;
+  for(let k=0;k<18;k++){const s=mk('i');s.style.left=rnd(2,96)+'%';s.style.background=pick(EC);s.style.animationDelay=rnd(0,.6)+'s';cf.appendChild(s)}
+  const run=()=>{cc.style.translate=`${rnd(-12,12)}cqw ${rnd(-10,10)}cqw`;sfx.no();
+    if(fooled)return;fooled=true;big.textContent=a.T(['만우절~ 🤪','April fools 🤪']);pp.textContent=a.T(['진짜 알은 저기 떨어지고 있어요!','The real egg is falling over there!']);
+    const g=mk('span','geg2');cf.after(g);g.addEventListener('click',ev=>{ev.stopPropagation();if(a.done)return;o.remove();a.win()});tone(500,.4,'sine',.08)};
+  b.addEventListener('click',run);
+});
+// 211 skip button
+st(['엄청나게 어려운 판이에요','A super, super hard stage'],['어려우면 건너뛰어도 돼요','If it’s too hard, you can skip'],a=>{
+  for(let i=0;i<20;i++)a.put(15+(i%5)*17.5,16+Math.floor(i/5)*16,'⚙️',{size:9,cls:'spin'});
+  a.put(50,80,a.T(['1단계 / 999단계','Step 1 of 999']),{cls:'lcd',size:5});
+  a.tap(box,()=>a.say(a.T(['톱니바퀴 999개를 맞춰야 해요…','You must align 999 gears…'])));
+  a.btn(84,92,a.T(['⏭ 건너뛰기','⏭ Skip']),()=>{a.say(a.T(['건너뛰기도 이스터애그였어요!','Skipping was the easter egg!']));a.after(700,a.win)},{size:3.6});
+});
+// 212 blue screen
+st(['앗, 게임이 고장 났어요!','Oh no, the game crashed!'],['오류 코드를 잘 읽어 봐요. E66…','Read the error code. E66…'],a=>{
+  const l=a.layer('bsod');l.innerHTML=`<b>:(</b><p>${a.T(['알이 깨졌습니다.<br>다시 시작하는 중…','The egg has cracked.<br>Restarting…'])} <span id="bp">0</span>%</p><p>${a.T(['오류 코드:','Error code:'])} <u class="ecode">0xE66</u></p>`;
+  let p=0;a.every(120,()=>{p+=3;if(p>100){p=0;a.say(a.T(['다시 0%… 😩','Back to 0%… 😩']))}const s=l.querySelector('#bp');if(s)s.textContent=Math.min(p,100)});
+  l.querySelector('.ecode').addEventListener('click',ev=>{ev.stopPropagation();if(a.done)return;l.querySelector('.ecode').textContent='E66 → EGG!';sfx.pop();a.after(700,a.win)});
+});
+// 213 notification
+st(['알한테서 연락이 올 거예요','The egg is going to message you'],['위에서 내려오는 알림을 눌러요','Tap the notification that slides down'],a=>{
+  a.put(50,56,'📱',{size:36});const n=a.put(50,8,`🐣 <b>${a.T(['알','Egg'])}</b> · ${a.T(['나 여기 있어! 눌러 봐','I’m here! Tap me'])}`,{cls:'notif',size:4});
+  const show=()=>{n.classList.add('show');tone(1320,.08,'triangle',.08);a.after(2400,()=>n.classList.remove('show'))};a.after(900,show);a.every(4200,show);
+  a.tap(n,()=>{if(n.classList.contains('show'))a.win()});
+});
+// 214 incoming call
+st(['전화가 왔어요!','Someone’s calling!'],['초록 버튼을 오른쪽으로 밀어 받아요','Slide the green button right to answer'],a=>{
+  const ph=a.put(50,36,`<div class="cname">🐔 ${a.T(['꼬꼬 엄마','Mama Hen'])}</div><div class="csub">${a.T(['전화 왔어요…','is calling…'])}</div>`,{cls:'callui',size:1});ph.classList.add('ring');
+  a.every(1100,()=>{if(a.done)return;tone(880,.15,'sine',.08);tone(988,.15,'sine',.08,.18)});
+  a.put(50,74,`<span>${a.T(['밀어서 받기 →','slide to answer →'])}</span>`,{cls:'track',size:4.4});const th=a.put(17,74,'📞',{cls:'thumb grn',size:6});let ok=false;
+  a.drag(th,{lockY:true,move:p=>{if(p.x<17)a.move(th,17,74);if(p.x>83)a.move(th,83,74)},end:()=>{if(ok)return;if(a.xy(th).x>=78){ok=true;ph.classList.remove('ring');a.say(a.T(['꼬꼬? 너한테 알 맡겨 놨단다~','Bawk? I left an egg with you, dear~']));eggThen(a,80,48,9)}else a.move(th,17,74)}});
+});
+// 215 pause
+st(['알이 너무 빨리 떨어져요!','The egg falls way too fast!'],['아래쪽 ⏸ 버튼으로 시간을 멈춰요','Stop time with the ⏸ button'],a=>{
+  const e=a.egg(50,-10,10,'#9fd3f2');let y=-10,x=50,pz=false;
+  a.raf(()=>{if(pz)return;y+=2.4;if(y>110){y=-10;x=rnd(15,85)}a.move(e,x,y)});
+  const b=a.btn(50,92,'⏸',()=>{pz=!pz;b.textContent=pz?'▶':'⏸';box.classList.toggle('paused',pz);if(pz)a.say(a.T(['일시 정지!','Paused!']))},{size:6});
+  a.tap(e,()=>{if(pz){a.say(a.T(['잡았다!','Caught it!']));a.win()}else a.say(a.T(['미끄러졌어요!','Too slippery!']))});
+});
+// 216 cheat code
+st(['옛날 게임기의 비밀 명령','The secret code of old game consoles'],['⬆ ⬆ ⬇ ⬇ ⬅ ➡ ⬅ ➡ B A','⬆ ⬆ ⬇ ⬇ ⬅ ➡ ⬅ ➡ B A'],a=>{
+  a.put(50,22,'🎮',{size:22});const out=a.put(50,46,'',{cls:'notes',size:5});const G='UUDDLRLRBA';let s='';
+  const push=c=>{s=(s+c).slice(-10);out.textContent=[...s].map(x=>({U:'⬆',D:'⬇',L:'⬅',R:'➡'}[x]||x)).join(' ');sfx.tap();
+    if(s===G){a.say(a.T(['치트키 발동! 알 +99','Cheat activated! Eggs +99']));for(let i=0;i<8;i++)a.egg(rnd(10,90),rnd(14,40),5,pick(EC),{cls:'popin'});a.after(900,a.win)}};
+  arrows(a,(dx,dy)=>push(dy<0?'U':dy>0?'D':dx<0?'L':'R'),70);
+  a.btn(36,88,'B',()=>push('B'),{size:6,cls:'red2'});a.btn(64,88,'A',()=>push('A'),{size:6,cls:'red2'});
+});
+// 217 developer mode
+st(['설정 화면이에요. 비밀 메뉴가 있대요','A settings screen. There’s a secret menu'],['버전 번호를 일곱 번 눌러요','Tap the version number seven times'],a=>{
+  const R=a.T([['📶 와이파이','🔔 알림','🔋 배터리','ℹ️ 버전 3.0.0'],['📶 Wi-Fi','🔔 Notifications','🔋 Battery','ℹ️ Version 3.0.0']]);let n=0;
+  R.forEach((t,i)=>{const r=a.put(50,20+i*16,t,{cls:'srow',size:5});
+    a.tap(r,()=>{sfx.tap();if(i<3){a.say(a.T(['별거 없어요','Nothing special']));return}n++;
+      if(n>=3&&n<7)a.say(a.T([`개발자가 되기까지 ${7-n}번 남았어요`,`${7-n} taps from being a developer`]));
+      if(n===7){a.say(a.T(['🎉 이제 개발자예요! 비밀 알 해금','🎉 You’re a developer! Secret egg unlocked']));eggThen(a,50,86,8)}})});
+});
+// 218 search barrel roll
+st(['검색창에 뭔가 쳐 봐요','Type something in the search box'],['‘빙글빙글’을 검색해 봐요','Search for “barrel roll”'],a=>{
+  a.put(50,22,'<b style="color:#3a86ff">알</b><b style="color:#e63946">글</b>',{cls:'notes',size:12});const f=mk('form','ans');f.style.bottom='38%';
+  f.innerHTML=`<input id="srch" autocomplete="off" placeholder="${a.T(['검색','search'])}"><button type="submit">🔍</button>`;box.appendChild(f);
+  f.addEventListener('submit',ev=>{ev.preventDefault();if(a.done)return;const v=f.querySelector('input').value.trim().toLowerCase();
+    if(['빙글빙글','빙글','barrel roll','do a barrel roll','spin'].includes(v)){f.querySelector('input').blur();box.classList.add('barrel');sfx.win();a.after(1300,()=>{box.classList.remove('barrel');eggThen(a,50,74,11,null,a.T(['빙글빙글 하다가 알이 빠졌어요','The egg fell out while spinning']))})}
+    else if(['알','달걀','계란','egg'].includes(v))a.say(a.T(['알은 검색으로 못 찾아요 ㅋㅋ','You can’t search for the egg lol']));
+    else a.say(a.T([`‘${v}’ 검색 결과 0개`,`0 results for “${v}”`]))});
+});
+// 219 invert colors
+st(['하얀 눈밭에 하얀 알이 있대요','A white egg in the white snow'],['색을 뒤집어 봐요','Flip the colors'],a=>{
+  box.style.background='#ffffff';for(let i=0;i<8;i++)a.put(rnd(8,92),rnd(10,78),'❄',{size:4}).style.color='#dfe7ee';
+  const e=a.egg(rnd(20,80),rnd(20,70),12,'#ffffff');e.style.boxShadow='none';e.style.opacity='0';let inv=false;
+  a.btn(50,90,a.T(['◐ 색 반전','◐ Invert']),()=>{inv=!inv;box.style.filter=inv?'invert(1)':'';e.style.opacity=inv?'1':'0';e.style.setProperty('--c',inv?'#2a2a2a':'#fff');if(inv)a.say(a.T(['오! 뭔가 보여요','Whoa, I see something']))},{size:5});
+  a.tap(e,()=>{if(inv)a.win()});
+});
+// 220 3D glasses
+st(['그림이 어질어질해요','This picture makes me dizzy'],['안경을 써 봐요','Put on the glasses'],a=>{
+  const e=a.egg(50,46,22,'#ffd86b',{cls:'blur3d'});const g=a.put(50,86,'👓',{size:12});let on=false;
+  a.tap(e,()=>{if(on)a.win();else a.say(a.T(['어지러워요 😵','So dizzy 😵']))});
+  a.tap(g,()=>{if(on)return;on=true;g.remove();box.classList.add('threed');e.classList.remove('blur3d');e.classList.add('pop3d');sfx.pop();a.say(a.T(['알이 튀어나왔다!','The egg popped out at me!']))});
+});
+// 221 ghost photo
+st(['사진을 찍어 봐요','Take a photo'],['사진에만 보이는 게 있어요. 사진 속 그 자리를 진짜로 눌러요','Something shows only in the photo. Tap that spot for real'],a=>{
+  ['🪴','🛋️','🖼️'].forEach((x,i)=>a.put(20+i*30,i===1?66:40,x,{size:16}));const ep={x:rnd(15,85),y:rnd(14,56)};let shot=false;
+  a.btn(50,90,'📷',()=>{const fl=a.layer('flash');a.after(300,()=>fl.remove());tone(1800,.05,'square',.05);shot=true;
+    let pc=box.querySelector('.polar');if(!pc){pc=a.put(84,78,'<div class="pin2"></div>',{cls:'polar',size:1})}pc.firstChild.style.cssText=`left:${ep.x}%;top:${ep.y}%`;
+    a.say(a.T(['어? 사진에 알이 찍혔어요!','Huh? The photo shows an egg!']))},{size:7});
+  a.on(box,'click',ev=>{if(!shot||a.done)return;const p=a.pos(ev);if(a.dist(p,ep)<10){a.egg(ep.x,ep.y,10,pick(EC),{cls:'popin'});a.say(a.T(['정말 있었네!','It was really there!']));a.after(600,a.win)}});
+});
+// 222 self-destruct
+st(['자폭 버튼이에요. 절대 누르지 마세요','A self-destruct button. Never press it'],['유리 뚜껑부터 치워야 눌러져요','Move the glass lid first'],a=>{
+  let armed=false,go=false;const b=a.btn(50,52,a.T(['자폭','BOOM']),()=>{if(!armed||go)return;go=true;let c=3;a.say('3');
+    const tick=()=>{c--;tone(900,.1,'square',.07);if(c>0){a.say(String(c));a.after(700,tick)}else{a.say(a.T(['펑!!! …꽃가루 🎉','BOOM!!! …confetti 🎉']));sfx.win();
+      for(let i=0;i<14;i++)a.put(rnd(5,95),rnd(8,92),pick(['🎉','🎊','✨','🌸']),{size:7,cls:'popin'});eggThen(a,50,52,14)}};a.after(700,tick)},{cls:'red',size:6});
+  const lid=a.put(50,50,'',{cls:'glid',size:1});a.drag(lid,{end:p=>{if(a.dist(p,{x:50,y:50})>22){armed=true;lid.style.opacity='.4';lid.style.pointerEvents='none';sfx.tap()}else a.move(lid,50,50)}});
+});
+// 223 the egg dances when you're not looking
+st(['이 알은 아무도 안 볼 때 춤을 춘대요','This egg dances when nobody’s looking'],['눈을 가리고 조금 기다렸다가 확 떠요','Cover your eyes, wait a bit, then peek'],a=>{
+  const e=a.egg(50,46,22,'#b5e48c');let cov=false,dance=false,cv=null,tid=null;
+  const b=a.btn(50,88,a.T(['🙈 눈 가리기','🙈 Cover eyes']),()=>{if(!cov){cov=true;cv=a.layer('dark2');box.appendChild(b);b.textContent=a.T(['👀 확 뜨기!','👀 Peek!']);tid=a.after(1300,()=>{dance=true;e.classList.add('jit');tone(523,.1,'square',.03)})}
+    else{cov=false;cv.remove();clearTimeout(tid);if(dance){a.say(a.T(['앗! 들켰다 💃','Oops! Busted 💃']));a.after(700,a.win)}else a.say(a.T(['…(가만히 있는 척)','…(pretending to be still)']));b.textContent=a.T(['🙈 눈 가리기','🙈 Cover eyes'])}},{size:5});
+});
+// 224 Humpty Dumpty
+st(['담장 위의 험프티 덤프티!','Humpty Dumpty on the wall!'],['떨어지기 전에 베개를 담장 아래에 놓아요','Put the pillow under the wall before he falls'],a=>{
+  D(a,50,74,'width:30cqw;height:28cqw;background:repeating-linear-gradient(0deg,#b5654a 0 6cqw,#8a4a35 6cqw 6.6cqw);border-radius:1cqw');
+  const e=a.egg(50,50,14,'#fdf6e3',{cls:'roll'});e.style.transition='top .6s ease-in';const pw=a.put(14,88,'',{cls:'pillow',size:1});a.drag(pw);
+  a.say(a.T(['어어어… 흔들려!','Whoa whoa… wobbly!']));
+  a.after(4200,()=>{e.classList.remove('roll');const q=a.xy(pw),safe=q.y>80&&Math.abs(q.x-50)<20;if(safe)a.move(pw,50,90);a.move(e,50,safe?82:88);
+    a.after(600,()=>{if(safe){a.say(a.T(['푹신! 살았다!','Fluffy! Saved!']));a.tap(e,a.win);a.wob(e)}else{e.remove();a.put(50,88,'🍳',{size:12});a.no(a.T(['와장창! 다시 해 봐요','Crash! Try again']));a.reset(1400)}})});
+});
+// 225 princess and the pea
+st(['공주님이 잠을 못 자요','The princess can’t sleep'],['맨 위 매트리스부터 하나씩 치워 봐요','Remove the mattresses from the top'],a=>{
+  const C=['#f7a8c4','#9fd3f2','#ffd86b','#b5e48c','#c9a7f5'],ms=[];
+  C.forEach((c,i)=>{const m=D(a,50,84-i*6,`width:56cqw;height:5.6cqw;border-radius:2cqw;background:${c}`);ms.push(m)});
+  const pr=a.put(50,84-5*6-5,'👸',{size:12,cls:'slide'});a.say(a.T(['뭔가 배겨서 잠이 안 와…','Something lumpy keeps me up…']));let k=4;
+  ms.forEach((m,i)=>a.tap(m,()=>{if(i!==k)return;m.remove();k--;sfx.tap();a.move(pr,50,84-(k+1)*6-5);
+    if(k<0){a.say(a.T(['완두콩이 아니라 알이었어!','It wasn’t a pea, it was an egg!']));eggThen(a,30,88,8)}}));
+});
+// 226 golden goose
+st(['황금 거위가 우울해요','The golden goose is sad'],['악기를 연주해 줘요','Play it some music'],a=>{
+  const g=a.put(36,52,'🦢',{size:28}),v=a.put(78,70,'🎻',{size:16});let n=0;a.say(a.T(['흑흑…','Sniff…']));
+  a.tap(v,()=>{if(n>=3)return;tone([392,494,587][n],.5,'triangle',.18);n++;a.wob(v);a.say('♪'.repeat(n));
+    if(n===3){a.wob(g);a.say(a.T(['신난다! 황금알 퐁!','Yay! Here’s a golden egg!']));const e=a.egg(36,76,11,'',{cls:'gold popin'});a.tap(e,a.win)}});
+});
+// 227 Pinocchio
+st(['피노키오에게 알이 어디 있는지 물어봐요','Ask Pinocchio where the egg is'],['거짓말을 할 때마다 코가 길어져요','His nose grows with every lie'],a=>{
+  a.put(16,40,'🤥',{size:20});const nose=D(a,24,41,'width:0;height:2.4cqw;transform:translate(0,-50%);background:#e9b48a;border-radius:2cqw;transition:width .5s');
+  D(a,84,34,'width:16cqw;height:2cqw;background:var(--soft);border-radius:1cqw');const e=a.egg(84,27,8,'#ffd86b');e.style.transition='top .6s ease-in';let n=0;
+  const L3=a.T([['몰라~','진짜 몰라~','알 같은 건 없어~'],['Dunno~','Really, no idea~','There’s no egg~']]);
+  a.btn(50,82,a.T(['알 어디 있어?','Where’s the egg?']),()=>{if(n>=3)return;a.say(L3[n]);n++;nose.style.width=n*20+'cqw';tone(300+n*120,.2,'sine',.1);
+    if(n===3)a.after(550,()=>{a.move(e,84,66);a.say(a.T(['앗! 코에 걸려 떨어졌다','Oops! My nose knocked it down']));a.tap(e,a.win)})},{size:5});
+});
+// 228 frog kiss
+st(['개구리 왕자님이래요','They say this frog is a prince'],['입술을 개구리에게 끌어다 줘요','Drag the kiss to the frog'],a=>{
+  const f=a.put(50,44,'🐸',{size:28}),k=a.put(18,84,'💋',{size:12});
+  a.drag(k,{end:p=>{if(a.dist(p,{x:50,y:44})<16){k.remove();a.put(50,44,'✨',{size:40,cls:'popin'});sfx.win();a.after(600,()=>{f.textContent='🐥';a.say(a.T(['짠! 왕자가 아니라 병아리였어요','Ta-da! Not a prince, a chick!']));eggThen(a,72,64,9)})}else a.move(k,18,84)}});
+});
+// 229 Pandora
+st(['절대 열지 마시오','Do NOT open'],['…열어 봐요','…open it'],a=>{
+  const b=a.put(50,58,`<span class="sign">${a.T(['열지 마시오','DO NOT OPEN'])}</span>`,{cls:'pbox',size:1});let op=false;
+  a.tap(b,()=>{if(op)return;op=true;b.classList.add('open');sfx.pop();['🦇','🕷️','🐛','💨','👻'].forEach((x,i)=>a.after(i*260,()=>{const f=a.put(rnd(30,70),50,x,{size:10,cls:'fly'});a.after(900,()=>f.remove());tone(200+i*80,.12,'sawtooth',.04)}));
+    a.after(1500,()=>{a.say(a.T(['맨 밑에 남은 건… 희망의 알!','What’s left at the bottom… the egg of hope!']));eggThen(a,50,46,10,'#ffd86b')})});
+});
+// 230 mirror mirror
+st(['거울아 거울아, 세상에서 가장 예쁜 건?','Mirror, mirror, who’s the fairest of all?'],['거울을 여러 번 눌러요','Tap the mirror a few times'],a=>{
+  const m=a.put(50,48,'',{cls:'mirror',size:1});let n=0;const A=a.T([['왕비님? …아니요','백설공주? …그것도 아니요','바로… 알이에요!'],['The queen? …No','Snow White? …Also no','It’s… the egg!']]);
+  a.tap(m,()=>{if(n>=3)return;a.say(A[n]);n++;sfx.note(500+n*120);if(n===3){const e=a.egg(50,46,12,'#f7a8c4',{cls:'popin'});a.tap(e,a.win)}});
+});
+// 231 jack-in-the-box
+st(['손잡이를 돌리면 뭔가 튀어나와요','Turn the crank and something pops out'],['상자를 계속 눌러 음악을 끝까지','Keep tapping the box until the song ends'],a=>{
+  const b=a.put(50,66,'<i></i>',{cls:'jbox',size:1}),N=[262,262,294,294,330,392,330,262];let k=0;
+  a.tap(b,()=>{if(k>=8)return;tone(N[k],.25,'triangle',.18);k++;a.wob(b);
+    if(k===8){b.classList.add('open');a.after(200,()=>{tone(1000,.2,'square',.08);D(a,50,44,'width:2cqw;height:16cqw;background:repeating-linear-gradient(0deg,#888 0 1cqw,transparent 1cqw 2cqw)',' ','popin');
+      a.say(a.T(['뿅! 놀랐지?','Boing! Surprised?']));eggThen(a,50,32,12)})}});
+});
+// 232 tooth fairy
+st(['이가 빠졌어요!','I lost a tooth!'],['이를 베개 밑에 넣고, 달을 눌러 자고, 아침에 베개를 들춰요','Tooth under the pillow, tap the moon to sleep, then lift the pillow'],a=>{
+  const pl=a.put(50,62,'',{cls:'pillow',size:1});pl.style.scale='1.8';const t=a.put(18,84,'🦷',{size:10}),mo=a.put(84,14,'🌙',{size:12});let st2=0;
+  a.drag(t,{end:p=>{if(a.dist(p,{x:50,y:62})<14){t.remove();st2=1;a.say(a.T(['이제 자요','Now go to sleep']))}else a.move(t,18,84)}});
+  a.tap(mo,()=>{if(st2!==1)return;st2=2;box.classList.add('night');a.say('💤');a.after(1600,()=>{box.classList.remove('night');mo.textContent='☀️';st2=3;a.say(a.T(['아침이다! 베개 밑을 볼까?','Morning! Check under the pillow?']))})});
+  a.tap(pl,()=>{if(st2!==3)return;st2=4;pl.style.top='50%';a.say(a.T(['동전 대신… 알?!','Instead of a coin… an egg?!']));eggThen(a,50,70,10)});
+});
+// 233 Santa
+st(['굴뚝에서 덜컹 소리가 나요','Clunk! Something in the chimney'],['집을 두드려 봐요','Knock on the house'],a=>{
+  const h=a.put(50,60,'🏠',{size:46});let n=0;
+  a.tap(h,()=>{if(n>=2)return;n++;sfx.knock();a.wob(h);a.say(a.T(['덜컹…','Clunk…']));
+    if(n===2)a.after(500,()=>{a.put(62,30,'🎅',{size:16,cls:'popin'});a.say(a.T(['호호호! 어… 오늘 크리스마스 아니야? 알이라도 줄게','Ho ho ho! Wait… not Christmas? Have an egg anyway']));eggThen(a,74,40,8)})});
+});
+// 234 knock-knock
+st(['똑똑, 누가 왔어요','Knock knock, someone’s here'],['버튼으로 대답해요','Answer with the button'],a=>{
+  const d=a.put(50,44,'🚪',{size:34});const Q=a.T([['누구세요?','알 누구?'],['Who’s there?','Egg who?']]),Rp=a.T([['알','알면서 뭘 물어~ 😝'],['Egg.','Egg-cited to see you! 😝']]);let k=0;
+  a.say(a.T(['똑똑!','Knock knock!']));sfx.knock();sfx.knock();
+  const b=a.btn(50,86,Q[0],()=>{if(k>=2)return;a.say(Rp[k]);a.wob(d);k++;if(k<2)b.textContent=Q[1];else{b.remove();d.textContent='🥚';d.classList.add('popin');a.tap(d,a.win)}},{size:5});
+});
+// 235 jokes
+st(['닭을 웃겨 봐요','Make the chicken laugh'],['카드를 눌러 웃긴 이야기를 들려줘요','Tap the card to tell a joke'],a=>{
+  const c=a.put(50,74,'🐔',{size:18});const J=a.T([[['가장 뜨거운 과일은?','천도복숭아! 🍑'],['왕이 넘어지면?','킹콩! 🦍'],['소가 웃으면?','우하하! 🐮']],[['Why did the chicken cross the road?','To get to the other side!'],['What do you call a sleeping dinosaur?','A dino-snore!'],['Why don’t eggs tell jokes?','They’d crack each other up!']]]);
+  let k=0,s=0;const cd=a.put(50,32,J[0][0],{cls:'jcard',size:4.6});
+  a.tap(cd,()=>{if(k>=3)return;if(s===0){cd.textContent=J[k][1];s=1;c.style.fontSize=(18+k*6)+'cqw';a.say(['ㅋ','ㅋㅋㅋ','푸하하하!'][k]);a.wob(c);tone(500+k*150,.2,'square',.05);k++;
+      if(k===3){a.say(a.T(['너무 웃어서 알이 나왔어!','Laughed so hard an egg popped out!']));eggThen(a,74,82,9)}}
+    else{cd.textContent=J[k][0];s=0}});
+});
+// 236 fortune cookies
+st(['포춘 쿠키를 깨 봐요','Crack open the fortune cookies'],['하나씩 눌러 봐요','Tap them one by one'],a=>{
+  const F=a.T([['오늘은 양말을 거꾸로 신을 운세','콧구멍이 간질간질할 운세'],['You will wear your socks inside out','Your nose will feel tickly today']]);const lk=rint(0,2);let f=0;
+  [22,50,78].forEach((x,i)=>{const c=a.put(x,44,'🥠',{size:16});a.tap(c,()=>{if(c.dataset.o)return;c.dataset.o=1;sfx.pop();c.textContent='💥';
+    if(i===lk){a.say(a.T(['“곧 알을 찾게 될 것이다”','“You will soon find an egg”']));eggThen(a,x,44,9)}else{a.say('“'+F[f++%2]+'”')}})});
+});
+// 237 magic hat
+st(['마술사 모자예요','A magician’s hat'],['모자를 계속 두드려요','Keep tapping the hat'],a=>{
+  const h=a.put(50,64,'🎩',{size:30});const I=[['🐇',['토끼!','A rabbit!']],['🕊️',['비둘기!','A dove!']],['🧦',['…양말?','…a sock?']],['🐟',['생선?! 왜?','A fish?! Why?']]];let n=0;
+  a.tap(h,()=>{a.wob(h);sfx.pop();if(n<I.length){const[e,t]=I[n++];const it=a.put(rnd(25,75),30,e,{size:12,cls:'popin'});a.say(a.T(t));a.after(1200,()=>it.remove())}
+    else if(n===I.length){n++;a.say(a.T(['드디어! 수리수리 알!','Finally! Abraca-egg!']));eggThen(a,50,30,12)}});
+});
+// 238 mimic chest
+st(['보물 상자를 발견했어요','You found a treasure chest'],['상자가 물어도 포기하지 마요','Don’t give up if it bites'],a=>{
+  const c=a.put(50,56,'<i></i><b></b>',{cls:'chest',size:1});let n=0;
+  a.tap(c,()=>{n++;if(n<3){c.classList.add('bite');a.no(a.T(['덥석! 미믹이다!','CHOMP! It’s a mimic!']));a.after(400,()=>c.classList.remove('bite'))}
+    else if(n===3){c.classList.add('open');a.say(a.T(['흥, 졌다. 가져가','Fine, you win. Take it']));eggThen(a,50,40,11,'#ffd86b')}});
+});
+// 239 sleeping dragon
+st(['용이 알을 지키며 자고 있어요','A dragon sleeps on its egg'],['깃털로 콧구멍을 간지럽혀요','Tickle its nose with the feather'],a=>{
+  const d=a.put(54,52,'🐉',{size:34}),z=a.put(78,30,'💤',{size:10,cls:'float'}),ft=a.put(14,84,'🪶',{size:11});let ok=false;
+  a.drag(ft,{end:p=>{if(ok)return;if(a.dist(p,{x:40,y:46})<16){ok=true;z.remove();a.say(a.T(['에… 에… 에취!!','Ah… ah… ACHOO!!']));a.put(26,48,'🔥',{size:16,cls:'popin'});tone(150,.5,'sawtooth',.1);
+    a.after(800,()=>{const e=a.egg(26,74,12,'#e76f51',{cls:'popin'});a.say(a.T(['알이 뜨끈해졌어요','The egg is toasty now']));a.tap(e,()=>{e.remove();const b=a.put(26,72,'🐲',{size:14,cls:'popin'});a.say(a.T(['엄마?','Mama?']));a.after(900,a.win)})})}else a.move(ft,14,84)}});
+});
+// 240 cauldron
+st(['마녀의 솥이 끓어요','The witch’s cauldron is bubbling'],['재료 아무거나 세 개를 솥에 넣어요','Drop any three ingredients in'],a=>{
+  const p=a.put(50,58,'<i></i>',{cls:'cauldron',size:1});let n=0;
+  ['🍄','🐸','⭐','🦴','🧦'].forEach((x,i)=>{const e=a.put(12+i*19,90,x,{size:10});a.drag(e,{end:q=>{if(n<3&&a.dist(q,{x:50,y:54})<16){e.remove();n++;sfx.pop();a.wob(p);a.say(['보글…','보글보글…','펑!!!'][n-1]);
+    if(n===3){p.classList.add('boom');a.after(400,()=>eggThen(a,50,30,12,'#8338ec',a.T(['마법의 알이 완성됐어요','A magic egg is born'])))}}else a.move(e,12+i*19,90)}})});
+});
+// 241 wishing well
+st(['소원을 들어주는 우물이래요','A wishing well'],['동전을 우물에 던져요','Drop a coin in the well'],a=>{
+  a.put(50,62,'',{cls:'well',size:1});let n=0;const V=a.T([['…더','…더 줘'],['…more','…MORE']]);
+  const c=a.put(16,86,'',{cls:'coin',size:1});a.drag(c,{end:p=>{if(n<3&&a.dist(p,{x:50,y:52})<15){n++;tone(1300,.08,'triangle',.12);a.after(400,()=>tone(500,.3,'sine',.08));
+    if(n<3)a.say(V[n-1]);else{c.remove();a.say(a.T(['소원 성취! 퐁!','Wish granted! Pop!']));eggThen(a,50,34,11)}}a.move(c,16,86)}});
+});
+// 242 UFO
+st(['하늘에 UFO가 떴어요','There’s a UFO in the sky'],['UFO를 두 번 눌러 봐요','Tap the UFO twice'],a=>{
+  box.classList.add('night');const u=a.put(50,16,'🛸',{size:18,cls:'bob'}),cow=a.put(50,82,'🐄',{size:14});cow.style.transition='top 1s';let n=0;
+  a.tap(u,()=>{n++;const bm=D(a,50,48,'width:22cqw;height:60cqw;background:linear-gradient(rgba(255,240,150,.55),rgba(255,240,150,.05));clip-path:polygon(35% 0,65% 0,100% 100%,0 100%)');a.after(1100,()=>bm.remove());tone(400,1,'sine',.08);
+    if(n===1){a.move(cow,50,22);a.say(a.T(['음메?!','Moo?!']));a.after(1000,()=>cow.remove())}
+    else if(n===2){a.say(a.T(['지구인에게 선물. 삐리리','A gift for earthlings. Bleep']));const e=a.egg(50,20,10,'#d8ffe4',{cls:'glow lit'});e.style.transition='top 1s';a.after(50,()=>a.move(e,50,80));a.tap(e,a.win)}});
+});
+// 243 rug trapdoor
+st(['양탄자가 볼록해요','The rug has a bump'],['양탄자를 옆으로 끌어요','Drag the rug aside'],a=>{
+  const td=D(a,50,56,'width:30cqw;height:24cqw;background:#6b4524;border:1cqw solid #3b2a1d;box-sizing:border-box;border-radius:1cqw');let op=false;
+  const rug=a.put(50,56,'',{cls:'rug',size:1});a.drag(rug,{end:p=>{if(a.dist(p,{x:50,y:56})<20)a.move(rug,50,56)}});
+  a.tap(td,()=>{if(op)return;op=true;td.style.background='#120c08';sfx.tap();a.say(a.T(['비밀 지하실이다!','A secret cellar!']));eggThen(a,50,56,9)});
+});
+// 244 bookshelf
+st(['평범한 책장이에요','Just an ordinary bookshelf'],['삐딱하게 꽂힌 책이 하나 있어요','One book is sticking out'],a=>{
+  const eg=a.egg(50,48,12,'#ffd86b');const sh=D(a,50,48,'width:76cqw;height:66cqw;background:#8a5a3b;border-radius:1.5cqw;transition:translate 1s');
+  const C=['#e63946','#3a86ff','#2a9d8f','#f6c443','#8338ec','#f4a261'],sp=rint(0,17);a.tap(eg,()=>{if(sh.dataset.o)a.win()});
+  for(let i=0;i<18;i++){const r=Math.floor(i/6),k=i%6,b=mk('i','book');b.style.cssText=`left:${6+k*15}%;top:${4+r*33}%;background:${pick(C)}`;if(i===sp)b.style.rotate='14deg';sh.appendChild(b);
+    b.addEventListener('click',ev=>{ev.stopPropagation();if(a.done)return;if(i===sp){sh.style.translate='80cqw 0';sh.dataset.o=1;tone(200,.8,'sawtooth',.05);a.say(a.T(['끼이익… 비밀 방이다!','Creeeak… a secret room!']));sh.style.pointerEvents='none'}else{sfx.tap();a.say(a.T(['그냥 책이에요','Just a book']))}})}
+});
+// 245 portrait
+st(['초상화가 나를 쳐다봐요','The portrait is watching me'],['그림을 눌러 보세요','Tap the painting'],a=>{
+  const e=a.egg(50,44,12,'#c9a7f5');e.style.visibility='hidden';
+  const f=a.put(50,44,'<span>🧐</span>',{cls:'frame',size:1});let op=false;
+  a.tap(f,()=>{if(op)return;op=true;f.classList.add('swing');tone(220,.5,'sawtooth',.05);a.say(a.T(['그림 뒤에 금고가!','A safe behind the painting!']));e.style.visibility='';a.tap(e,a.win)});
+});
+// 246 fridge
+st(['냉장고에 알이 있대요','There’s an egg in the fridge'],['위 칸 냉동실도 열어 봐요','Open the freezer on top too'],a=>{
+  D(a,50,52,'width:44cqw;height:76cqw;background:#e8ecef;border-radius:3cqw');
+  const fz=D(a,50,26,'width:40cqw;height:20cqw;background:#cfd6dc;border-radius:2cqw;transition:scale .3s;transform-origin:0 0'),bt=D(a,50,64,'width:40cqw;height:46cqw;background:#cfd6dc;border-radius:2cqw;transition:scale .3s');
+  a.tap(bt,()=>{if(bt.dataset.o)return;bt.dataset.o=1;bt.style.scale='.05 1';a.put(50,64,'🥚🥚🥚<br>🥛🧀',{size:7});a.say(a.T(['이건 진짜 먹는 계란이에요. 다른 데!','These are for eating. Somewhere else!']));sfx.tap()});
+  a.tap(fz,()=>{if(fz.dataset.o)return;fz.dataset.o=1;fz.style.scale='.05 1';sfx.tap();a.say(a.T(['꽁꽁 언 이스터애그!','A frozen easter egg!']));const e=a.egg(50,26,9,'#9fd3f2',{cls:'popin'});e.style.outline='1cqw solid rgba(255,255,255,.8)';a.tap(e,a.win)});
+});
+// 247 toaster
+st(['토스트를 구워요','Make some toast'],['빵을 넣고 굽기를 두 번 눌러요','Put in bread, then press Toast twice'],a=>{
+  const t=a.put(50,60,'<i></i>',{cls:'toaster',size:1}),br=a.put(18,86,'🍞',{size:12});let inb=false,n=0;
+  a.drag(br,{end:p=>{if(a.dist(p,{x:50,y:52})<16){inb=true;br.remove();sfx.tap()}else a.move(br,18,86)}});
+  a.btn(84,86,a.T(['굽기','Toast']),()=>{if(!inb){a.say(a.T(['빵부터 넣어요','Bread first']));return}n++;a.wob(t);tone(700,.1,'square',.06);
+    if(n===1){const s=a.put(50,36,'🍞',{size:12,cls:'fly'});s.style.filter='sepia(1) saturate(2)';a.say(a.T(['띵! 맛있는 토스트','Ding! Nice toast']))}
+    else if(n===2){a.say(a.T(['띵! …어? 알?!','Ding! …an egg?!']));const e=a.egg(50,36,10,'#ffb38a',{cls:'fly'});a.after(950,()=>a.tap(e,a.win))}},{size:4.6});
+});
+// 248 gacha
+st(['뽑기 기계예요','A capsule machine'],['손잡이를 돌려 캡슐을 뽑아요','Turn the knob to get capsules'],a=>{
+  a.put(50,40,'<i></i>',{cls:'gacha',size:1});const kn=a.put(50,70,'',{cls:'knob2',size:1});let n=0;const T3=['🦖','🧦','🥚'];
+  a.tap(kn,()=>{if(n>=3)return;kn.style.rotate=(n+1)*120+'deg';tone(400,.15,'square',.06);const cp=a.put(50,86,'',{cls:'capsule popin',size:1}),it=T3[n++];
+    a.tap(cp,()=>{if(cp.dataset.o)return;cp.dataset.o=1;sfx.pop();if(it==='🥚'){cp.remove();eggThen(a,50,86,9,null,a.T(['알 모양 캡슐에서 진짜 알이!','A real egg in the egg-shaped capsule!']))}else{cp.innerHTML=`<b>${it}</b>`;a.say(a.T(['꽝! 다시','Dud! Again']));a.after(900,()=>cp.remove())}})});
+});
+// 249 chocolate egg
+st(['초콜릿 알이에요','A chocolate egg'],['포장을 문질러 벗기고 세 번 깨물어요','Rub off the foil, then bite three times'],a=>{
+  scratch(a,{y:46,under:'<span class="choco"></span>',cell:'linear-gradient(135deg,#d9d9e8,#a6b8c9)',done:()=>{const ch=box.querySelector('.choco');let n=0;a.say(a.T(['맛있겠다!','Yummy!']));
+    a.tap(ch,()=>{n++;sfx.pop();ch.style.clipPath=`polygon(0 ${n*22}%,100% ${n*14}%,100% 100%,0 100%)`;if(n===3){a.say(a.T(['안에 장난감 알이!','A toy egg inside!']));eggThen(a,50,58,9)}})}});
+});
+// 250 onion
+st(['양파 속에 뭐가 있을까요?','What’s inside the onion?'],['껍질을 계속 벗겨요','Keep peeling'],a=>{
+  const o=a.put(50,50,'🧅',{size:40}),fc=a.put(84,18,'🙂',{size:14});let n=0;const F=['😐','😢','😭','🌊','🌊🌊'];
+  a.tap(o,()=>{if(n>=5)return;fc.textContent=F[n];n++;o.style.fontSize=(40-n*5)+'cqw';sfx.tap();if(n===3)a.say(a.T(['눈물이 나요…','My eyes are watering…']));
+    if(n===5){o.remove();a.say(a.T(['양파 속에 알이…?','An egg in an onion…?']));eggThen(a,50,50,10)}});
+});
+// 251 cake
+st(['케이크를 잘라요','Cut the cake'],['칼을 케이크 위로 쓱 지나가게 끌어요','Drag the knife across the cake'],a=>{
+  const ck=a.put(50,50,'🎂',{size:44}),kn=a.put(14,22,'🔪',{size:12});let ok=false;
+  a.drag(kn,{move:p=>{if(!ok&&Math.abs(p.x-50)<4&&p.y>34&&p.y<66){ok=true;ck.style.clipPath='polygon(0 0,46% 0,46% 100%,0 100%)';const r=a.put(56,50,'🎂',{size:44});r.style.clipPath='polygon(46% 0,100% 0,100% 100%,46% 100%)';sfx.pop();
+    a.say(a.T(['케이크 속 서프라이즈!','A surprise inside!']));eggThen(a,51,56,8,'#f7a8c4')}}});
+});
+// 252 cloche
+st(['오늘의 특별 요리입니다','Today’s special dish'],['뚜껑을 계속 열어요','Keep lifting the lid'],a=>{
+  let s=36;const cl=a.put(50,56,'',{cls:'cloche',size:1});cl.style.width=s+'cqw';cl.style.height=s*.62+'cqw';D(a,50,58+s*.31/1,'width:56cqw;height:2cqw;border-radius:2cqw;background:var(--soft)');let n=0;
+  a.tap(cl,()=>{n++;sfx.tap();if(n<4){s-=8;cl.style.width=s+'cqw';cl.style.height=s*.62+'cqw';cl.style.top=(56+(36-s)*.31)+'%';a.say(a.T(['또 뚜껑?!','Another lid?!']))}
+    else{cl.remove();a.say(a.T(['오늘의 요리: 알 한 알!','Today’s dish: one egg!']));eggThen(a,50,62,8)}});
+});
+// 253 burping frog
+st(['개구리가 목말라요','The frog is thirsty'],['탄산음료를 개구리에게 끌어다 줘요','Drag the soda to the frog'],a=>{
+  const f=a.put(50,48,'🐸',{size:28}),s=a.put(16,84,'🥤',{size:12});
+  a.drag(s,{end:p=>{if(a.dist(p,{x:50,y:48})<16){s.remove();a.say(a.T(['꿀꺽꿀꺽…','Gulp gulp…']));f.style.transition='font-size .8s';f.style.fontSize='40cqw';
+    a.after(1000,()=>{a.say(a.T(['꺼어어억!!!','BUUURRRP!!!']));tone(90,.6,'sawtooth',.15);f.style.fontSize='28cqw';a.no();eggThen(a,74,30,9)})}else a.move(s,16,84)}});
+});
+// 254 whoopee cushion
+st(['의자에 앉아 봐요','Have a seat'],['아이를 의자로 끌어다 앉혀요','Drag the kid onto the chair'],a=>{
+  a.put(50,66,'🪑',{size:28});D(a,50,62,'width:16cqw;height:5cqw;border-radius:50%;background:#e63946');const k=a.put(16,62,'🧒',{size:14});
+  a.drag(k,{end:p=>{if(a.dist(p,{x:50,y:56})<14){a.move(k,50,52);k.style.pointerEvents='none';a.say(a.T(['뿌우웅~ 💨','PFFFRRT~ 💨']));tone(110,.7,'sawtooth',.14);a.no();
+    a.after(500,()=>eggThen(a,50,22,10,null,a.T(['방귀 쿠션 속에 알이 숨어 있었어요','An egg was hiding in the whoopee cushion'])))}}});
+});
+// 255 hiccups
+st(['딸꾹질이 멈추지 않아요','Can’t stop hiccuping'],['깜짝 놀라게 해 줘요','Give them a scare'],a=>{
+  const f=a.put(50,44,'😮',{size:30});let ok=false;a.every(1100,()=>{if(ok)return;a.say(a.T(['딸꾹!','Hic!']));a.wob(f);tone(600,.06,'sine',.1)});
+  a.btn(50,84,a.T(['왁!!','BOO!!']),()=>{if(ok)return;ok=true;f.textContent='😱';tone(200,.2,'square',.1);a.say(a.T(['으악! …어? 멈췄다! 근데 뭐가 넘어왔어','Aah! …it stopped! but something came up']));eggThen(a,50,64,9)},{size:6,cls:'red2'});
+});
+// 256 tickle egg
+st(['간지럼을 잘 타는 알','A very ticklish egg'],['알을 손가락으로 마구 문질러요','Rub the egg like crazy'],a=>{
+  const e=a.egg(50,48,30,'#ffd86b');let st2=0;const L=a.T([['히히','하하하','깔깔깔! 그만!'],['Hee hee','Ha ha ha','HAHAHA stop!']]);
+  rubber(a,e,420,()=>{e.remove();a.put(50,48,'🐣',{size:30,cls:'popin'});a.say(a.T(['너무 웃어서 껍데기가 깨졌어!','Laughed so hard I cracked!']));a.after(800,a.win)},s=>{const k=Math.min(2,Math.floor(s/140));if(k>=st2){a.say(L[k]);st2=k+1;a.wob(e);tone(800+k*200,.08,'square',.04)}});
+});
+// 257 tickle foot
+st(['발바닥이 간질간질','A ticklish foot'],['발을 문질러 간지럽혀요','Rub the foot to tickle it'],a=>{
+  const f=a.put(50,56,'🦶',{size:34});
+  rubber(a,f,300,()=>{f.style.rotate='-40deg';a.say(a.T(['으하하! 뻥!','Hahaha! KICK!']));tone(300,.2,'square',.08);const s=a.put(50,40,'🧦',{size:14,cls:'fly'});a.after(900,()=>{s.remove();eggThen(a,70,20,9,null,a.T(['양말에서 알이 떨어졌어요','An egg fell out of the sock']))})},s=>{if(s>120)a.wob(f)});
+});
+// 258 snoring dad
+st(['아빠가 코를 골아요','Dad is snoring'],['아빠 코를 살짝 눌러요','Gently press Dad’s nose'],a=>{
+  const d=a.put(50,50,'😴',{size:34});let n=0,ok=false;a.every(1500,()=>{if(ok)return;a.say(a.T(['드르렁… 쿨…','Zzzrrk… pshh…']));tone(80,.5,'sawtooth',.08)});
+  a.tap(d,()=>{if(ok)return;n++;a.wob(d);if(n<3)a.say(a.T(['흡… 드르…','Hnk… zzz…']));else{ok=true;d.textContent='😳';a.say(a.T(['푸하! 어? 알? 아빠 주머니에 있지','Pfah! Huh? The egg? In Dad’s pocket']));eggThen(a,74,74,9)}});
+});
+// 259 crying baby
+st(['아기가 울어요','The baby is crying'],['아기를 웃겨 줘요','Make the baby laugh'],a=>{
+  const b=a.put(50,40,'😭',{size:30});a.every(1300,()=>{if(b.textContent==='😭'){a.say(a.T(['응애! 응애!','Waaah!']));tone(700,.2,'sawtooth',.03)}});
+  const A=[['🍼',['꿀꺽… 응애!','Gulp… waaah!']],['🧸',['…응애!','…waaah!']],['🙈',null]];
+  shuf(A).forEach(([x,t],j)=>a.btn(26+j*24,82,x,()=>{if(b.textContent!=='😭')return;if(t){a.say(a.T(t));return}b.textContent='🫣';a.say(a.T(['까꿍!','Peekaboo!']));a.after(600,()=>{b.textContent='😆';a.say(a.T(['꺄르르! 이거 줄게','Giggle! Here you go']));eggThen(a,50,64,9)})},{size:8}));
+});
+// 260 afro nest
+st(['머리가 엄청 풍성해요','What a big fluffy hairdo'],['머리를 문질러 빗어 줘요','Rub to comb the hair'],a=>{
+  a.put(50,62,'🙂',{size:22});const h=a.put(50,38,'',{cls:'afro',size:1});
+  rubber(a,h,320,()=>{a.put(64,18,'🐦',{size:10,cls:'fly'});tone(1400,.1,'sine',.08);a.say(a.T(['머리에 새 둥지가 있었어요!','There was a bird’s nest in there!']));eggThen(a,50,32,9)},s=>{if(s>120)a.wob(h)});
+});
+// 261 kangaroo
+st(['캥거루 주머니가 볼록해요','The kangaroo’s pouch is bulging'],['주머니를 두 번 눌러요','Tap the pouch twice'],a=>{
+  a.put(50,52,'🦘',{size:40});const p=D(a,52,62,'width:14cqw;height:10cqw;border-radius:50%');let n=0;
+  a.tap(p,()=>{n++;sfx.pop();if(n===1){const j=a.put(52,52,'🦘',{size:10,cls:'popin'});a.say(a.T(['아기 캥거루! 안녕~','A baby! Hi~']));a.after(1000,()=>j.remove())}
+    else if(n===2)eggThen(a,52,54,8,null,a.T(['…알? 너 캥거루 맞아?','…an egg? Are you even a kangaroo?']))});
+});
+// 262 penguin
+st(['아빠 펭귄이 뭔가 숨겨요','Daddy penguin is hiding something'],['펭귄 배를 간지럽혀요','Tickle the penguin’s belly'],a=>{
+  const p=a.put(50,50,'🐧',{size:36});
+  rubber(a,p,240,()=>{p.style.transition='top .4s';a.move(p,50,34);a.say(a.T(['황제펭귄 아빠는 발 위에 알을 품어요!','Emperor penguin dads keep the egg on their feet!']));eggThen(a,50,74,9,'#fdf6e3')},s=>{if(s>90)a.wob(p)});
+});
+// 263 flamingo
+st(['홍학이 한 발로 서 있어요','The flamingo stands on one leg'],['홍학을 눌러 발을 바꾸게 해요','Tap it to make it switch legs'],a=>{
+  const f=a.put(50,48,'🦩',{size:40});let ok=false;
+  a.tap(f,()=>{if(ok)return;ok=true;f.style.scale='-1 1';sfx.tap();a.say(a.T(['다리를 바꿨더니… 알이!','It switched legs… an egg!']));eggThen(a,44,82,8,'#f7a8c4')});
+});
+// 264 pigeon
+st(['비둘기가 날아가요','A pigeon flies over'],['떨어지는 걸 피하지 말고 눌러요','Don’t dodge the falling thing. Tap it'],a=>{
+  const b=a.put(-10,14,'🐦',{size:12});let x=-10,dropped=false;
+  a.raf(()=>{x+=.5;if(x>112)x=-12;a.move(b,x,14);if(!dropped&&x>44&&x<50){dropped=true;const w=D(a,x,20,'width:5cqw;height:6cqw;border-radius:50%/60% 60% 40% 40%;background:#fff;box-shadow:inset -.6cqw -.8cqw 0 rgba(0,0,0,.1)');
+    a.say(a.T(['새똥이다! 피해!','Bird poop! Duck!']));w.style.transition='top 2.2s linear';a.after(30,()=>a.move(w,x,86));
+    a.tap(w,()=>{w.style.transition='none';w.style.width='12cqw';w.style.height='16cqw';w.style.background='#ffd86b';a.say(a.T(['새똥이 아니라 알이었어요!','Not poop, an egg!']));a.after(700,a.win)});a.after(2600,()=>{if(!a.done){w.remove();dropped=false}})}});
+});
+// 265 confused cow
+st(['소가 이상해요','Something’s off with the cow'],['소를 계속 쓰다듬어요','Keep petting the cow'],a=>{
+  const c=a.put(50,50,'🐄',{size:36});let n=0;
+  a.tap(c,()=>{if(n>=5)return;n++;a.wob(c);if(n<5){a.say(a.T(['음메~','Moo~']));tone(160,.3,'sawtooth',.06)}else{a.say(a.T(['꼬…꼬끼오? (알 퐁)','Cock-a… moo? (plop)']));tone(700,.2,'sawtooth',.05);eggThen(a,70,78,9,'#fdf6e3')}});
+});
+// 266 rubber duck
+st(['고무 오리예요','A rubber duck'],['꾹꾹 눌러 봐요','Squeeze it'],a=>{
+  const d=a.put(50,52,'🦆',{size:34});d.style.transition='scale .1s';let n=0;
+  a.tap(d,()=>{if(n>=6)return;n++;d.style.scale='1 .8';a.after(120,()=>d.style.scale='');tone(1500,.08,'square',.05);a.say(a.T(['삑!','Squeak!']));
+    if(n===6){a.say(a.T(['삑삑… 퐁! 오리니까 알도 낳죠','Squeak… plop! Ducks lay eggs, right?']));eggThen(a,68,74,8)}});
+});
+// 267 chicken costume
+st(['닭들 사이에 수상한 녀석이 있어요','There’s a suspicious one among the chickens'],['지퍼가 달린 닭을 찾아요','Find the chicken with a zipper'],a=>{
+  const k=rint(0,8);for(let i=0;i<9;i++){const x=22+(i%3)*28,y=24+Math.floor(i/3)*26,c=a.put(x,y,'🐔',{size:15});
+    if(i===k){const z=D(a,x+.5,y+1,'width:.8cqw;height:8cqw;background:repeating-linear-gradient(0deg,#555 0 .6cqw,#bbb .6cqw 1.2cqw)');a.tap(z,go)}
+    a.tap(c,()=>{if(i===k)go();else{a.say(a.T(['꼬꼬! 나 진짜 닭이야','Bawk! I’m a real chicken']));a.wob(c)}});
+    function go(){if(a.done)return;c.textContent='';a.say(a.T(['들켰다! 닭 옷 입은 알이었어','Busted! An egg in a chicken suit']));eggThen(a,x,y,10)}}
+});
+// 268 statues
+st(['박물관 조각상들이에요','Museum statues'],['몰래 움직이는 조각상을 찾아요','Find the statue that secretly moves'],a=>{
+  const k=rint(0,5),ss=[];for(let i=0;i<6;i++){const s=a.put(20+(i%3)*30,30+Math.floor(i/3)*40,'🧍',{size:22,cls:'stat'});ss.push(s);
+    a.tap(s,()=>{if(i===k){s.textContent='';s.classList.remove('stat');a.say(a.T(['얼음… 땡! 들켰다','Freeze… oops, busted!']));eggThen(a,s.style.left.replace('%','')*1,30+Math.floor(i/3)*40,11)}else{a.say(a.T(['진짜 돌이에요','Real stone']));sfx.knock()}})}
+  a.every(1600,()=>{const s=ss[k];if(s.textContent)a.wob(s)});
+});
+// 269 banana slip
+st(['아저씨가 왔다 갔다 해요','A man walks back and forth'],['바나나 껍질을 길 위에 놓아요','Put the banana peel on his path'],a=>{
+  a.put(50,74,'',{cls:'ground',size:1});const m=a.put(10,64,'🚶',{size:16}),ht=a.put(10,52,'🎩',{size:8}),bn=a.put(50,88,'🍌',{size:10});let x=10,v=.4,bx=null,ok=false;
+  a.drag(bn,{end:p=>{if(p.y>60&&p.y<80){bx=p.x;a.move(bn,p.x,70)}else{bx=null;a.move(bn,50,88)}}});
+  a.raf(()=>{if(ok)return;x+=v;if(x>90||x<10){v=-v;m.style.scale=v>0?'-1 1':'1 1'}a.move(m,x,64);a.move(ht,x,52);
+    if(bx!==null&&Math.abs(x-bx)<3){ok=true;m.style.rotate='-90deg';a.say(a.T(['으악! 미끄덩!','Whoa! Slip!']));tone(500,.4,'sine',.1);ht.classList.add('fly');a.after(900,()=>eggThen(a,x,30,9,null,a.T(['모자 속에 알이!','An egg under the hat!'])))}});
+});
+// 270 seesaw
+st(['시소 끝에 알이 있어요','There’s an egg on the seesaw'],['코끼리를 반대쪽 끝에 놓아요','Put the elephant on the other end'],a=>{
+  const pl=D(a,50,70,'width:70cqw;height:2.4cqw;background:#a0703f;border-radius:1cqw;transition:rotate .3s;rotate:8deg');D(a,50,75,'width:0;height:0;border-left:5cqw solid transparent;border-right:5cqw solid transparent;border-bottom:8cqw solid var(--soft)');
+  a.put(76,24,'🧺',{size:16});const e=a.egg(80,68,9,'#ffd86b');e.style.transition='left 1s,top 1s ease-out';const el=a.put(14,30,'🐘',{size:16});
+  a.drag(el,{end:p=>{if(p.x<35&&p.y>40){el.style.pointerEvents='none';a.move(el,20,63);pl.style.rotate='-8deg';tone(80,.3,'triangle',.2);a.move(e,76,16);a.say(a.T(['쿵! 슝~ 바구니에 쏙!','Thud! Whoosh~ into the basket!']));a.after(1100,()=>a.tap(e,a.win))}}});
+});
+// 271 Rube Goldberg
+st(['이 버튼은 뭘 할까요?','What does this button do?'],['누르고 구경만 해요','Press it and just watch'],a=>{
+  a.put(50,74,'',{cls:'ground',size:1});const ball=a.put(12,30,'⚽',{size:8});ball.style.transition='left .8s,top .8s';D(a,22,36,'width:24cqw;height:1.4cqw;background:var(--soft);rotate:18deg');
+  const ds=[40,46,52].map(x=>a.put(x,64,'',{cls:'domino',size:1})),bell=a.put(66,56,'🔔',{size:10}),hen=a.put(86,64,'🐔',{size:14});let go=false;
+  a.btn(14,88,'▶',()=>{if(go)return;go=true;a.move(ball,34,62);
+    a.after(800,()=>{ds.forEach((d,i)=>a.after(i*150,()=>{d.classList.add('fall');sfx.knock()}));
+      a.after(600,()=>{a.wob(bell);tone(1200,.5,'triangle',.15);a.after(400,()=>{a.wob(hen);a.say(a.T(['꼬끼오?! 깜짝이야!','Bawk?! What a scare!']));eggThen(a,86,80,8)})})})},{size:6});
+});
+// 272 cat knocks things off
+st(['고양이가 탁자 위 물건을 떨어뜨려요','The cat knocks things off the table'],['바구니를 끌어서 알을 받아요','Drag the basket to catch the egg'],a=>{
+  D(a,30,40,'width:52cqw;height:2.4cqw;background:#a0703f');const cat=a.put(10,32,'🐈',{size:13}),items=['☕','🪴','egg'],bk=a.put(80,86,'🧺',{size:16});a.drag(bk,{lockY:true});let i=0;
+  const next=()=>{if(i>=3)return;const it=items[i++],x=30+i*6,e=it==='egg'?a.egg(x,35,8,pick(EC)):a.put(x,35,it,{size:9});a.move(cat,x-8,32);
+    a.after(700,()=>{a.say(a.T(['툭','Bump']));e.style.transition='left 1.1s linear,top 1.1s ease-in';a.move(e,62+i*4,86);
+      a.after(1150,()=>{if(it==='egg'){if(Math.abs(a.xy(bk).x-a.xy(e).x)<12){a.say(a.T(['나이스 캐치!','Nice catch!']));a.after(400,a.win)}else{e.remove();a.put(62+i*4,86,'🍳',{size:9});a.no(a.T(['와장창! 다시','Crash! Again']));a.reset(1300)}}
+        else{e.remove();sfx.no();next()}})})};a.after(600,next);
+});
+// 273 bat cave
+st(['깜깜한 동굴이에요','A pitch-dark cave'],['박수를 쳐 봐요','Clap your hands'],a=>{
+  box.classList.add('night');const bs=[];for(let i=0;i<6;i++)bs.push(a.put(rnd(15,85),rnd(12,40),'🦇',{size:8}));let ok=false;
+  a.btn(50,88,'👏',()=>{if(ok)return;ok=true;tone(1800,.05,'square',.1);bs.forEach((b,i)=>{b.style.transition='left 1s,top 1s';a.after(i*80,()=>a.move(b,rnd(-20,120),-20))});
+    a.say(a.T(['푸드덕! 박쥐가 다 나갔어요','Flap flap! The bats left']));a.after(1000,()=>{box.classList.remove('night');eggThen(a,rnd(20,80),rnd(50,70),10)})},{size:7});
+});
+// 274 monster under the bed
+st(['침대 밑에 괴물이 있어요!','A monster under the bed!'],['손전등으로 비춰 봐요','Shine the flashlight'],a=>{
+  D(a,50,56,'width:66cqw;height:16cqw;background:#9fd3f2;border-radius:2cqw');D(a,50,70,'width:62cqw;height:12cqw;background:#1a1a22');const ey=a.put(50,70,'👀',{size:8});
+  a.tap(a.put(14,88,'🔦',{size:12}),()=>{if(ey.textContent!=='👀')return;ey.textContent='👾';a.say(a.T(['꺄악! 눈부셔! 무서워!','EEK! Too bright! Scary!']));tone(900,.3,'sawtooth',.05);
+    ey.style.transition='left .6s';a.after(300,()=>a.move(ey,120,70));a.after(900,()=>eggThen(a,50,70,8,null,a.T(['괴물이 알을 두고 도망갔어요','The monster ran and left an egg'])))});
+});
+// 275 closet
+st(['옷장이 꽉 찼어요','The closet is stuffed'],['옷장 문을 열어요','Open the closet door'],a=>{
+  const c=D(a,50,48,'width:48cqw;height:70cqw;background:#c9a77c;border-radius:1.5cqw;box-shadow:inset 0 0 0 1cqw #a0703f');let op=false;
+  a.tap(c,()=>{if(op)return;op=true;sfx.no();a.say(a.T(['와르르르!','AVALANCHE!']));['👕','👖','🧦','🧣','👗','🧤','🩳','👚'].forEach((x,i)=>{const e=a.put(50,40,x,{size:11});e.style.transition='left .6s,top .6s';a.after(i*80,()=>a.move(e,rnd(14,86),rnd(70,90)))});
+    a.after(900,()=>eggThen(a,50,64,9,null,a.T(['옷 더미 꼭대기에 알이!','An egg on top of the pile!'])))});
+});
+// 276 hamster wheel
+st(['전기가 나갔어요','The power is out'],['햄스터를 빠르게 눌러 바퀴를 돌려요','Tap the hamster fast to spin the wheel'],a=>{
+  const dk=a.layer('dark2'),w=a.put(30,60,'<b>🐹</b>',{cls:'hwheel',size:1}),bl=a.put(78,28,'💡',{size:14,cls:'bulb off'}),eg=a.egg(70,74,9,pick(EC));box.appendChild(w);box.appendChild(bl);let p=0,ok=false;
+  const bar=a.put(30,90,'<i></i>',{cls:'bar',size:1});box.appendChild(bar);
+  a.raf(()=>{if(ok)return;p=Math.max(0,p-.15);bar.firstChild.style.width=p+'%';w.style.animationDuration=Math.max(.15,1.5-p/70)+'s'});
+  a.tap(w,()=>{if(ok)return;p+=8;tone(400+p*5,.04,'square',.03);if(p>=100){ok=true;dk.remove();bl.classList.remove('off');a.say(a.T(['불이 켜졌다! 헥헥','Lights on! Pant pant']));a.tap(eg,a.win)}});
+});
+// 277 choose your adventure
+st(['모험을 떠나요','Off on an adventure'],['아무거나 골라요. 어디로 가든…','Pick anything. Wherever you go…'],a=>{
+  const P=a.T([[[['🌲 숲으로','🕳️ 동굴로'],['곰이 춤을 추고 있어요 🐻💃','박쥐가 노래를 불러요 🦇🎤']],[['🕺 같이 춘다','🏃 도망간다'],['신나게 춤추다 넘어졌어요 😵','도망가다 바나나를 밟았어요 🍌']],[['🛏️ 잔다','🍩 간식 먹는다'],['자고 일어나니…','간식 상자를 열었더니…']]],
+    [[['🌲 Forest','🕳️ Cave'],['A bear is dancing 🐻💃','A bat is singing 🦇🎤']],[['🕺 Dance too','🏃 Run away'],['You danced and tripped 😵','You ran and slipped on a banana 🍌']],[['🛏️ Sleep','🍩 Snack'],['You woke up and…','You opened the snack box and…']]]]);
+  let k=0;const tx=a.put(50,34,'',{cls:'label wrapt',size:5.5});tx.style.color='var(--ink)';tx.textContent=a.T(['어디로 갈까?','Where to?']);let bs=[];
+  const show=()=>{bs.forEach(b=>b.remove());bs=P[k][0].map((t,j)=>a.btn(30+j*40,74,t,()=>{tx.textContent=P[k][1][j];sfx.tap();k++;if(k<3)show();else{bs.forEach(b=>b.remove());a.after(700,()=>{tx.textContent=a.T(['결국 알을 찾았어요! 🎉','You found the egg anyway! 🎉']);eggThen(a,50,66,11)})}},{size:4.4}))};show();
+});
+// 278 crystal ball
+st(['수정 구슬이 미래를 보여줘요','The crystal ball shows the future'],['구슬을 문질러요','Rub the ball'],a=>{
+  const c=a.put(50,44,'🔮',{size:34});const k=a.put(18,80,'🧒',{size:14});
+  rubber(a,c,260,()=>{a.say(a.T(['보인다… 네 뒤에 알이!','I see… an egg behind you!']));k.style.transition='left .5s';a.move(k,30,80);eggThen(a,14,80,8)},s=>{if(s>80)c.style.filter=`hue-rotate(${s}deg)`});
+});
+// 279 hypnosis
+st(['닭에게 최면을 걸어요','Hypnotize the chicken'],['빙글빙글 원을 계속 눌러요','Keep tapping the spiral'],a=>{
+  const sp=a.put(50,36,'',{cls:'spiral spin',size:1}),c=a.put(50,76,'🐔',{size:18});let n=0;
+  a.tap(sp,()=>{if(n>=4)return;n++;sp.style.animationDuration=(6-n*1.3)+'s';tone(300+n*60,.3,'sine',.08);a.say(a.T([['너는… 점점…','졸려진다…','알을…','낳고 싶어진다…'],['You are getting…','sleepy…','you want…','to lay an egg…']])[n-1]);
+    if(n===4){c.textContent='😵‍💫';a.after(600,()=>{c.textContent='🐔';eggThen(a,64,86,8)})}});
+});
+// 280 karaoke
+st(['노래방 시간!','Karaoke time!'],['마이크를 꾹 누르고 노래해요','Hold the mic and sing'],a=>{
+  const s=a.put(50,30,'',{cls:'lcd',size:16});let t0=0,hold=false,ok=false;
+  holdBtn(a,50,70,'🎤',{size:14,down:()=>{if(!ok){hold=true;t0=performance.now();a.say('♪ ~ ♫ ~')}},up:()=>{if(!hold||ok)return;hold=false;if(performance.now()-t0<1500){a.say(a.T(['더 길게 불러요!','Sing longer!']));return}
+    ok=true;let v=0;const roll=()=>{v=Math.min(100,v+rint(5,15));s.textContent=v;tone(300+v*6,.05,'square',.04);if(v<100)a.after(60,roll);else{sfx.win();a.say(a.T(['100점! 상품은 알!','100 points! Prize: an egg!']));eggThen(a,80,80,9)}};roll()}});
+  a.raf(()=>{if(hold&&!ok&&Math.random()<.1)tone(rnd(400,800),.1,'triangle',.05)});
+});
+// 281 draw an egg
+st(['그림을 그리면 진짜가 돼요','Whatever you draw becomes real'],['아무거나 쓱쓱 그려 봐요','Scribble anything'],a=>{
+  const ly=a.layer('');ly.style.pointerEvents='none';ly.innerHTML='<svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%"><polyline fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" points=""/></svg>';
+  const pl=ly.querySelector('polyline');ly.style.color='var(--berry)';box.style.touchAction='none';let pts=null,len=0,made=false;a.put(50,90,'✏️',{size:9});
+  a.on(box,'pointerdown',ev=>{if(a.done||made)return;pts=[a.pos(ev)];len=0;try{box.setPointerCapture(ev.pointerId)}catch(e){}});
+  a.on(box,'pointermove',ev=>{if(!pts)return;const p=a.pos(ev);len+=a.dist(p,pts[pts.length-1]);pts.push(p);pl.setAttribute('points',pts.map(q=>q.x+','+q.y).join(' '))});
+  a.on(box,'pointerup',()=>{if(!pts||a.done)return;if(len>60){made=true;const cx=pts.reduce((s,q)=>s+q.x,0)/pts.length,cy=pts.reduce((s,q)=>s+q.y,0)/pts.length;pl.setAttribute('points','');a.say(a.T(['짠! 그림이 알이 됐어요','Ta-da! Your drawing became an egg']));eggThen(a,cx,cy,12)}else a.say(a.T(['조금 더 그려요','Draw a bit more']));pts=null});
+});
+// 282 moon pun
+st(['오늘 밤 달이 좀 이상해요','The moon looks odd tonight'],['달을 눌러 봐요','Tap the moon'],a=>{
+  box.classList.add('night');for(let i=0;i<14;i++)a.put(rnd(4,96),rnd(4,96),'✦',{size:rnd(2,3),cls:'twk'});
+  const m=a.egg(66,30,16,'#fff6c8');m.style.boxShadow='0 0 6cqw rgba(255,240,180,.6)';a.put(30,82,'🦉',{size:12});
+  a.tap(m,()=>{a.say(a.T(['달… 걀! 달이 아니라 달걀이었어요','Not the moon… an egg-moon!']));sfx.pop();a.wob(m);a.after(900,a.win)});
+});
+// 283 snowman
+st(['눈사람이 너무 커요','A very big snowman'],['눈사람 머리에 눈덩이를 세 번 던져요','Throw three snowballs at its head'],a=>{
+  const h=a.put(50,30,'',{cls:'snowb',size:1});h.style.width=h.style.height='20cqw';const b=a.put(50,62,'',{cls:'snowb',size:1});b.style.width=b.style.height='32cqw';a.put(50,30,'👀',{size:6});let n=0;
+  a.tap(h,()=>{if(n>=3)return;n++;sfx.pop();a.wob(h);a.say(a.T(['퍽!','Splat!'])+' '+n);
+    if(n===3){h.style.transition='left .8s,top .8s,rotate .8s';a.move(h,86,86);h.style.rotate='200deg';box.querySelectorAll('.obj').forEach(o=>{if(o.textContent==='👀')o.remove()});a.after(400,()=>eggThen(a,50,30,10,null,a.T(['머리 속에 알이 있었어요!','There was an egg in its head!'])))}});
+});
+// 284 TV channels
+st(['TV를 봐요','Watch some TV'],['채널을 바꿔서 알 채널을 찾아요','Change channels to find the egg channel'],a=>{
+  const tv=a.put(50,42,'',{cls:'tv',size:1}),C=a.T([['📰 닭 뉴스: “꼬꼬”','⛅ 날씨: 내일은 알 비','🍳 요리: 계란말이','🥚 알 채널 (눌러 봐!)'],['📰 Chicken news: “Bawk”','⛅ Weather: egg showers','🍳 Cooking: omelet','🥚 Egg channel (tap me!)']]);let ch=rint(0,2);
+  const draw=()=>{tv.textContent=C[ch];tv.style.filter=`hue-rotate(${ch*80}deg)`};draw();
+  a.btn(50,82,a.T(['채널 ▲','Channel ▲']),()=>{ch=(ch+1)%4;draw();tone(200,.05,'square',.05)},{size:5});
+  a.tap(tv,()=>{if(ch===3){a.say(a.T(['알이 화면 밖으로 튀어나왔다!','The egg jumped out of the screen!']));eggThen(a,50,64,10)}else a.say(a.T(['재미없어, 다른 채널','Boring, next channel']))});
+});
+// 285 egg rain
+st(['오늘의 날씨: 알 비!','Today’s weather: egg showers!'],['우산을 뒤집어서 알을 받아요','Flip the umbrella to catch eggs'],a=>{
+  const u=a.put(50,74,'☂️',{size:22});let flip=false,got=0;a.drag(u,{lockY:true});
+  a.btn(88,92,'🔄',()=>{flip=!flip;u.style.rotate=flip?'180deg':'';sfx.tap()},{size:5});
+  a.every(600,()=>{const x=rnd(10,90),e=a.egg(x,-6,6,pick(EC));e.style.transition='top 1.6s linear';a.after(30,()=>a.move(e,x,74));
+    a.after(1620,()=>{if(a.done)return;if(flip&&Math.abs(a.xy(u).x-x)<12){e.remove();got++;sfx.pop();a.say(got+' / 5');if(got===5){a.say(a.T(['우산 가득 알!','An umbrella full of eggs!']));a.after(500,a.win)}}else{e.style.transition='top .4s';a.move(e,x,110);a.after(400,()=>e.remove())}})});
+});
+// 286 disguised egg
+st(['변장한 알을 찾아요','Find the egg in disguise'],['콧수염 달린 얼굴을 잘 봐요','Look for the face with a mustache'],a=>{
+  const F=['😀','😃','😄','😁','🙂','😊','😐','🤓','😎','🧐','🙃'],k=rint(0,11);
+  for(let i=0;i<12;i++){const x=20+(i%4)*20,y=24+Math.floor(i/4)*24;if(i===k){const e=a.egg(x,y,11,'#ffd86b');e.innerHTML='<b class="dsg">🥸</b>';a.tap(e,()=>{e.innerHTML='';a.say(a.T(['들켰다! 변장 벗기!','Busted! Disguise off!']));a.after(600,a.win)})}
+    else{const f=a.put(x,y,pick(F),{size:11});a.tap(f,()=>{a.say(a.T(['난 사람이야','I’m a person']));a.wob(f)})}}
+});
+// 287 dog digging
+st(['강아지가 뭔가 냄새를 맡아요','The dog smells something'],['강아지를 여러 번 쓰다듬어요','Pet the dog a few times'],a=>{
+  a.put(50,72,'',{cls:'ground',size:1});const d=a.put(50,62,'🐕',{size:22});const I=[['🦴',['뼈다귀!','A bone!']],['🧦',['…아빠 양말','…Dad’s sock']],['egg']];let n=0;
+  a.tap(d,()=>{if(n>=3)return;a.wob(d);tone(400,.08,'square',.05);a.say(a.T(['멍! 파바박','Woof! Dig dig']));const it=I[n++];a.after(500,()=>{if(it[0]==='egg')eggThen(a,74,80,8,null,a.T(['알을 파냈어요!','Dug up an egg!']));else{const e=a.put(74,82,it[0],{size:10,cls:'popin'});a.say(a.T(it[1]));a.after(900,()=>e.remove())}})});
+});
+// 288 fetch
+st(['강아지랑 공놀이','Playing fetch'],['공을 위로 휙 던져요','Flick the ball upward'],a=>{
+  const d=a.put(20,72,'🐕',{size:16}),b=a.put(50,80,'⚾',{size:10});d.style.transition='left .8s';let th=false;
+  a.drag(b,{move:p=>{if(th||p.y>62)return;th=true;b.classList.add('roll2');a.move(b,110,10);a.say(a.T(['물어 와!','Fetch!']));a.after(300,()=>a.move(d,120,72));
+    a.after(1800,()=>{d.style.scale='-1 1';a.move(d,60,72);a.after(800,()=>{a.say(a.T(['공 대신 알을 물어 왔어요?!','It brought back an egg instead?!']));eggThen(a,48,76,8)})})},end:()=>{if(!th)a.move(b,50,80)}});
+});
+// 289 don't read this
+st(['표지판을 읽지 마세요','Do not read the sign'],['표지판을 계속 눌러요','Keep tapping the sign'],a=>{
+  const s=a.put(50,44,'',{cls:'board2',size:5.4});const T5=a.T([['이 글을 읽지 마세요','방금 읽었죠?','그만 읽어요!','…알려 줄게요','알은 표지판 뒤에 있어요'],['Do not read this','You just read it, didn’t you?','Stop reading!','…fine, I’ll tell you','The egg is behind this sign']]);let n=0;s.textContent=T5[0];
+  a.tap(s,()=>{n++;sfx.tap();if(n<T5.length)s.textContent=T5[n];else if(n===T5.length){s.classList.add('flipaway');a.after(500,()=>{s.remove();eggThen(a,50,44,12)})}});
+});
+// 290 ghost
+st(['으스스한 방이에요','A spooky room'],['아무 데나 눌러 봐요','Tap anywhere'],a=>{
+  box.classList.add('night');let st2=0;
+  a.on(box,'click',ev=>{if(a.done||st2)return;st2=1;const p=a.pos(ev);const g=a.put(p.x,p.y,'👻',{size:24,cls:'popin'});a.say(a.T(['까꿍!','BOO!']));tone(300,.4,'sawtooth',.06);
+    a.after(900,()=>{g.textContent='😱';a.say(a.T(['…으악! 나도 놀랐잖아!','…AAH! You scared ME!']));g.style.transition='left .6s';a.after(300,()=>a.move(g,130,p.y));eggThen(a,p.x,p.y+14,9)})});
+});
+// 291 piñata
+st(['피냐타를 터뜨려요','Smash the piñata'],['계속 때려요','Keep hitting it'],a=>{
+  const p=a.put(50,36,'🪅',{size:28,cls:'roll'});D(a,50,10,'width:.6cqw;height:12cqw;background:var(--soft)');let n=0;
+  a.tap(p,()=>{if(n>=8)return;n++;a.wob(p);sfx.knock();a.say(n+' / 8');
+    if(n===8){p.remove();sfx.win();for(let i=0;i<10;i++){const c=a.put(50,36,pick(['🍬','🍭','🍫']),{size:7});c.style.transition='left .7s,top .7s';a.after(20,()=>a.move(c,rnd(8,92),rnd(70,92)))}eggThen(a,50,60,11,null,a.T(['사탕 비! 그리고 알!','Candy rain! And an egg!']))}});
+});
+// 292 cuckoo clock
+st(['뻐꾸기시계예요','A cuckoo clock'],['작은 문을 계속 두드려요','Keep knocking on the little door'],a=>{
+  D(a,50,44,'width:40cqw;height:46cqw;background:#8a5a3b;clip-path:polygon(50% 0,100% 30%,100% 100%,0 100%,0 30%);');a.put(50,52,'🕛',{size:14});
+  const dr=D(a,50,30,'width:10cqw;height:9cqw;background:#3b2a1d;border-radius:5cqw 5cqw 0 0');let n=0;
+  a.tap(dr,()=>{if(n>=3)return;n++;const b=a.put(50,24,n<3?'🐦':'',{size:10,cls:'popin'});if(n<3){a.say(a.T(['뻐꾹!','Cuckoo!']));tone(880,.15);tone(700,.2,'sine',.15,.18);a.after(700,()=>b.remove())}
+    else{b.remove();a.say(a.T(['뻐꾹… 알?!','Cuck… egg?!']));eggThen(a,50,22,8)}});
+});
+// 293 bubble gum
+st(['풍선껌을 불어요','Blow a bubble-gum bubble'],['껌을 세 번 씹고, 버튼을 꾹 눌러 불어요','Chew three times, then hold to blow'],a=>{
+  const f=a.put(50,40,'😗',{size:28}),b=a.put(56,48,'',{cls:'gum',size:1});let ch=0,sz=0,hold=false,ok=false;
+  a.tap(f,()=>{if(ch>=3)return;ch++;a.wob(f);tone(200,.05,'square',.05);a.say(a.T(['쩝','Chomp'])+' '+ch)});
+  holdBtn(a,50,86,a.T(['후~','Blow']),{size:5,down:()=>{if(ch<3){a.say(a.T(['껌부터 씹어요','Chew first']));return}hold=true},up:()=>{hold=false}});
+  a.raf(()=>{if(!hold||ok)return;sz+=.35;b.style.width=b.style.height=sz+'cqw';if(sz>40){ok=true;b.remove();tone(150,.2,'square',.1);f.textContent='😳';a.say(a.T(['펑! 껌 속에 알이 붙어 있었어요','POP! An egg was stuck in the gum']));eggThen(a,56,62,9,'#f7a8c4')}});
+});
+// 294 robot dance
+st(['로봇이 춤을 추고 싶대요','The robot wants to dance'],['음악을 틀어요','Play some music'],a=>{
+  const r=a.put(50,46,'🤖',{size:30});let on=false;
+  a.btn(50,86,'▶ ♫',()=>{if(on)return;on=true;r.classList.add('jit');let k=0;a.every(220,()=>{tone([523,659,784,659][k++%4],.12,'square',.05)});
+    ['🔩','⚙️','🔧'].forEach((x,i)=>a.after(500+i*500,()=>{const p=a.put(50,40,x,{size:7});p.style.transition='left .6s,top .6s';a.after(20,()=>a.move(p,rnd(10,90),88))}));
+    a.after(2200,()=>{r.classList.remove('jit');a.say(a.T(['삐빅! 머리에서 알이 빠졌다','Beep! An egg fell out of my head']));eggThen(a,64,74,9)})},{size:6});
+});
+// 295 squirrel
+st(['나무 구멍 속을 볼까요?','Peek into the tree hole?'],['구멍을 계속 눌러요','Keep tapping the hole'],a=>{
+  a.put(50,52,'🌳',{size:70});const h=D(a,50,48,'width:10cqw;height:12cqw;border-radius:50%;background:#3b2a1d');let n=0;
+  a.tap(h,()=>{if(n>=3)return;n++;const sq=a.put(50,44,'🐿️',{size:10,cls:'popin'});a.after(500,()=>sq.remove());
+    if(n<3){const ac=a.put(50,48,'🌰',{size:7});ac.style.transition='left .6s,top .6s';a.after(20,()=>a.move(ac,rnd(10,90),90));a.say(a.T(['찍찍! 저리 가!','Squeak! Go away!']))}
+    else{a.say(a.T(['찍… 이거 가지고 가!','Squeak… just take this!']));eggThen(a,50,80,9)}});
+});
+// 296 woodpecker
+st(['딱따구리가 있어요','A woodpecker'],['새를 눌러 나무를 쪼게 해요','Tap the bird to make it peck'],a=>{
+  D(a,50,50,'width:20cqw;height:100%;background:#8a5a3b');const b=a.put(64,40,'🐦',{size:12});b.style.scale='-1 1';let n=0;
+  a.tap(b,()=>{if(n>=5)return;n++;a.wob(b);tone(1200,.03,'square',.08);tone(1200,.03,'square',.08,.08);a.say(a.T(['딱딱딱!','Tap tap tap!']));
+    if(n===5){D(a,55,42,'width:8cqw;height:8cqw;border-radius:50%;background:#3b2a1d');eggThen(a,55,42,5,null,a.T(['나무 속에 알이 있었어요!','There was an egg inside the tree!']))}});
+});
+// 297 spider
+st(['거미줄이 있어요','A spider web'],['거미줄을 톡 건드려요','Give the web a little tap'],a=>{
+  const w=a.put(50,24,'🕸️',{size:30});let ok=false;
+  a.tap(w,()=>{if(ok)return;ok=true;a.wob(w);const t=D(a,50,4,'width:.4cqw;height:0;background:var(--soft);transform:translate(-50%,0);transition:height 1s');const s=a.put(50,8,'🕷️',{size:10});s.style.transition='top 1s';
+    a.after(20,()=>{t.style.height='50cqw';a.move(s,50,58)});a.after(1000,()=>{a.say(a.T(['왜 불러? 알 가져가','What? Take your egg']));eggThen(a,50,70,8)})});
+});
+// 298 dinosaur fossil
+st(['공룡 화석을 발굴해요','Dig up a dinosaur fossil'],['붓으로 흙을 털어요(문질러요)','Brush away the dirt (rub)'],a=>{
+  scratch(a,{y:46,under:'<span class="egg" style="--c:#c8b89a;width:20cqw;--pat:repeating-linear-gradient(30deg,transparent 0 3cqw,rgba(0,0,0,.08) 3cqw 3.6cqw)"></span>',cell:'#a8875e',cls:'plain',
+    done:()=>{a.say(a.T(['공룡 알 화석이다!','A dinosaur egg fossil!']));const e=box.querySelector('.scard .egg');let n=0;a.tap(e,()=>{n++;a.wob(e);tone(200+n*100,.1);if(n===3){e.remove();a.put(50,46,'🦕',{size:24,cls:'popin'});a.say(a.T(['깨어났다?!','It hatched?!']));a.after(900,a.win)}})}});
+});
+// 299 turn around
+st(['뒤를 돌아봐!','Look behind you!'],['돌아보기 버튼을 눌러요','Press the turn-around button'],a=>{
+  a.put(50,46,'🧱',{size:30});a.say(a.T(['앞에는 벽뿐이에요','Only a wall in front']));let t=false;
+  a.btn(50,86,a.T(['↩ 돌아보기','↩ Turn around']),()=>{if(t)return;t=true;box.classList.add('turn');a.after(400,()=>{box.querySelectorAll('.obj').forEach(o=>{if(o.textContent==='🧱')o.textContent='🌷'});a.say(a.T(['앗, 뒤에 있었네!','Oh, it was right behind me!']));eggThen(a,50,64,12)});a.after(800,()=>box.classList.remove('turn'))},{size:5});
+});
+// 300
 st(['황금알이 나타났어요!','The golden egg appears!'],['일곱 번 두드려요','Tap it seven times'],a=>{
   const e=a.egg(50,50,36,'',{cls:'gold'});let n=0;
   a.tap(e,()=>{if(n>=7)return;n++;a.wob(e);tone(700+n*80,.15,'triangle',.15);a.say('✨'.repeat(n));
@@ -1947,7 +2598,7 @@ function ui(){
   $('cnt').textContent=`${cur+1} / ${S.length}`;
   $('bar').style.width=(cur/S.length*100)+'%';
   const it=T(S[cur].t);if($('inst').textContent!==it)$('inst').textContent=it;
-  $('ttl').textContent=T(['이스터애그 200','Easter Egg 200']);
+  $('ttl').textContent=T(['이스터애그 300','Easter Egg 300']);
   $('bSnd').textContent=snd?T(['🔊 소리','🔊 Sound']):T(['🔇 소리','🔇 Sound']);
   $('bSnd').setAttribute('aria-pressed',String(snd));
   $('bHint').textContent=T(['💡 힌트','💡 Hint']);
