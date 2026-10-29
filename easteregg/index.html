@@ -281,7 +281,8 @@ h1 .logo{width:18px;height:24px;border-radius:50%/60% 60% 40% 40%;background:lin
 .flip3{animation:flip3 .5s}
 @keyframes flip3{25%{scale:1 .1}50%{scale:1 1}75%{scale:1 .1}}
 .stone{width:8cqw;height:6cqw;border-radius:50%;background:#9aa39c;color:#fff;display:grid;place-items:center;font-family:var(--disp);box-shadow:0 .8cqw 0 #6b746d}
-.beam{width:64cqw;height:1.6cqw;background:var(--ink);border-radius:1cqw;transition:rotate .4s}
+.beam{width:56cqw;height:1.6cqw;background:var(--ink);border-radius:1cqw;transition:rotate .4s}
+.pan{width:24cqw;height:5cqw;border-radius:0 0 12cqw 12cqw;background:var(--soft);transition:top .4s}
 .fulcrum{width:0;height:0;border-left:5cqw solid transparent;border-right:5cqw solid transparent;border-bottom:10cqw solid var(--soft)}
 .wt{width:10cqw;height:7cqw;border-radius:1.2cqw;background:#5b6770;color:#fff;display:grid;place-items:center;font-family:var(--disp)}
 .jit{animation:wob .45s infinite}
@@ -361,6 +362,10 @@ h1 .logo{width:18px;height:24px;border-radius:50%/60% 60% 40% 40%;background:lin
 .dsg{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);font-size:7cqw;font-weight:400}
 .turn{animation:turn .8s ease-in-out}
 @keyframes turn{50%{scale:0 1}}
+.ptile{width:18cqw;height:18cqw;border-radius:2cqw;background:var(--sky);transition:rotate .2s}
+.ptile i{position:absolute;left:0;right:0;top:50%;height:5cqw;transform:translateY(-50%);background:#9aa39c}
+.ptile.wet i{background:#3a86ff}
+.water2{top:30%;background:linear-gradient(rgba(142,202,230,.75),rgba(33,158,188,.9))}
 .board{width:90cqw;height:48cqw;border-radius:3cqw;background:var(--sky);box-shadow:inset 0 0 0 .6cqw var(--line)}
 .qtile{width:26cqw;height:26cqw;overflow:hidden;background:var(--sky);outline:.4cqw solid var(--paper);transition:rotate .2s}
 .qpic{position:absolute;width:200%;height:200%}
@@ -1206,7 +1211,7 @@ function scratch(a,o){
   const hit=ev=>{if(ok||!document.elementFromPoint)return;const el=document.elementFromPoint(ev.clientX,ev.clientY);
     if(el&&el.classList.contains('sc')&&!el.classList.contains('gone')){el.classList.add('gone');n++;if(n%4===0)tone(rnd(1500,2500),.03,'square',.03);
       if(n>=40){ok=true;c.querySelectorAll('.sc').forEach(x=>x.classList.add('gone'));if(o.done)o.done();else a.after(700,a.win)}}};
-  a.on(c,'pointerdown',ev=>{on=true;try{c.setPointerCapture(ev.pointerId)}catch(e){}hit(ev)});
+  a.on(c,'pointerdown',ev=>{if(ok)return;on=true;try{c.setPointerCapture(ev.pointerId)}catch(e){}hit(ev)});
   a.on(c,'pointermove',ev=>{if(on)hit(ev)});
   ['pointerup','pointercancel'].forEach(t=>a.on(c,t,()=>{on=false}));
   return c;
@@ -1804,22 +1809,25 @@ st(['공룡 알을 보러 가요','Go see a dinosaur egg'],['시간 막대를 �
     end:()=>{if(a.xy(th).x<=20){sc.textContent='🦕';a.say(a.T(['공룡 시대! 거대한 알이에요','Dinosaur times! A giant egg']));const e=a.egg(78,34,14,'#b5e48c',{cls:'popin'});a.tap(e,a.win)}}});
 });
 // 190 music box
-st(['오르골 손잡이를 돌려요','Wind up the music box'],['상자 둘레를 손가락으로 빙글빙글 두 바퀴','Circle around the box twice with your finger'],a=>{
-  a.put(50,50,'🎁',{size:30});const c={x:50,y:50};box.style.touchAction='none';let last=null,tot=0,beat=0,ok=false;
-  a.on(box,'pointerdown',ev=>{const p=a.pos(ev);last=Math.atan2(p.y-c.y,p.x-c.x);try{box.setPointerCapture(ev.pointerId)}catch(e){}});
+st(['오르골 손잡이를 돌려요','Wind up the music box'],['점선 원을 따라 손가락으로 빙글빙글 두 바퀴 그려요','Trace the dotted circle around twice with your finger'],a=>{
+  const ring=a.put(50,50,'',{cls:'tring',size:1});ring.style.width=ring.style.height='64cqw';a.put(50,50,'🎁',{size:30});const lb=a.put(50,90,a.T(['0 / 2 바퀴','0 / 2 turns']),{cls:'label',size:5});const c={x:50,y:50};box.style.touchAction='none';let last=null,tot=0,beat=0,ok=false;
+  a.on(box,'pointerdown',ev=>{if(ok)return;const p=a.pos(ev);last=Math.atan2(p.y-c.y,p.x-c.x);try{box.setPointerCapture(ev.pointerId)}catch(e){}});
   a.on(box,'pointermove',ev=>{if(last===null||ok)return;const p=a.pos(ev),an=Math.atan2(p.y-c.y,p.x-c.x);let d=an-last;if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;tot+=d;last=an;
-    const b=Math.floor(Math.abs(tot)/(Math.PI/2));if(b>beat){beat=b;tone([523,587,659,698,784,880,988,1047][b%8],.25,'sine',.15)}
+    const b=Math.floor(Math.abs(tot)/(Math.PI/2));if(b>beat){beat=b;lb.textContent=a.T([`${Math.min(2,Math.floor(b/4))} / 2 바퀴`,`${Math.min(2,Math.floor(b/4))} / 2 turns`]);tone([523,587,659,698,784,880,988,1047][b%8],.25,'sine',.15)}
     if(Math.abs(tot)>4*Math.PI){ok=true;a.say('♪ ♫ ♪');const e=a.egg(50,24,10,'#c9a7f5',{cls:'popin'});a.tap(e,a.win)}});
   a.on(box,'pointerup',()=>{last=null});
 });
 // 191 balance
-st(['저울을 수평으로 맞춰요','Balance the scale'],['알의 무게는 3이에요. 추를 오른쪽 접시에 올려요','The egg weighs 3. Put weights on the right pan'],a=>{
-  const bm=a.put(50,40,'',{cls:'beam',size:1});a.put(50,52,'',{cls:'fulcrum',size:1});a.egg(24,30,10,'#ffd86b');let on=[];
-  const upd=()=>{const s=on.reduce((x,y)=>x+y.v,0);bm.style.rotate=Math.max(-14,Math.min(14,(s-3)*5))+'deg';on.forEach((o,i)=>a.move(o.e,76,32-i*7));
-    if(s===3){a.say(a.T(['수평!','Balanced!']));a.after(600,a.win)}else if(s>3)a.say(a.T(['너무 무거워요. 추를 눌러 내려요','Too heavy. Tap a weight to remove it']))};
-  [1,2,2,1].forEach((v,i)=>{const x=20+i*20,e=a.put(x,82,String(v),{cls:'wt',size:5});const o={v,e};
-    a.drag(e,{end:p=>{if(on.includes(o))return;if(p.x>58&&p.y<62){on.push(o);sfx.knock();upd()}else a.move(e,x,82)}});
-    a.tap(e,()=>{if(!on.includes(o))return;on=on.filter(z=>z!==o);a.move(e,x,82);upd()})});
+st(['저울을 수평으로 맞춰요','Balance the scale'],['알의 무게는 3이에요. 숫자 추를 오른쪽 접시로 끌어 올려요. 내리려면 접시 밖으로 끌어내요','The egg weighs 3. Drag number weights onto the right pan. Drag one off to remove it'],a=>{
+  a.put(50,60,'',{cls:'fulcrum',size:1});const bm=a.put(50,50,'',{cls:'beam',size:1});
+  const pL=a.put(24,50,'',{cls:'pan',size:1}),pR=a.put(76,50,'',{cls:'pan',size:1}),eg=a.egg(24,42,10,'#ffd86b');let on=[],ok=false;
+  const tilt=t=>{bm.style.rotate=t*.55+'deg';a.move(pL,24,50-t*.5);a.move(eg,24,42-t*.5);a.move(pR,76,50+t*.5);on.forEach((o,k)=>a.move(o.e,76,44+t*.5-k*8))};
+  const upd=()=>{const s=on.reduce((x,y)=>x+y.v,0);tilt(Math.max(-14,Math.min(14,(s-3)*6)));
+    if(s===3&&!ok){ok=true;a.say(a.T(['딱 수평!','Perfectly balanced!']));a.after(700,a.win)}
+    else if(s>3)a.say(a.T(['너무 무거워요. 추 하나를 접시 밖으로 끌어내요','Too heavy. Drag a weight off']));else if(s>0)a.say(a.T(['조금 더!','A bit more!']))};
+  [1,2,2,1].forEach((v,i)=>{const x=20+i*20,e=a.put(x,84,String(v),{cls:'wt',size:5});const o={v,e};
+    a.drag(e,{end:p=>{if(ok)return;const inPan=p.x>58&&p.y<68;on=on.filter(z=>z!==o);if(inPan){on.push(o);sfx.knock()}else a.move(e,x,84);upd()}})});
+  tilt(14);
 });
 // 192 bee
 st(['꿀벌이 꽃 세 송이를 모두 들러요','The bee must visit all three flowers'],['꿀벌을 끌어서 꽃마다 데려가요','Drag the bee to each flower'],a=>{
