@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="받은 돈과 쓴 돈을 적으면 남은 돈과 달마다 합계를 계산해 주는 용돈기입장.">
+<title>용돈기입장</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: 한 열 장부 — 잔액 머리말, 월 이동, 입력 카드, 날짜별 기록(줄마다 남은 돈) */
+:root{
+  --paper:#f3f6f1; --sheet:#ffffff; --ink:#1f2a24; --muted:#66756c; --rule:#dbe3dc;
+  --accent:#2f6b4f; --accent-ink:#ffffff; --in:#1f5fbf; --out:#c23a35; --soft:#e7efe8;
+  --display:"Jua","IBM Plex Sans KR",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#121714; --sheet:#1a211d; --ink:#e4ece6; --muted:#93a399; --rule:#2c3731;
+  --accent:#6fbf94; --accent-ink:#0f1a14; --in:#7aa8f0; --out:#f08a84; --soft:#22302a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#121714; --sheet:#1a211d; --ink:#e4ece6; --muted:#93a399; --rule:#2c3731;
+  --accent:#6fbf94; --accent-ink:#0f1a14; --in:#7aa8f0; --out:#f08a84; --soft:#22302a; color-scheme:dark}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px}
+.num{font-variant-numeric:tabular-nums}
+header h1{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:0;color:var(--muted)}
+.balance{font-family:var(--display);font-size:2.6rem;line-height:1.1;margin:2px 0 0}
+.balance small{font-size:1.1rem;margin-left:4px}
+.status{font-size:.82rem;color:var(--muted)}
+.month{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.month b{font-family:var(--display);font-weight:400;font-size:1.2rem}
+.icon-btn{border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:10px;width:40px;height:40px;font-size:1.1rem;cursor:pointer}
+.sum{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:2px solid var(--ink);border-bottom:1px solid var(--rule)}
+.sum div{padding:10px 4px;display:grid;gap:2px}
+.sum div+div{border-left:1px solid var(--rule);padding-left:10px}
+.sum span{font-size:.75rem;color:var(--muted);letter-spacing:.04em}
+.sum strong{font-size:1.05rem;font-weight:600}
+.c-in{color:var(--in)} .c-out{color:var(--out)}
+form{background:var(--sheet);border:1px solid var(--rule);border-radius:14px;padding:16px;display:grid;gap:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--soft);border-radius:10px;padding:4px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{text-align:center;padding:8px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg input:checked+label{background:var(--sheet);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg input:focus-visible+label{outline:2px solid var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:grid;gap:4px;min-width:0}
+.field>span{font-size:.78rem;color:var(--muted)}
+input[type=text],input[type=date],input[type=number]{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:10px 12px;width:100%;box-sizing:border-box;min-width:0}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:.85rem;border:1px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.submit{font:inherit;font-weight:600;font-size:1rem;background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:12px;cursor:pointer}
+.submit:disabled{opacity:.5;cursor:default}
+.msg{font-size:.82rem;color:var(--out);min-height:1em;margin:0}
+.day h3{font-size:.8rem;color:var(--muted);font-weight:500;margin:0 0 4px;letter-spacing:.03em}
+.day ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.day li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--rule);align-items:baseline}
+.day .memo{min-width:0;overflow-wrap:anywhere}
+.day .cat{font-size:.72rem;color:var(--muted);border:1px solid var(--rule);border-radius:4px;padding:0 5px;margin-left:6px;white-space:nowrap}
+.day .amt{font-weight:600;text-align:right}
+.day .after{font-size:.75rem;color:var(--muted)}
+.del{font:inherit;font-size:.75rem;background:none;border:0;color:var(--muted);cursor:pointer;padding:0;text-decoration:underline;justify-self:end}
+.del.confirm{color:var(--out);font-weight:600}
+.list{display:grid;gap:16px}
+.empty{text-align:center;color:var(--muted);padding:28px 8px;border:1px dashed var(--rule);border-radius:14px}
+@media (max-width:380px){.balance{font-size:2.2rem}.sum strong{font-size:.95rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>지금 남은 돈</h1>
+    <p class="balance num"><span id="bal">0</span><small>원</small></p>
+    <p class="status" id="status">기록을 불러오는 중</p>
+  </header>
+
+  <form id="f" novalidate>
+    <div class="seg" role="radiogroup" aria-label="종류">
+      <input type="radio" name="kind" id="k-out" value="out" checked><label for="k-out">쓴 돈</label>
+      <input type="radio" name="kind" id="k-in" value="in"><label for="k-in">받은 돈</label>
+    </div>
+    <div class="row">
+      <label class="field"><span>날짜</span><input type="date" id="date" required></label>
+      <label class="field"><span>금액(원)</span><input type="number" id="amount" inputmode="numeric" min="1" step="1" placeholder="1000" required></label>
+    </div>
+    <label class="field"><span>내용</span><input type="text" id="memo" maxlength="40" placeholder="예: 문방구 연필"></label>
+    <div class="field"><span>분류</span><div class="chips" id="cats"></div></div>
+    <p class="msg" id="msg" aria-live="polite"></p>
+    <button class="submit" id="save" type="submit">적기</button>
+  </form>
+
+  <div class="month">
+    <button class="icon-btn" id="prev" type="button" aria-label="이전 달">‹</button>
+    <b id="mlabel"></b>
+    <button class="icon-btn" id="next" type="button" aria-label="다음 달">›</button>
+  </div>
+  <div class="sum num">
+    <div><span>받은 돈</span><strong class="c-in" id="m-in">0원</strong></div>
+    <div><span>쓴 돈</span><strong class="c-out" id="m-out">0원</strong></div>
+    <div><span>이달 남김</span><strong id="m-net">0원</strong></div>
+  </div>
+  <div class="list" id="list"></div>
+</div>
+
+<script>
+const KEY='craft-allowance-v1';
+const CATS={out:["간식","문구","장난감","선물","저금","기타"],in:["용돈","세뱃돈","심부름","선물","기타"]};
+const $=id=>document.getElementById(id);
+const fmt=n=>n.toLocaleString("ko-KR");
+const pad=n=>String(n).padStart(2,"0");
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+let entries=[], cat=null, view=today().slice(0,7), db=null, canWrite=true, pendingDel=null;
+
+function kind(){return document.querySelector('input[name=kind]:checked').value}
+function drawCats(){
+  const box=$("cats"); box.textContent="";
+  const list=CATS[kind()]; if(!list.includes(cat)) cat=list[0];
+  list.forEach(c=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=c;
+    b.setAttribute("aria-pressed",c===cat);b.onclick=()=>{cat=c;drawCats()};box.appendChild(b)});
+}
+function shiftMonth(d){let [y,m]=view.split("-").map(Number);m+=d;if(m<1){m=12;y--}if(m>12){m=1;y++}view=y+"-"+pad(m);render()}
+
+function render(){
+  const sorted=[...entries].sort((a,b)=>a.date===b.date?(a.createdAt||0)-(b.createdAt||0):a.date<b.date?-1:1);
+  let run=0; const after=new Map();
+  sorted.forEach(e=>{run+=e.kind==="in"?e.amount:-e.amount;after.set(e.id,run)});
+  $("bal").textContent=fmt(run);
+  $("bal").parentElement.classList.toggle("c-out",run<0);
+  const [y,m]=view.split("-"); $("mlabel").textContent=y+"년 "+Number(m)+"월";
+  const month=sorted.filter(e=>e.date.startsWith(view));
+  const mi=month.filter(e=>e.kind==="in").reduce((s,e)=>s+e.amount,0);
+  const mo=month.filter(e=>e.kind==="out").reduce((s,e)=>s+e.amount,0);
+  $("m-in").textContent=fmt(mi)+"원"; $("m-out").textContent=fmt(mo)+"원";
+  $("m-net").textContent=(mi-mo>0?"+":"")+fmt(mi-mo)+"원";
+  const list=$("list"); list.textContent="";
+  if(!month.length){const p=document.createElement("p");p.className="empty";
+    p.textContent=entries.length?"이 달에는 적은 기록이 없습니다.":"아직 기록이 없습니다. 위에서 받은 돈이나 쓴 돈을 적으면 여기에 쌓입니다.";list.appendChild(p);return}
+  const byDay={}; month.forEach(e=>(byDay[e.date]=byDay[e.date]||[]).push(e));
+  const W="일월화수목금토";
+  Object.keys(byDay).sort().reverse().forEach(d=>{
+    const sec=document.createElement("section");sec.className="day";
+    const dt=new Date(d+"T00:00:00");
+    const h=document.createElement("h3");h.textContent=Number(d.slice(5,7))+"월 "+Number(d.slice(8))+"일 ("+W[dt.getDay()]+")";sec.appendChild(h);
+    const ul=document.createElement("ul");
+    byDay[d].slice().reverse().forEach(e=>{
+      const li=document.createElement("li");
+      const memo=document.createElement("div");memo.className="memo";memo.textContent=e.memo||(e.kind==="in"?"받은 돈":"쓴 돈");
+      if(e.cat){const c=document.createElement("span");c.className="cat";c.textContent=e.cat;memo.appendChild(c)}
+      const amt=document.createElement("div");amt.className="amt num "+(e.kind==="in"?"c-in":"c-out");amt.textContent=(e.kind==="in"?"+":"−")+fmt(e.amount)+"원";
+      const aft=document.createElement("div");aft.className="after num";aft.textContent="남은 돈 "+fmt(after.get(e.id))+"원";
+      li.append(memo,amt,aft);
+      if(canWrite&&db){const del=document.createElement("button");del.type="button";del.className="del"+(pendingDel===e.id?" confirm":"");
+        del.textContent=pendingDel===e.id?"정말 지우기":"지우기";
+        del.onclick=async()=>{if(pendingDel!==e.id){pendingDel=e.id;render();return}
+          pendingDel=null;try{await db.doc("entries/"+e.id).delete()}catch(err){$("msg").textContent="지우지 못했습니다. 잠시 뒤 다시 눌러 주세요."}};
+        li.appendChild(del)}
+      ul.appendChild(li)});
+    sec.appendChild(ul);list.appendChild(sec)});
+}
+
+$("date").value=today();
+document.querySelectorAll('input[name=kind]').forEach(r=>r.addEventListener("change",drawCats));
+$("prev").onclick=()=>shiftMonth(-1); $("next").onclick=()=>shiftMonth(1);
+drawCats(); render();
+
+$("f").addEventListener("submit",async ev=>{
+  ev.preventDefault(); const msg=$("msg"); msg.textContent="";
+  const amount=Math.round(Number($("amount").value));
+  if(!amount||amount<1){msg.textContent="금액을 1원 이상으로 적어 주세요.";$("amount").focus();return}
+  if(!$("date").value){msg.textContent="날짜를 골라 주세요.";return}
+  if(!db){msg.textContent="저장소에 연결되지 않아 적을 수 없습니다.";return}
+  const body={date:$("date").value,kind:kind(),amount,memo:$("memo").value.trim(),cat,createdAt:Date.now()};
+  $("save").disabled=true;
+  try{await db.collection("entries").add(body);$("amount").value="";$("memo").value="";view=body.date.slice(0,7);render()}
+  catch(err){msg.textContent=err&&err.code==="invalid_argument"?"이 화면에서는 기록을 적을 권한이 없습니다.":"적지 못했습니다. 잠시 뒤 다시 눌러 주세요."}
+  finally{$("save").disabled=false}
+});
+
+(function(){
+  db={collection:()=>({add:async b=>{const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);entries.push({id,...b});save()}}),
+      doc:p=>({delete:async()=>{const id=p.split("/")[1];entries=entries.filter(e=>e.id!==id);save()}})};
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(entries))}catch(e){$("msg").textContent="이 브라우저에는 저장되지 않습니다."}
+    $("status").textContent="이 기기에 저장된 기록 "+entries.length+"건";render()}
+  try{const raw=localStorage.getItem(KEY);if(raw)entries=JSON.parse(raw).filter(e=>e&&e.date&&Number.isFinite(e.amount))}catch(e){}
+  $("status").textContent="이 기기에 저장된 기록 "+entries.length+"건";
+  render();
+})();
+</script>
+</body>
+</html>
