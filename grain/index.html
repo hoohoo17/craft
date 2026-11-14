@@ -56,12 +56,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .pt{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:8px;padding:8px;background:rgba(242,244,247,.97);overflow-y:auto}
 .pt[hidden]{display:none}
 .pt-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
-.pt-grid{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:2px}
-.pt-grid button{aspect-ratio:1;min-width:0;padding:0;border:0;border-radius:2px;font:600 9px/1 var(--body);letter-spacing:-.03em;overflow:hidden}
-.pt-grid button.f{margin-top:5px}
-.pt-grid button.f2{margin-top:0}
-.pt-grid button[aria-pressed="true"]{outline:2px solid var(--text);outline-offset:0;position:relative;z-index:1}
-@media (min-width:520px){.pt-grid{gap:3px}.pt-grid button{font-size:12px;border-radius:3px}}
+.pt-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.pt-grid .el{height:auto;min-height:52px;padding:5px 2px}
+.pt-grid .el span{white-space:normal;word-break:break-all;text-align:center;line-height:1.2}
+@media (min-width:700px){.pt-grid{grid-template-columns:repeat(10,minmax(0,1fr))}}
 .tools .act{flex:none;height:34px}
 .find{display:flex;gap:6px;padding:0 16px 8px;flex:none}
 .find input{flex:1;min-width:0;height:34px;padding:0 10px;font:400 16px var(--body);color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;-webkit-user-select:text;user-select:text;-webkit-appearance:none;appearance:none}
@@ -76,7 +74,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .el i{display:block;flex:none;width:70%;max-width:40px;height:22px;border-radius:3px}
 .el span{max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .el i.sym{display:flex;align-items:center;justify-content:center;gap:2px;font:600 13px/1 var(--body);font-style:normal;font-variant-numeric:tabular-nums}
-.el i.sym small{font-size:8px;font-weight:500;align-self:flex-start;margin-top:3px;opacity:.85}
+
 .el[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--press)}
 @media (min-width:700px){
   .palette{grid-template-columns:repeat(10,1fr);height:66px}
@@ -94,8 +92,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 <div class="stage" id="stage">
   <canvas id="tank" aria-label="알갱이 실험 수조. 문지르면 선택한 원소가 쏟아진다."></canvas>
   <div class="pt" id="pt" hidden>
-    <div class="pt-bar"><span>원소 118종. 누르면 고른다.</span><button type="button" class="act" id="pt-close">닫기</button></div>
-    <div class="pt-grid" id="pt-grid" role="group" aria-label="주기율표"></div>
+    <div class="pt-bar"><span>원소 118종, 번호 순서. 누르면 고른다.</span><button type="button" class="act" id="pt-close">닫기</button></div>
+    <div class="pt-grid" id="pt-grid" role="group" aria-label="원소 전체"></div>
   </div>
 </div>
 <p class="hint" id="hint"></p>
@@ -104,7 +102,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
     <button type="button" id="tab-0" data-tab="0" aria-pressed="true">기본</button>
     <button type="button" id="tab-1" data-tab="1" aria-pressed="false">원소</button>
   </div>
-  <button type="button" class="act" id="pt-open" aria-expanded="false">주기율표</button>
+  <button type="button" class="act" id="pt-open" aria-expanded="false">원소 전체</button>
   <div class="brush" role="group" aria-label="붓 크기">
     <button type="button" id="brush-s" data-r="1" aria-label="붓 작게" aria-pressed="false"><i style="width:5px;height:5px"></i></button>
     <button type="button" id="brush-m" data-r="3" aria-label="붓 보통" aria-pressed="true"><i style="width:10px;height:10px"></i></button>
@@ -112,7 +110,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
   </div>
 </div>
 <div class="find">
-  <input id="find" type="search" placeholder="원소 찾기: 이름, 기호, 번호" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="원소 찾기">
+  <input id="find" type="search" placeholder="원소 찾기: 이름이나 번호" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="원소 찾기">
   <button type="button" id="find-clear" aria-label="검색어 지우기" hidden>지우기</button>
 </div>
 <div class="palette" id="palette" role="group" aria-label="원소"></div>
@@ -1067,35 +1065,19 @@ function remember(t){
   try{localStorage.setItem("grain-recent",JSON.stringify(recent))}catch(_){}
   return true;
 }
-function cellPos(z){
-  if(z===1)return [1,1];if(z===2)return [1,18];
-  if(z<=4)return [2,z-2];if(z<=10)return [2,z+8];
-  if(z<=12)return [3,z-10];if(z<=18)return [3,z];
-  if(z<=36)return [4,z-18];if(z<=54)return [5,z-36];
-  if(z<=56)return [6,z-54];if(z<=71)return [9,z-54];if(z<=86)return [6,z-68];
-  if(z<=88)return [7,z-86];if(z<=103)return [10,z-86];return [7,z-100];
-}
 function showTable(on){pt.hidden=!on;ptOpen.setAttribute("aria-expanded",String(on))}
-ELS.forEach(e=>{
-  if(e.z===undefined)return;
-  const b=document.createElement("button"),ps=cellPos(e.z);
-  b.type="button";b.id="pt-"+e.z;b.dataset.el=e.t;b.textContent=e.sym;
-  b.setAttribute("aria-label",e.z+"번 "+e.n);b.setAttribute("aria-pressed","false");
-  b.style.gridRow=ps[0];b.style.gridColumn=ps[1];
-  b.style.background=e.c;b.style.color=e.fg||"#fff";
-  if(ps[0]>=9)b.className=ps[0]===9?"f":"f f2";
-  b.addEventListener("click",()=>{
+ELS.filter(e=>e.z!==undefined).sort((p,q)=>p.z-q.z).forEach(e=>{
+  ptGrid.appendChild(makeBtn(e,"pt-"+e.z,()=>{
     if(query){find.value="";query="";findClear.hidden=true}
     tab=1;choose(e.t);buildPalette();showTable(false);
-  });
-  ptGrid.appendChild(b);
+  }));
 });
 ptOpen.addEventListener("click",()=>showTable(pt.hidden));
 document.getElementById("pt-close").addEventListener("click",()=>showTable(false));
 function choose(t){
   sel=t;
   const e=ELS.find(o=>o.t===t);
-  hint.innerHTML="<b>"+e.n+"</b> "+(e.z!==undefined?e.sym+" "+e.z+"번. ":"")+e.d;
+  hint.innerHTML="<b>"+e.n+"</b> "+(e.z!==undefined?e.z+"번 원소. ":"")+e.d;
   if(remember(t)&&tab===1&&!query)buildPalette();
   mark();
 }
@@ -1112,21 +1094,20 @@ function found(){
   });
   return a.concat(b,c);
 }
-function addBtn(e){
+function makeBtn(e,id,onPick){
   const b=document.createElement("button");
-  b.type="button";b.className="el";b.id="el-"+e.t;b.dataset.el=e.t;
+  b.type="button";b.className="el";b.id=id;b.dataset.el=e.t;
   const sw=document.createElement("i");
-  if(e.sym){
-    sw.className="sym";sw.style.background=e.c;sw.style.color=e.fg||"#fff";
-    const z=document.createElement("small");z.textContent=e.z;
-    sw.appendChild(z);sw.appendChild(document.createTextNode(e.sym));
-  }else if(e.c)sw.style.background=e.c;
+  if(e.z!==undefined){sw.className="sym";sw.style.background=e.c;sw.style.color=e.fg||"#fff";sw.textContent=e.z}
+  else if(e.c)sw.style.background=e.c;
   else{sw.style.border="1px dashed #5b6673";sw.style.background="#dfe8f0"}
   const nm=document.createElement("span");nm.textContent=e.n;
   b.appendChild(sw);b.appendChild(nm);
-  b.addEventListener("click",()=>choose(e.t));
-  pal.appendChild(b);
+  b.setAttribute("aria-pressed","false");
+  b.addEventListener("click",onPick);
+  return b;
 }
+function addBtn(e){pal.appendChild(makeBtn(e,"el-"+e.t,()=>choose(e.t)))}
 function buildPalette(){
   pal.textContent="";
   pal.classList.toggle("searching",!!query);
@@ -1135,7 +1116,7 @@ function buildPalette(){
     if(list.length)list.forEach(addBtn);
     else{
       const m=document.createElement("p");m.className="none";
-      m.textContent="맞는 원소가 없다. 이름(수소), 기호(H), 원자 번호(1), 성질(터진다)로 찾는다.";
+      m.textContent="맞는 원소가 없다. 이름(수소), 번호(1), 성질(터진다)로 찾는다.";
       pal.appendChild(m);
     }
   }else if(tab===0)ELS.forEach(e=>{if(e.t===EMPTY||e.tab===0)addBtn(e)});
