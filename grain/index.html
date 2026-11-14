@@ -39,9 +39,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stage{flex:1;min-height:0;position:relative;margin:0 16px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--tank)}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:crosshair}
 .hint{margin:0;padding:8px 16px 0;min-height:45px;font-size:13px;line-height:1.4;color:var(--muted)}
-.tools{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 16px 8px}
+.tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:6px 16px 8px}
 .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.seg button{height:32px;padding:0 9px;white-space:nowrap;font-size:13px;font-weight:500;background:var(--panel);border:0;border-left:1px solid var(--line)}
+.seg button{height:32px;min-width:34px;padding:0 10px;white-space:nowrap;font-size:13px;font-weight:500;background:var(--panel);border:0;border-left:1px solid var(--line)}
 .seg button:first-child{border-left:0}
 .seg button[aria-pressed="true"]{background:var(--press);font-weight:600}
 .hint b{color:var(--text);font-weight:600}
@@ -75,8 +75,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
   <div class="seg" role="group" aria-label="원소 묶음">
     <button type="button" id="tab-0" data-tab="0" aria-pressed="true">기본</button>
     <button type="button" id="tab-1" data-tab="1" aria-pressed="false">원소 1</button>
-    <button type="button" id="tab-2" data-tab="2" aria-pressed="false">원소 2</button>
-    <button type="button" id="tab-3" data-tab="3" aria-pressed="false">원소 3</button>
+    <button type="button" id="tab-2" data-tab="2" aria-label="원소 2" aria-pressed="false">2</button>
+    <button type="button" id="tab-3" data-tab="3" aria-label="원소 3" aria-pressed="false">3</button>
+    <button type="button" id="tab-4" data-tab="4" aria-label="원소 4" aria-pressed="false">4</button>
   </div>
   <div class="brush" role="group" aria-label="붓 크기">
     <button type="button" id="brush-s" data-r="1" aria-label="붓 작게" aria-pressed="false"><i style="width:5px;height:5px"></i></button>
@@ -92,7 +93,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 const EMPTY=0,SAND=1,WATER=2,STONE=3,PLANT=4,FIRE=5,OIL=6,STEAM=7,LAVA=8,POWDER=9,ICE=10,
       HYD=11,CARBON=12,NITRO=13,OXY=14,FLUOR=15,SODIUM=16,IRON=17,GOLD=18,HG=19,RUST=20,EMBER=21,
       HE=22,NEON=23,MG=24,FLARE=25,AL=26,PHOS=27,CL=28,SALT=29,POT=30,TUNG=31,URAN=32,
-      SULF=33,AR=34,CA=35,CU=36,PATINA=37,GA=38,GAL=39,BR=40,IOD=41,IGAS=42,CS=43,PT=44,MAXT=44;
+      SULF=33,AR=34,CA=35,CU=36,PATINA=37,GA=38,GAL=39,BR=40,IOD=41,IGAS=42,CS=43,PT=44,
+      LI=45,SR=46,AG=47,TARN=48,XE=49,BA=50,PB=51,BI=52,RN=53,RA=54,SPK_R=55,SPK_G=56,MAXT=56;
 const ELS=[
   {t:SAND,  tab:0,n:"모래",  c:"#d4a44e", d:"쌓이고 무너진다. 물과 기름 아래로 가라앉는다."},
   {t:WATER, tab:0,n:"물",    c:"#3a84d6", d:"흐른다. 불을 끄고 식물을 키운다."},
@@ -130,25 +132,35 @@ const ELS=[
   {t:IOD,   tab:3,n:"아이오딘",c:"#3c2846",sym:"I", z:53, d:"어두운 가루. 뜨거워지면 보라색 기체가 되고, 식으면 다시 가루로 내려앉는다."},
   {t:CS,    tab:3,n:"세슘",  c:"#ccb264", fg:"#1b222b",sym:"Cs",z:55, d:"물에 닿으면 칼륨보다 훨씬 크게 터진다."},
   {t:PT,    tab:3,n:"백금",  c:"#b0b6c4", fg:"#1b222b",sym:"Pt",z:78, d:"변하지 않는 금속. 수소와 산소가 함께 닿으면 불 없이도 타게 한다. 촉매."},
+  {t:LI,    tab:4,n:"리튬",  c:"#dcbec8", fg:"#1b222b",sym:"Li",z:3,  d:"가장 가벼운 금속. 물에 뜨고, 물과 만나면 수소를 내며 조용히 사라진다."},
+  {t:SR,    tab:4,n:"스트론튬",c:"#c88c82",sym:"Sr",z:38, d:"불이 붙으면 빨간 불꽃으로 솟는다. 불꽃놀이의 빨강. 화약과 섞어 터뜨려 보자."},
+  {t:AG,    tab:4,n:"은",    c:"#b8beca", fg:"#1b222b",sym:"Ag",z:47, d:"무거운 가루. 황에 닿으면 검게 변한다. 은수저가 검어지는 까닭."},
+  {t:XE,    tab:4,n:"제논",  c:"#788cff", sym:"Xe",z:54, d:"반응하지 않는 무거운 기체. 푸르게 빛나며 가라앉는다."},
+  {t:BA,    tab:4,n:"바륨",  c:"#96be96", fg:"#1b222b",sym:"Ba",z:56, d:"불이 붙으면 초록 불꽃으로 솟는다. 불꽃놀이의 초록."},
+  {t:PB,    tab:4,n:"납",    c:"#5c6070", sym:"Pb",z:82, d:"무겁고 무른 금속 가루. 잘 변하지 않는다. 라듐이 붕괴한 끝에 남는다."},
+  {t:BI,    tab:4,n:"비스무트",c:"#c878b4",sym:"Bi",z:83, d:"무지갯빛으로 빛나는 결정. 움직이지 않는다."},
+  {t:RN,    tab:4,n:"라돈",  c:"#c8dc50", fg:"#1b222b",sym:"Rn",z:86, d:"빛나는 무거운 기체. 시간이 지나면 붕괴해 납이 된다."},
+  {t:RA,    tab:4,n:"라듐",  c:"#50dcc8", fg:"#1b222b",sym:"Ra",z:88, d:"스스로 빛난다. 라돈 기체를 내뿜다가 결국 납이 된다. 방사성 붕괴."},
   {t:EMPTY, n:"지우개",c:"",        d:"문지른 자리를 비운다."}
 ];
 // r,g,b,흔들림 폭
 const BASE=[[223,232,240,0],[212,164,78,22],[58,132,214,10],[122,128,138,14],[70,168,82,22],[0,0,0,0],[124,84,58,10],[156,172,192,10],[238,92,32,26],[104,92,128,16],[112,188,232,10],
   [240,150,150,8],[40,40,46,10],[150,160,240,10],[200,110,220,8],[190,200,60,10],[198,190,172,12],[74,84,100,8],[245,196,0,20],[132,140,156,14],[166,84,48,18],[214,74,26,24],
   [250,176,120,8],[255,96,70,0],[170,178,188,14],[255,244,150,0],[146,168,204,14],[224,214,110,10],[60,190,150,8],[244,244,248,10],[176,160,200,12],[58,52,96,6],[120,210,40,14],
-  [226,230,50,14],[90,84,190,8],[222,196,160,12],[206,126,78,10],[88,176,150,12],[120,170,180,8],[150,196,206,10],[156,36,36,10],[60,40,70,8],[150,40,170,8],[204,178,100,20],[176,182,196,6]];
+  [226,230,50,14],[90,84,190,8],[222,196,160,12],[206,126,78,10],[88,176,150,12],[120,170,180,8],[150,196,206,10],[156,36,36,10],[60,40,70,8],[150,40,170,8],[204,178,100,20],[176,182,196,6],
+  [220,190,200,10],[200,140,130,12],[184,190,202,16],[60,60,66,10],[120,140,255,0],[150,190,150,12],[92,96,112,10],[200,120,180,0],[200,220,80,0],[80,220,200,14],[255,60,80,0],[60,230,110,0]];
 const BGPX=(0xff000000|(240<<16)|(232<<8)|223)>>>0;
-const tbl=(...ts)=>{const a=new Uint8Array(48);ts.forEach(t=>a[t]=1);return a};
-const GASES=[STEAM,HYD,OXY,FLUOR,HE,NEON,CL,AR,IGAS];
+const tbl=(...ts)=>{const a=new Uint8Array(64);ts.forEach(t=>a[t]=1);return a};
+const GASES=[STEAM,HYD,OXY,FLUOR,HE,NEON,CL,AR,IGAS,XE,RN];
 const PASS_POWDER=tbl(EMPTY,FIRE,...GASES);
 const PASS_WATER=tbl(EMPTY,OIL,NITRO,...GASES);
 const PASS_OIL=tbl(EMPTY,...GASES);
 const PASS_LAVA=PASS_OIL;
 const PASS_HEAVY=tbl(EMPTY,WATER,OIL,NITRO,...GASES);
-const PASS_HG=tbl(EMPTY,WATER,OIL,NITRO,...GASES,SAND,POWDER,CARBON,RUST,SODIUM,MG,AL,PHOS,SALT,POT,SULF,CA,IOD,CS);
+const PASS_HG=tbl(EMPTY,WATER,OIL,NITRO,...GASES,SAND,POWDER,CARBON,RUST,SODIUM,MG,AL,PHOS,SALT,POT,SULF,CA,IOD,CS,LI,SR,AG,TARN,BA,PB,RA);
 const SINK_NONE=tbl(),SINK_STD=tbl(WATER,OIL,NITRO),SINK_AU=tbl(WATER,OIL,NITRO,HG);
 const LIQ=tbl(WATER,OIL,NITRO,HG,BR,GAL),GAS=tbl(...GASES);
-const CORR=tbl(STONE,SAND,PLANT,IRON,RUST,ICE,POWDER,CARBON,SODIUM,MG,AL,PHOS,SALT,POT,URAN,SULF,CA,CU,PATINA,GA,IOD,CS);
+const CORR=tbl(STONE,SAND,PLANT,IRON,RUST,ICE,POWDER,CARBON,SODIUM,MG,AL,PHOS,SALT,POT,URAN,SULF,CA,CU,PATINA,GA,IOD,CS,LI,SR,BA,PB);
 const TOUGH=tbl(STONE,LAVA,IRON,GOLD,HG,TUNG,PT);
 const HOT=tbl(FIRE,LAVA,EMBER,FLARE);
 const DX=[0,1,0,-1],DY=[-1,0,1,0];
@@ -172,7 +184,7 @@ function swap(i,j){
   t=shade[i];shade[i]=shade[j];shade[j]=t;
   stamp[i]=stamp[j]=tick;
 }
-function initLife(t){return t===FIRE?30+R()*40|0:(t===STEAM||t===NITRO)?120+R()*120|0:t===EMBER||t===IGAS?150+R()*100|0:t===FLARE?30+R()*20|0:t===BR?200+R()*50|0:t===GAL?200:0}
+function initLife(t){return t===FIRE?30+R()*40|0:(t===STEAM||t===NITRO)?120+R()*120|0:t===EMBER||t===IGAS||t===RN?150+R()*100|0:t===SPK_R||t===SPK_G?25+R()*20|0:t===FLARE?30+R()*20|0:t===BR?200+R()*50|0:t===GAL?200:0}
 
 function fallPowder(i,x,y,sink){
   if(y+1>=H)return;
@@ -230,6 +242,7 @@ function explode(cx,cy,r){
     if(TOUGH[t]&&(r<12||t===TUNG))continue;
     if(t===ICE)set(n,WATER);
     else if(t===WATER)set(n,STEAM,initLife(STEAM));
+    else if(t===SR||t===BA)set(n,t===SR?SPK_R:SPK_G,30+R()*25|0);
     else if(R()<.85)set(n,FIRE,5+R()*16|0);
     else set(n,EMPTY);
   }
@@ -245,6 +258,44 @@ function step(){
       switch(t){
       case SAND:case POWDER:case CARBON:case RUST:fallPowder(i,x,y,SINK_STD);break;
       case GOLD:fallPowder(i,x,y,SINK_AU);break;
+      case SR:case BA:case PB:case TARN:fallPowder(i,x,y,SINK_STD);break;
+      case LI:{
+        if(R()<.3){const n=rn(x,y);if(n>=0&&g[n]===WATER&&R()<.2){set(n,HYD);set(i,EMPTY);break}}
+        fallPowder(i,x,y,SINK_NONE);
+        break;}
+      case AG:{
+        if(R()<.2){const n=rn(x,y);if(n>=0&&g[n]===SULF&&R()<.3){set(i,TARN);break}}
+        fallPowder(i,x,y,SINK_STD);
+        break;}
+      case XE:gasMove(i,x,y,1,.4,false);break;
+      case RN:
+        if(life[i]<=1){set(i,PB);break}
+        if(R()<.3)life[i]--;
+        gasMove(i,x,y,1,.4,false);
+        break;
+      case RA:{
+        if(R()<.003){
+          const n=rn(x,y);
+          if(n>=0&&g[n]===EMPTY){set(n,RN,initLife(RN));if(R()<.15){set(i,PB);break}}
+        }
+        fallPowder(i,x,y,SINK_STD);
+        break;}
+      case SPK_R:case SPK_G:{
+        if(life[i]<=1){set(i,EMPTY);break}
+        const l=--life[i];
+        if(R()<.3){
+          const n=rn(x,y);
+          if(n>=0){
+            const tn=g[n];
+            if(tn===SR||tn===BA)set(n,tn===SR?SPK_R:SPK_G,initLife(SPK_R));
+            else if(tn===POWDER)explode(n%W,n/W|0);
+            else if(tn===HYD)set(n,FIRE,10);
+          }
+        }
+        if(g[i]!==t)break;
+        const ny=y+(l>10?-1:1),nx=x+(R()*3|0)-1;
+        if(ny>=0&&ny<H&&nx>=0&&nx<W){const n=ny*W+nx;if(g[n]===EMPTY)swap(i,n)}
+        break;}
       case SULF:{
         if(R()<.1){const n=rn(x,y);if(n>=0&&g[n]===CARBON&&R()<.3){set(n,POWDER);set(i,POWDER);break}}
         fallPowder(i,x,y,SINK_STD);
@@ -428,6 +479,7 @@ function step(){
           else if(tn===MG){if(R()<.1)set(n,FLARE,initLife(FLARE))}
           else if(tn===PHOS){if(R()<.5)set(n,FIRE,40+R()*40|0)}
           else if(tn===SULF){if(R()<.15)set(n,FIRE,60+R()*40|0)}
+          else if(tn===SR||tn===BA){if(R()<.3)set(n,tn===SR?SPK_R:SPK_G,initLife(SPK_R))}
           else if(tn===ICE){if(R()<.05)set(n,WATER)}
           else if(tn===EMPTY&&q===0){if(R()<.15)set(n,FIRE,6+R()*9|0)}
         }
@@ -519,6 +571,7 @@ function step(){
           else if(tn===MG){if(R()<.2)set(n,FLARE,initLife(FLARE))}
           else if(tn===PHOS){if(R()<.5)set(n,FIRE,40+R()*40|0)}
           else if(tn===SULF){if(R()<.15)set(n,FIRE,60+R()*40|0)}
+          else if(tn===SR||tn===BA){if(R()<.3)set(n,tn===SR?SPK_R:SPK_G,initLife(SPK_R))}
         }
         if(g[i]!==FIRE||stamp[i]===tick)break;
         if(y>0&&R()<.45){
@@ -544,6 +597,7 @@ function step(){
           else if(tn===MG){if(R()<.3)set(n,FLARE,initLife(FLARE))}
           else if(tn===PHOS){set(n,FIRE,40+R()*40|0)}
           else if(tn===SULF){if(R()<.3)set(n,FIRE,60+R()*40|0)}
+          else if(tn===SR||tn===BA){if(R()<.3)set(n,tn===SR?SPK_R:SPK_G,initLife(SPK_R))}
         }
         if(g[i]!==LAVA)break;
         if(y>0&&g[i-W]===EMPTY&&R()<.003)set(i-W,FIRE,6+R()*10|0);
@@ -582,6 +636,17 @@ function render(){
       else{r=206+f;gg=58+f;b=28}
     }else if(t===FLARE){
       const f=(shade[i]+tick*11)&31;r=255;gg=236+(f>>1);b=110+f*4;
+    }else if(t===SPK_R){
+      const f=(shade[i]+tick*13)&63;r=255;gg=40+f;b=70+f;
+    }else if(t===SPK_G){
+      const f=(shade[i]+tick*13)&63;r=40+f*2;gg=225;b=80+f;
+    }else if(t===BI){
+      const ph=((i%W)+(i/W|0))*.3+(shade[i]&7)*.12;
+      r=150+90*Math.sin(ph);gg=150+90*Math.sin(ph+2.09);b=150+90*Math.sin(ph+4.19);
+    }else if(t===XE){
+      const ph=(tick+shade[i])*.05;r=120+50*Math.sin(ph);gg=150+40*Math.sin(ph+1);b=255;
+    }else if(t===RN){
+      const ph=(tick+shade[i])*.05;r=195+40*Math.sin(ph);gg=222;b=70+40*Math.sin(ph+2);
     }else if(t===NEON){
       const ph=(tick+shade[i])*.05;r=255;gg=96+50*Math.sin(ph);b=70+60*Math.sin(ph*.7+2);
     }else{
@@ -589,7 +654,7 @@ function render(){
       let v=((shade[i]&31)-16)*c[3]/16;
       if(t===LAVA||t===EMBER)v+=Math.sin((tick+shade[i])*.08)*16;
       else if(t===HG||t===GAL)v+=Math.sin((tick+shade[i])*.12)*22;
-      else if(t===URAN)v+=Math.sin((tick+shade[i])*.06)*26;
+      else if(t===URAN||t===RA)v+=Math.sin((tick+shade[i])*.06)*26;
       r=c[0]+v;gg=c[1]+v;b=c[2]+v;
     }
     r=r<0?0:r>255?255:r|0;gg=gg<0?0:gg>255?255:gg|0;b=b<0?0:b>255?255:b|0;
@@ -606,8 +671,8 @@ function dab(cx,cy){
     const x=cx+dx,y=cy+dy;if(x<0||x>=W||y<0||y>=H)continue;
     const i=y*W+x,t=g[i];
     if(sel===EMPTY||sel===STONE){if(t!==sel)set(i,sel)}
-    else if(sel===PLANT||sel===ICE||sel===IRON||sel===TUNG||sel===CU||sel===GA||sel===PT){if(t===EMPTY)set(i,sel)}
-    else if(sel===FIRE){if((t===EMPTY||t===PLANT||t===OIL||t===HYD||t===OXY)&&R()<.5)set(i,FIRE,initLife(FIRE));else if(t===CARBON){if(R()<.5)set(i,EMBER,150+R()*100|0)}else if(t===MG){if(R()<.5)set(i,FLARE,initLife(FLARE))}else if(t===PHOS||t===SULF){set(i,FIRE,initLife(FIRE))}else if(t===POWDER)explode(x,y)}
+    else if(sel===PLANT||sel===ICE||sel===IRON||sel===TUNG||sel===CU||sel===GA||sel===PT||sel===BI){if(t===EMPTY)set(i,sel)}
+    else if(sel===FIRE){if((t===EMPTY||t===PLANT||t===OIL||t===HYD||t===OXY)&&R()<.5)set(i,FIRE,initLife(FIRE));else if(t===CARBON){if(R()<.5)set(i,EMBER,150+R()*100|0)}else if(t===MG){if(R()<.5)set(i,FLARE,initLife(FLARE))}else if(t===PHOS||t===SULF){set(i,FIRE,initLife(FIRE))}else if(t===SR||t===BA){set(i,t===SR?SPK_R:SPK_G,initLife(SPK_R))}else if(t===POWDER)explode(x,y)}
     else if(t===EMPTY&&R()<.5)set(i,sel,initLife(sel));
   }
 }
@@ -754,7 +819,7 @@ function start(d){
   }else{
     fit();seed();
   }
-  setTab(d.tab>=1&&d.tab<=3?d.tab:0);
+  setTab(d.tab>=1&&d.tab<=4?d.tab:0);
   choose(typeof d.sel==="number"&&d.sel<=MAXT?d.sel:SAND);
   setBrush(d.brush||3);
   setPaused(d.paused!==undefined?!!d.paused:matchMedia("(prefers-reduced-motion: reduce)").matches);
