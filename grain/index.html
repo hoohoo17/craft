@@ -114,7 +114,7 @@ const EMPTY=0,SAND=1,WATER=2,STONE=3,PLANT=4,FIRE=5,OIL=6,STEAM=7,LAVA=8,POWDER=
       SULF=33,AR=34,CA=35,CU=36,PATINA=37,GA=38,GAL=39,BR=40,IOD=41,IGAS=42,CS=43,PT=44,
       LI=45,SR=46,AG=47,TARN=48,XE=49,BA=50,PB=51,BI=52,RN=53,RA=54,SPK_R=55,SPK_G=56,
       SI=57,TI=58,NI=59,ZN=60,KR=61,SN=62,TINP=63,ND=64,FR=65,PU=66,
-      BORON=67,CR=68,CO=69,AS=70,WITHER=71,PD=72,CE=73,PO=74,CF=75,OG=76,MAXT=76;
+      BORON=67,CR=68,CO=69,AS=70,WITHER=71,PD=72,CE=73,PO=74,CF=75,OG=76,MAXT=140;
 const ELS=[
   {t:SAND,  tab:0,n:"모래",  c:"#d4a44e", d:"쌓이고 무너진다. 물과 기름 아래로 가라앉는다."},
   {t:WATER, tab:0,n:"물",    c:"#3a84d6", d:"흐른다. 불을 끄고 식물을 키운다."},
@@ -190,7 +190,7 @@ const BASE=[[223,232,240,0],[212,164,78,22],[58,132,214,10],[122,128,138,14],[70
   [64,76,120,16],[196,186,170,6],[150,156,140,14],[140,164,184,8],[200,170,255,0],[168,176,170,6],[110,112,108,12],[214,48,60,6],[255,170,60,10],[255,80,160,12],
   [90,70,60,12],[176,196,214,6],[40,80,190,14],[96,110,96,12],[150,120,60,14],[190,186,176,6],[170,160,140,14],[80,150,255,12],[250,224,110,10],[230,120,255,0]];
 const BGPX=(0xff000000|(240<<16)|(232<<8)|223)>>>0;
-const tbl=(...ts)=>{const a=new Uint8Array(96);ts.forEach(t=>a[t]=1);return a};
+const tbl=(...ts)=>{const a=new Uint8Array(160);ts.forEach(t=>a[t]=1);return a};
 const GASES=[STEAM,HYD,OXY,FLUOR,HE,NEON,CL,AR,IGAS,XE,RN,KR];
 const PASS_POWDER=tbl(EMPTY,FIRE,...GASES);
 const PASS_WATER=tbl(EMPTY,OIL,NITRO,...GASES);
@@ -203,6 +203,92 @@ const LIQ=tbl(WATER,OIL,NITRO,HG,BR,GAL),GAS=tbl(...GASES);
 const CORR=tbl(STONE,SAND,PLANT,IRON,RUST,ICE,POWDER,CARBON,SODIUM,MG,AL,PHOS,SALT,POT,URAN,SULF,CA,CU,PATINA,GA,IOD,CS,LI,SR,BA,PB,SI,TI,NI,ZN,SN,TINP,ND,FR,PU,BORON,CR,CO,AS,WITHER,CE);
 const TOUGH=tbl(STONE,LAVA,IRON,GOLD,HG,TUNG,PT,TI);
 const HOT=tbl(FIRE,LAVA,EMBER,FLARE,PO);
+const MORE=[
+  [4, "Be", "베릴륨", "S", "#93a79b", "가볍고 단단한 금속 덩어리. 폭발에도 버틴다.", "t"],
+  [21, "Sc", "스칸듐", "P", "#cfd2c4", "가벼운 희토류 금속 가루.", ""],
+  [23, "V", "바나듐", "S", "#7f8fa6", "단단한 금속 덩어리. 강철을 더 질기게 만드는 재료.", ""],
+  [25, "Mn", "망가니즈", "P", "#8a7f86", "잘 부서지는 금속 가루.", ""],
+  [32, "Ge", "저마늄", "S", "#8d9488", "반도체로 쓰이는 단단한 덩어리.", ""],
+  [34, "Se", "셀레늄", "B", "#b4483c", "불에 타는 붉은 가루.", ""],
+  [37, "Rb", "루비듐", "K", "#c4a6b8", "물에 닿으면 터진다. 칼륨보다 세다.", ""],
+  [39, "Y", "이트륨", "P", "#b9c2c8", "희토류 금속 가루.", ""],
+  [40, "Zr", "지르코늄", "L", "#a9b0a2", "가루에 불이 닿으면 눈부시게 탄다.", ""],
+  [41, "Nb", "나이오븀", "S", "#7c8aa0", "단단한 금속 덩어리.", ""],
+  [42, "Mo", "몰리브데넘", "S", "#6e7884", "열에 강한 금속 덩어리. 폭발에도 버틴다.", "t"],
+  [43, "Tc", "테크네튬", "V", "#7ad0c0", "사람이 처음 만든 원소. 빛나다가 붕괴해 사라진다.", ".0006"],
+  [44, "Ru", "루테늄", "S", "#9aa0aa", "잘 변하지 않는 귀금속 덩어리. 플루오린에도 버틴다.", "n"],
+  [45, "Rh", "로듐", "S", "#c2c6cc", "잘 변하지 않는 귀금속 덩어리. 플루오린에도 버틴다.", "n"],
+  [48, "Cd", "카드뮴", "P", "#a8aebc", "무른 금속 가루.", ""],
+  [49, "In", "인듐", "P", "#b4b0c8", "아주 무른 금속 가루.", ""],
+  [51, "Sb", "안티모니", "P", "#8e9aa0", "잘 부서지는 가루.", ""],
+  [52, "Te", "텔루륨", "P", "#9a9488", "잘 부서지는 가루.", ""],
+  [57, "La", "란타넘", "P", "#c8c0b0", "희토류 금속 가루.", ""],
+  [59, "Pr", "프라세오디뮴", "P", "#a8c48c", "희토류 금속 가루. 초록빛을 띤다.", ""],
+  [61, "Pm", "프로메튬", "V", "#8ce0b0", "방사성 희토류. 빛나다가 붕괴해 사라진다.", ".001"],
+  [62, "Sm", "사마륨", "P", "#c4b89c", "희토류 금속 가루.", ""],
+  [63, "Eu", "유로퓸", "G", "#f08c78", "빛나는 희토류 가루. 야광과 형광 물질의 재료.", ""],
+  [64, "Gd", "가돌리늄", "M", "#9cb0c0", "자석에 끌리는 희토류 가루.", ""],
+  [65, "Tb", "터븀", "P", "#98c8a0", "희토류 금속 가루.", ""],
+  [66, "Dy", "디스프로슘", "P", "#b0b8a0", "희토류 금속 가루.", ""],
+  [67, "Ho", "홀뮴", "P", "#d0b890", "희토류 금속 가루.", ""],
+  [68, "Er", "어븀", "P", "#e0a0b8", "희토류 금속 가루. 분홍빛을 띤다.", ""],
+  [69, "Tm", "툴륨", "P", "#a0c0b8", "희토류 금속 가루.", ""],
+  [70, "Yb", "이터븀", "P", "#c0c8a8", "희토류 금속 가루.", ""],
+  [71, "Lu", "루테튬", "P", "#b8b0b8", "희토류 금속 가루.", ""],
+  [72, "Hf", "하프늄", "S", "#8090a0", "열에 강한 금속 덩어리. 폭발에도 버틴다.", "t"],
+  [73, "Ta", "탄탈럼", "S", "#6a7890", "잘 변하지 않는 금속 덩어리. 폭발과 플루오린에 버틴다.", "tn"],
+  [75, "Re", "레늄", "S", "#74707c", "열에 아주 강한 금속 덩어리. 폭발에도 버틴다.", "t"],
+  [76, "Os", "오스뮴", "H", "#6c84a8", "가장 무거운 금속 가루. 수은 속으로 가라앉는다.", ""],
+  [77, "Ir", "이리듐", "S", "#d0d0c0", "가장 변하지 않는 금속 덩어리. 폭발과 플루오린에 버틴다.", "tn"],
+  [81, "Tl", "탈륨", "X", "#7c8470", "독. 닿은 식물이 시들고, 시듦이 이웃 식물로 번진다.", ""],
+  [85, "At", "아스타틴", "F", "#9070c0", "아주 드문 방사성 원소. 금방 붕괴해 사라진다.", "220"],
+  [89, "Ac", "악티늄", "R", "#70c0e8", "방사성 원소. 빛나다가 붕괴해 납이 된다.", ".0015"],
+  [90, "Th", "토륨", "R", "#88c8a0", "방사성 원소. 빛난다. 아주 천천히 붕괴해 납이 된다.", ".00005"],
+  [91, "Pa", "프로트악티늄", "R", "#a0d090", "방사성 원소. 빛나다가 붕괴해 납이 된다.", ".0008"],
+  [93, "Np", "넵투늄", "V", "#60c8b0", "방사성 원소. 빛나다가 붕괴해 사라진다.", ".0006"],
+  [95, "Am", "아메리슘", "R", "#f0a0c0", "방사성 원소. 빛나다가 붕괴해 납이 된다.", ".001"],
+  [96, "Cm", "퀴륨", "R", "#e090e0", "방사성 원소. 빛나다가 붕괴해 납이 된다.", ".0015"],
+  [97, "Bk", "버클륨", "R", "#d0a070", "방사성 원소. 빛나다가 붕괴해 납이 된다.", ".002"],
+  [99, "Es", "아인슈타이늄", "F", "#70a0f0", "사람이 만든 원소. 빛나다가 금방 붕괴해 사라진다.", "250"],
+  [100, "Fm", "페르뮴", "F", "#f09070", "사람이 만든 원소. 빛나다가 금방 붕괴해 사라진다.", "230"],
+  [101, "Md", "멘델레븀", "F", "#c080f0", "사람이 만든 원소. 빛나다가 금방 붕괴해 사라진다.", "200"],
+  [102, "No", "노벨륨", "F", "#80d0f0", "사람이 만든 원소. 빛나다가 금방 붕괴해 사라진다.", "170"],
+  [103, "Lr", "로렌슘", "F", "#f0c060", "사람이 만든 원소. 빛나다가 금방 붕괴해 사라진다.", "140"],
+  [104, "Rf", "러더포듐", "F", "#f08080", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "90"],
+  [105, "Db", "더브늄", "F", "#f0a060", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "85"],
+  [106, "Sg", "시보귬", "F", "#e0d050", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "80"],
+  [107, "Bh", "보륨", "F", "#a0e060", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "75"],
+  [108, "Hs", "하슘", "F", "#60e090", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "70"],
+  [109, "Mt", "마이트너륨", "F", "#50e0d0", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "65"],
+  [110, "Ds", "다름슈타튬", "F", "#60b0f0", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "60"],
+  [111, "Rg", "뢴트게늄", "F", "#8090f0", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "55"],
+  [112, "Cn", "코페르니슘", "F", "#a080f0", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "50"],
+  [113, "Nh", "니호늄", "F", "#d070f0", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "45"],
+  [114, "Fl", "플레로븀", "F", "#f070d0", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "40"],
+  [115, "Mc", "모스코븀", "F", "#f070a0", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "35"],
+  [116, "Lv", "리버모륨", "F", "#f09090", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "30"],
+  [117, "Ts", "테네신", "F", "#f0b0b0", "사람이 만든 초중원소. 만들자마자 붕괴해 사라진다.", "28"]
+];
+// 종류: 1 가루, 2 무거운 가루, 3 타는 가루, 4 눈부시게 타는 가루, 5 물에 터짐, 6 자석에 끌림, 7 빛나는 가루, 8 방사성, 9 독, 10 금방 사라짐
+const KIND=new Uint8Array(160),PARAM=new Float32Array(160),PROD=new Uint8Array(160),SOLIDP=new Uint8Array(160);
+const KCODE={P:1,H:2,B:3,L:4,K:5,M:6,G:7,R:8,V:8,X:9,F:10};
+MORE.forEach((m,idx)=>{
+  const t=77+idx,c=m[4],r=parseInt(c.slice(1,3),16),gg=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);
+  const e={t:t,tab:7+(idx/9|0),n:m[2],c:c,sym:m[1],z:m[0],d:m[5]};
+  if(r*.3+gg*.59+b*.11>150)e.fg="#1b222b";
+  ELS.splice(ELS.length-1,0,e);
+  if(m[3]==="S"){
+    SOLIDP[t]=1;BASE[t]=[r,gg,b,6];
+    if(m[6].includes("t"))TOUGH[t]=1;
+    if(!m[6].includes("n"))CORR[t]=1;
+  }else{
+    KIND[t]=KCODE[m[3]];BASE[t]=[r,gg,b,12];CORR[t]=1;
+    if(m[3]!=="H")PASS_HG[t]=1;
+    if(m[3]==="R"||m[3]==="V"||m[3]==="F")PARAM[t]=+m[6];
+    if(m[3]==="R")PROD[t]=PB;
+  }
+});
+const MAXTAB=7+((MORE.length-1)/9|0);
 const DX=[0,1,0,-1],DY=[-1,0,1,0];
 const R=Math.random;
 
@@ -224,7 +310,7 @@ function swap(i,j){
   t=shade[i];shade[i]=shade[j];shade[j]=t;
   stamp[i]=stamp[j]=tick;
 }
-function initLife(t){return t===FIRE?30+R()*40|0:(t===STEAM||t===NITRO)?120+R()*120|0:t===EMBER||t===IGAS||t===RN?150+R()*100|0:t===SPK_R||t===SPK_G?25+R()*20|0:t===FR?60+R()*60|0:t===WITHER?30+R()*30|0:t===PO?200:t===OG?20+R()*20|0:t===FLARE?30+R()*20|0:t===BR?200+R()*50|0:t===GAL?200:0}
+function initLife(t){if(KIND[t]===10)return PARAM[t]*(.5+R()*.5)|0;return t===FIRE?30+R()*40|0:(t===STEAM||t===NITRO)?120+R()*120|0:t===EMBER||t===IGAS||t===RN?150+R()*100|0:t===SPK_R||t===SPK_G?25+R()*20|0:t===FR?60+R()*60|0:t===WITHER?30+R()*30|0:t===PO?200:t===OG?20+R()*20|0:t===FLARE?30+R()*20|0:t===BR?200+R()*50|0:t===GAL?200:0}
 
 function fallPowder(i,x,y,sink){
   if(y+1>=H)return;
@@ -272,6 +358,20 @@ function gasMove(i,x,y,vy,p,mix){
 function rn(x,y){
   const q=R()*4|0,nx=x+DX[q],ny=y+DY[q];
   return (nx<0||nx>=W||ny<0||ny>=H)?-1:ny*W+nx;
+}
+function magPowder(i,x,y){
+  if(mag[i]){
+    for(let k2=0;k2<4;k2++){
+      const dx=(R()*13|0)-6,dy=(R()*13|0)-6,nx=x+dx,ny=y+dy;
+      if(nx<0||nx>=W||ny<0||ny>=H||g[ny*W+nx]!==ND)continue;
+      if(Math.abs(dx)<=1&&Math.abs(dy)<=1)return;
+      const tn=i+Math.sign(dx)+Math.sign(dy)*W,tt=g[tn];
+      if(tt===EMPTY||LIQ[tt]||GAS[tt])swap(i,tn);
+      return;
+    }
+    return;
+  }
+  fallPowder(i,x,y,SINK_STD);
 }
 function explode(cx,cy,r){
   r=r||5;
@@ -368,18 +468,29 @@ function step(){
         if(R()<.3){const n=rn(x,y);if(n>=0&&g[n]===OXY){set(n,EMPTY);set(i,SAND);break}}
         fallPowder(i,x,y,SINK_STD);
         break;}
-      case NI:case CO:{
-        if(mag[i]){
-          for(let k2=0;k2<4;k2++){
-            const dx=(R()*13|0)-6,dy=(R()*13|0)-6,nx=x+dx,ny=y+dy;
-            if(nx<0||nx>=W||ny<0||ny>=H||g[ny*W+nx]!==ND)continue;
-            if(Math.abs(dx)<=1&&Math.abs(dy)<=1)break;
-            const tn=i+Math.sign(dx)+Math.sign(dy)*W,tt=g[tn];
-            if(tt===EMPTY||LIQ[tt]||GAS[tt])swap(i,tn);
-            break;
-          }
-          break;
+      case NI:case CO:magPowder(i,x,y);break;
+      default:{
+        const kd=KIND[t];
+        if(!kd)break;
+        if(kd===1){fallPowder(i,x,y,SINK_STD);break}
+        if(kd===2){fallPowder(i,x,y,SINK_AU);break}
+        if(kd===6){magPowder(i,x,y);break}
+        if(kd===7){fallPowder(i,x,y,SINK_STD);break}
+        if(kd===8){
+          if(R()<PARAM[t]){set(i,PROD[t]);break}
+          if(R()<.02){const n=rn(x,y);if(n>=0&&g[n]===WATER)set(n,STEAM,initLife(STEAM))}
+          fallPowder(i,x,y,SINK_STD);break;
         }
+        if(kd===10){
+          if(life[i]<=1){set(i,EMPTY);break}
+          life[i]--;
+          fallPowder(i,x,y,SINK_STD);break;
+        }
+        const n=rn(x,y),tn=n>=0?g[n]:EMPTY;
+        if(kd===3){if(HOT[tn]&&R()<.4){set(i,FIRE,40+R()*40|0);break}}
+        else if(kd===4){if((HOT[tn]||tn===SPK_R||tn===SPK_G)&&R()<.4){set(i,FLARE,initLife(FLARE));break}}
+        else if(kd===5){if(tn===WATER&&R()<.5){set(n,HYD);explode(x,y,7);break}}
+        else if(kd===9){if(tn===PLANT)set(n,WITHER,initLife(WITHER))}
         fallPowder(i,x,y,SINK_STD);
         break;}
       case SN:{
@@ -820,7 +931,8 @@ function render(){
       if(t===LAVA||t===EMBER)v+=Math.sin((tick+shade[i])*.08)*16;
       else if(t===HG||t===GAL)v+=Math.sin((tick+shade[i])*.12)*22;
       else if(t===PD)v-=life[i]*.5;
-      else if(t===URAN||t===RA||t===FR||t===PU||t===PO||t===CF)v+=Math.sin((tick+shade[i])*.06)*26;
+      else if(t===URAN||t===RA||t===FR||t===PU||t===PO||t===CF||KIND[t]===7||KIND[t]===8)v+=Math.sin((tick+shade[i])*.06)*26;
+      else if(KIND[t]===10)v+=(((shade[i]+tick*17)&31)-16)*3;
       r=c[0]+v;gg=c[1]+v;b=c[2]+v;
     }
     r=r<0?0:r>255?255:r|0;gg=gg<0?0:gg>255?255:gg|0;b=b<0?0:b>255?255:b|0;
@@ -838,7 +950,7 @@ function dab(cx,cy){
     const x=cx+dx,y=cy+dy;if(x<0||x>=W||y<0||y>=H)continue;
     const i=y*W+x,t=g[i];
     if(sel===EMPTY||sel===STONE){if(t!==sel)set(i,sel)}
-    else if(sel===PLANT||sel===ICE||sel===IRON||sel===TUNG||sel===CU||sel===GA||sel===PT||sel===BI||sel===TI||sel===ZN||sel===SN||sel===ND||sel===CR||sel===PD){if(t===EMPTY)set(i,sel)}
+    else if(sel===PLANT||sel===ICE||sel===IRON||sel===TUNG||sel===CU||sel===GA||sel===PT||sel===BI||sel===TI||sel===ZN||sel===SN||sel===ND||sel===CR||sel===PD||SOLIDP[sel]){if(t===EMPTY)set(i,sel)}
     else if(sel===FIRE){if((t===EMPTY||t===PLANT||t===OIL||t===HYD||t===OXY)&&R()<.5)set(i,FIRE,initLife(FIRE));else if(t===CARBON){if(R()<.5)set(i,EMBER,150+R()*100|0)}else if(t===MG){if(R()<.5)set(i,FLARE,initLife(FLARE))}else if(t===PHOS||t===SULF){set(i,FIRE,initLife(FIRE))}else if(t===SR||t===BA){set(i,t===SR?SPK_R:SPK_G,initLife(SPK_R))}else if(t===POWDER)explode(x,y)}
     else if(t===EMPTY&&R()<.5)set(i,sel,initLife(sel));
   }
@@ -925,6 +1037,15 @@ function fit(){
 // 조작부
 const hint=document.getElementById("hint"),pal=document.getElementById("palette");
 let tab=0;
+{
+  const seg=document.querySelector(".seg");
+  for(let n=7;n<=MAXTAB;n++){
+    const b=document.createElement("button");
+    b.type="button";b.id="tab-"+n;b.dataset.tab=n;b.textContent=n;
+    b.setAttribute("aria-label","원소 "+n);b.setAttribute("aria-pressed","false");
+    seg.appendChild(b);
+  }
+}
 const tabBtns=document.querySelectorAll(".seg button");
 function mark(){pal.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.el===sel)))}
 function choose(t){
@@ -1027,7 +1148,7 @@ function start(d){
   }else{
     fit();seed();
   }
-  setTab(d.tab>=1&&d.tab<=6?d.tab:0);
+  setTab(d.tab>=1&&d.tab<=MAXTAB?d.tab:0);
   choose(typeof d.sel==="number"&&d.sel<=MAXT?d.sel:SAND);
   setBrush(d.brush||3);
   setPaused(d.paused!==undefined?!!d.paused:matchMedia("(prefers-reduced-motion: reduce)").matches);
