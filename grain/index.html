@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>알갱이 실험실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* 한 화면 앱: 위 머리띠, 가운데 실험 수조(캔버스), 아래 원소 팔레트 5×2. 색은 원소가 담당하고 틀은 조용하게. */
+  --bg:#f2f4f7;
+  --tank:#dfe8f0;
+  --panel:#ffffff;
+  --press:#fff1cf;
+  --line:#c9d1da;
+  --text:#1b222b;
+  --muted:#5b6673;
+  --accent:#c47d08;
+  --display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--body);
+  display:flex;flex-direction:column;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+header{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:10px 16px 8px}
+h1{font-family:var(--display);font-weight:400;font-size:22px;line-height:1;margin:0 auto 0 0;letter-spacing:.01em}
+h1 span{color:var(--accent)}
+button{font-family:var(--body);color:var(--text);cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.act{font-size:13px;font-weight:500;padding:6px 10px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.act:active{background:var(--press)}
+.stage{flex:1;min-height:0;position:relative;margin:0 16px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--tank)}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:crosshair}
+.hint{margin:0;padding:8px 16px 0;min-height:45px;font-size:13px;line-height:1.4;color:var(--muted)}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 16px 8px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{height:32px;padding:0 9px;white-space:nowrap;font-size:13px;font-weight:500;background:var(--panel);border:0;border-left:1px solid var(--line)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--press);font-weight:600}
+.hint b{color:var(--text);font-weight:600}
+.brush{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:none}
+.brush button{width:36px;height:32px;display:grid;place-items:center;background:var(--panel);border:0;border-left:1px solid var(--line);padding:0}
+.brush button:first-child{border-left:0}
+.brush button i{display:block;border-radius:50%;background:var(--muted)}
+.brush button[aria-pressed="true"]{background:var(--press)}
+.brush button[aria-pressed="true"] i{background:var(--accent)}
+.palette{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:0 16px 14px}
+.el{display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 2px 6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;font-size:12px;font-weight:500;line-height:1}
+.el i{display:block;width:70%;max-width:40px;height:14px;border-radius:3px}
+.el i.sym{height:24px;display:flex;align-items:center;justify-content:center;gap:2px;font:600 13px/1 var(--body);font-style:normal;font-variant-numeric:tabular-nums}
+.el i.sym small{font-size:8px;font-weight:500;align-self:flex-start;margin-top:3px;opacity:.85}
+.el[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--press)}
+@media (min-width:700px){
+  .palette{grid-template-columns:repeat(10,1fr)}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>알갱이 <span>실험실</span></h1>
+  <button class="act" id="btn-pause" type="button">멈춤</button>
+  <button class="act" id="btn-clear" type="button">비우기</button>
+  <button class="act" id="btn-seed" type="button">새 장면</button>
+</header>
+<div class="stage" id="stage"><canvas id="tank" aria-label="알갱이 실험 수조. 문지르면 선택한 원소가 쏟아진다."></canvas></div>
+<p class="hint" id="hint"></p>
+<div class="tools">
+  <div class="seg" role="group" aria-label="원소 묶음">
+    <button type="button" id="tab-0" data-tab="0" aria-pressed="true">기본</button>
+    <button type="button" id="tab-1" data-tab="1" aria-pressed="false">원소 1</button>
+    <button type="button" id="tab-2" data-tab="2" aria-pressed="false">원소 2</button>
+    <button type="button" id="tab-3" data-tab="3" aria-pressed="false">원소 3</button>
+  </div>
+  <div class="brush" role="group" aria-label="붓 크기">
+    <button type="button" id="brush-s" data-r="1" aria-label="붓 작게" aria-pressed="false"><i style="width:5px;height:5px"></i></button>
+    <button type="button" id="brush-m" data-r="3" aria-label="붓 보통" aria-pressed="true"><i style="width:10px;height:10px"></i></button>
+    <button type="button" id="brush-l" data-r="6" aria-label="붓 크게" aria-pressed="false"><i style="width:16px;height:16px"></i></button>
+  </div>
+</div>
+<div class="palette" id="palette" role="group" aria-label="원소"></div>
+
+<script>
+(function(){
+"use strict";
+const EMPTY=0,SAND=1,WATER=2,STONE=3,PLANT=4,FIRE=5,OIL=6,STEAM=7,LAVA=8,POWDER=9,ICE=10,
+      HYD=11,CARBON=12,NITRO=13,OXY=14,FLUOR=15,SODIUM=16,IRON=17,GOLD=18,HG=19,RUST=20,EMBER=21,
+      HE=22,NEON=23,MG=24,FLARE=25,AL=26,PHOS=27,CL=28,SALT=29,POT=30,TUNG=31,URAN=32,
+      SULF=33,AR=34,CA=35,CU=36,PATINA=37,GA=38,GAL=39,BR=40,IOD=41,IGAS=42,CS=43,PT=44,MAXT=44;
+const ELS=[
+  {t:SAND,  tab:0,n:"모래",  c:"#d4a44e", d:"쌓이고 무너진다. 물과 기름 아래로 가라앉는다."},
+  {t:WATER, tab:0,n:"물",    c:"#3a84d6", d:"흐른다. 불을 끄고 식물을 키운다."},
+  {t:STONE, tab:0,n:"돌",    c:"#7a808a", d:"움직이지 않는 벽. 폭발에도 버틴다. 플루오린에는 삭는다."},
+  {t:PLANT, tab:0,n:"식물",  c:"#46a852", d:"물에 닿으면 자란다. 불에 탄다."},
+  {t:FIRE,  tab:0,n:"불",    c:"#ff8c28", d:"위로 오른다. 식물, 기름, 화약, 수소에 옮겨붙는다."},
+  {t:OIL,   tab:0,n:"기름",  c:"#7c543a", d:"물 위에 뜬다. 불이 닿으면 탄다."},
+  {t:LAVA,  tab:0,n:"용암",  c:"#ee5c20", d:"느리게 흐른다. 물과 만나면 돌과 증기가 된다."},
+  {t:POWDER,tab:0,n:"화약",  c:"#685c80", d:"불이나 용암에 닿으면 터진다."},
+  {t:ICE,   tab:0,n:"얼음",  c:"#70bce8", d:"곁의 물을 얼린다. 불 옆에서 녹는다."},
+  {t:HYD,   tab:1,n:"수소",  c:"#f09696", sym:"H", z:1,  d:"가장 가벼운 기체. 불이 닿으면 타서 증기(물)가 된다."},
+  {t:CARBON,tab:1,n:"탄소",  c:"#28282e", sym:"C", z:6,  d:"숯가루. 불이 붙으면 벌겋게 달아올라 오래 탄다. 물에 꺼진다."},
+  {t:NITRO, tab:1,n:"질소",  c:"#96a0f0", sym:"N", z:7,  d:"액체 질소. 물을 얼리고 불과 용암을 식힌 뒤 날아간다."},
+  {t:OXY,   tab:1,n:"산소",  c:"#c86edc", sym:"O", z:8,  d:"불을 키우는 기체. 불이 닿으면 크게 타오른다."},
+  {t:FLUOR, tab:1,n:"플루오린",c:"#bec83c",fg:"#1b222b",sym:"F", z:9,  d:"닿는 것을 거의 다 삭이는 기체. 돌도 없앤다. 금과 수은은 버틴다."},
+  {t:SODIUM,tab:1,n:"나트륨",c:"#c6beac",fg:"#1b222b",sym:"Na",z:11, d:"물에 뜬다. 물과 만나면 수소를 내며 불붙는다."},
+  {t:IRON,  tab:1,n:"철",    c:"#4a5464", sym:"Fe",z:26, d:"단단한 고체. 물에 닿으면 녹슬어 부서진다. 용암에 녹는다."},
+  {t:GOLD,  tab:1,n:"금",    c:"#f5c400", fg:"#1b222b",sym:"Au",z:79, d:"무겁고 변하지 않는다. 수은 속으로도 가라앉는다."},
+  {t:HG,    tab:1,n:"수은",  c:"#848c9c", sym:"Hg",z:80, d:"무거운 액체 금속. 모래와 물이 그 위에 뜬다."},
+  {t:HE,    tab:2,n:"헬륨",  c:"#fab078", fg:"#1b222b",sym:"He",z:2,  d:"아무것과도 반응하지 않는 가벼운 기체. 위로 올라갈 뿐이다."},
+  {t:NEON,  tab:2,n:"네온",  c:"#ff6046", sym:"Ne",z:10, d:"반응하지 않는 기체. 네온사인처럼 빛난다."},
+  {t:MG,    tab:2,n:"마그네슘",c:"#aab2bc",fg:"#1b222b",sym:"Mg",z:12, d:"불이 붙으면 눈부시게 탄다. 물을 부으면 수소가 생겨 더 탄다."},
+  {t:AL,    tab:2,n:"알루미늄",c:"#92a8cc",fg:"#1b222b",sym:"Al",z:13, d:"녹(철이 물에 녹슨 가루)과 섞어 불을 붙이면 쇳물이 된다. 테르밋 반응."},
+  {t:PHOS,  tab:2,n:"인",    c:"#e0d66e", fg:"#1b222b",sym:"P", z:15, d:"백린. 공기에 닿으면 저절로 불붙는다. 물속에서는 안전하다."},
+  {t:CL,    tab:2,n:"염소",  c:"#3cbe96", sym:"Cl",z:17, d:"가라앉는 기체. 식물을 죽인다. 나트륨과 만나면 소금이 된다."},
+  {t:POT,   tab:2,n:"칼륨",  c:"#b0a0c8", fg:"#1b222b",sym:"K", z:19, d:"물에 뜬다. 물에 닿으면 바로 터진다."},
+  {t:TUNG,  tab:2,n:"텅스텐",c:"#3a3460", sym:"W", z:74, d:"가장 단단한 벽. 용암, 폭발, 플루오린에 모두 버틴다."},
+  {t:URAN,  tab:2,n:"우라늄",c:"#78d228", fg:"#1b222b",sym:"U", z:92, d:"무겁고 뜨겁다. 물을 끓인다. 많이 모이면 크게 터져 돌도 부순다."},
+  {t:SULF,  tab:3,n:"황",    c:"#e2e632", fg:"#1b222b",sym:"S", z:16, d:"노란 가루. 불에 탄다. 탄소와 섞이면 화약이 된다."},
+  {t:AR,    tab:3,n:"아르곤",c:"#5a54be", sym:"Ar",z:18, d:"가라앉는 기체. 반응하지 않고, 불을 덮어 끈다."},
+  {t:CA,    tab:3,n:"칼슘",  c:"#dec4a0", fg:"#1b222b",sym:"Ca",z:20, d:"물과 만나면 수소 거품을 내고 석회(돌)로 굳는다."},
+  {t:CU,    tab:3,n:"구리",  c:"#ce7e4e", sym:"Cu",z:29, d:"단단한 고체. 물이나 산소에 닿으면 푸른 녹(녹청)이 슨다."},
+  {t:GA,    tab:3,n:"갈륨",  c:"#78aab4", sym:"Ga",z:31, d:"열에 약한 금속. 불 가까이에서 녹아 흐르고, 식으면 다시 굳는다."},
+  {t:BR,    tab:3,n:"브로민",c:"#9c2424", sym:"Br",z:35, d:"붉은 액체. 물 아래로 가라앉고 식물을 죽인다. 알루미늄과 만나면 불탄다."},
+  {t:IOD,   tab:3,n:"아이오딘",c:"#3c2846",sym:"I", z:53, d:"어두운 가루. 뜨거워지면 보라색 기체가 되고, 식으면 다시 가루로 내려앉는다."},
+  {t:CS,    tab:3,n:"세슘",  c:"#ccb264", fg:"#1b222b",sym:"Cs",z:55, d:"물에 닿으면 칼륨보다 훨씬 크게 터진다."},
+  {t:PT,    tab:3,n:"백금",  c:"#b0b6c4", fg:"#1b222b",sym:"Pt",z:78, d:"변하지 않는 금속. 수소와 산소가 함께 닿으면 불 없이도 타게 한다. 촉매."},
+  {t:EMPTY, n:"지우개",c:"",        d:"문지른 자리를 비운다."}
+];
+// r,g,b,흔들림 폭
+const BASE=[[223,232,240,0],[212,164,78,22],[58,132,214,10],[122,128,138,14],[70,168,82,22],[0,0,0,0],[124,84,58,10],[156,172,192,10],[238,92,32,26],[104,92,128,16],[112,188,232,10],
+  [240,150,150,8],[40,40,46,10],[150,160,240,10],[200,110,220,8],[190,200,60,10],[198,190,172,12],[74,84,100,8],[245,196,0,20],[132,140,156,14],[166,84,48,18],[214,74,26,24],
+  [250,176,120,8],[255,96,70,0],[170,178,188,14],[255,244,150,0],[146,168,204,14],[224,214,110,10],[60,190,150,8],[244,244,248,10],[176,160,200,12],[58,52,96,6],[120,210,40,14],
+  [226,230,50,14],[90,84,190,8],[222,196,160,12],[206,126,78,10],[88,176,150,12],[120,170,180,8],[150,196,206,10],[156,36,36,10],[60,40,70,8],[150,40,170,8],[204,178,100,20],[176,182,196,6]];
+const BGPX=(0xff000000|(240<<16)|(232<<8)|223)>>>0;
+const tbl=(...ts)=>{const a=new Uint8Array(48);ts.forEach(t=>a[t]=1);return a};
+const GASES=[STEAM,HYD,OXY,FLUOR,HE,NEON,CL,AR,IGAS];
+const PASS_POWDER=tbl(EMPTY,FIRE,...GASES);
+const PASS_WATER=tbl(EMPTY,OIL,NITRO,...GASES);
+const PASS_OIL=tbl(EMPTY,...GASES);
+const PASS_LAVA=PASS_OIL;
+const PASS_HEAVY=tbl(EMPTY,WATER,OIL,NITRO,...GASES);
+const PASS_HG=tbl(EMPTY,WATER,OIL,NITRO,...GASES,SAND,POWDER,CARBON,RUST,SODIUM,MG,AL,PHOS,SALT,POT,SULF,CA,IOD,CS);
+const SINK_NONE=tbl(),SINK_STD=tbl(WATER,OIL,NITRO),SINK_AU=tbl(WATER,OIL,NITRO,HG);
+const LIQ=tbl(WATER,OIL,NITRO,HG,BR,GAL),GAS=tbl(...GASES);
+const CORR=tbl(STONE,SAND,PLANT,IRON,RUST,ICE,POWDER,CARBON,SODIUM,MG,AL,PHOS,SALT,POT,URAN,SULF,CA,CU,PATINA,GA,IOD,CS);
+const TOUGH=tbl(STONE,LAVA,IRON,GOLD,HG,TUNG,PT);
+const HOT=tbl(FIRE,LAVA,EMBER,FLARE);
+const DX=[0,1,0,-1],DY=[-1,0,1,0];
+const R=Math.random;
+
+const canvas=document.getElementById("tank"),stage=document.getElementById("stage");
+const ctx=canvas.getContext("2d");
+let W=0,H=0,g,life,shade,stamp,img,px,tick=1;
+let sel=SAND,brush=3,paused=false;
+
+function alloc(w,h){
+  W=w;H=h;const n=w*h;
+  g=new Uint8Array(n);life=new Uint8Array(n);shade=new Uint8Array(n);stamp=new Uint32Array(n);
+  canvas.width=w;canvas.height=h;
+  img=ctx.createImageData(w,h);px=new Uint32Array(img.data.buffer);
+}
+function set(i,t,l){g[i]=t;life[i]=l||0;shade[i]=R()*256|0;stamp[i]=tick}
+function swap(i,j){
+  let t=g[i];g[i]=g[j];g[j]=t;
+  t=life[i];life[i]=life[j];life[j]=t;
+  t=shade[i];shade[i]=shade[j];shade[j]=t;
+  stamp[i]=stamp[j]=tick;
+}
+function initLife(t){return t===FIRE?30+R()*40|0:(t===STEAM||t===NITRO)?120+R()*120|0:t===EMBER||t===IGAS?150+R()*100|0:t===FLARE?30+R()*20|0:t===BR?200+R()*50|0:t===GAL?200:0}
+
+function fallPowder(i,x,y,sink){
+  if(y+1>=H)return;
+  const b=i+W,tb=g[b];
+  if(PASS_POWDER[tb]||(sink[tb]&&R()<.7)){swap(i,b);return}
+  const d=R()<.5?1:-1;
+  let nx=x+d;
+  if(nx>=0&&nx<W){const tj=g[b+d];if(PASS_POWDER[tj]||(sink[tj]&&R()<.5)){swap(i,b+d);return}}
+  nx=x-d;
+  if(nx>=0&&nx<W){const tj=g[b-d];if(PASS_POWDER[tj]||(sink[tj]&&R()<.5)){swap(i,b-d);return}}
+}
+function flow(i,x,y,pass,spread,slow){
+  if(y+1<H){
+    const b=i+W;
+    if(pass[g[b]]){swap(i,b);return}
+    if(slow&&R()>.25)return;
+    const d=R()<.5?1:-1;
+    if(x+d>=0&&x+d<W&&pass[g[b+d]]){swap(i,b+d);return}
+    if(x-d>=0&&x-d<W&&pass[g[b-d]]){swap(i,b-d);return}
+  }else if(slow&&R()>.25)return;
+  let d=R()<.5?1:-1;
+  for(let pass2=0;pass2<2;pass2++){
+    let j=i;
+    for(let s=1;s<=spread;s++){
+      const nx=x+d*s;if(nx<0||nx>=W)break;
+      const n=i+d*s;if(g[n]!==EMPTY)break;j=n;
+    }
+    if(j!==i){swap(i,j);return}
+    d=-d;
+  }
+}
+function gasMove(i,x,y,vy,p,mix){
+  if(R()>p)return;
+  const ny=y+vy;
+  if(ny>=0&&ny<H){
+    const a=i+vy*W,ta=g[a];
+    if(ta===EMPTY||(vy<0&&LIQ[ta])||(mix&&GAS[ta]&&ta!==g[i]&&R()<.3)){swap(i,a);return}
+    const d=R()<.5?1:-1;
+    if(x+d>=0&&x+d<W&&g[a+d]===EMPTY){swap(i,a+d);return}
+    if(x-d>=0&&x-d<W&&g[a-d]===EMPTY){swap(i,a-d);return}
+  }
+  const d=R()<.5?1:-1;
+  if(x+d>=0&&x+d<W&&g[i+d]===EMPTY)swap(i,i+d);
+}
+function rn(x,y){
+  const q=R()*4|0,nx=x+DX[q],ny=y+DY[q];
+  return (nx<0||nx>=W||ny<0||ny>=H)?-1:ny*W+nx;
+}
+function explode(cx,cy,r){
+  r=r||5;
+  for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+    if(dx*dx+dy*dy>r*r)continue;
+    const x=cx+dx,y=cy+dy;if(x<0||x>=W||y<0||y>=H)continue;
+    const n=y*W+x,t=g[n];
+    if(TOUGH[t]&&(r<12||t===TUNG))continue;
+    if(t===ICE)set(n,WATER);
+    else if(t===WATER)set(n,STEAM,initLife(STEAM));
+    else if(R()<.85)set(n,FIRE,5+R()*16|0);
+    else set(n,EMPTY);
+  }
+}
+
+function step(){
+  tick++;
+  for(let y=H-1;y>=0;y--){
+    const ltr=R()<.5;
+    for(let k=0;k<W;k++){
+      const x=ltr?k:W-1-k,i=y*W+x,t=g[i];
+      if(t===EMPTY||t===STONE||stamp[i]===tick)continue;
+      switch(t){
+      case SAND:case POWDER:case CARBON:case RUST:fallPowder(i,x,y,SINK_STD);break;
+      case GOLD:fallPowder(i,x,y,SINK_AU);break;
+      case SULF:{
+        if(R()<.1){const n=rn(x,y);if(n>=0&&g[n]===CARBON&&R()<.3){set(n,POWDER);set(i,POWDER);break}}
+        fallPowder(i,x,y,SINK_STD);
+        break;}
+      case AR:{
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===FIRE)set(n,EMPTY);else if(tn===EMBER)set(n,CARBON);
+        }
+        gasMove(i,x,y,1,.5,true);
+        break;}
+      case CA:{
+        if(R()<.2){const n=rn(x,y);if(n>=0&&g[n]===WATER&&R()<.25){set(n,HYD);set(i,STONE);break}}
+        fallPowder(i,x,y,SINK_STD);
+        break;}
+      case CU:
+        if(R()<.02){const n=rn(x,y);if(n>=0){const tn=g[n];if((tn===WATER||tn===OXY||tn===STEAM)&&R()<.2)set(i,PATINA)}}
+        break;
+      case GA:{
+        const n=rn(x,y);
+        if(n>=0&&(HOT[g[n]]||g[n]===STEAM))set(i,GAL,200);
+        break;}
+      case GAL:{
+        const n=rn(x,y);
+        if(n>=0&&(HOT[g[n]]||g[n]===STEAM))life[i]=200;
+        else if(life[i]<=1){set(i,GA);break}
+        else if(R()<.5)life[i]--;
+        flow(i,x,y,PASS_HEAVY,2,false);
+        break;}
+      case BR:{
+        if(life[i]<=1){set(i,EMPTY);break}
+        if(R()<.1)life[i]--;
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===PLANT){if(R()<.1)set(n,EMPTY)}
+          else if(tn===SODIUM||tn===POT||tn===CS){set(n,SALT);set(i,EMPTY);break}
+          else if(tn===AL){set(n,FIRE,30);set(i,FIRE,30);break}
+        }
+        if(g[i]===BR)flow(i,x,y,PASS_HEAVY,3,false);
+        break;}
+      case IOD:{
+        if(R()<.5){const n=rn(x,y);if(n>=0&&HOT[g[n]]){set(i,IGAS,initLife(IGAS));break}}
+        fallPowder(i,x,y,SINK_STD);
+        break;}
+      case IGAS:
+        if(life[i]<=1){set(i,IOD);break}
+        if(R()<.5)life[i]--;
+        gasMove(i,x,y,-1,.5,true);
+        break;
+      case CS:{
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx;
+          if(g[n]===WATER&&R()<.6){set(n,HYD);explode(x,y,9);break}
+        }
+        if(g[i]===CS)fallPowder(i,x,y,SINK_STD);
+        break;}
+      case PT:{
+        let h=-1,o=-1;
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===HYD)h=n;else if(tn===OXY)o=n;
+        }
+        if(h>=0&&o>=0){set(h,FIRE,10+R()*10|0);set(o,STEAM,initLife(STEAM))}
+        break;}
+      case HE:gasMove(i,x,y,-1,1,true);break;
+      case NEON:gasMove(i,x,y,R()<.5?-1:1,.3,false);break;
+      case MG:fallPowder(i,x,y,SINK_STD);break;
+      case FLARE:{
+        if(life[i]<=1){set(i,EMPTY);break}
+        life[i]--;
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===MG){if(R()<.3)set(n,FLARE,initLife(FLARE))}
+          else if(tn===WATER){set(n,HYD)}
+          else if(tn===HYD||tn===OXY||tn===PHOS){set(n,FIRE,20+R()*30|0)}
+          else if(tn===PLANT){if(R()<.3)set(n,FIRE,40+R()*50|0)}
+          else if(tn===OIL){set(n,FIRE,25+R()*30|0)}
+          else if(tn===POWDER){explode(nx,ny)}
+          else if(tn===CARBON){if(R()<.15)set(n,EMBER,initLife(EMBER))}
+          else if(tn===ICE){if(R()<.2)set(n,WATER)}
+          else if(tn===EMPTY&&q===0){if(R()<.3)set(n,FIRE,6+R()*9|0)}
+        }
+        break;}
+      case AL:{
+        if(R()<.5){
+          let rust=-1,heat=false;
+          for(let q=0;q<4;q++){
+            const nx=x+DX[q],ny=y+DY[q];
+            if(nx<0||nx>=W||ny<0||ny>=H)continue;
+            const n=ny*W+nx,tn=g[n];
+            if(tn===RUST)rust=n;else if(HOT[tn])heat=true;
+          }
+          if(rust>=0&&heat){set(i,LAVA);set(rust,LAVA);break}
+        }
+        fallPowder(i,x,y,SINK_STD);
+        break;}
+      case PHOS:{
+        if(R()<.02){
+          let air=false;
+          for(let q=0;q<4;q++){
+            const nx=x+DX[q],ny=y+DY[q];
+            if(nx<0||nx>=W||ny<0||ny>=H)continue;
+            const tn=g[ny*W+nx];
+            if(tn===EMPTY||tn===OXY){air=true;break}
+          }
+          if(air){set(i,FIRE,40+R()*40|0);break}
+        }
+        fallPowder(i,x,y,SINK_STD);
+        break;}
+      case CL:{
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===SODIUM||tn===POT||tn===CS){set(n,SALT);set(i,EMPTY);break}
+          else if(tn===PLANT){if(R()<.2){set(n,EMPTY);if(R()<.3)set(i,EMPTY);break}}
+          else if(tn===WATER){if(R()<.1){set(i,EMPTY);break}}
+        }
+        if(g[i]===CL)gasMove(i,x,y,1,.6,true);
+        break;}
+      case SALT:{
+        if(R()<.2){
+          const q=R()*4|0,nx=x+DX[q],ny=y+DY[q];
+          if(nx>=0&&nx<W&&ny>=0&&ny<H){
+            const n=ny*W+nx,tn=g[n];
+            if(tn===WATER){if(R()<.3){set(i,EMPTY);break}}
+            else if(tn===ICE){if(R()<.3)set(n,WATER)}
+          }
+        }
+        fallPowder(i,x,y,SINK_STD);
+        break;}
+      case POT:{
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx;
+          if(g[n]===WATER&&R()<.4){set(n,HYD);explode(x,y);break}
+        }
+        if(g[i]===POT)fallPowder(i,x,y,SINK_NONE);
+        break;}
+      case URAN:{
+        if(R()<.05){
+          const q=R()*4|0,nx=x+DX[q],ny=y+DY[q];
+          if(nx>=0&&nx<W&&ny>=0&&ny<H){
+            const n=ny*W+nx,tn=g[n];
+            if(tn===WATER)set(n,STEAM,initLife(STEAM));
+            else if(tn===ICE)set(n,WATER);
+          }
+        }
+        if(R()<.004&&x>=3&&x<W-3&&y>=3&&y<H-3){
+          let c=0;
+          for(let dy=-3;dy<=3;dy++){const o=i+dy*W;for(let dx=-3;dx<=3;dx++)if(g[o+dx]===URAN)c++}
+          if(c>=42){explode(x,y,14);break}
+        }
+        fallPowder(i,x,y,SINK_AU);
+        break;}
+      case EMBER:{
+        if(life[i]<=1){set(i,EMPTY);break}
+        if(R()<.25)life[i]--;
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===CARBON){if(R()<.04)set(n,EMBER,150+R()*100|0)}
+          else if(tn===PLANT){if(R()<.1)set(n,FIRE,40+R()*50|0)}
+          else if(tn===OIL){if(R()<.35)set(n,FIRE,25+R()*30|0)}
+          else if(tn===POWDER){explode(nx,ny)}
+          else if(tn===HYD||tn===OXY){set(n,FIRE,20+R()*30|0)}
+          else if(tn===WATER){set(n,STEAM,initLife(STEAM));set(i,CARBON);break}
+          else if(tn===NITRO){set(i,CARBON);break}
+          else if(tn===MG){if(R()<.1)set(n,FLARE,initLife(FLARE))}
+          else if(tn===PHOS){if(R()<.5)set(n,FIRE,40+R()*40|0)}
+          else if(tn===SULF){if(R()<.15)set(n,FIRE,60+R()*40|0)}
+          else if(tn===ICE){if(R()<.05)set(n,WATER)}
+          else if(tn===EMPTY&&q===0){if(R()<.15)set(n,FIRE,6+R()*9|0)}
+        }
+        if(g[i]===EMBER&&stamp[i]!==tick)fallPowder(i,x,y,SINK_STD);
+        break;}
+      case HG:flow(i,x,y,PASS_HG,2,false);break;
+      case HYD:gasMove(i,x,y,-1,.9,true);break;
+      case OXY:gasMove(i,x,y,R()<.55?-1:1,.4,false);break;
+      case IRON:
+        if(R()<.02){
+          const q=R()*4|0,nx=x+DX[q],ny=y+DY[q];
+          if(nx>=0&&nx<W&&ny>=0&&ny<H&&g[ny*W+nx]===WATER&&R()<.25)set(i,RUST);
+        }
+        break;
+      case SODIUM:{
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx;
+          if(g[n]===WATER&&R()<.2){
+            set(n,HYD);set(i,FIRE,10+R()*10|0);
+            if(R()<.08)explode(x,y);
+            break;
+          }
+        }
+        if(g[i]===SODIUM)fallPowder(i,x,y,SINK_NONE);
+        break;}
+      case NITRO:{
+        if(life[i]<=1){set(i,EMPTY);break}
+        if(R()<.25)life[i]--;
+        let used=false;
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===WATER){if(R()<.5){set(n,ICE);used=true}}
+          else if(tn===STEAM){set(n,WATER);used=true}
+          else if(tn===FIRE){set(n,EMPTY);used=true}
+          else if(tn===LAVA){set(n,STONE);used=true}
+        }
+        if(used&&R()<.5){set(i,EMPTY);break}
+        flow(i,x,y,PASS_OIL,3,false);
+        break;}
+      case FLUOR:{
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(CORR[tn]){if(R()<.3){set(n,EMPTY);if(R()<.5)set(i,EMPTY);break}}
+          else if(tn===WATER){if(R()<.3){set(i,EMPTY);break}}
+          else if(tn===HYD){set(n,FIRE,8);set(i,FIRE,8);break}
+        }
+        if(g[i]===FLUOR)gasMove(i,x,y,1,.5,true);
+        break;}
+      case WATER:flow(i,x,y,PASS_WATER,4,false);break;
+      case OIL:flow(i,x,y,PASS_OIL,3,false);break;
+      case PLANT:
+        if(R()<.03){
+          const q=R()*4|0,nx=x+DX[q],ny=y+DY[q];
+          if(nx>=0&&nx<W&&ny>=0&&ny<H){const n=ny*W+nx;if(g[n]===WATER)set(n,PLANT)}
+        }
+        break;
+      case ICE:
+        if(R()<.02){
+          const q=R()*4|0,nx=x+DX[q],ny=y+DY[q];
+          if(nx>=0&&nx<W&&ny>=0&&ny<H){
+            const n=ny*W+nx,tn=g[n];
+            if(tn===WATER){if(R()<.3)set(n,ICE)}
+            else if(tn===STEAM)set(i,WATER);
+          }
+        }
+        break;
+      case FIRE:{
+        if(life[i]<=1){set(i,EMPTY);break}
+        life[i]--;
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===PLANT){if(R()<.1)set(n,FIRE,40+R()*50|0)}
+          else if(tn===OIL){if(R()<.35)set(n,FIRE,25+R()*30|0)}
+          else if(tn===POWDER){explode(nx,ny)}
+          else if(tn===WATER){set(n,STEAM,initLife(STEAM));set(i,EMPTY);break}
+          else if(tn===ICE){if(R()<.06)set(n,WATER)}
+          else if(tn===HYD){set(n,R()<.6?FIRE:STEAM,R()<2?8+R()*8|0:0);if(g[n]===STEAM)life[n]=initLife(STEAM)}
+          else if(tn===OXY){set(n,FIRE,50+R()*60|0)}
+          else if(tn===CARBON){if(R()<.12)set(n,EMBER,150+R()*100|0)}
+          else if(tn===NITRO){set(i,EMPTY);break}
+          else if(tn===MG){if(R()<.2)set(n,FLARE,initLife(FLARE))}
+          else if(tn===PHOS){if(R()<.5)set(n,FIRE,40+R()*40|0)}
+          else if(tn===SULF){if(R()<.15)set(n,FIRE,60+R()*40|0)}
+        }
+        if(g[i]!==FIRE||stamp[i]===tick)break;
+        if(y>0&&R()<.45){
+          const d=(R()*3|0)-1,nx=x+d;
+          if(nx>=0&&nx<W){const n=i-W+d;if(g[n]===EMPTY)swap(i,n)}
+        }
+        break;}
+      case LAVA:{
+        for(let q=0;q<4;q++){
+          const nx=x+DX[q],ny=y+DY[q];
+          if(nx<0||nx>=W||ny<0||ny>=H)continue;
+          const n=ny*W+nx,tn=g[n];
+          if(tn===WATER){set(n,STEAM,initLife(STEAM));if(R()<.6){set(i,STONE);break}}
+          else if(tn===PLANT){if(R()<.3)set(n,FIRE,40+R()*50|0)}
+          else if(tn===OIL){if(R()<.5)set(n,FIRE,25+R()*30|0)}
+          else if(tn===POWDER){explode(nx,ny)}
+          else if(tn===ICE){if(R()<.2)set(n,WATER)}
+          else if(tn===HYD||tn===OXY){set(n,FIRE,20+R()*30|0)}
+          else if(tn===CARBON){if(R()<.1)set(n,EMBER,150+R()*100|0)}
+          else if(tn===IRON){if(R()<.01)set(n,LAVA)}
+          else if(tn===SODIUM){if(R()<.2)set(n,FIRE,20+R()*20|0)}
+          else if(tn===NITRO){set(n,EMPTY);set(i,STONE);break}
+          else if(tn===MG){if(R()<.3)set(n,FLARE,initLife(FLARE))}
+          else if(tn===PHOS){set(n,FIRE,40+R()*40|0)}
+          else if(tn===SULF){if(R()<.3)set(n,FIRE,60+R()*40|0)}
+        }
+        if(g[i]!==LAVA)break;
+        if(y>0&&g[i-W]===EMPTY&&R()<.003)set(i-W,FIRE,6+R()*10|0);
+        flow(i,x,y,PASS_LAVA,1,true);
+        break;}
+      case STEAM:{
+        if(life[i]<=1){set(i,WATER);break}
+        life[i]--;
+        if(R()<.7){
+          if(y>0){
+            const a=i-W,ta=g[a];
+            if(ta===EMPTY||ta===WATER||ta===OIL){swap(i,a);break}
+            const d=R()<.5?1:-1;
+            if(x+d>=0&&x+d<W&&g[a+d]===EMPTY){swap(i,a+d);break}
+            if(x-d>=0&&x-d<W&&g[a-d]===EMPTY){swap(i,a-d);break}
+          }
+          const d=R()<.5?1:-1;
+          if(x+d>=0&&x+d<W&&g[i+d]===EMPTY)swap(i,i+d);
+        }
+        break;}
+      }
+    }
+  }
+}
+
+function render(){
+  const n=W*H;
+  for(let i=0;i<n;i++){
+    const t=g[i];
+    if(t===EMPTY){px[i]=BGPX;continue}
+    let r,gg,b;
+    if(t===FIRE){
+      const l=life[i],f=(shade[i]+tick*7)&31;
+      if(l>28){r=255;gg=214+f;b=96}
+      else if(l>12){r=255;gg=128+f;b=36}
+      else{r=206+f;gg=58+f;b=28}
+    }else if(t===FLARE){
+      const f=(shade[i]+tick*11)&31;r=255;gg=236+(f>>1);b=110+f*4;
+    }else if(t===NEON){
+      const ph=(tick+shade[i])*.05;r=255;gg=96+50*Math.sin(ph);b=70+60*Math.sin(ph*.7+2);
+    }else{
+      const c=BASE[t];
+      let v=((shade[i]&31)-16)*c[3]/16;
+      if(t===LAVA||t===EMBER)v+=Math.sin((tick+shade[i])*.08)*16;
+      else if(t===HG||t===GAL)v+=Math.sin((tick+shade[i])*.12)*22;
+      else if(t===URAN)v+=Math.sin((tick+shade[i])*.06)*26;
+      r=c[0]+v;gg=c[1]+v;b=c[2]+v;
+    }
+    r=r<0?0:r>255?255:r|0;gg=gg<0?0:gg>255?255:gg|0;b=b<0?0:b>255?255:b|0;
+    px[i]=(0xff000000|(b<<16)|(gg<<8)|r)>>>0;
+  }
+  ctx.putImageData(img,0,0);
+}
+
+// 붓
+function dab(cx,cy){
+  const r=brush;
+  for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+    if(dx*dx+dy*dy>r*r+1)continue;
+    const x=cx+dx,y=cy+dy;if(x<0||x>=W||y<0||y>=H)continue;
+    const i=y*W+x,t=g[i];
+    if(sel===EMPTY||sel===STONE){if(t!==sel)set(i,sel)}
+    else if(sel===PLANT||sel===ICE||sel===IRON||sel===TUNG||sel===CU||sel===GA||sel===PT){if(t===EMPTY)set(i,sel)}
+    else if(sel===FIRE){if((t===EMPTY||t===PLANT||t===OIL||t===HYD||t===OXY)&&R()<.5)set(i,FIRE,initLife(FIRE));else if(t===CARBON){if(R()<.5)set(i,EMBER,150+R()*100|0)}else if(t===MG){if(R()<.5)set(i,FLARE,initLife(FLARE))}else if(t===PHOS||t===SULF){set(i,FIRE,initLife(FIRE))}else if(t===POWDER)explode(x,y)}
+    else if(t===EMPTY&&R()<.5)set(i,sel,initLife(sel));
+  }
+}
+function stroke(x0,y0,x1,y1){
+  const dx=x1-x0,dy=y1-y0,n=Math.max(Math.abs(dx),Math.abs(dy),1);
+  const st=Math.max(1,brush>>1);
+  for(let s=0;s<=n;s+=st)dab(Math.round(x0+dx*s/n),Math.round(y0+dy*s/n));
+  dab(x1,y1);
+}
+const ptrs=new Map();
+function pos(e){
+  const rc=canvas.getBoundingClientRect();
+  return [Math.floor((e.clientX-rc.left)/rc.width*W),Math.floor((e.clientY-rc.top)/rc.height*H)];
+}
+canvas.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  try{canvas.setPointerCapture(e.pointerId)}catch(_){}
+  const [x,y]=pos(e);ptrs.set(e.pointerId,{x,y});dab(x,y);
+});
+canvas.addEventListener("pointermove",e=>{
+  const p=ptrs.get(e.pointerId);if(!p)return;
+  e.preventDefault();
+  const [x,y]=pos(e);stroke(p.x,p.y,x,y);p.x=x;p.y=y;
+});
+const up=e=>ptrs.delete(e.pointerId);
+canvas.addEventListener("pointerup",up);
+canvas.addEventListener("pointercancel",up);
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+
+// 처음 장면: 물이 담긴 돌 수조와 풀, 선반 위 모래 더미, 용암 그릇
+function rect(x0,y0,x1,y1,t,p){
+  x0=Math.max(0,x0|0);x1=Math.min(W-1,x1|0);y0=Math.max(0,y0|0);y1=Math.min(H-1,y1|0);
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(p===undefined||R()<p)set(y*W+x,t,initLife(t));
+}
+function seed(){
+  g.fill(0);life.fill(0);
+  const fl=H-1;
+  // 수조
+  const bx0=W*.08,bx1=W*.58,bh=H*.16;
+  rect(bx0,fl-1,bx1,fl,STONE);
+  rect(bx0,fl-bh,bx0+1,fl,STONE);
+  rect(bx1-1,fl-bh,bx1,fl,STONE);
+  rect(bx0+2,fl-bh*.7,bx1-2,fl-2,WATER);
+  // 풀
+  for(let k=0;k<5;k++){
+    const sx=bx0+4+R()*(bx1-bx0-8),sh=bh*(.3+R()*.5);
+    rect(sx,fl-1-sh,sx+1,fl-2,PLANT);
+  }
+  rect(bx0-2,fl-bh-3,bx0+3,fl-bh-1,PLANT);
+  // 선반과 모래
+  const sy=H*.36;
+  rect(W*.5,sy,W*.96,sy+1,STONE);
+  rect(W*.56,sy-H*.13,W*.92,sy-1,SAND);
+  // 용암 그릇
+  const lx0=W*.7,lx1=W*.94,lh=H*.08;
+  rect(lx0,fl-1,lx1,fl,STONE);
+  rect(lx0,fl-lh,lx0+1,fl,STONE);
+  rect(lx1-1,fl-lh,lx1,fl,STONE);
+  rect(lx0+2,fl-lh*.75,lx1-2,fl-2,LAVA);
+}
+
+function dims(){
+  const cw=stage.clientWidth||360,ch=stage.clientHeight||480;
+  const w=Math.max(96,Math.min(220,Math.round(cw/3)));
+  const h=Math.max(48,Math.min(420,Math.round(w*ch/cw)));
+  return [w,h];
+}
+function fit(){
+  const [w,h]=dims();
+  if(w===W&&h===H)return;
+  const og=g,ol=life,os=shade,oW=W,oH=H;
+  alloc(w,h);
+  if(!og)return;
+  const mh=Math.min(oH,h),mw=Math.min(oW,w);
+  for(let yy=0;yy<mh;yy++){
+    const so=(oH-1-yy)*oW,dn=(h-1-yy)*w;
+    for(let x=0;x<mw;x++){g[dn+x]=og[so+x];life[dn+x]=ol[so+x];shade[dn+x]=os[so+x]}
+  }
+}
+
+// 조작부
+const hint=document.getElementById("hint"),pal=document.getElementById("palette");
+let tab=0;
+const tabBtns=document.querySelectorAll(".seg button");
+function mark(){pal.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.el===sel)))}
+function choose(t){
+  sel=t;
+  const e=ELS.find(o=>o.t===t);
+  hint.innerHTML="<b>"+e.n+"</b> "+e.d;
+  mark();
+}
+function buildPalette(){
+  pal.textContent="";
+  ELS.forEach(e=>{
+    if(e.t!==EMPTY&&e.tab!==tab)return;
+    const b=document.createElement("button");
+    b.type="button";b.className="el";b.id="el-"+e.t;b.dataset.el=e.t;
+    const sw=document.createElement("i");
+    if(e.sym){
+      sw.className="sym";sw.style.background=e.c;sw.style.color=e.fg||"#fff";
+      const z=document.createElement("small");z.textContent=e.z;
+      sw.appendChild(z);sw.appendChild(document.createTextNode(e.sym));
+    }else if(e.c)sw.style.background=e.c;
+    else{sw.style.border="1px dashed #5b6673";sw.style.background="#dfe8f0"}
+    b.appendChild(sw);b.appendChild(document.createTextNode(e.n));
+    b.addEventListener("click",()=>choose(e.t));
+    pal.appendChild(b);
+  });
+  mark();
+}
+function setTab(n){
+  tab=n;
+  tabBtns.forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.tab===n)));
+  buildPalette();
+}
+tabBtns.forEach(b=>b.addEventListener("click",()=>setTab(+b.dataset.tab)));
+const brushBtns=document.querySelectorAll(".brush button");
+function setBrush(r){brush=r;brushBtns.forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.r===r)))}
+brushBtns.forEach(b=>b.addEventListener("click",()=>setBrush(+b.dataset.r)));
+const btnPause=document.getElementById("btn-pause");
+function setPaused(p){paused=p;btnPause.textContent=p?"재생":"멈춤"}
+btnPause.addEventListener("click",()=>setPaused(!paused));
+document.getElementById("btn-clear").addEventListener("click",()=>{g.fill(0);life.fill(0)});
+document.getElementById("btn-seed").addEventListener("click",seed);
+
+function frame(){
+  ptrs.forEach(p=>dab(p.x,p.y));
+  if(!paused){step();step()}
+  render();
+  requestAnimationFrame(frame);
+}
+
+function snapshot(){
+  let s="";
+  for(let i=0;i<g.length;i+=8192)s+=String.fromCharCode.apply(null,g.subarray(i,i+8192));
+  return {w:W,h:H,g:s,sel:sel,brush:brush,paused:paused,tab:tab};
+}
+function start(d){
+  d=d||{};
+  if(d.g&&d.w&&d.h&&d.g.length===d.w*d.h){
+    alloc(d.w,d.h);
+    for(let i=0;i<g.length;i++){const t=d.g.charCodeAt(i);g[i]=t<=MAXT?t:0;life[i]=initLife(g[i]);shade[i]=R()*256|0}
+    fit();
+  }else{
+    fit();seed();
+  }
+  setTab(d.tab>=1&&d.tab<=3?d.tab:0);
+  choose(typeof d.sel==="number"&&d.sel<=MAXT?d.sel:SAND);
+  setBrush(d.brush||3);
+  setPaused(d.paused!==undefined?!!d.paused:matchMedia("(prefers-reduced-motion: reduce)").matches);
+  if(window.ResizeObserver)new ResizeObserver(fit).observe(stage);else addEventListener("resize",fit);
+  requestAnimationFrame(frame);
+}
+const hot=window.claude&&window.claude.hot;
+if(hot&&hot.snapshot)hot.snapshot(snapshot);
+if(hot&&hot.ready)hot.ready(start);else start((hot&&hot.data)||{});
+})();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
