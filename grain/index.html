@@ -39,7 +39,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .stage{flex:1;min-height:0;position:relative;margin:0 16px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--tank)}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:crosshair}
 .hint{flex:none;margin:0;padding:8px 16px 0;height:63px;overflow:hidden;font-size:13px;line-height:1.4;color:var(--muted)}
-.tools{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 16px 8px}
+.tools{flex:none;display:flex;align-items:center;gap:10px;padding:6px 16px 8px}
 .seg{display:flex;flex:0 1 auto;min-width:0;border:1px solid var(--line);border-radius:6px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
 .seg::-webkit-scrollbar{display:none}
 .seg button{flex:none}
@@ -47,12 +47,22 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .seg button:first-child{border-left:0}
 .seg button[aria-pressed="true"]{background:var(--press);font-weight:600}
 .hint b{color:var(--text);font-weight:600}
-.brush{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:none}
+.brush{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:none;margin-left:auto}
 .brush button{width:36px;height:32px;display:grid;place-items:center;background:var(--panel);border:0;border-left:1px solid var(--line);padding:0}
 .brush button:first-child{border-left:0}
 .brush button i{display:block;border-radius:50%;background:var(--muted)}
 .brush button[aria-pressed="true"]{background:var(--press)}
 .brush button[aria-pressed="true"] i{background:var(--accent)}
+.pt{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:8px;padding:8px;background:rgba(242,244,247,.97);overflow-y:auto}
+.pt[hidden]{display:none}
+.pt-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+.pt-grid{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:2px}
+.pt-grid button{aspect-ratio:1;min-width:0;padding:0;border:0;border-radius:2px;font:600 9px/1 var(--body);letter-spacing:-.03em;overflow:hidden}
+.pt-grid button.f{margin-top:5px}
+.pt-grid button.f2{margin-top:0}
+.pt-grid button[aria-pressed="true"]{outline:2px solid var(--text);outline-offset:0;position:relative;z-index:1}
+@media (min-width:520px){.pt-grid{gap:3px}.pt-grid button{font-size:12px;border-radius:3px}}
+.tools .act{flex:none;height:34px}
 .find{display:flex;gap:6px;padding:0 16px 8px;flex:none}
 .find input{flex:1;min-width:0;height:34px;padding:0 10px;font:400 16px var(--body);color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;-webkit-user-select:text;user-select:text;-webkit-appearance:none;appearance:none}
 .find input::placeholder{color:var(--muted);font-size:14px}
@@ -81,18 +91,20 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
   <button class="act" id="btn-clear" type="button">비우기</button>
   <button class="act" id="btn-seed" type="button">새 장면</button>
 </header>
-<div class="stage" id="stage"><canvas id="tank" aria-label="알갱이 실험 수조. 문지르면 선택한 원소가 쏟아진다."></canvas></div>
+<div class="stage" id="stage">
+  <canvas id="tank" aria-label="알갱이 실험 수조. 문지르면 선택한 원소가 쏟아진다."></canvas>
+  <div class="pt" id="pt" hidden>
+    <div class="pt-bar"><span>원소 118종. 누르면 고른다.</span><button type="button" class="act" id="pt-close">닫기</button></div>
+    <div class="pt-grid" id="pt-grid" role="group" aria-label="주기율표"></div>
+  </div>
+</div>
 <p class="hint" id="hint"></p>
 <div class="tools">
   <div class="seg" role="group" aria-label="원소 묶음">
     <button type="button" id="tab-0" data-tab="0" aria-pressed="true">기본</button>
-    <button type="button" id="tab-1" data-tab="1" aria-pressed="false">원소 1</button>
-    <button type="button" id="tab-2" data-tab="2" aria-label="원소 2" aria-pressed="false">2</button>
-    <button type="button" id="tab-3" data-tab="3" aria-label="원소 3" aria-pressed="false">3</button>
-    <button type="button" id="tab-4" data-tab="4" aria-label="원소 4" aria-pressed="false">4</button>
-    <button type="button" id="tab-5" data-tab="5" aria-label="원소 5" aria-pressed="false">5</button>
-    <button type="button" id="tab-6" data-tab="6" aria-label="원소 6" aria-pressed="false">6</button>
+    <button type="button" id="tab-1" data-tab="1" aria-pressed="false">원소</button>
   </div>
+  <button type="button" class="act" id="pt-open" aria-expanded="false">주기율표</button>
   <div class="brush" role="group" aria-label="붓 크기">
     <button type="button" id="brush-s" data-r="1" aria-label="붓 작게" aria-pressed="false"><i style="width:5px;height:5px"></i></button>
     <button type="button" id="brush-m" data-r="3" aria-label="붓 보통" aria-pressed="true"><i style="width:10px;height:10px"></i></button>
@@ -1037,21 +1049,54 @@ function fit(){
 // 조작부
 const hint=document.getElementById("hint"),pal=document.getElementById("palette");
 let tab=0;
-{
-  const seg=document.querySelector(".seg");
-  for(let n=7;n<=MAXTAB;n++){
-    const b=document.createElement("button");
-    b.type="button";b.id="tab-"+n;b.dataset.tab=n;b.textContent=n;
-    b.setAttribute("aria-label","원소 "+n);b.setAttribute("aria-pressed","false");
-    seg.appendChild(b);
-  }
-}
 const tabBtns=document.querySelectorAll(".seg button");
-function mark(){pal.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.el===sel)))}
+const BYT={};ELS.forEach(e=>{BYT[e.t]=e});
+let recent=[HYD,CARBON,NITRO,OXY,FLUOR,SODIUM,IRON,GOLD,HG];
+try{
+  const r=JSON.parse(localStorage.getItem("grain-recent")||"null");
+  if(Array.isArray(r)){const ok=r.filter(t=>BYT[t]&&BYT[t].z!==undefined);if(ok.length===9)recent=ok}
+}catch(_){}
+const ptGrid=document.getElementById("pt-grid"),pt=document.getElementById("pt"),ptOpen=document.getElementById("pt-open");
+function mark(){
+  pal.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.el===sel)));
+  ptGrid.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.el===sel)));
+}
+function remember(t){
+  if(BYT[t].z===undefined||recent.includes(t))return false;
+  recent.unshift(t);recent.length=9;
+  try{localStorage.setItem("grain-recent",JSON.stringify(recent))}catch(_){}
+  return true;
+}
+function cellPos(z){
+  if(z===1)return [1,1];if(z===2)return [1,18];
+  if(z<=4)return [2,z-2];if(z<=10)return [2,z+8];
+  if(z<=12)return [3,z-10];if(z<=18)return [3,z];
+  if(z<=36)return [4,z-18];if(z<=54)return [5,z-36];
+  if(z<=56)return [6,z-54];if(z<=71)return [9,z-54];if(z<=86)return [6,z-68];
+  if(z<=88)return [7,z-86];if(z<=103)return [10,z-86];return [7,z-100];
+}
+function showTable(on){pt.hidden=!on;ptOpen.setAttribute("aria-expanded",String(on))}
+ELS.forEach(e=>{
+  if(e.z===undefined)return;
+  const b=document.createElement("button"),ps=cellPos(e.z);
+  b.type="button";b.id="pt-"+e.z;b.dataset.el=e.t;b.textContent=e.sym;
+  b.setAttribute("aria-label",e.z+"번 "+e.n);b.setAttribute("aria-pressed","false");
+  b.style.gridRow=ps[0];b.style.gridColumn=ps[1];
+  b.style.background=e.c;b.style.color=e.fg||"#fff";
+  if(ps[0]>=9)b.className=ps[0]===9?"f":"f f2";
+  b.addEventListener("click",()=>{
+    if(query){find.value="";query="";findClear.hidden=true}
+    tab=1;choose(e.t);buildPalette();showTable(false);
+  });
+  ptGrid.appendChild(b);
+});
+ptOpen.addEventListener("click",()=>showTable(pt.hidden));
+document.getElementById("pt-close").addEventListener("click",()=>showTable(false));
 function choose(t){
   sel=t;
   const e=ELS.find(o=>o.t===t);
-  hint.innerHTML="<b>"+e.n+"</b> "+e.d;
+  hint.innerHTML="<b>"+e.n+"</b> "+(e.z!==undefined?e.sym+" "+e.z+"번. ":"")+e.d;
+  if(remember(t)&&tab===1&&!query)buildPalette();
   mark();
 }
 const find=document.getElementById("find"),findClear=document.getElementById("find-clear");
@@ -1093,7 +1138,8 @@ function buildPalette(){
       m.textContent="맞는 원소가 없다. 이름(수소), 기호(H), 원자 번호(1), 성질(터진다)로 찾는다.";
       pal.appendChild(m);
     }
-  }else ELS.forEach(e=>{if(e.t===EMPTY||e.tab===tab)addBtn(e)});
+  }else if(tab===0)ELS.forEach(e=>{if(e.t===EMPTY||e.tab===0)addBtn(e)});
+  else{recent.forEach(t=>addBtn(BYT[t]));addBtn(BYT[EMPTY])}
   tabBtns.forEach(b=>b.setAttribute("aria-pressed",String(!query&&+b.dataset.tab===tab)));
   mark();
 }
@@ -1148,7 +1194,7 @@ function start(d){
   }else{
     fit();seed();
   }
-  setTab(d.tab>=1&&d.tab<=MAXTAB?d.tab:0);
+  setTab(d.tab===1?1:0);
   choose(typeof d.sel==="number"&&d.sel<=MAXT?d.sel:SAND);
   setBrush(d.brush||3);
   setPaused(d.paused!==undefined?!!d.paused:matchMedia("(prefers-reduced-motion: reduce)").matches);
