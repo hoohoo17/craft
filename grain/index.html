@@ -51,6 +51,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .brush button i{display:block;border-radius:50%;background:var(--muted)}
 .brush button[aria-pressed="true"]{background:var(--press)}
 .brush button[aria-pressed="true"] i{background:var(--accent)}
+.find{display:flex;gap:6px;padding:0 16px 8px}
+.find input{flex:1;min-width:0;height:34px;padding:0 10px;font:400 16px var(--body);color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;-webkit-user-select:text;user-select:text;-webkit-appearance:none;appearance:none}
+.find input::placeholder{color:var(--muted);font-size:14px}
+.find input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.find input::-webkit-search-cancel-button{display:none}
+.find button{height:34px;padding:0 10px;font-size:13px;font-weight:500;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.palette.searching{max-height:160px;overflow-y:auto}
+.palette .none{grid-column:1/-1;margin:0;padding:10px 2px;font-size:13px;color:var(--muted)}
 .palette{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:0 16px 14px}
 .el{display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 2px 6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;font-size:12px;font-weight:500;line-height:1}
 .el i{display:block;width:70%;max-width:40px;height:14px;border-radius:3px}
@@ -85,6 +93,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
     <button type="button" id="brush-m" data-r="3" aria-label="붓 보통" aria-pressed="true"><i style="width:10px;height:10px"></i></button>
     <button type="button" id="brush-l" data-r="6" aria-label="붓 크게" aria-pressed="false"><i style="width:16px;height:16px"></i></button>
   </div>
+</div>
+<div class="find">
+  <input id="find" type="search" placeholder="원소 찾기: 이름, 기호, 번호" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="원소 찾기">
+  <button type="button" id="find-clear" aria-label="검색어 지우기" hidden>지우기</button>
 </div>
 <div class="palette" id="palette" role="group" aria-label="원소"></div>
 
@@ -770,6 +782,7 @@ function pos(e){
 }
 canvas.addEventListener("pointerdown",e=>{
   e.preventDefault();
+  if(document.activeElement===find)find.blur();
   try{canvas.setPointerCapture(e.pointerId)}catch(_){}
   const [x,y]=pos(e);ptrs.set(e.pointerId,{x,y});dab(x,y);
 });
@@ -822,6 +835,7 @@ function dims(){
   return [w,h];
 }
 function fit(){
+  if(W&&document.activeElement===find)return;
   const [w,h]=dims();
   if(w===W&&h===H)return;
   const og=g,ol=life,os=shade,oW=W,oH=H;
@@ -845,31 +859,69 @@ function choose(t){
   hint.innerHTML="<b>"+e.n+"</b> "+e.d;
   mark();
 }
+const find=document.getElementById("find"),findClear=document.getElementById("find-clear");
+let query="";
+function found(){
+  const q=query,a=[],b=[],c=[];
+  ELS.forEach(e=>{
+    if(e.t===EMPTY)return;
+    const sym=(e.sym||"").toLowerCase();
+    if((sym&&sym===q)||(e.z!==undefined&&String(e.z)===q))a.push(e);
+    else if(e.n.includes(q)||(sym&&sym.startsWith(q)))b.push(e);
+    else if(q.length>=2&&e.d.includes(q))c.push(e);
+  });
+  return a.concat(b,c);
+}
+function addBtn(e){
+  const b=document.createElement("button");
+  b.type="button";b.className="el";b.id="el-"+e.t;b.dataset.el=e.t;
+  const sw=document.createElement("i");
+  if(e.sym){
+    sw.className="sym";sw.style.background=e.c;sw.style.color=e.fg||"#fff";
+    const z=document.createElement("small");z.textContent=e.z;
+    sw.appendChild(z);sw.appendChild(document.createTextNode(e.sym));
+  }else if(e.c)sw.style.background=e.c;
+  else{sw.style.border="1px dashed #5b6673";sw.style.background="#dfe8f0"}
+  b.appendChild(sw);b.appendChild(document.createTextNode(e.n));
+  b.addEventListener("click",()=>choose(e.t));
+  pal.appendChild(b);
+}
 function buildPalette(){
   pal.textContent="";
-  ELS.forEach(e=>{
-    if(e.t!==EMPTY&&e.tab!==tab)return;
-    const b=document.createElement("button");
-    b.type="button";b.className="el";b.id="el-"+e.t;b.dataset.el=e.t;
-    const sw=document.createElement("i");
-    if(e.sym){
-      sw.className="sym";sw.style.background=e.c;sw.style.color=e.fg||"#fff";
-      const z=document.createElement("small");z.textContent=e.z;
-      sw.appendChild(z);sw.appendChild(document.createTextNode(e.sym));
-    }else if(e.c)sw.style.background=e.c;
-    else{sw.style.border="1px dashed #5b6673";sw.style.background="#dfe8f0"}
-    b.appendChild(sw);b.appendChild(document.createTextNode(e.n));
-    b.addEventListener("click",()=>choose(e.t));
-    pal.appendChild(b);
-  });
+  pal.classList.toggle("searching",!!query);
+  if(query){
+    const list=found();
+    if(list.length)list.forEach(addBtn);
+    else{
+      const m=document.createElement("p");m.className="none";
+      m.textContent="맞는 원소가 없다. 이름(수소), 기호(H), 원자 번호(1), 성질(터진다)로 찾는다.";
+      pal.appendChild(m);
+    }
+  }else ELS.forEach(e=>{if(e.t===EMPTY||e.tab===tab)addBtn(e)});
+  tabBtns.forEach(b=>b.setAttribute("aria-pressed",String(!query&&+b.dataset.tab===tab)));
   mark();
+}
+function setQuery(v){
+  query=String(v||"").trim().toLowerCase();
+  findClear.hidden=!query;
+  buildPalette();
 }
 function setTab(n){
   tab=n;
-  tabBtns.forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.tab===n)));
+  if(query){find.value="";query="";findClear.hidden=true}
   buildPalette();
 }
 tabBtns.forEach(b=>b.addEventListener("click",()=>setTab(+b.dataset.tab)));
+find.addEventListener("input",()=>setQuery(find.value));
+find.addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return;
+  e.preventDefault();
+  const list=query?found():[];
+  if(list.length)choose(list[0].t);
+  find.blur();
+});
+find.addEventListener("blur",()=>fit());
+findClear.addEventListener("click",()=>{find.value="";setQuery("")});
 const brushBtns=document.querySelectorAll(".brush button");
 function setBrush(r){brush=r;brushBtns.forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.r===r)))}
 brushBtns.forEach(b=>b.addEventListener("click",()=>setBrush(+b.dataset.r)));
