@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>거짓말쟁이 AI 찾기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+/* 레이아웃: 용의자 세우는 벽(키 눈금) 앞에 로봇을 줄 세우고, 아래에 수사 수첩(질문·기록)을 둔다. 한 가지 테마로 고정. */
+:root{
+  color-scheme: light;
+  --wall:#dfe6ea;      /* 취조실 벽 */
+  --line:#b9c5cc;      /* 키 눈금선 */
+  --ink:#1c2b3a;       /* 글자, 테두리 */
+  --paper:#fbfaf4;     /* 수첩 종이 */
+  --signal:#f2542d;    /* 지목, 강조 */
+  --ok:#1f8a5b;        /* 정답 */
+  --soft:#5d6d7a;      /* 보조 글자 */
+  --display:"Do Hyeon","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--wall);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding:14px 16px 32px;display:flex;flex-direction:column;gap:12px}
+
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.1;margin:0;text-wrap:balance}
+.stage{font-family:var(--display);font-size:18px;white-space:nowrap}
+.stage b{color:var(--signal);font-weight:400;font-size:26px}
+
+.rule{background:var(--ink);color:var(--paper);padding:10px 12px;border-radius:6px;font-size:15px}
+.rule strong{font-family:var(--display);font-weight:400;color:#ffd166;margin-right:6px}
+
+/* 용의자 벽 */
+.lineup{position:relative;border:2px solid var(--ink);border-radius:6px;padding:26px 8px 0 30px;
+  background:
+    repeating-linear-gradient(to bottom,transparent 0 25px,var(--line) 25px 26px),
+    #eef2f4;
+  display:flex;justify-content:space-around;align-items:flex-end;gap:4px;min-height:182px;overflow:hidden}
+.ticks{position:absolute;left:4px;top:0;bottom:0;display:flex;flex-direction:column;font-size:10px;color:var(--soft);font-variant-numeric:tabular-nums}
+.ticks span{height:26px;line-height:26px}
+.bot{flex:1 1 0;min-width:0;max-width:96px;background:none;border:0;padding:0 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+.bot svg{width:100%;max-width:78px;height:auto;display:block;transition:transform .15s}
+.bot .name{font-family:var(--display);font-size:16px;background:var(--paper);border:2px solid var(--ink);border-radius:4px;padding:0 8px;line-height:1.4}
+.bot.sel svg{transform:translateY(-8px)}
+.bot.sel .name{background:var(--ink);color:var(--paper)}
+.bot .count{font-size:11px;color:var(--soft);height:14px;line-height:14px}
+.stamp{position:absolute;top:34%;left:50%;transform:translate(-50%,-50%) rotate(-12deg);font-family:var(--display);font-size:15px;
+  color:var(--signal);border:3px solid var(--signal);border-radius:4px;padding:0 5px;background:rgba(251,250,244,.9);white-space:nowrap;animation:thump .25s ease-out}
+@keyframes thump{from{transform:translate(-50%,-50%) rotate(-12deg) scale(2);opacity:0}}
+
+.meter{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:15px}
+.dots{display:flex;gap:6px}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--ink);background:var(--signal)}
+.dots i.used{background:transparent}
+
+/* 수사 수첩 */
+.note{background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.note h2{font-family:var(--display);font-weight:400;font-size:18px;margin:0}
+.qs{display:flex;flex-direction:column;gap:8px}
+.q{background:#fff;border:2px solid var(--ink);border-radius:6px;padding:10px 12px;text-align:left;min-height:44px}
+.q:active{background:var(--wall)}
+.accuse{background:var(--signal);color:#fff;border:2px solid var(--ink);border-radius:6px;padding:10px 12px;font-family:var(--display);font-size:18px;min-height:46px}
+.next{background:var(--ink);color:var(--paper);border:0;border-radius:6px;padding:12px;font-family:var(--display);font-size:19px;min-height:48px}
+.muted{color:var(--soft);font-size:14px;margin:0}
+.result{font-family:var(--display);font-size:22px;margin:0;line-height:1.25}
+.result.win{color:var(--ok)}
+.result.lose{color:var(--signal)}
+
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.log li{border-left:4px solid var(--ink);padding:2px 0 2px 10px;font-size:15px}
+.log .who{font-family:var(--display)}
+.log .a{display:block;font-weight:700}
+.log li.new{border-left-color:var(--signal);animation:slide .2s ease-out}
+@keyframes slide{from{transform:translateX(-8px);opacity:0}}
+
+details{font-size:14px;color:var(--soft)}
+summary{cursor:pointer;width:fit-content;padding:4px 0}
+.box{display:inline-block;width:.8em;height:.8em;border:2px solid var(--ink);border-radius:2px;vertical-align:-1px;margin-right:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="app" id="app"></main>
+<script>
+(function(){
+"use strict";
+var NAMES=["삐삐","뚜뚜","코코","모모","루루"];
+var BODY=["#3a86c8","#e9b824","#7a5cc2","#2aa58a","#d9627a"];
+var BOXES=[{n:"빨강",c:"#e5484d"},{n:"파랑",c:"#3a86c8"},{n:"초록",c:"#2aa58a"}];
+var STAGES=[
+ {n:3,q:3,t:"liar"},{n:3,q:3,t:"liar"},
+ {n:3,q:2,t:"liar"},{n:3,q:2,t:"liar"},
+ {n:4,q:3,t:"liar"},{n:4,q:3,t:"liar"},
+ {n:5,q:4,t:"liar"},{n:5,q:4,t:"liar"},
+ {n:3,q:2,t:"sleepy"},{n:4,q:3,t:"sleepy"}
+];
+var KEY="liar-ai-best";
+var S;
+
+function rnd(n){return Math.floor(Math.random()*n);}
+function deal(stage,misses){
+  var d=STAGES[stage],tr=rnd(3);
+  return {stage:stage,misses:misses||0,liar:rnd(d.n),treasure:tr,lieTreasure:(tr+1+rnd(2))%3,
+          asked:NAMES.slice(0,d.n).map(function(){return 0;}),left:d.q,log:[],sel:-1,phase:"play",picked:-1};
+}
+function isLying(r){
+  if(r!==S.liar) return false;
+  return STAGES[S.stage].t==="liar" ? true : S.asked[r]>=1;
+}
+function ask(r,kind,target){
+  if(S.phase!=="play"||S.left<=0) return;
+  var lie=isLying(r),q,a,truth,says;
+  if(kind==="treasure"){
+    q="보물은 어느 상자에 있어?";
+    a="보물은 "+BOXES[lie?S.lieTreasure:S.treasure].n+" 상자에 있어.";
+  }else if(kind==="self"){
+    q="너는 거짓말쟁이야?";
+    truth=(r===S.liar); says=lie?!truth:truth;
+    a=says?"응, 내가 거짓말쟁이야.":"아니, 난 거짓말쟁이가 아니야.";
+  }else{
+    q=NAMES[target]+"는 거짓말쟁이야?";
+    truth=(target===S.liar); says=lie?!truth:truth;
+    a=says?"응, "+NAMES[target]+"가 거짓말쟁이야.":"아니, "+NAMES[target]+"는 거짓말쟁이가 아니야.";
+  }
+  S.asked[r]++; S.left--;
+  S.log.unshift({r:r,q:q,a:a});
+  render(true);
+}
+function accuse(r){
+  if(S.phase!=="play") return;
+  S.picked=r;
+  if(r===S.liar){
+    S.phase=(S.stage===STAGES.length-1)?"done":"won";
+    if(S.phase==="done") saveBest();
+  }else{ S.phase="lost"; S.misses++; }
+  S.sel=-1;
+  render();
+}
+function saveBest(){
+  try{
+    var b=localStorage.getItem(KEY);
+    if(b===null||S.misses<Number(b)) localStorage.setItem(KEY,String(S.misses));
+  }catch(e){}
+}
+function best(){ try{var b=localStorage.getItem(KEY);return b===null?null:Number(b);}catch(e){return null;} }
+
+function robot(i,mood){
+  var c=BODY[i],ink="#1c2b3a";
+  var heads=[
+    '<rect x="16" y="22" width="48" height="38" rx="6"/>',
+    '<rect x="14" y="26" width="52" height="34" rx="17"/>',
+    '<rect x="22" y="14" width="36" height="46" rx="8"/>',
+    '<path d="M24 22h32l10 14v24H14V36z"/>',
+    '<rect x="12" y="28" width="56" height="32" rx="4"/>'
+  ];
+  var eyeY=[40,42,34,42,42][i];
+  var eyes,mouth;
+  if(mood==="liar"){
+    eyes='<path d="M27 '+(eyeY-4)+'l8 8m0-8l-8 8M45 '+(eyeY-4)+'l8 8m0-8l-8 8" stroke="'+ink+'" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    mouth='<path d="M30 53l4-3 4 3 4-3 4 3 4-3" stroke="'+ink+'" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  }else{
+    eyes='<circle cx="31" cy="'+eyeY+'" r="5" fill="#fff" stroke="'+ink+'" stroke-width="2"/><circle cx="49" cy="'+eyeY+'" r="5" fill="#fff" stroke="'+ink+'" stroke-width="2"/>'+
+         '<circle cx="31" cy="'+eyeY+'" r="2" fill="'+ink+'"/><circle cx="49" cy="'+eyeY+'" r="2" fill="'+ink+'"/>';
+    mouth=mood==="honest"
+      ? '<path d="M32 51q8 6 16 0" stroke="'+ink+'" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+      : '<path d="M33 53h14" stroke="'+ink+'" stroke-width="2.5" stroke-linecap="round"/>';
+  }
+  var top=[22,26,14,22,28][i];
+  return '<svg viewBox="0 0 80 112" aria-hidden="true">'+
+    '<path d="M40 '+top+'V'+(top-9)+'" stroke="'+ink+'" stroke-width="3"/><circle cx="40" cy="'+(top-11)+'" r="4" fill="#f2542d" stroke="'+ink+'" stroke-width="2"/>'+
+    '<g fill="'+c+'" stroke="'+ink+'" stroke-width="3" stroke-linejoin="round">'+heads[i]+
+    '<rect x="22" y="64" width="36" height="32" rx="5"/>'+
+    '<rect x="8" y="66" width="10" height="22" rx="5"/><rect x="62" y="66" width="10" height="22" rx="5"/>'+
+    '<rect x="26" y="96" width="10" height="13" rx="3"/><rect x="44" y="96" width="10" height="13" rx="3"/></g>'+
+    '<rect x="30" y="72" width="20" height="10" rx="2" fill="#fff" stroke="'+ink+'" stroke-width="2"/>'+
+    eyes+mouth+'</svg>';
+}
+function esc(s){return String(s).replace(/[&<>"]/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m];});}
+
+function ruleText(d){
+  var base=d.t==="liar"
+    ? "로봇 "+d.n+"대 중 1대는 <b>항상 거짓말</b>을 한다. 나머지는 항상 진실을 말한다."
+    : "로봇 "+d.n+"대 중 1대는 잠꾸러기 거짓말쟁이다. <b>첫 대답만 진실</b>이고, 그다음부터는 거짓말을 한다.";
+  return base+" 질문은 "+d.q+"번.";
+}
+function hintText(d){
+  if(d.t==="sleepy") return "잠꾸러기도 첫 대답은 진실이다. 한 로봇에게 두 번 묻지 말고, 로봇마다 첫 질문을 아껴 써라.";
+  if(d.q>=d.n) return "모두에게 보물 위치를 물어봐라. 혼자 다른 대답을 하는 로봇이 거짓말쟁이다.";
+  if(d.q>=d.n-1&&d.n>=4) return "한 대만 빼고 모두에게 보물 위치를 물어봐라. 혼자 다른 대답을 하는 로봇이 거짓말쟁이다. 대답이 모두 같으면 묻지 않은 로봇이 거짓말쟁이다.";
+  return "질문이 2번뿐이라 보물 질문으로는 모자란다. 먼저 “저 로봇은 거짓말쟁이야?”를 물어라. “아니”가 나오면 물어본 로봇과 지목된 로봇 둘 다 정직하니 남은 로봇이 거짓말쟁이다. “응”이 나오면 둘 중 하나가 거짓말쟁이니, 남은 로봇에게 한 번 더 물어 확정해라.";
+}
+
+function render(fresh){
+  var d=STAGES[S.stage],over=S.phase!=="play",h="";
+  h+='<header class="top"><h1>거짓말쟁이 AI 찾기</h1><div class="stage"><b>'+(S.stage+1)+'</b> / '+STAGES.length+' 단계</div></header>';
+  h+='<p class="rule" style="margin:0"><strong>규칙</strong>'+ruleText(d)+'</p>';
+
+  h+='<section class="lineup" aria-label="용의자 로봇"><div class="ticks" aria-hidden="true"><span>180</span><span>160</span><span>140</span><span>120</span><span>100</span><span>80</span><span>60</span></div>';
+  for(var i=0;i<d.n;i++){
+    var mood=over?(i===S.liar?"liar":"honest"):"";
+    h+='<button type="button" class="bot'+(S.sel===i?' sel':'')+'" data-bot="'+i+'" aria-pressed="'+(S.sel===i)+'"'+(over?' disabled':'')+'>'+
+       robot(i,mood)+'<span class="name">'+NAMES[i]+'</span><span class="count">'+(S.asked[i]?'질문 '+S.asked[i]+'번':'')+'</span>'+
+       (over&&i===S.liar?'<span class="stamp">거짓말쟁이</span>':'')+'</button>';
+  }
+  h+='</section>';
+
+  h+='<div class="meter"><span>남은 질문</span><span class="dots" role="img" aria-label="남은 질문 '+S.left+'번">';
+  for(var k=0;k<d.q;k++) h+='<i class="'+(k<S.left?'':'used')+'"></i>';
+  h+='</span></div>';
+
+  h+='<section class="note">';
+  if(S.phase==="play"){
+    if(S.sel<0){
+      h+='<h2>'+(S.left>0?'질문할 로봇을 골라라':'질문이 끝났다. 거짓말쟁이를 골라라')+'</h2>';
+      h+='<p class="muted">로봇을 누르면 질문과 지목 버튼이 나온다.</p>';
+    }else{
+      var r=S.sel;
+      h+='<h2>'+NAMES[r]+'에게</h2><div class="qs">';
+      if(S.left>0){
+        h+='<button type="button" class="q" data-q="treasure">보물은 어느 상자에 있어?</button>';
+        for(var j=0;j<d.n;j++) if(j!==r) h+='<button type="button" class="q" data-q="other" data-t="'+j+'">'+NAMES[j]+'는 거짓말쟁이야?</button>';
+        h+='<button type="button" class="q" data-q="self">너는 거짓말쟁이야?</button>';
+      }else{
+        h+='<p class="muted">질문을 다 썼다.</p>';
+      }
+      h+='<button type="button" class="accuse" data-accuse="'+r+'">'+NAMES[r]+'가 거짓말쟁이다!</button></div>';
+    }
+  }else{
+    var box='<span class="box" style="background:'+BOXES[S.treasure].c+'"></span>'+BOXES[S.treasure].n+' 상자';
+    if(S.phase==="lost"){
+      h+='<p class="result lose">틀렸다. '+NAMES[S.picked]+'는 정직했다.</p>';
+      h+='<p class="muted">거짓말쟁이는 '+NAMES[S.liar]+'였다. 보물은 '+box+'에 있었다.</p>';
+      h+='<button type="button" class="next" data-act="retry">이 단계 다시 하기</button>';
+    }else if(S.phase==="won"){
+      h+='<p class="result win">정답. '+NAMES[S.liar]+'가 거짓말쟁이였다.</p>';
+      h+='<p class="muted">보물은 '+box+'에 있었다. 질문 '+(d.q-S.left)+'번을 썼다.</p>';
+      h+='<button type="button" class="next" data-act="next">다음 단계</button>';
+    }else{
+      var b=best();
+      h+='<p class="result win">10단계를 모두 통과했다.</p>';
+      h+='<p class="muted">틀린 횟수 '+S.misses+'번. '+(S.misses===0?'한 번도 속지 않은 명탐정이다.':S.misses<=3?'꽤 날카로운 수사관이다.':'로봇들에게 여러 번 속았다.')+
+         (b!==null?' 최고 기록은 틀린 횟수 '+b+'번.':'')+'</p>';
+      h+='<button type="button" class="next" data-act="restart">처음부터 다시 하기</button>';
+    }
+  }
+  if(S.phase==="play") h+='<details'+(d.t==="liar"&&d.q<d.n&&d.n===3?' open':'')+'><summary>힌트 보기</summary>'+hintText(d)+'</details>';
+  h+='</section>';
+
+  h+='<section class="note"><h2>수사 기록</h2>';
+  if(!S.log.length) h+='<p class="muted">아직 질문하지 않았다.</p>';
+  else{
+    h+='<ol class="log" reversed>';
+    S.log.forEach(function(e,idx){
+      h+='<li class="'+(fresh&&idx===0?'new':'')+'"><span class="who">'+NAMES[e.r]+'</span>에게: '+esc(e.q)+'<span class="a">“'+esc(e.a)+'”</span></li>';
+    });
+    h+='</ol>';
+  }
+  h+='</section>';
+  document.getElementById("app").innerHTML=h;
+}
+
+document.getElementById("app").addEventListener("click",function(ev){
+  var t=ev.target.closest("button"); if(!t) return;
+  if(t.dataset.bot!==undefined){ var i=Number(t.dataset.bot); S.sel=(S.sel===i?-1:i); render(); return; }
+  if(t.dataset.q){ ask(S.sel,t.dataset.q,t.dataset.t!==undefined?Number(t.dataset.t):-1); return; }
+  if(t.dataset.accuse!==undefined){ accuse(Number(t.dataset.accuse)); return; }
+  if(t.dataset.act==="retry"){ S=deal(S.stage,S.misses); render(); }
+  else if(t.dataset.act==="next"){ S=deal(S.stage+1,S.misses); render(); }
+  else if(t.dataset.act==="restart"){ S=deal(0,0); render(); }
+});
+
+function start(data){
+  S=(data&&typeof data.stage==="number"&&STAGES[data.stage]&&Array.isArray(data.log))?data:deal(0,0);
+  render();
+}
+var hot=window.claude&&window.claude.hot;
+if(hot&&hot.snapshot) hot.snapshot(function(){return S;});
+if(hot&&hot.ready) hot.ready(start); else start((hot&&hot.data)||{});
+})();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
