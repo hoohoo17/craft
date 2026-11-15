@@ -998,7 +998,10 @@ function makeCup(size) {
   shuffle(order);
   const groups = [];
   for (let i = 0; i < size / 4; i++) groups.push(order.slice(i * 4, i * 4 + 4));
-  return { size: size, names: CUP_NAMES.slice(0, size), cards: cards, groups: groups, res: {} };
+  // 고친 팀 이름은 새 대회를 열어도 그대로 둔다
+  const old = (st.cup && st.cup.names) || [];
+  const names = CUP_NAMES.slice(0, size).map(function (d, i) { return old[i] || d; });
+  return { size: size, names: names, cards: cards, groups: groups, res: {} };
 }
 
 function groupGames(gi) {
@@ -1664,6 +1667,70 @@ function renderAll() {
   renderCards();
 }
 
+/* 월드컵 팀 이름 고치기: 조를 고르고 그 조 4팀 이름을 바꾼다 */
+let nameG = 0;
+function cupNameEditor() {
+  const box = document.createElement('div');
+  box.className = 'card';
+  box.style.margin = '10px 0';
+  if (nameG >= st.cup.groups.length) nameG = 0;
+
+  const p = document.createElement('p');
+  p.className = 'note';
+  p.style.margin = '2px 0 8px';
+  p.innerHTML = '✏️ <b>팀 이름 바꾸기</b> — 조를 고르고 이름을 눌러서 고치면 돼. 새 대회를 열어도 이름은 그대로야.';
+  box.appendChild(p);
+
+  const picker = document.createElement('div');
+  picker.className = 'picker';
+  st.cup.groups.forEach(function (_, gi) {
+    const b = document.createElement('button');
+    b.textContent = LETTER[gi] + '조';
+    b.setAttribute('aria-pressed', gi === nameG ? 'true' : 'false');
+    b.addEventListener('click', function () {
+      nameG = gi;
+      box.replaceWith(cupNameEditor());
+    });
+    picker.appendChild(b);
+  });
+  box.appendChild(picker);
+
+  st.cup.groups[nameG].forEach(function (team) {
+    const row = document.createElement('div');
+    row.className = 'teamrow';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = st.cup.names[team];
+    input.maxLength = 8;
+    input.addEventListener('input', function () {
+      st.cup.names[team] = input.value.trim() || CUP_NAMES[team];
+      save();
+      renderCupGroups();
+      if (!st.open) renderCupKo();
+      renderCards();
+    });
+    input.addEventListener('blur', function () { input.value = st.cup.names[team]; });
+    row.appendChild(input);
+    box.appendChild(row);
+  });
+
+  const custom = st.cup.names.some(function (n, i) { return n !== CUP_NAMES[i]; });
+  if (custom) {
+    const r = document.createElement('button');
+    r.className = 'big ghost';
+    r.style.marginTop = '8px';
+    r.textContent = '팀 이름 전부 원래대로';
+    r.addEventListener('click', function () {
+      ask('바꾼 팀 이름을 전부 원래 이름으로 돌릴까?', function () {
+        st.cup.names = CUP_NAMES.slice(0, st.cup.size);
+        save(); renderAll();
+      });
+    });
+    box.appendChild(r);
+  }
+  return box;
+}
+
 function renderCupSettings() {
   const view = document.getElementById('cupSettings');
   view.innerHTML = '';
@@ -1692,6 +1759,8 @@ function renderCupSettings() {
     seg.appendChild(b);
   });
   view.appendChild(seg);
+
+  view.appendChild(cupNameEditor());
 
   const nb = document.createElement('button');
   nb.className = 'big ghost';
