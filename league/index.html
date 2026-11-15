@@ -973,10 +973,14 @@ const CUP_NAMES = [
   '사자','호랑이','표범','매','독수리','상어','고래','문어','전갈','코브라',
   '코뿔소','코끼리','기린','치타','여우','곰','부엉이','까마귀','두더지','고슴도치',
   '방패','창','화살','도끼','망치','갑옷','성벽','대포','깃발','보석',
-  '황금','수정','진주','다이아'
+  '황금','수정','진주','다이아',
+  '해적','기사','닌자','마법사','용','유니콘','불사조','거인','요정','로봇',
+  '공룡','펭귄','판다','캥거루','고릴라','하마','악어','독사','물개','돌고래',
+  '나비','벌','개미','사슴','늑대개','올빼미','참새','백조','토네이도','지진',
+  '용암','빙하','태양','달','별빛','블랙홀','화성','토성','목성','금성'
 ];
-const LETTER = 'ABCDEFGHIJKLMNOP';
-const KO_NAME = { 32: '32강', 16: '16강', 8: '8강', 4: '준결승', 3: '3·4위전', 2: '결승' };
+const LETTER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const KO_NAME = { 64: '64강', 32: '32강', 16: '16강', 8: '8강', 4: '준결승', 3: '3·4위전', 2: '결승' };
 const G4 = [[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]];   // 4팀이 서로 한 번씩
 
 function shuffle(a) {
@@ -1033,7 +1037,25 @@ function groupsAllDone() {
   for (let i = 0; i < st.cup.groups.length; i++) if (!groupDone(i)) return false;
   return true;
 }
-function firstKo() { return st.cup.size / 2; }
+/* 각 조 1·2위 수보다 크거나 같은 가장 작은 2의 거듭제곱. 모자란 자리는 성적 좋은 3위로 채운다 */
+function firstKo() {
+  let n = 1;
+  while (n < st.cup.groups.length * 2) n *= 2;
+  return n;
+}
+function thirdsNeeded() { return firstKo() - st.cup.groups.length * 2; }
+/* 3위 팀끼리 승점 → 득실 → 다득점 → 조 순서로 줄 세워서 위에서부터 뽑는다 */
+function bestThirds() {
+  const list = st.cup.groups.map(function (_, gi) {
+    const r = groupTable(gi)[2]; return { i: r.i, gi: gi, pts: r.pts, gd: r.gf - r.ga, gf: r.gf };
+  });
+  list.sort(function (x, y) { return y.pts - x.pts || y.gd - x.gd || y.gf - x.gf || x.gi - y.gi; });
+  return list.slice(0, thirdsNeeded());
+}
+function groupOf(team) {
+  for (let gi = 0; gi < st.cup.groups.length; gi++) if (st.cup.groups[gi].indexOf(team) >= 0) return gi;
+  return -1;
+}
 function koRounds() {
   const out = [];
   for (let n = firstKo(); n >= 2; n = n / 2) out.push(n);
@@ -1056,6 +1078,23 @@ function koGames(size) {
   if (size === firstKo()) {
     if (!groupsAllDone()) return null;
     const out = [];
+    if (thirdsNeeded() > 0) {
+      // 1위는 3위나 다른 조 2위와 붙고, 남은 2위끼리 붙는다. 첫 판에 같은 조끼리는 피한다.
+      const firsts = [], seconds = [];
+      st.cup.groups.forEach(function (_, gi) {
+        const t = groupTable(gi); firsts.push(t[0].i); seconds.push(t[1].i);
+      });
+      const pool = bestThirds().map(function (r) { return r.i; }).concat(seconds.slice().reverse());
+      firsts.forEach(function (a) {
+        let k = 0;
+        while (k < pool.length - 1 && groupOf(pool[k]) === groupOf(a)) k++;
+        out.push([a, pool.splice(k, 1)[0]]);
+      });
+      for (let i = 0; i + 1 < pool.length; i += 2) out.push([pool[i], pool[i + 1]]);
+      return out.map(function (pr, i) {
+        return { x: pr[0], y: pr[1], k: 'K' + size + '-' + i + '-' + pr[0] + '-' + pr[1] };
+      });
+    }
     for (let gi = 0; gi < st.cup.groups.length; gi += 2) {
       const A = groupTable(gi), B = groupTable(gi + 1);
       out.push([A[0].i, B[1].i]);
@@ -1208,13 +1247,16 @@ function renderCupGroups() {
   const tbl = document.createElement('div');
   tbl.className = 'card';
   const rows = groupTable(gi);
+  const thirdUp = groupsAllDone() && thirdsNeeded() > 0 &&
+    bestThirds().some(function (r) { return r.gi === gi; });
+  const up = function (idx) { return idx < 2 || (idx === 2 && thirdUp); };
   tbl.innerHTML = '<div class="gtitle">' + LETTER[gi] + '조</div>' +
     '<table><thead><tr><th class="rank"></th><th class="tname" style="text-align:left">팀</th>' +
     '<th>경기</th><th>승</th><th>패</th><th>득실</th><th>승점</th></tr></thead><tbody>' +
     rows.map(function (r, idx) {
       const d = r.gf - r.ga;
       return '<tr><td class="rank">' + (idx + 1) + '</td>' +
-        '<td class="tname' + (idx < 2 ? ' qual' : '') + '">' + esc(r.name) + (idx < 2 ? ' ↑' : '') + '</td>' +
+        '<td class="tname' + (up(idx) ? ' qual' : '') + '">' + esc(r.name) + (up(idx) ? ' ↑' : '') + '</td>' +
         '<td>' + r.p + '</td><td>' + r.w + '</td><td>' + r.l + '</td>' +
         '<td>' + (d > 0 ? '+' + d : d) + '</td><td class="pts">' + r.pts + '</td></tr>';
     }).join('') + '</tbody></table>';
@@ -1227,7 +1269,10 @@ function renderCupGroups() {
 
   const tip = document.createElement('p');
   tip.className = 'note';
-  tip.innerHTML = '각 조 <b>1·2위</b>가 ' + KO_NAME[firstKo()] + '에 올라가. 초록색 ↑ 표시가 지금 올라가는 자리야.';
+  tip.innerHTML = '각 조 <b>1·2위</b>' +
+    (thirdsNeeded() > 0 ? '와 <b>성적 좋은 3위 ' + thirdsNeeded() + '팀</b>이 ' : '가 ') +
+    KO_NAME[firstKo()] + '에 올라가. 초록색 ↑ 표시가 지금 올라가는 자리야.' +
+    (thirdsNeeded() > 0 ? ' 3위는 조별리그가 다 끝나야 정해져.' : '');
   view.appendChild(tip);
 }
 
@@ -1625,13 +1670,14 @@ function renderCupSettings() {
   const info = document.createElement('p');
   info.className = 'note';
   info.innerHTML = '지금 대회는 <b>' + st.cup.size + '팀</b> — ' + st.cup.groups.length +
-    '개 조로 나눠서 조별리그를 하고, 각 조 1·2위가 ' + KO_NAME[firstKo()] + '부터 붙어. ' +
-    '조별리그 ' + (st.cup.groups.length * 6) + '경기 + 토너먼트 ' + (st.cup.size / 2 - 1) + '경기야.';
+    '개 조(A~' + LETTER[st.cup.groups.length - 1] + '조)로 나눠서 조별리그를 하고, 각 조 1·2위' +
+    (thirdsNeeded() > 0 ? '와 성적 좋은 3위 ' + thirdsNeeded() + '팀이 ' : '가 ') + KO_NAME[firstKo()] + '부터 붙어. ' +
+    '조별리그 ' + (st.cup.groups.length * 6) + '경기 + 토너먼트 ' + firstKo() + '경기야.';
   view.appendChild(info);
 
   const seg = document.createElement('div');
   seg.className = 'seg';
-  [[32, '32팀 · 16강부터'], [64, '64팀 · 32강부터']].forEach(function (opt) {
+  [[32, '32팀 · A~H조'], [64, '64팀 · A~P조'], [104, '104팀 · A~Z조']].forEach(function (opt) {
     const b = document.createElement('button');
     b.textContent = opt[1];
     b.setAttribute('aria-pressed', st.cup.size === opt[0] ? 'true' : 'false');
