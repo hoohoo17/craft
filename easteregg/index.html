@@ -429,7 +429,7 @@ h1 .logo{width:18px;height:24px;border-radius:50%/60% 60% 40% 40%;background:lin
 .stk{width:40cqw;height:40cqw;border-radius:50%;background:#fff;box-shadow:0 1cqw 3cqw rgba(0,0,0,.15);display:grid;place-items:center;font-size:24cqw;transition:rotate .5s,translate .5s,opacity .5s;transform-origin:20% 20%}
 .stk.peel{rotate:-60deg;translate:-30cqw -30cqw;opacity:0}
 .scorner{width:10cqw;height:10cqw;background:linear-gradient(135deg,transparent 50%,#e7e7df 50%);border-radius:0 0 2cqw 0;z-index:4}
-.meringue{width:40cqw;height:24cqw;border-radius:50% 50% 30% 30%;background:radial-gradient(circle at 30% 70%,#fff 0 30%,transparent 31%),radial-gradient(circle at 60% 40%,#fff 0 34%,transparent 35%),radial-gradient(circle at 50% 10%,#fff 0 18%,transparent 19%);filter:drop-shadow(0 .6cqw 0 #e6e2d8);transition:scale .2s}
+.meringue{width:40cqw;height:24cqw;border-radius:50% 50% 30% 30%;background:radial-gradient(circle at 30% 70%,#fffdf6 0 30%,transparent 31%),radial-gradient(circle at 60% 40%,#fffdf6 0 34%,transparent 35%),radial-gradient(circle at 50% 10%,#fffdf6 0 18%,transparent 19%);filter:drop-shadow(0 0 .5cqw #c9b98f) drop-shadow(0 .8cqw 0 #e0cfa3);transition:opacity .2s,scale .2s;z-index:3}
 .target{width:20cqw;height:20cqw;border-radius:50%;background:radial-gradient(circle,#e63946 0 18%,#fff 19% 38%,#e63946 39% 58%,#fff 59% 78%,#e63946 79%)}
 .spinx{animation:spinx .6s}
 @keyframes spinx{to{transform:translate(-50%,-50%) rotateY(720deg)}}
@@ -3084,9 +3084,11 @@ st(['커다란 스티커가 붙어 있어요','A big sticker is stuck here'],['�
   a.drag(cn,{end:p=>{if(ok)return;if(a.dist(p,{x:66,y:62})>18){ok=true;cn.remove();st2.classList.add('peel');sfx.tap();a.say(a.T(['찍~ 스티커 밑에 알!','Rrrip~ an egg under the sticker!']));a.after(500,()=>{st2.remove();a.tap(e,a.win)})}else a.move(cn,66,62)}});
 });
 // 377 meringue
-st(['머랭이 몽글몽글','Fluffy meringue'],['그릇을 반대로 문질러 봐요','Rub the bowl backwards'],a=>{
-  const m=a.put(50,44,'',{cls:'meringue',size:1});a.put(50,64,'🥣',{size:30});
-  rubber(a,m,300,()=>{m.remove();a.say(a.T(['머랭이 다시 알이 됐어요?!','The meringue turned back into an egg?!']));eggThen(a,50,46,12,'#fdf6e3')},s=>{m.style.opacity=Math.max(.35,1-s/450)});
+st(['머랭이 몽글몽글','Fluffy meringue'],['그릇 속 머랭을 손가락으로 계속 문질러요','Keep rubbing the meringue in the bowl'],a=>{
+  a.put(50,62,'🥣',{size:34});const m=a.put(50,44,'',{cls:'meringue',size:1});const bar=a.put(50,86,'<i></i>',{cls:'bar',size:1});
+  const pad=a.put(50,52,'',{size:1});pad.style.cssText+='width:70cqw;height:56cqw;border-radius:50%;z-index:4';
+  rubber(a,pad,300,()=>{pad.remove();m.remove();bar.firstChild.style.width='100%';a.say(a.T(['머랭이 다시 알이 됐어요?!','The meringue turned back into an egg?!']));eggThen(a,50,44,12,'#fdf6e3')},
+    s=>{const p=Math.min(1,s/300);bar.firstChild.style.width=p*100+'%';m.style.opacity=String(1-p*.6);m.style.scale=String(1-p*.3);if(R()<.06)a.wob(m)});
 });
 // 378 dribble
 st(['공을 튀겨요','Dribble the ball'],['공을 계속 튀겨요','Keep bouncing the ball'],a=>{
