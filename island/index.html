@@ -300,7 +300,7 @@ function generate(){
   for (let k=0;k<2;k++) spawnRandom('wolf');
   for (let k=0;k<7;k++) spawnRandom('fish');
   for (let k=0;k<3;k++) spawnRandom('bird');
-  tod = .3; day = 1; harvest = 0; undoStack.length = 0;
+  tod = .3; day = 1; harvest = 0;
   dirty = changed = terrDirty = true;
 }
 
@@ -860,8 +860,18 @@ document.getElementById('undo').onclick = () => {
   grid = u.grid; ages = u.ages; owner = u.owner; ents = JSON.parse(u.ents); kingdoms = deKings(u.kings); nextKid = u.nextKid;
   dirty = changed = terrDirty = true;
 };
-document.getElementById('fresh').onclick = () => {
-  if (confirm('지금 섬을 바다에 보내고 새 섬을 만들까요?')) { generate(); firstResident = true; toast('새 섬이 솟아올랐어요'); }
+// 확인 창(confirm)은 미리보기·앱 안에서 막힐 수 있어, 버튼을 한 번 더 누르는 방식으로 확인해요
+const freshBtn = document.getElementById('fresh');
+let freshArmed = null;
+freshBtn.onclick = () => {
+  if (!freshArmed){
+    freshBtn.textContent = '정말요? 한 번 더';
+    toast('지금 섬이 사라져요. 새 섬 버튼을 한 번 더 누르세요');
+    freshArmed = setTimeout(() => { freshArmed = null; freshBtn.textContent = '🏝 새 섬'; }, 3000);
+    return;
+  }
+  clearTimeout(freshArmed); freshArmed = null; freshBtn.textContent = '🏝 새 섬';
+  pushUndo(); generate(); computeTerr(); firstResident = true; toast('새 섬이 솟아올랐어요');
 };
 const nameEl = document.getElementById('name');
 document.getElementById('photo').onclick = () => {
