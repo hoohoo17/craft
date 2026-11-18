@@ -618,10 +618,16 @@ function aiThink(K){
     if (K.food >= 10 && (Math.random() < .6 || K.wood < 6)) hire(k, 'sword');
     else if (K.food >= 6 && K.wood >= 12) hire(k, 'archer');
   }
-  // 영토에 들어온 적을 막아요
-  const intruder = units.find(u => !u.dead && u.k !== k && terr[idx(ux(u),uy(u))] === k);
-  if (intruder && !K.attacking) army.forEach(u => { if (u.order < 0 || Math.random() < .5) u.order = idx(ux(intruder),uy(intruder)); });
-  else if (!K.attacking) army.forEach(u => { u.order = -1; });
+  // 출정한 부대가 거의 무너졌거나 목표가 사라지면 남은 병사를 불러들여요
+  const raiders = army.filter(u => u.raid);
+  if (K.attacking && (raiders.length < 2 || !kings[K.target].alive || owner[kings[K.target].capital] === k)){
+    K.attacking = false; raiders.forEach(u => { u.raid = false; u.order = -1; });
+  }
+  // 집에 남은 병사는 영토에 들어온 적을 막아요
+  const home = army.filter(u => !u.raid);
+  const intruder = units.find(u => !u.dead && u.k !== k && u.kind !== 'villager' && terr[idx(ux(u),uy(u))] === k);
+  if (intruder) home.forEach(u => { if (u.order < 0 || Math.random() < .5) u.order = idx(ux(intruder),uy(intruder)); });
+  else home.forEach(u => { u.order = -1; });
   // 출정
   if (!K.attacking && army.length >= K.wave){
     const foes = kings.filter(o => o.alive && o.id !== k);
@@ -629,12 +635,12 @@ function aiThink(K){
       const me = K.capital;
       const target = (foes.find(o => o.id === 0) && Math.random() < .6) ? kings[0]
         : foes.sort((a,b) => d2(a.capital%W,(a.capital/W)|0, me%W,(me/W)|0) - d2(b.capital%W,(b.capital/W)|0, me%W,(me/W)|0))[0];
-      army.forEach(u => { u.order = target.capital; });
-      K.attacking = true; K.wave = Math.min(28, K.wave + 2);
-      if (target.id === 0) toast(`⚔ ${K.name} 군대 ${army.length}명이 쳐들어와요!`, true);
+      // 두 명은 성을 지키고 나머지가 떠나요
+      const go = army.slice(2);
+      go.forEach(u => { u.order = target.capital; u.raid = true; });
+      K.attacking = true; K.target = target.id; K.wave = Math.min(28, K.wave + 2);
+      if (target.id === 0) toast(`⚔ ${K.name} 군대 ${go.length}명이 쳐들어와요!`, true);
     }
-  } else if (K.attacking && army.length < 3){
-    K.attacking = false; army.forEach(u => { u.order = -1; });
   }
 }
 
