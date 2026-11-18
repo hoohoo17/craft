@@ -66,7 +66,7 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated;touch-acti
 .cmd i{font-style:normal;font-size:20px;line-height:1.1}
 .cmd small{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .cmd[aria-pressed="true"]{border-color:var(--me);background:#dfe7f6}
-.cmd:disabled{opacity:.45;cursor:not-allowed}
+.cmd.lack{opacity:.5}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .seg{display:flex;background:#efeadb;border-radius:9px;padding:3px}
 .seg button{border:0;background:transparent;border-radius:7px;padding:6px 10px;font-family:var(--body);font-size:13px;color:var(--ink);cursor:pointer}
@@ -558,7 +558,7 @@ function tick(){
   }
   for (const K of kings){
     if (!K.alive) continue;
-    K.food += .6 * mult(K); K.wood += .3 * mult(K);
+    K.food += 1 * mult(K); K.wood += .5 * mult(K);
     const houses = bList.filter(b => owner[b] === K.id && grid[b] === T.HOUSE).length;
     const vill = units.filter(u => u.k === K.id && u.kind === 'villager').length;
     if (vill < houses + 2 && Math.random() < .3) spawnUnit(K.id, 'villager');
@@ -566,13 +566,19 @@ function tick(){
 }
 function armyOf(k){ return units.filter(u => u.k === k && u.kind !== 'villager'); }
 function armyCap(k){ return 4 + 2*bList.filter(b => owner[b] === k && grid[b] === T.HOUSE).length; }
+function shortText(K, c){
+  const out = [];
+  if ((c.food||0) > K.food) out.push(`식량이 ${Math.ceil(c.food - K.food)}`);
+  if ((c.wood||0) > K.wood) out.push(`목재가 ${Math.ceil(c.wood - K.wood)}`);
+  return out.join(', ') + ' 모자라요. 주민이 밭과 나무에서 모으는 중이에요';
+}
 function canPay(K, c){ return K.food >= (c.food||0) && K.wood >= (c.wood||0); }
 function pay(K, c){ K.food -= c.food||0; K.wood -= c.wood||0; }
 function hire(k, kind){
   const K = kings[k];
   if (!K.alive) return 'gone';
   if (armyOf(k).length >= armyCap(k)) return '병력 한도가 꽉 찼어요. 집을 더 지으세요';
-  if (!canPay(K, COST[kind])) return kind === 'sword' ? '식량이 모자라요' : '식량이나 목재가 모자라요';
+  if (!canPay(K, COST[kind])) return shortText(K, COST[kind]);
   if (!spawnUnit(k, kind)) return '성 둘레에 자리가 없어요';
   pay(K, COST[kind]);
   return '';
@@ -586,7 +592,7 @@ function canBuild(k, i, kind){
     for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) if ((dx||dy) && inb(x+dx,y+dy) && isBld(grid[idx(x+dx,y+dy)])) return '다른 건물과 한 칸 띄워 지어요';
     if (units.some(u => ux(u) === x && uy(u) === y && u.k !== k)) return '적이 서 있어요';
   }
-  if (!canPay(kings[k], COST[kind])) return '목재가 모자라요';
+  if (!canPay(kings[k], COST[kind])) return shortText(kings[k], COST[kind]);
   return '';
 }
 function build(k, i, kind){
@@ -866,6 +872,7 @@ cv.addEventListener('pointerdown', ev => {
 });
 document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => {
   tool = b.dataset.tool;
+  if (playing && tool !== 'move' && !canPay(kings[0], COST[tool])) toast(shortText(kings[0], COST[tool]), true);
   document.querySelectorAll('[data-tool]').forEach(x => x.setAttribute('aria-pressed', x === b));
 });
 const segPick = (sel, fn) => document.querySelectorAll(sel+' button').forEach(b => b.onclick = () => {
@@ -909,11 +916,13 @@ function updateUI(){
     `<span>🌾 식량<b>${Math.floor(K.food)}</b></span><span>🪵 목재<b>${Math.floor(K.wood)}</b></span>` +
     `<span class="${army.length >= cap ? 'warn' : ''}">병력<b>${army.length}/${cap}</b></span>` +
     `<span>⚔${sw} 🏹${ar}</span><span>⏱<b>${m}:${String(s).padStart(2,'0')}</b></span>`;
-  document.getElementById('hireSword').disabled = !canPay(K, COST.sword) || army.length >= cap;
-  document.getElementById('hireArcher').disabled = !canPay(K, COST.archer) || army.length >= cap;
-  document.querySelector('[data-tool="house"]').disabled = K.wood < 10;
-  document.querySelector('[data-tool="field"]').disabled = K.wood < 4;
-  document.querySelector('[data-tool="tower"]').disabled = K.wood < 20;
+  // 모자라도 버튼은 눌려요. 흐리게만 보이고, 누르면 무엇이 모자란지 알려 줘요
+  const lack = (el, v) => { el.classList.toggle('lack', v); el.setAttribute('aria-disabled', v); };
+  lack(document.getElementById('hireSword'), !canPay(K, COST.sword) || army.length >= cap);
+  lack(document.getElementById('hireArcher'), !canPay(K, COST.archer) || army.length >= cap);
+  lack(document.querySelector('[data-tool="house"]'), K.wood < 10);
+  lack(document.querySelector('[data-tool="field"]'), K.wood < 4);
+  lack(document.querySelector('[data-tool="tower"]'), K.wood < 20);
   document.getElementById('kings').innerHTML = kings.map(o => {
     const hs = bList.filter(b => owner[b] === o.id && grid[b] === T.HOUSE).length;
     const ar2 = armyOf(o.id).length;
