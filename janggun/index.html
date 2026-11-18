@@ -131,14 +131,14 @@ button:focus-visible{outline:2px solid var(--me);outline-offset:2px}
     <div>
       <div class="label">모집 — 성에서 병사가 나와요</div>
       <div class="grid">
-        <button class="cmd" id="hireSword"><i>⚔️</i>검병<small>🌾10</small></button>
+        <button class="cmd" id="hireSword"><i>⚔️</i>검병<small>🌾8</small></button>
         <button class="cmd" id="hireArcher"><i>🏹</i>궁수<small>🌾3 🪵8</small></button>
       </div>
     </div>
     <div>
       <div class="label">짓기 — 고른 뒤 우리 영토를 누르세요</div>
       <div class="grid">
-        <button class="cmd" data-tool="house" aria-pressed="false"><i>🏠</i>집<small>🪵10 · 병력 +2</small></button>
+        <button class="cmd" data-tool="house" aria-pressed="false"><i>🏠</i>집<small>🪵10 · 병력 +3</small></button>
         <button class="cmd" data-tool="field" aria-pressed="false"><i>🌾</i>밭<small>🪵4 · 식량</small></button>
         <button class="cmd" data-tool="tower" aria-pressed="false"><i>🗼</i>망루<small>🪵20 · 활 쏨</small></button>
       </div>
@@ -148,7 +148,7 @@ button:focus-visible{outline:2px solid var(--me);outline-offset:2px}
       <div class="kings" id="kings"></div>
     </div>
   </div>
-  <p class="hint">검병은 튼튼하고 가까이서 싸우고, 궁수는 약하지만 멀리서 쏴요. 망루와 성은 다가오는 적에게 활을 쏴요. 집을 지으면 병력 한도가 늘고 주민이 늘어 일손이 많아져요. 적의 집 옆에 서 있으면 집을 부수어 빼앗아요.</p>
+  <p class="hint">성은 병력 한도에 여유가 있으면 검병을 공짜로 징병해요. 검병은 튼튼하고 가까이서 싸우고, 궁수는 약하지만 멀리서 쏴요. 망루와 성은 다가오는 적에게 활을 쏴요. 집을 지으면 병력 한도가 늘고 주민이 늘어 일손이 많아져요. 적의 집 옆에 서 있으면 집을 부수어 빼앗아요.</p>
 </div>
 
 <script>
@@ -156,7 +156,7 @@ button:focus-visible{outline:2px solid var(--me);outline-offset:2px}
 const W = 40, H = 28, CS = 16, N = W*H;
 const T = {WATER:0, SAND:1, GRASS:2, TREE:3, MOUNT:4, FLOWER:5, ROAD:6, HOUSE:7, SAPLING:8, FIELD:9, CASTLE:10, TOWER:11};
 const MAXHP = {[T.HOUSE]:45, [T.CASTLE]:220, [T.TOWER]:100};
-const COST = {house:{wood:10}, field:{wood:4}, tower:{wood:20}, sword:{food:10}, archer:{food:3, wood:8}};
+const COST = {house:{wood:10}, field:{wood:4}, tower:{wood:20}, sword:{food:8}, archer:{food:3, wood:8}};
 const UNIT = {
   villager:{hp:12, dmg:0, rate:1, range:0, aggro:0, speed:1.1},
   sword:{hp:34, dmg:6, rate:.8, range:1.0, aggro:3.5, speed:1.25},
@@ -165,11 +165,11 @@ const UNIT = {
 const COLORS = ['#2f62b8','#d0452f','#e0a21b'];
 const SYL = ['가','나','라','마','소','하','도','루','벨','온','세','리','타','진','바','로','아','윤','미','가'];
 // 난이도: 적 수입(mult), 출정 인원(wave), 첫 출정 시각(first초), 출정 간격(gap초), 우리를 노릴 확률(aim),
-// 적 출정 최대 인원(maxWave), 적 집 상한(houses), 시작 자원(start), 우리 수입 배율(mine), 우리 성 화살 피해(castle)
+// 적 출정 최대 인원(maxWave), 적 집 상한(houses), 우리 성의 공짜 징병 간격(draft초, 적은 18초), 시작 자원(start), 우리 수입 배율(mine), 우리 성 화살 피해(castle)
 const DIFF = [
-  {mult:.55, wave:10, maxWave:14, houses:8,  first:240, gap:150, aim:.3, start:60, mine:1.3, castle:6},
-  {mult:1,   wave:7,  maxWave:22, houses:12, first:120, gap:90,  aim:.6, start:20, mine:1,   castle:3},
-  {mult:1.35,wave:5,  maxWave:28, houses:16, first:45,  gap:50,  aim:.7, start:20, mine:1,   castle:3},
+  {mult:.55, wave:10, maxWave:14, houses:8,  draft:8,  first:240, gap:150, aim:.3, start:60, mine:1.3, castle:6},
+  {mult:1,   wave:7,  maxWave:22, houses:12, draft:12, first:120, gap:90,  aim:.6, start:20, mine:1,   castle:3},
+  {mult:1.35,wave:5,  maxWave:28, houses:16, draft:15, first:45,  gap:50,  aim:.7, start:20, mine:1,   castle:3},
 ];
 const isBld = t => t === T.HOUSE || t === T.CASTLE || t === T.TOWER;
 
@@ -288,7 +288,7 @@ function setupKingdoms(spots){
   spots.forEach(([x,y], k) => {
     const name = kingdomName(used); used.push(name);
     const ci = idx(x,y);
-    kings.push({id:k, name, color:COLORS[k], ai:k !== 0, alive:true, capital:ci, food:k === 0 ? DIFF[diff].start : 20, wood:k === 0 ? DIFF[diff].start : 20, lastRaid:-1e9,
+    kings.push({id:k, name, color:COLORS[k], ai:k !== 0, alive:true, capital:ci, food:k === 0 ? DIFF[diff].start : 20, wood:k === 0 ? DIFF[diff].start : 20, lastRaid:-1e9, draft:0,
                 wave:DIFF[diff].wave, attacking:false, think:rnd(0,2)});
     setTile(ci, T.CASTLE, k);
     setTile(idx(x-2,y+1), T.HOUSE, k);
@@ -568,10 +568,16 @@ function tick(){
     const houses = bList.filter(b => owner[b] === K.id && grid[b] === T.HOUSE).length;
     const vill = units.filter(u => u.k === K.id && u.kind === 'villager').length;
     if (vill < houses + 2 && Math.random() < .3) spawnUnit(K.id, 'villager');
+    // 징병: 병력 한도에 여유가 있으면 성에서 검병이 공짜로 나와요
+    K.draft += 1;
+    if (K.draft >= (K.ai ? 18 : DIFF[diff].draft)){
+      if (armyOf(K.id).length < armyCap(K.id) && spawnUnit(K.id, 'sword')){ K.draft = 0; if (!K.ai) fx.push({type:'text', x:K.capital%W+.5, y:((K.capital/W)|0)+.2, t:0, d:1.2, text:'징병 +1'}); }
+      else K.draft = K.ai ? 18 : DIFF[diff].draft;
+    }
   }
 }
 function armyOf(k){ return units.filter(u => u.k === k && u.kind !== 'villager'); }
-function armyCap(k){ return 4 + 2*bList.filter(b => owner[b] === k && grid[b] === T.HOUSE).length; }
+function armyCap(k){ return 6 + 3*bList.filter(b => owner[b] === k && grid[b] === T.HOUSE).length; }
 function shortText(K, c){
   const out = [];
   if ((c.food||0) > K.food) out.push(`식량이 ${Math.ceil(c.food - K.food)}`);
@@ -628,7 +634,7 @@ function aiThink(K){
   else if (K.wood >= 26 && towers < 1 + Math.floor(houses/4)) tryBuild('tower');
   else if (K.wood >= 14 && houses < hcap && Math.random() < .4) tryBuild('house');
   if (army.length < armyCap(k)){
-    if (K.food >= 10 && (Math.random() < .6 || K.wood < 8)) hire(k, 'sword');
+    if (K.food >= 8 && (Math.random() < .6 || K.wood < 8)) hire(k, 'sword');
     else if (K.food >= 3 && K.wood >= 14) hire(k, 'archer');
   }
   // 출정한 부대가 거의 무너졌거나 목표가 사라지면 남은 병사를 불러들여요
@@ -922,7 +928,7 @@ function updateUI(){
   document.getElementById('res').innerHTML =
     `<span>🌾 식량<b>${Math.floor(K.food)}</b></span><span>🪵 목재<b>${Math.floor(K.wood)}</b></span>` +
     `<span class="${army.length >= cap ? 'warn' : ''}">병력<b>${army.length}/${cap}</b></span>` +
-    `<span>⚔${sw} 🏹${ar}</span><span>⏱<b>${m}:${String(s).padStart(2,'0')}</b></span>`;
+    `<span>⚔${sw} 🏹${ar}</span><span>징병<b>${army.length >= cap ? '한도' : Math.max(0, Math.ceil(DIFF[diff].draft - K.draft))+'초'}</b></span><span>⏱<b>${m}:${String(s).padStart(2,'0')}</b></span>`;
   // 모자라도 버튼은 눌려요. 흐리게만 보이고, 누르면 무엇이 모자란지 알려 줘요
   const lack = (el, v) => { el.classList.toggle('lack', v); el.setAttribute('aria-disabled', v); };
   lack(document.getElementById('hireSword'), !canPay(K, COST.sword) || army.length >= cap);
