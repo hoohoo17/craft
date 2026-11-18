@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>섬의 장군</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+/* 한 세계로 고정: 군막의 작전 지도. 머리말(자원), 지도, 명령판 순서의 한 화면. */
+:root{
+  color-scheme:light;
+  --tent:#e9e4d6;      /* 군막 천 */
+  --board:#fbf8ef;     /* 명령판 */
+  --ink:#1f2a33;
+  --muted:#5f6a70;
+  --line:#cfc6ae;
+  --me:#2f62b8;        /* 우리 나라(파랑) */
+  --me-ink:#ffffff;
+  --danger:#c0392b;
+  --display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--tent);color:var(--ink);font-family:var(--body);
+  overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+#app{max-width:760px;margin:0 auto;padding:14px 16px 28px;display:flex;flex-direction:column;gap:10px}
+.back{font-size:13px;color:var(--muted);text-decoration:none}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;font-size:30px;margin:0;letter-spacing:.02em;line-height:1}
+h1 span{color:var(--me)}
+.res{display:flex;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--muted);align-items:baseline}
+.res b{font-family:var(--display);font-weight:400;font-size:19px;color:var(--ink);margin-left:3px;font-variant-numeric:tabular-nums}
+.res .warn b{color:var(--danger)}
+
+.stage{position:relative;border-radius:10px;overflow:hidden;box-shadow:0 0 0 3px #8a7b58,0 8px 24px rgba(31,42,51,.25);background:#1f5f94}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+.toast{
+  position:absolute;left:50%;top:10px;transform:translate(-50%,-8px);opacity:0;max-width:92%;
+  background:rgba(251,248,239,.96);color:var(--ink);padding:7px 14px;border-radius:999px;
+  font-size:14px;transition:opacity .25s,transform .25s;pointer-events:none;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.2)
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:#fbe9e6;color:#8e2418}
+.over{
+  position:absolute;inset:0;background:rgba(20,28,36,.72);color:#fbf8ef;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:16px
+}
+.over[hidden]{display:none}
+.over h2{font-family:var(--display);font-weight:400;font-size:40px;margin:0;letter-spacing:.04em}
+.over p{margin:0;font-size:14px;line-height:1.6;max-width:30em;color:#e6e0cf}
+.over .seg{background:rgba(255,255,255,.12)}
+.over .seg button{color:#fbf8ef}
+
+.board{background:var(--board);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 0 var(--line)}
+.label{font-size:12px;color:var(--muted);margin:0 2px 5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px}
+.cmd{
+  border:2px solid transparent;background:#efeadb;border-radius:9px;padding:6px 4px;
+  font-family:var(--body);font-size:13px;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px
+}
+.cmd i{font-style:normal;font-size:20px;line-height:1.1}
+.cmd small{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cmd[aria-pressed="true"]{border-color:var(--me);background:#dfe7f6}
+.cmd:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;background:#efeadb;border-radius:9px;padding:3px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:6px 10px;font-family:var(--body);font-size:13px;color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--me);color:var(--me-ink)}
+.btn{border:0;background:var(--me);color:var(--me-ink);border-radius:9px;padding:10px 22px;font-family:var(--display);font-size:18px;cursor:pointer;letter-spacing:.04em}
+.spacer{flex:1}
+.kings{display:flex;flex-wrap:wrap;gap:6px}
+.king{display:flex;align-items:center;gap:6px;background:#f2eee2;border-radius:999px;padding:5px 11px 5px 7px;font-size:13px}
+.king .dot{width:14px;height:14px;border-radius:3px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.18)}
+.king b{font-family:var(--display);font-weight:400;font-size:15px}
+.king small{color:var(--muted);font-variant-numeric:tabular-nums}
+.king.dead{opacity:.45;text-decoration:line-through}
+.hint{font-size:12px;color:var(--muted);line-height:1.55;margin:0 2px}
+button:focus-visible{outline:2px solid var(--me);outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="back" href="https://hoohoo17.github.io/craft/">← 게임 목록</a>
+  <header>
+    <h1>섬의 <span>장군</span></h1>
+    <div class="res" id="res"></div>
+  </header>
+
+  <div class="stage">
+    <canvas id="cv" aria-label="작전 지도"></canvas>
+    <div class="toast" id="toast"></div>
+    <div class="over" id="over">
+      <h2 id="overTitle">섬의 장군</h2>
+      <p id="overText">파란 나라의 장군이 되어 섬을 통일하세요. 주민이 나무를 베고 밭을 거둬 목재와 식량을 모아요. 병사를 모아 깃발로 진군시키고, 적의 성을 함락하면 그 나라를 통째로 차지해요. 우리 성이 무너지면 집니다.</p>
+      <div class="seg" id="diff">
+        <button data-d="0" aria-pressed="false">쉬움</button>
+        <button data-d="1" aria-pressed="true">보통</button>
+        <button data-d="2" aria-pressed="false">어려움</button>
+      </div>
+      <button class="btn" id="start">출정</button>
+      <p id="best"></p>
+    </div>
+  </div>
+
+  <div class="board">
+    <div>
+      <div class="label">명령 — 부대를 고르고 지도를 누르면 그곳으로 진군해요</div>
+      <div class="row">
+        <div class="seg" id="group">
+          <button data-g="all" aria-pressed="true">전군</button>
+          <button data-g="sword" aria-pressed="false">검병</button>
+          <button data-g="archer" aria-pressed="false">궁수</button>
+        </div>
+        <div class="spacer"></div>
+        <div class="seg" id="speed" aria-label="시간 빠르기">
+          <button data-v="0" aria-pressed="false" aria-label="멈춤">⏸</button>
+          <button data-v="1" aria-pressed="true">1배</button>
+          <button data-v="2" aria-pressed="false">2배</button>
+        </div>
+      </div>
+      <div class="grid" style="margin-top:6px">
+        <button class="cmd" data-tool="move" aria-pressed="true"><i>🚩</i>진군<small>지도를 누르기</small></button>
+        <button class="cmd" id="recall"><i>🏰</i>귀환<small>성으로 모이기</small></button>
+      </div>
+    </div>
+    <div>
+      <div class="label">모집 — 성에서 병사가 나와요</div>
+      <div class="grid">
+        <button class="cmd" id="hireSword"><i>⚔️</i>검병<small>🌾10</small></button>
+        <button class="cmd" id="hireArcher"><i>🏹</i>궁수<small>🌾6 🪵6</small></button>
+      </div>
+    </div>
+    <div>
+      <div class="label">짓기 — 고른 뒤 우리 영토를 누르세요</div>
+      <div class="grid">
+        <button class="cmd" data-tool="house" aria-pressed="false"><i>🏠</i>집<small>🪵10 · 병력 +2</small></button>
+        <button class="cmd" data-tool="field" aria-pressed="false"><i>🌾</i>밭<small>🪵4 · 식량</small></button>
+        <button class="cmd" data-tool="tower" aria-pressed="false"><i>🗼</i>망루<small>🪵20 · 활 쏨</small></button>
+      </div>
+    </div>
+    <div>
+      <div class="label">나라</div>
+      <div class="kings" id="kings"></div>
+    </div>
+  </div>
+  <p class="hint">검병은 튼튼하고 가까이서 싸우고, 궁수는 약하지만 멀리서 쏴요. 망루와 성은 다가오는 적에게 활을 쏴요. 집을 지으면 병력 한도가 늘고 주민이 늘어 일손이 많아져요. 적의 집 옆에 서 있으면 집을 부수어 빼앗아요.</p>
+</div>
+
+<script>
+(() => {
+const W = 40, H = 28, CS = 16, N = W*H;
+const T = {WATER:0, SAND:1, GRASS:2, TREE:3, MOUNT:4, FLOWER:5, ROAD:6, HOUSE:7, SAPLING:8, FIELD:9, CASTLE:10, TOWER:11};
+const MAXHP = {[T.HOUSE]:45, [T.CASTLE]:220, [T.TOWER]:100};
+const COST = {house:{wood:10}, field:{wood:4}, tower:{wood:20}, sword:{food:10}, archer:{food:6, wood:6}};
+const UNIT = {
+  villager:{hp:12, dmg:0, rate:1, range:0, aggro:0, speed:1.1},
+  sword:{hp:34, dmg:6, rate:.8, range:1.0, aggro:3.5, speed:1.25},
+  archer:{hp:18, dmg:4, rate:1.1, range:3.2, aggro:4.5, speed:1.1},
+};
+const COLORS = ['#2f62b8','#d0452f','#e0a21b'];
+const SYL = ['가','나','라','마','소','하','도','루','벨','온','세','리','타','진','바','로','아','윤','미','가'];
+const DIFF = [{mult:.7, wave:10}, {mult:1, wave:7}, {mult:1.35, wave:5}];
+const isBld = t => t === T.HOUSE || t === T.CASTLE || t === T.TOWER;
+
+const cv = document.getElementById('cv');
+cv.width = W*CS; cv.height = H*CS;
+const ctx = cv.getContext('2d');
+const bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height;
+const bctx = bg.getContext('2d');
+const tc = document.createElement('canvas'); tc.width = cv.width; tc.height = cv.height;
+const tctx = tc.getContext('2d');
+
+let grid, ages, owner, bhp, terr, kings, units, fx, bList, flowCache;
+let diff = 1, speedMul = 1, tool = 'move', group = 'all';
+let playing = false, elapsed = 0, dirty = true, terrDirty = true, uid = 0;
+
+const idx = (x,y) => y*W + x;
+const inb = (x,y) => x>=0 && y>=0 && x<W && y<H;
+const hash = (x,y,s=0) => { let h = (x*374761393 + y*668265263 + s*1442695041) | 0; h = (h ^ (h>>>13)) * 1274126177; return ((h ^ (h>>>16)) >>> 0) / 4294967296; };
+const rnd = (a,b) => a + Math.random()*(b-a);
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const N4 = [[1,0],[-1,0],[0,1],[0,-1]];
+const walk = (x,y) => { if (!inb(x,y)) return false; const t = grid[idx(x,y)]; return t !== T.WATER && t !== T.MOUNT && !isBld(t); };
+const ux = e => Math.floor(e.x), uy = e => Math.floor(e.y);
+const d2 = (ax,ay,bx,by) => (ax-bx)**2 + (ay-by)**2;
+
+/* ---------- 땅 바꾸기 ---------- */
+function setTile(i, t, k){
+  const was = grid[i];
+  grid[i] = t; ages[i] = 0; dirty = true;
+  if (isBld(t)){ owner[i] = k; bhp[i] = MAXHP[t]; }
+  else owner[i] = -1;
+  if (isBld(t) || isBld(was)){ terrDirty = true; flowCache.clear(); }
+}
+
+/* ---------- 섬 만들기 ---------- */
+function makeIsland(){
+  let n = new Float32Array(N).map(() => Math.random());
+  for (let pass=0; pass<4; pass++){
+    const m = new Float32Array(N);
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+      let s=0,c=0;
+      for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) if (inb(x+dx,y+dy)){ s+=n[idx(x+dx,y+dy)]; c++; }
+      m[idx(x,y)] = s/c;
+    }
+    n = m;
+  }
+  let lo=1, hi=0; n.forEach(v => { lo=Math.min(lo,v); hi=Math.max(hi,v); });
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const i = idx(x,y);
+    const nx = (x - W/2 + .5)/(W/2), ny = (y - H/2 + .5)/(H/2);
+    const h = ((n[i]-lo)/(hi-lo||1))*.5 + (1-Math.hypot(nx*.95,ny))*.9;
+    let t;
+    if (h < .45) t = T.WATER;
+    else if (h < .5) t = T.SAND;
+    else if (h < .78) t = Math.random() < .03 ? T.FLOWER : (Math.random() < .12 ? T.TREE : T.GRASS);
+    else if (h < .96) t = Math.random() < .55 ? T.TREE : T.GRASS;
+    else t = T.MOUNT;
+    grid[i] = t;
+  }
+  // 가장 큰 땅덩이만 남겨요
+  const comp = new Int16Array(N).fill(-1); let best = -1, bestSize = 0, c = 0;
+  for (let i=0;i<N;i++){
+    if (grid[i] === T.WATER || comp[i] >= 0) continue;
+    let size = 0; const q = [i]; comp[i] = c;
+    while (q.length){ const j = q.pop(); size++; const x = j%W, y = (j/W)|0;
+      for (const [dx,dy] of N4){ const nx=x+dx, ny=y+dy; if (!inb(nx,ny)) continue; const k = idx(nx,ny); if (grid[k] !== T.WATER && comp[k] < 0){ comp[k] = c; q.push(k); } } }
+    if (size > bestSize){ bestSize = size; best = c; }
+    c++;
+  }
+  for (let i=0;i<N;i++) if (grid[i] !== T.WATER && comp[i] !== best) grid[i] = T.WATER;
+}
+function newGame(){
+  for (let tries=0; tries<40; tries++){
+    grid = new Uint8Array(N); ages = new Uint16Array(N); owner = new Int8Array(N).fill(-1);
+    bhp = new Float32Array(N); terr = new Int8Array(N).fill(-1);
+    flowCache = new Map(); units = []; fx = [];
+    makeIsland();
+    const spots = placeCapitals();
+    if (spots) { setupKingdoms(spots); break; }
+  }
+  elapsed = 0; dirty = terrDirty = true;
+  computeTerr(); renderBg();
+}
+function landOk(x,y){
+  for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++){ if (!inb(x+dx,y+dy) || grid[idx(x+dx,y+dy)] === T.WATER) return false; }
+  return true;
+}
+function placeCapitals(){
+  const cand = [];
+  for (let y=2;y<H-2;y++) for (let x=2;x<W-2;x++) if (landOk(x,y)) cand.push([x,y]);
+  if (cand.length < 30) return null;
+  let best = null, bestScore = -1;
+  for (let k=0;k<500;k++){
+    const a = pick(cand), b = pick(cand), c = pick(cand);
+    const s = Math.min(Math.hypot(a[0]-b[0],a[1]-b[1]), Math.hypot(a[0]-c[0],a[1]-c[1]), Math.hypot(b[0]-c[0],b[1]-c[1]));
+    if (s > bestScore){ bestScore = s; best = [a,b,c]; }
+  }
+  if (bestScore < 12) return null;
+  // 성 둘레는 평지로
+  for (const [x,y] of best) for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) grid[idx(x+dx,y+dy)] = T.GRASS;
+  // 모든 성이 걸어서 이어지는지 확인
+  const f = bfs(idx(best[0][0], best[0][1]));
+  if (f[idx(best[1][0], best[1][1]+1)] >= 9999 || f[idx(best[2][0], best[2][1]+1)] >= 9999) return null;
+  return best;
+}
+function kingdomName(used){
+  let name;
+  for (let k=0;k<30;k++){ name = pick(SYL)+pick(SYL)+'국'; if (!used.includes(name)) break; }
+  return name;
+}
+function setupKingdoms(spots){
+  kings = [];
+  const used = [];
+  // 플레이어는 왼쪽에 가까운 자리
+  spots.sort((a,b) => a[0]-b[0]);
+  spots.forEach(([x,y], k) => {
+    const name = kingdomName(used); used.push(name);
+    const ci = idx(x,y);
+    kings.push({id:k, name, color:COLORS[k], ai:k !== 0, alive:true, capital:ci, food:20, wood:20,
+                wave:DIFF[diff].wave, attacking:false, think:rnd(0,2)});
+    setTile(ci, T.CASTLE, k);
+    setTile(idx(x-2,y+1), T.HOUSE, k);
+    setTile(idx(x+2,y+1), T.HOUSE, k);
+    setTile(idx(x,y+2), T.FIELD, k); ages[idx(x,y+2)] = 15;
+    setTile(idx(x-1,y+2), T.FIELD, k); ages[idx(x-1,y+2)] = 5;
+    for (let n=0;n<2;n++) spawnUnit(k,'sword');
+    for (let n=0;n<3;n++) spawnUnit(k,'villager');
+  });
+}
+
+/* ---------- 길 찾기 (목표에서 퍼져 나가는 거리표) ---------- */
+function bfs(goal){
+  const dist = new Int16Array(N).fill(9999);
+  dist[goal] = 0; const q = [goal]; let h = 0;
+  while (h < q.length){
+    const j = q[h++], x = j%W, y = (j/W)|0;
+    for (const [dx,dy] of N4){
+      const nx = x+dx, ny = y+dy;
+      if (!walk(nx,ny)) continue;
+      const k = idx(nx,ny);
+      if (dist[k] > dist[j]+1){ dist[k] = dist[j]+1; q.push(k); }
+    }
+  }
+  return dist;
+}
+function flow(goal){
+  let f = flowCache.get(goal);
+  if (!f){ f = bfs(goal); flowCache.set(goal, f); }
+  return f;
+}
+function stepFlow(e, goal){
+  const f = flow(goal), x = ux(e), y = uy(e);
+  let best = null, bd = f[idx(x,y)];
+  for (const [dx,dy] of N4){
+    const nx = x+dx, ny = y+dy;
+    if (!walk(nx,ny)) continue;
+    const v = f[idx(nx,ny)] + Math.random()*.3;
+    if (v < bd){ bd = v; best = [nx,ny]; }
+  }
+  if (best) moveTo(e, best);
+  return !!best;
+}
+function stepToward(e, gx, gy, away){
+  const x = ux(e), y = uy(e), opts = [];
+  for (const [dx,dy] of N4) if (walk(x+dx,y+dy)) opts.push([x+dx,y+dy]);
+  if (!opts.length) return false;
+  opts.sort((a,b) => (away ? -1 : 1) * (d2(a[0]+.5,a[1]+.5,gx,gy) - d2(b[0]+.5,b[1]+.5,gx,gy)));
+  moveTo(e, Math.random() < .85 ? opts[0] : pick(opts));
+  return true;
+}
+function moveTo(e, [x,y]){ e.tx = x+.5; e.ty = y+.5; if (e.tx !== e.x) e.dir = e.tx > e.x ? 1 : -1; }
+
+/* ---------- 영토 ---------- */
+function computeTerr(){
+  bList = [];
+  for (let i=0;i<N;i++) if (isBld(grid[i])) bList.push(i);
+  terr.fill(-1);
+  const bd = new Float32Array(N).fill(1e9);
+  for (const b of bList){
+    const bx = b%W, by = (b/W)|0, r = grid[b] === T.CASTLE ? 4 : 3;
+    for (let dy=-r;dy<=r;dy++) for (let dx=-r;dx<=r;dx++){
+      const d = dx*dx+dy*dy; if (d > r*r+1) continue;
+      const x = bx+dx, y = by+dy; if (!inb(x,y)) continue;
+      const i = idx(x,y); if (grid[i] === T.WATER) continue;
+      if (d < bd[i]){ bd[i] = d; terr[i] = owner[b]; }
+    }
+  }
+  tctx.clearRect(0,0,tc.width,tc.height);
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const k = terr[idx(x,y)]; if (k < 0) continue;
+    tctx.fillStyle = kings[k].color; tctx.globalAlpha = .15; tctx.fillRect(x*CS,y*CS,CS,CS);
+    tctx.globalAlpha = .9;
+    const px = x*CS, py = y*CS;
+    if (!inb(x-1,y) || terr[idx(x-1,y)] !== k) tctx.fillRect(px,py,2,CS);
+    if (!inb(x+1,y) || terr[idx(x+1,y)] !== k) tctx.fillRect(px+CS-2,py,2,CS);
+    if (!inb(x,y-1) || terr[idx(x,y-1)] !== k) tctx.fillRect(px,py,CS,2);
+    if (!inb(x,y+1) || terr[idx(x,y+1)] !== k) tctx.fillRect(px,py+CS-2,CS,2);
+  }
+  tctx.globalAlpha = 1;
+  terrDirty = false;
+}
+
+/* ---------- 유닛 ---------- */
+function spawnUnit(k, kind){
+  const c = kings[k].capital, cx = c%W, cy = (c/W)|0;
+  const spots = [];
+  for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) if (walk(cx+dx,cy+dy)) spots.push([cx+dx,cy+dy]);
+  if (!spots.length) return null;
+  const [x,y] = pick(spots), s = UNIT[kind];
+  const u = {id:uid++, k, kind, x:x+.5, y:y+.5, tx:x+.5, ty:y+.5, hp:s.hp, max:s.hp, cd:0, think:Math.random()*.3,
+             order:-1, atk:null, job:-1, chop:0, dir:1, phase:Math.random()*6, dead:false};
+  units.push(u);
+  return u;
+}
+function hurt(u, d){
+  if (u.dead) return;
+  u.hp -= d; u.hit = .15;
+  if (u.hp <= 0){ u.dead = true; fx.push({type:'puff', x:u.x, y:u.y, t:0, d:.6, color:'rgba(210,70,55,'}); }
+}
+function hurtBld(i, d, k){
+  if (!isBld(grid[i]) || owner[i] === k) return;
+  bhp[i] -= d;
+  if (bhp[i] <= 0) capture(i, k);
+}
+function capture(i, k){
+  const old = owner[i], A = kings[k], B = kings[old];
+  fx.push({type:'ring', x:i%W+.5, y:((i/W)|0)+.5, t:0, d:.7, color:A.color, r:2});
+  if (grid[i] === T.CASTLE){
+    B.alive = false;
+    for (let j=0;j<N;j++) if (owner[j] === old){ owner[j] = k; bhp[j] = MAXHP[grid[j]]*.4; }
+    units.forEach(u => { if (u.k === old && !u.dead){ u.dead = true; fx.push({type:'puff', x:u.x, y:u.y, t:0, d:.8, color:'rgba(230,230,230,'}); } });
+    toast(k === 0 ? `🏯 ${B.name}의 성을 함락했어요!` : `${A.name}이 ${B.name}을 무너뜨렸어요`, old === 0);
+    checkEnd();
+  } else {
+    owner[i] = k; bhp[i] = MAXHP[grid[i]]*.4;
+    if (old === 0) toast(`우리 ${grid[i] === T.TOWER ? '망루를' : '집을'} 빼앗겼어요`, true);
+    else if (k === 0) toast(`${B.name}의 ${grid[i] === T.TOWER ? '망루를' : '집을'} 빼앗았어요`);
+  }
+  dirty = terrDirty = true;
+}
+function nearestEnemyUnit(e, r){
+  let best = null, bd = r*r;
+  for (const o of units){
+    if (o.dead || o.k === e.k) continue;
+    const d = d2(o.x,o.y,e.x,e.y);
+    if (d < bd){ bd = d; best = o; }
+  }
+  return best;
+}
+function nearestEnemyBld(e, r){
+  let best = -1, bd = r*r;
+  for (const b of bList){
+    if (owner[b] === e.k || owner[b] < 0) continue;
+    const d = d2(b%W+.5, ((b/W)|0)+.5, e.x, e.y);
+    if (d < bd){ bd = d; best = b; }
+  }
+  return best;
+}
+function soldierThink(e){
+  const s = UNIT[e.kind];
+  const foe = nearestEnemyUnit(e, s.aggro);
+  if (foe){
+    if (Math.sqrt(d2(foe.x,foe.y,e.x,e.y)) <= s.range){ e.atk = {u:foe}; return; }
+    e.atk = null; stepToward(e, foe.x, foe.y); return;
+  }
+  const b = nearestEnemyBld(e, s.range + .75);
+  if (b >= 0){ e.atk = {b}; return; }
+  e.atk = null;
+  const K = kings[e.k];
+  if (e.order >= 0){
+    const f = flow(e.order);
+    const here = f[idx(ux(e),uy(e))];
+    if (here >= 9999 && !isBld(grid[e.order])){ e.order = -1; return; }
+    if (here <= 1){ if (Math.random() < .25) wander(e, e.order, 2); return; }
+    if (!stepFlow(e, e.order) && Math.random() < .3) wander(e, e.order, 6);
+    return;
+  }
+  const f = flow(K.capital), here = f[idx(ux(e),uy(e))];
+  if (here > 4) stepFlow(e, K.capital);
+  else if (Math.random() < .2) wander(e, K.capital, 3);
+}
+function wander(e, center, r){
+  const cx = center%W, cy = (center/W)|0, x = ux(e), y = uy(e);
+  const opts = N4.map(([dx,dy]) => [x+dx,y+dy]).filter(([nx,ny]) => walk(nx,ny) && Math.abs(nx-cx)+Math.abs(ny-cy) <= r);
+  if (opts.length) moveTo(e, pick(opts));
+}
+function villagerThink(e){
+  const K = kings[e.k];
+  const foe = nearestEnemyUnit(e, 2.5);
+  if (foe && foe.kind !== 'villager'){ e.job = -1; e.chop = 0; stepToward(e, foe.x, foe.y, true); return; }
+  if (e.chop > 0){
+    e.chop -= .25;
+    if (e.chop <= 0 && e.job >= 0){
+      if (grid[e.job] === T.TREE){ grid[e.job] = T.SAPLING; ages[e.job] = 0; dirty = true; K.wood += 4 * mult(K); fx.push({type:'text', x:e.x, y:e.y, t:0, d:.9, text:'+4🪵'}); }
+      e.job = -1;
+    }
+    return;
+  }
+  if (e.job >= 0){
+    const t = grid[e.job];
+    if (terr[e.job] !== e.k || !(t === T.TREE || (t === T.FIELD && ages[e.job] >= 25))) e.job = -1;
+  }
+  if (e.job < 0){
+    let best = -1, bd = 1e9;
+    const wantTree = Math.random() < .5;
+    const x = ux(e), y = uy(e);
+    for (let dy=-7;dy<=7;dy++) for (let dx=-7;dx<=7;dx++){
+      const nx = x+dx, ny = y+dy; if (!inb(nx,ny)) continue;
+      const i = idx(nx,ny); if (terr[i] !== e.k) continue;
+      const ok = (grid[i] === T.FIELD && ages[i] >= 25) || (wantTree && grid[i] === T.TREE);
+      if (!ok) continue;
+      const d = Math.abs(dx)+Math.abs(dy) - (grid[i] === T.FIELD ? 3 : 0);
+      if (d < bd){ bd = d; best = i; }
+    }
+    e.job = best; e.stuck = 0;
+  }
+  if (e.job >= 0){
+    if (idx(ux(e),uy(e)) === e.job){
+      if (grid[e.job] === T.FIELD){ ages[e.job] = 0; dirty = true; K.food += 6 * mult(K); fx.push({type:'text', x:e.x, y:e.y, t:0, d:.9, text:'+6🌾'}); e.job = -1; }
+      else e.chop = 1.5;
+      return;
+    }
+    if (++e.stuck > 40){ e.job = -1; return; }
+    stepToward(e, e.job%W+.5, ((e.job/W)|0)+.5);
+    return;
+  }
+  if (Math.random() < .4) wander(e, K.capital, 5);
+}
+const mult = K => K.ai ? DIFF[diff].mult : 1;
+
+function updateUnits(dt){
+  for (const e of units){
+    if (e.dead) continue;
+    e.cd = Math.max(0, e.cd - dt);
+    if (e.hit) e.hit = Math.max(0, e.hit - dt);
+    if (!walk(ux(e),uy(e))){
+      // 발밑에 건물이 생기면 옆으로 비켜요
+      const x = ux(e), y = uy(e);
+      const o = N4.find(([dx,dy]) => walk(x+dx,y+dy));
+      if (o){ e.x = e.tx = x+o[0]+.5; e.y = e.ty = y+o[1]+.5; } else { e.dead = true; continue; }
+    }
+    const dx = e.tx - e.x, dy = e.ty - e.y, dist = Math.hypot(dx,dy);
+    if (dist > .02){
+      const sp = UNIT[e.kind].speed*dt;
+      if (sp >= dist){ e.x = e.tx; e.y = e.ty; } else { e.x += dx/dist*sp; e.y += dy/dist*sp; }
+      continue;
+    }
+    e.think -= dt;
+    if (e.think <= 0){ e.think = .25; if (e.kind === 'villager') villagerThink(e); else soldierThink(e); }
+    if (!e.atk) continue;
+    const s = UNIT[e.kind];
+    if (e.atk.u){
+      const t = e.atk.u;
+      if (t.dead || Math.sqrt(d2(t.x,t.y,e.x,e.y)) > s.range + .3){ e.atk = null; continue; }
+      e.dir = t.x >= e.x ? 1 : -1;
+      if (e.cd <= 0){
+        e.cd = s.rate; e.swing = .15;
+        if (e.kind === 'archer'){ fx.push({type:'arrow', x:e.x, y:e.y-.3, x2:t.x, y2:t.y-.2, t:0, d:.22}); setTimeout(() => hurt(t, s.dmg), 200/Math.max(1,speedMul)); }
+        else hurt(t, s.dmg);
+      }
+    } else if (e.atk.b !== undefined){
+      const b = e.atk.b;
+      if (!isBld(grid[b]) || owner[b] === e.k){ e.atk = null; continue; }
+      e.dir = (b%W+.5) >= e.x ? 1 : -1;
+      if (e.cd <= 0){
+        e.cd = s.rate; e.swing = .15;
+        if (e.kind === 'archer') fx.push({type:'arrow', x:e.x, y:e.y-.3, x2:b%W+.5, y2:((b/W)|0)+.4, t:0, d:.22});
+        hurtBld(b, s.dmg * (e.kind === 'archer' ? .6 : 1), e.k);
+      }
+    }
+  }
+  units = units.filter(u => !u.dead);
+}
+
+/* ---------- 1초마다 ---------- */
+function tick(){
+  for (let i=0;i<N;i++){
+    const t = grid[i];
+    if (t === T.FIELD && ages[i] < 25){ ages[i]++; if (ages[i] % 5 === 0) dirty = true; }
+    else if (t === T.SAPLING){ if (++ages[i] >= 30){ grid[i] = T.TREE; ages[i] = 0; dirty = true; } }
+    else if (isBld(t) && bhp[i] < MAXHP[t]) bhp[i] = Math.min(MAXHP[t], bhp[i] + .6);
+  }
+  // 망루와 성이 활을 쏴요
+  for (const b of bList){
+    const t = grid[b]; if (t !== T.TOWER && t !== T.CASTLE) continue;
+    const me = {x:b%W+.5, y:((b/W)|0)+.5, k:owner[b]};
+    const foe = nearestEnemyUnit(me, 3.6);
+    if (foe){
+      fx.push({type:'arrow', x:me.x, y:me.y-.6, x2:foe.x, y2:foe.y-.2, t:0, d:.25});
+      hurt(foe, t === T.TOWER ? 5 : 3);
+    }
+  }
+  for (const K of kings){
+    if (!K.alive) continue;
+    K.food += .6 * mult(K); K.wood += .3 * mult(K);
+    const houses = bList.filter(b => owner[b] === K.id && grid[b] === T.HOUSE).length;
+    const vill = units.filter(u => u.k === K.id && u.kind === 'villager').length;
+    if (vill < houses + 2 && Math.random() < .3) spawnUnit(K.id, 'villager');
+  }
+}
+function armyOf(k){ return units.filter(u => u.k === k && u.kind !== 'villager'); }
+function armyCap(k){ return 4 + 2*bList.filter(b => owner[b] === k && grid[b] === T.HOUSE).length; }
+function canPay(K, c){ return K.food >= (c.food||0) && K.wood >= (c.wood||0); }
+function pay(K, c){ K.food -= c.food||0; K.wood -= c.wood||0; }
+function hire(k, kind){
+  const K = kings[k];
+  if (!K.alive) return 'gone';
+  if (armyOf(k).length >= armyCap(k)) return '병력 한도가 꽉 찼어요. 집을 더 지으세요';
+  if (!canPay(K, COST[kind])) return kind === 'sword' ? '식량이 모자라요' : '식량이나 목재가 모자라요';
+  if (!spawnUnit(k, kind)) return '성 둘레에 자리가 없어요';
+  pay(K, COST[kind]);
+  return '';
+}
+function canBuild(k, i, kind){
+  const t = grid[i];
+  if (terr[i] !== k) return '우리 영토 안에만 지을 수 있어요';
+  if (!(t === T.GRASS || t === T.SAND || t === T.FLOWER || t === T.ROAD || (kind === 'field' && t === T.SAPLING))) return '여기는 지을 수 없는 땅이에요';
+  const x = i%W, y = (i/W)|0;
+  if (kind !== 'field'){
+    for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) if ((dx||dy) && inb(x+dx,y+dy) && isBld(grid[idx(x+dx,y+dy)])) return '다른 건물과 한 칸 띄워 지어요';
+    if (units.some(u => ux(u) === x && uy(u) === y && u.k !== k)) return '적이 서 있어요';
+  }
+  if (!canPay(kings[k], COST[kind])) return '목재가 모자라요';
+  return '';
+}
+function build(k, i, kind){
+  const why = canBuild(k, i, kind);
+  if (why) return why;
+  pay(kings[k], COST[kind]);
+  setTile(i, {house:T.HOUSE, field:T.FIELD, tower:T.TOWER}[kind], k);
+  if (terrDirty) computeTerr();
+  return '';
+}
+
+/* ---------- 적 나라의 머리 ---------- */
+function aiThink(K){
+  const k = K.id, army = armyOf(k);
+  const myB = bList.filter(b => owner[b] === k);
+  const houses = myB.filter(b => grid[b] === T.HOUSE).length;
+  const towers = myB.filter(b => grid[b] === T.TOWER).length;
+  let fields = 0; for (let i=0;i<N;i++) if (grid[i] === T.FIELD && terr[i] === k) fields++;
+  const tryBuild = kind => {
+    const cand = [];
+    for (let i=0;i<N;i++) if (terr[i] === k && !canBuild(k, i, kind)) cand.push(i);
+    if (cand.length) build(k, pick(cand), kind);
+  };
+  if (army.length >= armyCap(k) - 1 && K.wood >= 10 && houses < 14) tryBuild('house');
+  else if (fields < houses + 1 && K.wood >= 4) tryBuild('field');
+  else if (K.wood >= 26 && towers < 1 + Math.floor(houses/4)) tryBuild('tower');
+  else if (K.wood >= 14 && houses < 14 && Math.random() < .4) tryBuild('house');
+  if (army.length < armyCap(k)){
+    if (K.food >= 10 && (Math.random() < .6 || K.wood < 6)) hire(k, 'sword');
+    else if (K.food >= 6 && K.wood >= 12) hire(k, 'archer');
+  }
+  // 영토에 들어온 적을 막아요
+  const intruder = units.find(u => !u.dead && u.k !== k && terr[idx(ux(u),uy(u))] === k);
+  if (intruder && !K.attacking) army.forEach(u => { if (u.order < 0 || Math.random() < .5) u.order = idx(ux(intruder),uy(intruder)); });
+  else if (!K.attacking) army.forEach(u => { u.order = -1; });
+  // 출정
+  if (!K.attacking && army.length >= K.wave){
+    const foes = kings.filter(o => o.alive && o.id !== k);
+    if (foes.length){
+      const me = K.capital;
+      const target = (foes.find(o => o.id === 0) && Math.random() < .6) ? kings[0]
+        : foes.sort((a,b) => d2(a.capital%W,(a.capital/W)|0, me%W,(me/W)|0) - d2(b.capital%W,(b.capital/W)|0, me%W,(me/W)|0))[0];
+      army.forEach(u => { u.order = target.capital; });
+      K.attacking = true; K.wave = Math.min(28, K.wave + 2);
+      if (target.id === 0) toast(`⚔ ${K.name} 군대 ${army.length}명이 쳐들어와요!`, true);
+    }
+  } else if (K.attacking && army.length < 3){
+    K.attacking = false; army.forEach(u => { u.order = -1; });
+  }
+}
+
+/* ---------- 끝 ---------- */
+function checkEnd(){
+  if (!kings[0].alive) return finish(false);
+  if (kings.every(K => K.id === 0 || !K.alive)) finish(true);
+}
+function finish(win){
+  playing = false;
+  const m = Math.floor(elapsed/60), s = Math.floor(elapsed%60);
+  const time = `${m}분 ${String(s).padStart(2,'0')}초`;
+  let bestText = '';
+  if (win){
+    try {
+      const key = 'craft-janggun-best-' + diff, prev = +localStorage.getItem(key);
+      if (!prev || elapsed < prev){ localStorage.setItem(key, String(Math.round(elapsed))); bestText = '새 최고 기록이에요!'; }
+      else bestText = `최고 기록 ${Math.floor(prev/60)}분 ${String(prev%60).padStart(2,'0')}초`;
+    } catch(_) {}
+  }
+  document.getElementById('overTitle').textContent = win ? '섬을 통일했어요' : '성이 함락됐어요';
+  document.getElementById('overText').textContent = win ? `${time} 만에 모든 성을 차지했어요. 난이도를 바꿔 다시 출정해 보세요.` : `${time} 동안 버텼어요. 집을 늘려 병력 한도를 키우고, 망루로 성을 지켜 보세요.`;
+  document.getElementById('best').textContent = bestText;
+  document.getElementById('start').textContent = '다시 출정';
+  document.getElementById('over').hidden = false;
+}
+
+/* ---------- 지형 그리기 ---------- */
+function isWater(x,y){ return !inb(x,y) || grid[idx(x,y)] === T.WATER; }
+function drawGround(g, px, py, x, y){
+  g.fillStyle = '#6fbf4a'; g.fillRect(px,py,CS,CS);
+  if (hash(x,y,1) < .5){ g.fillStyle='#5eab3d'; g.fillRect(px+Math.floor(hash(x,y,2)*12)+1, py+Math.floor(hash(x,y,3)*12)+1, 2, 3); }
+  if (hash(x,y,4) < .35){ g.fillStyle='#86cf5e'; g.fillRect(px+Math.floor(hash(x,y,5)*12)+1, py+Math.floor(hash(x,y,6)*12)+1, 2, 2); }
+}
+function drawTile(g, x, y){
+  const i = idx(x,y), t = grid[i], px = x*CS, py = y*CS;
+  const col = owner[i] >= 0 ? kings[owner[i]].color : '#888';
+  switch (t){
+    case T.WATER: {
+      let near = false;
+      for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) if (!isWater(x+dx,y+dy)) near = true;
+      g.fillStyle = near ? '#3f93c9' : '#1f5f94'; g.fillRect(px,py,CS,CS);
+      if (hash(x,y,7) < .25){ g.fillStyle = near ? '#5aa9d8' : '#2a6ea6'; g.fillRect(px+Math.floor(hash(x,y,8)*10)+2, py+Math.floor(hash(x,y,9)*12)+2, 4, 1); }
+      break;
+    }
+    case T.SAND:
+      g.fillStyle = '#ecd89f'; g.fillRect(px,py,CS,CS);
+      g.fillStyle = '#d9c184';
+      for (let k=0;k<3;k++) g.fillRect(px+Math.floor(hash(x,y,10+k)*14)+1, py+Math.floor(hash(x,y,20+k)*14)+1, 1, 1);
+      break;
+    case T.GRASS: drawGround(g,px,py,x,y); break;
+    case T.TREE: {
+      drawGround(g,px,py,x,y);
+      const ox = Math.floor(hash(x,y,11)*4)-2;
+      g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(px+8+ox, py+14, 6, 2, 0, 0, 7); g.fill();
+      g.fillStyle = '#7a5230'; g.fillRect(px+7+ox, py+9, 2, 5);
+      g.fillStyle = hash(x,y,12) < .5 ? '#2f7d3a' : '#3b8a3f';
+      g.beginPath(); g.arc(px+8+ox, py+7, 6, 0, 7); g.fill();
+      g.fillStyle = '#4fa354'; g.beginPath(); g.arc(px+6+ox, py+5, 2.5, 0, 7); g.fill();
+      break;
+    }
+    case T.SAPLING:
+      drawGround(g,px,py,x,y);
+      g.fillStyle = '#9c7a52'; g.fillRect(px+6, py+11, 4, 3);
+      g.fillStyle = '#4fa354'; g.beginPath(); g.arc(px+8, py+9, 2 + Math.min(1, ages[i]/30)*2.5, 0, 7); g.fill();
+      break;
+    case T.MOUNT:
+      drawGround(g,px,py,x,y);
+      g.fillStyle = '#7d8590'; g.beginPath(); g.moveTo(px, py+CS); g.lineTo(px+8, py+1); g.lineTo(px+CS, py+CS); g.fill();
+      g.fillStyle = '#9aa2ab'; g.beginPath(); g.moveTo(px+8, py+1); g.lineTo(px+CS, py+CS); g.lineTo(px+9, py+CS); g.fill();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(px+5, py+6.5); g.lineTo(px+8, py+1); g.lineTo(px+11, py+6.5); g.lineTo(px+8,py+5); g.fill();
+      break;
+    case T.FLOWER: {
+      drawGround(g,px,py,x,y);
+      const cols = ['#f25f8a','#ffd23f','#ffffff','#b46ef0'];
+      for (let k=0;k<3;k++){
+        const fx2 = px+2+Math.floor(hash(x,y,30+k)*11), fy = py+2+Math.floor(hash(x,y,40+k)*11);
+        g.fillStyle = cols[Math.floor(hash(x,y,50+k)*4)]; g.fillRect(fx2-1,fy,3,1); g.fillRect(fx2,fy-1,1,3);
+      }
+      break;
+    }
+    case T.ROAD:
+      g.fillStyle = '#c9a46a'; g.fillRect(px,py,CS,CS);
+      break;
+    case T.FIELD: {
+      g.fillStyle = '#8a5a36'; g.fillRect(px,py,CS,CS);
+      const ripe = ages[i] >= 25, s = Math.min(1, ages[i]/25);
+      for (let r=0;r<3;r++){
+        g.fillStyle = '#734a2b'; g.fillRect(px, py+3+r*5, CS, 1);
+        g.fillStyle = ripe ? '#f2c94c' : '#6fbf4a';
+        for (let c=0;c<4;c++){ const h = 1+Math.round(s*3); g.fillRect(px+2+c*4, py+3+r*5-h, 2, h); }
+      }
+      break;
+    }
+    case T.HOUSE:
+      drawGround(g,px,py,x,y);
+      g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(px+3, py+14, 12, 2);
+      g.fillStyle = '#f4e9d2'; g.fillRect(px+3, py+7, 10, 8);
+      g.fillStyle = col; g.beginPath(); g.moveTo(px+1, py+8); g.lineTo(px+8, py+1); g.lineTo(px+15, py+8); g.fill();
+      g.fillStyle = '#7a5230'; g.fillRect(px+7, py+10, 3, 5);
+      g.fillStyle = '#8fc6e8'; g.fillRect(px+4, py+9, 2, 2); g.fillRect(px+11, py+9, 2, 2);
+      break;
+    case T.TOWER:
+      drawGround(g,px,py,x,y);
+      g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(px+4, py+14, 10, 2);
+      g.fillStyle = '#8d8a83'; g.fillRect(px+4, py+3, 8, 12);
+      g.fillStyle = '#a7a39a'; g.fillRect(px+3, py+1, 10, 3);
+      g.fillStyle = '#8d8a83'; g.fillRect(px+3, py, 2, 1); g.fillRect(px+7, py, 2, 1); g.fillRect(px+11, py, 2, 1);
+      g.fillStyle = col; g.fillRect(px+4, py+6, 8, 2);
+      g.fillStyle = '#2b2b2b'; g.fillRect(px+7, py+9, 2, 3);
+      break;
+    case T.CASTLE:
+      drawGround(g,px,py,x,y);
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(px, py+14, CS, 2);
+      g.fillStyle = '#9b968c'; g.fillRect(px, py+5, CS, 10);
+      g.fillStyle = '#b5b0a5';
+      for (let c=0;c<4;c++) g.fillRect(px+c*4, py+3, 3, 3);
+      g.fillStyle = '#5a4a3a'; g.fillRect(px+6, py+9, 4, 6);
+      g.fillStyle = '#4a4a4a'; g.fillRect(px+8, py-6, 1, 10);
+      g.fillStyle = col; g.fillRect(px+9, py-6, 6, 4);
+      break;
+  }
+}
+function renderBg(){
+  bctx.clearRect(0,0,bg.width,bg.height);
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++) drawTile(bctx,x,y);
+  dirty = false;
+}
+
+/* ---------- 유닛 그리기 ---------- */
+function drawUnit(e, now){
+  const px = e.x*CS, py = e.y*CS, col = kings[e.k].color;
+  const moving = Math.abs(e.tx-e.x)+Math.abs(e.ty-e.y) > .02;
+  const sel = e.k === 0 && e.kind !== 'villager' && tool === 'move' && (group === 'all' || group === e.kind);
+  ctx.save(); ctx.translate(px, py);
+  if (sel){ ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0,5,5,2,0,0,7); ctx.stroke(); }
+  ctx.scale(e.dir,1);
+  const step = moving ? Math.sin(now*12+e.phase) : 0;
+  ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0,5,3.5,1.3,0,0,7); ctx.fill();
+  ctx.fillStyle='#3b4252'; ctx.fillRect(-2,2,1.6,3+step); ctx.fillRect(.5,2,1.6,3-step);
+  ctx.fillStyle = e.hit > 0 ? '#ffffff' : col; ctx.fillRect(-2.5,-3,5,5.5);
+  ctx.fillStyle='#f2c9a0'; ctx.beginPath(); ctx.arc(0,-5.5,2.6,0,7); ctx.fill();
+  if (e.kind === 'villager'){
+    ctx.fillStyle='#e8c56a'; ctx.fillRect(-4,-7.5,8,1.4); ctx.fillRect(-2,-9.3,4,2);
+    if (e.chop > 0){ const a = Math.sin(now*16)*.8; ctx.save(); ctx.translate(3,-1); ctx.rotate(a); ctx.fillStyle='#7a5230'; ctx.fillRect(0,-5,1.2,6); ctx.fillStyle='#c9ced6'; ctx.fillRect(-1,-6,3,2); ctx.restore(); }
+  } else if (e.kind === 'sword'){
+    ctx.fillStyle='#4a4f58'; ctx.fillRect(-2.8,-8.6,5.6,2.4); ctx.fillRect(-.6,-10,1.2,1.6);
+    const sw = e.swing > 0 ? -1.1 : 0;
+    ctx.save(); ctx.translate(3,0); ctx.rotate(-.5 + sw); ctx.strokeStyle='#e3e7ec'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-8); ctx.stroke(); ctx.fillStyle='#7a5230'; ctx.fillRect(-1.5,-.5,3,1); ctx.restore();
+    ctx.fillStyle = col; ctx.strokeStyle='#e3e7ec'; ctx.lineWidth=.8; ctx.beginPath(); ctx.arc(-3,0,2.4,0,7); ctx.fill(); ctx.stroke();
+  } else {
+    ctx.fillStyle='#3b6b3b'; ctx.fillRect(-2.8,-8.4,5.6,2);
+    ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(2.5,-1,4.5,-1.2,1.2); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=.5; ctx.beginPath(); ctx.moveTo(4,-5.2); ctx.lineTo(4,3.2); ctx.stroke();
+  }
+  ctx.restore();
+  if (e.hp < e.max) bar(px-5, py-13, 10, e.hp/e.max, col);
+  if (e.swing) e.swing = Math.max(0, e.swing - .016);
+}
+function bar(x, y, w, p, col){
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x-1, y-1, w+2, 3.5);
+  ctx.fillStyle = p > .5 ? '#5fd35f' : p > .25 ? '#f0c040' : '#e5533d';
+  ctx.fillRect(x, y, w*Math.max(0,p), 1.6);
+}
+
+/* ---------- 효과 ---------- */
+function drawFx(rdt){
+  for (const f of fx){
+    f.t += rdt;
+    const p = Math.min(1, f.t/f.d), px = f.x*CS, py = f.y*CS;
+    if (f.type === 'puff'){
+      ctx.fillStyle = f.color + (1-p)*.8 + ')';
+      ctx.beginPath(); ctx.arc(px, py - p*6, 3 + p*5, 0, 7); ctx.fill();
+    } else if (f.type === 'ring'){
+      ctx.strokeStyle = f.color; ctx.globalAlpha = 1-p; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(px, py, 4 + p*(f.r||1.5)*CS, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+    } else if (f.type === 'arrow'){
+      const ax = px + (f.x2*CS - px)*p, ay = py + (f.y2*CS - py)*p - Math.sin(p*Math.PI)*8;
+      const ang = Math.atan2(f.y2*CS - py, f.x2*CS - px);
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang);
+      ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(1,0); ctx.stroke();
+      ctx.fillStyle = '#d8dde3'; ctx.fillRect(1,-1,2,2); ctx.restore();
+    } else if (f.type === 'text'){
+      ctx.globalAlpha = 1-p; ctx.fillStyle = '#ffffff'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(f.text, px, py - 10 - p*10); ctx.globalAlpha = 1;
+    } else if (f.type === 'flagdrop'){
+      ctx.strokeStyle = `rgba(255,255,255,${1-p})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(px, py, 3 + p*12, 0, 7); ctx.stroke();
+    }
+  }
+  fx = fx.filter(f => f.t < f.d);
+}
+function drawFlags(now){
+  const seen = new Set();
+  for (const u of units) if (u.k === 0 && u.order >= 0) seen.add(u.order);
+  for (const o of seen){
+    const px = (o%W)*CS + 8, py = ((o/W)|0)*CS + 12;
+    const wave = Math.sin(now*6)*1.2;
+    ctx.fillStyle = '#3a2a1a'; ctx.fillRect(px, py-14, 1.5, 14);
+    ctx.fillStyle = kings[0].color; ctx.beginPath(); ctx.moveTo(px+1.5, py-14); ctx.lineTo(px+10, py-11+wave); ctx.lineTo(px+1.5, py-8); ctx.fill();
+  }
+}
+
+/* ---------- 입력 ---------- */
+function cellFrom(ev){
+  const r = cv.getBoundingClientRect();
+  return [Math.max(0,Math.min(W-1,Math.floor((ev.clientX - r.left)/r.width*W))), Math.max(0,Math.min(H-1,Math.floor((ev.clientY - r.top)/r.height*H)))];
+}
+cv.addEventListener('pointerdown', ev => {
+  ev.preventDefault();
+  if (!playing) return;
+  const [x,y] = cellFrom(ev), i = idx(x,y);
+  if (tool === 'move'){
+    const sel = armyOf(0).filter(u => group === 'all' || u.kind === group);
+    if (!sel.length){ toast('보낼 병사가 없어요. 먼저 모집하세요', true); return; }
+    if (!isBld(grid[i]) && !walk(x,y)){ toast('그곳엔 갈 수 없어요', true); return; }
+    sel.forEach(u => { u.order = i; u.atk = null; });
+    fx.push({type:'flagdrop', x:x+.5, y:y+.5, t:0, d:.5});
+  } else {
+    const why = build(0, i, tool);
+    if (why) toast(why, true);
+  }
+});
+document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => {
+  tool = b.dataset.tool;
+  document.querySelectorAll('[data-tool]').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+const segPick = (sel, fn) => document.querySelectorAll(sel+' button').forEach(b => b.onclick = () => {
+  fn(b); document.querySelectorAll(sel+' button').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+segPick('#group', b => { group = b.dataset.g; tool = 'move'; document.querySelectorAll('[data-tool]').forEach(x => x.setAttribute('aria-pressed', x.dataset.tool === 'move')); });
+segPick('#speed', b => speedMul = +b.dataset.v);
+segPick('#diff', b => { diff = +b.dataset.d; showBest(); });
+document.getElementById('recall').onclick = () => {
+  const sel = armyOf(0).filter(u => group === 'all' || u.kind === group);
+  sel.forEach(u => { u.order = -1; u.atk = null; });
+  if (sel.length) toast('성으로 돌아와요');
+};
+document.getElementById('hireSword').onclick = () => { const w = hire(0,'sword'); if (w) toast(w, true); };
+document.getElementById('hireArcher').onclick = () => { const w = hire(0,'archer'); if (w) toast(w, true); };
+document.getElementById('start').onclick = () => {
+  newGame(); playing = true;
+  document.getElementById('over').hidden = true;
+  toast(`${kings[0].name}의 장군이 되었어요. 왼쪽 파란 성이 우리 성이에요`);
+};
+function showBest(){
+  try {
+    const v = +localStorage.getItem('craft-janggun-best-' + diff);
+    document.getElementById('best').textContent = v ? `이 난이도 최고 기록: ${Math.floor(v/60)}분 ${String(v%60).padStart(2,'0')}초` : '';
+  } catch(_) {}
+}
+
+let toastTimer;
+function toast(msg, bad){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on'); t.classList.toggle('bad', !!bad);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+}
+
+function updateUI(){
+  const K = kings[0];
+  const army = armyOf(0), cap = armyCap(0);
+  const m = Math.floor(elapsed/60), s = Math.floor(elapsed%60);
+  const sw = army.filter(u => u.kind === 'sword').length, ar = army.length - sw;
+  document.getElementById('res').innerHTML =
+    `<span>🌾 식량<b>${Math.floor(K.food)}</b></span><span>🪵 목재<b>${Math.floor(K.wood)}</b></span>` +
+    `<span class="${army.length >= cap ? 'warn' : ''}">병력<b>${army.length}/${cap}</b></span>` +
+    `<span>⚔${sw} 🏹${ar}</span><span>⏱<b>${m}:${String(s).padStart(2,'0')}</b></span>`;
+  document.getElementById('hireSword').disabled = !canPay(K, COST.sword) || army.length >= cap;
+  document.getElementById('hireArcher').disabled = !canPay(K, COST.archer) || army.length >= cap;
+  document.querySelector('[data-tool="house"]').disabled = K.wood < 10;
+  document.querySelector('[data-tool="field"]').disabled = K.wood < 4;
+  document.querySelector('[data-tool="tower"]').disabled = K.wood < 20;
+  document.getElementById('kings').innerHTML = kings.map(o => {
+    const hs = bList.filter(b => owner[b] === o.id && grid[b] === T.HOUSE).length;
+    const ar2 = armyOf(o.id).length;
+    return `<span class="king${o.alive ? '' : ' dead'}"><span class="dot" style="background:${o.color}"></span><b>${o.name}${o.id === 0 ? ' (우리)' : ''}</b>` +
+      (o.alive ? `<small>병사 ${ar2} · 집 ${hs}${o.attacking ? ' · 출정 중' : ''}</small>` : '<small>멸망</small>') + '</span>';
+  }).join('');
+}
+
+/* ---------- 반복 ---------- */
+let prev = performance.now(), acc = 0, uiAcc = 0;
+function frame(now){
+  const rdt = Math.max(0, Math.min(.1, (now - prev)/1000)); prev = now;
+  const dt = playing ? rdt * speedMul : 0;
+  if (playing){
+    elapsed += dt;
+    acc += dt; while (acc >= 1){ acc -= 1; tick(); }
+    for (const K of kings){ if (!K.ai || !K.alive) continue; K.think -= dt; if (K.think <= 0){ K.think = 2; aiThink(K); } }
+    // 2배속일 땐 한 프레임에 두 번 움직여요
+    const sub = Math.ceil(speedMul);
+    for (let k=0;k<sub;k++) updateUnits(dt/sub);
+  }
+  if (terrDirty) computeTerr();
+  if (dirty) renderBg();
+  uiAcc += rdt; if (uiAcc > .25){ uiAcc = 0; updateUI(); }
+
+  const t = now/1000;
+  ctx.drawImage(bg, 0, 0);
+  ctx.drawImage(tc, 0, 0);
+  ctx.fillStyle = 'rgba(255,255,255,.45)';
+  for (let k=0;k<16;k++){
+    const x = Math.floor(hash(k, Math.floor(t*1.5), 3)*W), y = Math.floor(hash(k, Math.floor(t*1.5), 4)*H);
+    if (grid[idx(x,y)] === T.WATER) ctx.fillRect(x*CS+4+(k%8), y*CS+6+(k%5), 3, 1);
+  }
+  for (const b of bList) if (bhp[b] < MAXHP[grid[b]]) bar((b%W)*CS+2, ((b/W)|0)*CS-3, 12, bhp[b]/MAXHP[grid[b]]);
+  drawFlags(t);
+  [...units].sort((a,b) => a.y - b.y).forEach(u => drawUnit(u, t));
+  drawFx(rdt);
+  requestAnimationFrame(frame);
+}
+newGame();
+showBest();
+updateUI();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
