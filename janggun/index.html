@@ -132,7 +132,7 @@ button:focus-visible{outline:2px solid var(--me);outline-offset:2px}
       <div class="label">모집 — 성에서 병사가 나와요</div>
       <div class="grid">
         <button class="cmd" id="hireSword"><i>⚔️</i>검병<small>🌾10</small></button>
-        <button class="cmd" id="hireArcher"><i>🏹</i>궁수<small>🌾6 🪵6</small></button>
+        <button class="cmd" id="hireArcher"><i>🏹</i>궁수<small>🌾3 🪵8</small></button>
       </div>
     </div>
     <div>
@@ -156,7 +156,7 @@ button:focus-visible{outline:2px solid var(--me);outline-offset:2px}
 const W = 40, H = 28, CS = 16, N = W*H;
 const T = {WATER:0, SAND:1, GRASS:2, TREE:3, MOUNT:4, FLOWER:5, ROAD:6, HOUSE:7, SAPLING:8, FIELD:9, CASTLE:10, TOWER:11};
 const MAXHP = {[T.HOUSE]:45, [T.CASTLE]:220, [T.TOWER]:100};
-const COST = {house:{wood:10}, field:{wood:4}, tower:{wood:20}, sword:{food:10}, archer:{food:6, wood:6}};
+const COST = {house:{wood:10}, field:{wood:4}, tower:{wood:20}, sword:{food:10}, archer:{food:3, wood:8}};
 const UNIT = {
   villager:{hp:12, dmg:0, rate:1, range:0, aggro:0, speed:1.1},
   sword:{hp:34, dmg:6, rate:.8, range:1.0, aggro:3.5, speed:1.25},
@@ -165,11 +165,11 @@ const UNIT = {
 const COLORS = ['#2f62b8','#d0452f','#e0a21b'];
 const SYL = ['가','나','라','마','소','하','도','루','벨','온','세','리','타','진','바','로','아','윤','미','가'];
 // 난이도: 적 수입(mult), 출정 인원(wave), 첫 출정 시각(first초), 출정 간격(gap초), 우리를 노릴 확률(aim),
-// 시작 자원(start), 우리 수입 배율(mine), 우리 성 화살 피해(castle)
+// 적 출정 최대 인원(maxWave), 적 집 상한(houses), 시작 자원(start), 우리 수입 배율(mine), 우리 성 화살 피해(castle)
 const DIFF = [
-  {mult:.55, wave:10, first:240, gap:150, aim:.3, start:60, mine:1.3, castle:6},
-  {mult:1,   wave:7,  first:120, gap:90,  aim:.6, start:20, mine:1,   castle:3},
-  {mult:1.35,wave:5,  first:45,  gap:50,  aim:.7, start:20, mine:1,   castle:3},
+  {mult:.55, wave:10, maxWave:14, houses:8,  first:240, gap:150, aim:.3, start:60, mine:1.3, castle:6},
+  {mult:1,   wave:7,  maxWave:22, houses:12, first:120, gap:90,  aim:.6, start:20, mine:1,   castle:3},
+  {mult:1.35,wave:5,  maxWave:28, houses:16, first:45,  gap:50,  aim:.7, start:20, mine:1,   castle:3},
 ];
 const isBld = t => t === T.HOUSE || t === T.CASTLE || t === T.TOWER;
 
@@ -622,13 +622,14 @@ function aiThink(K){
     for (let i=0;i<N;i++) if (terr[i] === k && !canBuild(k, i, kind)) cand.push(i);
     if (cand.length) build(k, pick(cand), kind);
   };
-  if (army.length >= armyCap(k) - 1 && K.wood >= 10 && houses < 14) tryBuild('house');
+  const hcap = DIFF[diff].houses;
+  if (army.length >= armyCap(k) - 1 && K.wood >= 10 && houses < hcap) tryBuild('house');
   else if (fields < houses + 1 && K.wood >= 4) tryBuild('field');
   else if (K.wood >= 26 && towers < 1 + Math.floor(houses/4)) tryBuild('tower');
-  else if (K.wood >= 14 && houses < 14 && Math.random() < .4) tryBuild('house');
+  else if (K.wood >= 14 && houses < hcap && Math.random() < .4) tryBuild('house');
   if (army.length < armyCap(k)){
-    if (K.food >= 10 && (Math.random() < .6 || K.wood < 6)) hire(k, 'sword');
-    else if (K.food >= 6 && K.wood >= 12) hire(k, 'archer');
+    if (K.food >= 10 && (Math.random() < .6 || K.wood < 8)) hire(k, 'sword');
+    else if (K.food >= 3 && K.wood >= 14) hire(k, 'archer');
   }
   // 출정한 부대가 거의 무너졌거나 목표가 사라지면 남은 병사를 불러들여요
   const raiders = army.filter(u => u.raid);
@@ -650,7 +651,7 @@ function aiThink(K){
       // 두 명은 성을 지키고 나머지가 떠나요
       const go = army.slice(2);
       go.forEach(u => { u.order = target.capital; u.raid = true; });
-      K.attacking = true; K.target = target.id; K.lastRaid = elapsed; K.wave = Math.min(28, K.wave + 2);
+      K.attacking = true; K.target = target.id; K.lastRaid = elapsed; K.wave = Math.min(DIFF[diff].maxWave, K.wave + 2);
       if (target.id === 0) toast(`⚔ ${K.name} 군대 ${go.length}명이 쳐들어와요!`, true);
     }
   }
