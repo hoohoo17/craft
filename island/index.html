@@ -159,7 +159,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려, 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -272,7 +272,7 @@ function kingdomName(){
 function newKingdom(capital){
   const usedC = new Set([...kingdoms.values()].map(k => k.color));
   const color = KCOLORS.find(c => !usedC.has(c)) || pick(KCOLORS);
-  const k = {id: nextKid++, name: kingdomName(), color, wars: new Set(), allies: {}, capital, draft: 0, hadKing: false, born: day};
+  const k = {id: nextKid++, name: kingdomName(), color, wars: new Set(), allies: {}, capital, draft: 0, hadKing: false, born: day, unrest: 0};
   kingdoms.set(k.id, k);
   return k;
 }
@@ -505,6 +505,7 @@ function capture(i, k){
     toast(`🏯 ${A.name}이 ${B.name}의 성을 함락했어요. ${B.name}은 ${A.name}에 흡수됐어요`);
   } else {
     owner[i] = k; bhp[i] = MAXHP[grid[i]]*.4;
+    if (B) B.unrest = Math.min(100, (B.unrest||0) + 5);
     ents.forEach(e => { if (e.type === 'person' && e.home === i) e.k = k; });
     if (B && performance.now() - lastCapToast > 2500){ lastCapToast = performance.now(); toast(`${A.name}이 ${B.name}의 ${grid[i] === T.CASTLE ? '성을' : '집을'} 빼앗았어요`); }
   }
@@ -554,6 +555,7 @@ function heirs(id){
 }
 function succeed(K, old){
   const oldTitle = old.female ? '여왕' : '왕';
+  K.unrest = Math.min(100, (K.unrest||0) + 10);
   const princes = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'prince' && e.age >= 150).sort((a,b) => b.age - a.age);
   if (princes.length >= 2 && Math.random() < .6){ startFeud(K, princes[0], princes[1], old, oldTitle); return; }
   const heir = heirs(K.id)[0];
@@ -582,6 +584,7 @@ function startFeud(K, a, b, old, oldTitle){
   const queen = ents.find(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'queen');
   if (queen) queen.role = 'dowager';
   K.feud = {a:a.id, b:b.id, t:0};
+  K.unrest = Math.min(100, (K.unrest||0) + 25);
   a.claim = b.claim = true; a.side = 'a'; b.side = 'b';
   setStats(a); setStats(b); a.hp = a.max; b.hp = b.max;
   const army = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'soldier').sort(() => Math.random() - .5);
@@ -611,7 +614,63 @@ function feudTick(K){
   f.aName = A.name; f.bName = B.name;
   if (f.t >= 90){
     const elder = A.age >= B.age ? A : B, younger = elder === A ? B : A;
+    const followers = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'soldier' && e.side === younger.side);
     endFeud(K, elder, `👑 다툼이 길어지자 신하들이 맏왕자 ${josa(elder.name,'을를')} 왕으로 세웠어요. ${josa(younger.name,'은는')} 물러났어요`);
+    if (Math.random() < .5) rebel(K, younger, followers, `🔥 물러난 왕자 ${josa(younger.name,'이가')} 따르는 병사를 이끌고 반란을 일으켜`);
+  }
+}
+
+// 반란: 수도에서 먼 마을이 떨어져 나가 새 나라를 세우고, 원래 나라와 전쟁을 벌여요
+function rebel(K, leader, followers, lead){
+  const id = K.id, cap = K.capital, capx = cap%W, capy = (cap/W)|0;
+  const far = h => Math.hypot(h%W - capx, ((h/W)|0) - capy);
+  const houses = bList.filter(b => owner[b] === id && grid[b] === T.HOUSE).sort((a,b) => far(b) - far(a));
+  if (houses.length < 4 || far(houses[0]) < 6) return false;
+  const seat = houses[0], sx = seat%W, sy = (seat/W)|0;
+  const group = houses.filter(h => Math.hypot(h%W - sx, ((h/W)|0) - sy) <= 6);
+  if (group.length < 2) return false;
+  const NK = newKingdom(seat);
+  grid[seat] = T.CASTLE; owner[seat] = NK.id; bhp[seat] = MAXHP[T.CASTLE]*.7;
+  group.forEach(h => { owner[h] = NK.id; });
+  const gset = new Set(group);
+  ents.forEach(e => {
+    if (e.type !== 'person' || e.dead || e.k !== id) return;
+    if (e.role === 'villager' && gset.has(e.home)) e.k = NK.id;
+  });
+  // 따르는 병사: 정해진 무리가 없으면 반란 마을 쪽에 가까운 병사와 일부
+  const army = followers || ents.filter(e => e.type === 'person' && !e.dead && e.k === id && e.role === 'soldier' && e !== leader &&
+    (Math.hypot(e.x - sx, e.y - sy) < Math.hypot(e.x - capx, e.y - capy) || Math.random() < .25));
+  army.forEach(e => { if (e === leader) return; e.k = NK.id; e.home = seat; e.side = null; e.atk = null; });
+  // 우두머리가 새 나라의 왕이 돼요
+  const was = title(leader);
+  leader.k = NK.id; leader.role = 'king'; leader.home = seat; leader.side = null; leader.claim = false; leader.atk = null;
+  leader.female = !!leader.female && was !== '왕자'; leader.rank = 0;
+  leader.x = leader.tx = sx + .5; leader.y = leader.ty = sy + 1.5;
+  leader.life = Math.max(leader.life, leader.age + rnd(400,700)); setStats(leader); leader.hp = leader.max;
+  const mate = leader.spouse ? byId(leader.spouse) : null;
+  if (mate && mate.k === id){ mate.k = NK.id; mate.home = seat; if (mate.role === 'crownwife') mate.role = 'queen'; }
+  NK.hadKing = true; NK.unrest = 0;
+  K.unrest = Math.max(0, (K.unrest||0) - 50);
+  K.wars.add(NK.id); NK.wars.add(id);
+  if (K.allies) delete K.allies[NK.id];
+  fx.push({type:'ring', x:sx+.5, y:sy+.5, t:0, d:1, color:'#ff5a36', r:4});
+  toast(`${lead || `🔥 ${K.name}에서 ${was} ${josa(leader.name,'이가')} 반란을 일으켜`} ${josa(NK.name,'을를')} 세웠어요!`);
+  dirty = changed = terrDirty = true; flowCache.clear();
+  return true;
+}
+function unrestTick(K, houses){
+  let u = K.unrest || 0;
+  // 나라가 클수록 다스리기 어렵고, 전쟁이 길어지면 민심이 나빠져요. 평화로우면 조금씩 회복돼요
+  if (houses > 10) u += .02 * (houses - 10);
+  if (K.wars.size) u += .3 * K.wars.size;
+  else u -= .35;
+  u = Math.max(0, Math.min(100, u));
+  K.unrest = u;
+  if (u >= 60 && !K.feud && Math.random() < (u - 60) / 400){
+    const pool = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id);
+    const leader = pool.find(e => e.role === 'soldier' && e.rank === 2) || pool.find(e => e.role === 'soldier' && e.rank === 1)
+      || pick(pool.filter(e => e.role === 'soldier').concat([null]));
+    if (leader) rebel(K, leader);
   }
 }
 
@@ -874,6 +933,8 @@ function tick(){
   for (const [id,K] of kingdoms){
     const mine = bList.filter(b => owner[b] === id);
     const houses = mine.filter(b => grid[b] === T.HOUSE);
+    unrestTick(K, houses.length);
+    if (!kingdoms.has(id)) continue;
     // 왕위 다툼
     if (K.feud){
       feudTick(K);
@@ -882,7 +943,8 @@ function tick(){
       const crowned = ents.find(e => e.type === 'person' && !e.dead && e.k === id && e.role === 'king');
       if (crowned) kings.set(id, crowned);
     }
-    // 왕
+    // 왕 (반란으로 방금 생긴 나라처럼 미리 센 목록에 없을 수 있어 직접 다시 찾아요)
+    if (!kings.has(id)){ const live = ents.find(e => e.type === 'person' && !e.dead && e.k === id && e.role === 'king'); if (live) kings.set(id, live); }
     if (!kings.has(id) && grid[K.capital] === T.CASTLE){
       const king = makePerson(id, 'king', K.capital);
       if (K.hadKing) toast(`👑 ${K.name}에 새 왕 ${josa(king.name,'이가')} 즉위했어요`);
@@ -1098,6 +1160,9 @@ function bless(x, y){
     if (e.type === 'person'){ e.hp = e.max; if (e.role === 'soldier' && e.kills < 5){ e.kills = e.kills < 2 ? 2 : 5; up = e; } }
   });
   if (up) toast(`✨ ${up.name}에게 신의 축복이 내렸어요`);
+  for (const K of kingdoms.values()){
+    if (Math.hypot(K.capital%W - x, ((K.capital/W)|0) - y) <= 3){ K.unrest = Math.max(0, (K.unrest||0) - 30); toast(`✨ ${K.name}의 민심이 가라앉았어요`); }
+  }
 }
 
 /* ---------- 칠하기 ---------- */
@@ -1683,7 +1748,7 @@ function updateStats(){
     return `<div class="king"><span class="dot" style="background:${k.color}"></span><b>${k.name}</b>` +
       `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}` : k.feud ? `<span class="war">왕위 다툼 중: ${byId(k.feud.a)?.name || '?'} 대 ${byId(k.feud.b)?.name || '?'}</span>` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
       `${(() => { const h = heirs(k.id)[0]; return h ? ` · 계승자 ${ROYAL_TITLE[h.role]} ${h.name}` : ''; })()}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
-      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}</div>`;
+      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs} · ${(k.unrest||0) < 30 ? '민심 좋음' : (k.unrest||0) < 60 ? '민심 흔들림' : '<span class="war">민심 위태 🔥</span>'}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}</div>`;
   }).join('');
 }
 
