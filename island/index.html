@@ -168,7 +168,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 나라들은 외교관을 보내 평화 회담이나 불가침 조약을 맺기도 해요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 나라들은 외교관을 보내 평화 회담이나 불가침 조약을 맺기도 해요. 상인은 특산물을 싣고 이웃 나라와 무역해 금을 벌고(금이 있으면 징병이 빨라져요), 교역로가 이어진 나라끼리는 전쟁이 덜 나요. 전쟁 중엔 상인이 약탈당할 수 있어요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -188,8 +188,10 @@ const RELIGIONS = [
   {name:'숲의 약속',   sym:'🌳', color:'#3f9a4a', desc:'영토에 나무가 잘 자라요'},
   {name:'불의 맹세',   sym:'🔥', color:'#e0532f', desc:'병사가 더 세게 싸우지만 민심이 쉽게 흔들려요'},
 ];
+// 특산물: 영토에 무엇이 많은지에 따라 정해져요
+const GOODS = [{name:'곡식', sym:'🌾', color:'#e2b33c'}, {name:'목재', sym:'🪵', color:'#8a5a2b'}, {name:'물고기', sym:'🐟', color:'#ff8a3d'}, {name:'철', sym:'⛏', color:'#8d939b'}];
 const faithOf = k => { const K = kingdoms.get(k); return K && K.faith != null ? K.faith : -1; };
-const CLERIC_TITLE = {priest:'사제', monk:'선교사', envoy:'외교관'};
+const CLERIC_TITLE = {priest:'사제', monk:'선교사', envoy:'외교관', merchant:'상인'};
 const FLAMMABLE = {[T.TREE]:.5, [T.GRASS]:.12, [T.FLOWER]:.2, [T.SAPLING]:.3, [T.FIELD]:.3, [T.HOUSE]:.4};
 const GOD_TOOLS = [
   {id:'look', ico:'🔍', name:'살펴보기'},
@@ -243,7 +245,7 @@ let grid, ages, owner, bhp, terr;
 let ents = [], fx = [];
 let kingdoms = new Map(), nextKid = 0, bList = [], borders = new Set(), flowCache = new Map();
 let tod = .3, day = 1, harvest = 0, speedMul = 1;
-let tool = 'look', brush = 1, selected = null, uid = 1;
+let tool = 'look', brush = 1, selected = null, uid = 1, specClock = 0;
 let dirty = true, changed = false, terrDirty = true, shake = 0, flash = 0;
 const undoStack = [];
 
@@ -507,6 +509,11 @@ function kill(e, color, by, natural){
     return;
   }
   if (e.type === 'person' && ROYALS.includes(e.role) && !natural){ const K = kingdoms.get(e.k); if (K && !e.quiet) toast(`${K.name}의 ${ROYAL_TITLE[e.role]} ${josa(e.name,'이가')} 쓰러졌어요`); }
+  if (e.type === 'person' && e.role === 'merchant' && by && by.type === 'person' && kingdoms.has(by.k) && kingdoms.has(e.k)){
+    const A = kingdoms.get(by.k), B = kingdoms.get(e.k), G = GOODS[e.goods ?? 0];
+    A.gold = (A.gold || 0) + 6;
+    toast(`⚔ ${A.name} 병사들이 ${B.name} 상인 ${e.name}의 ${G.sym}${josa(G.name,'을를')} 빼앗았어요 (+6💰)`);
+  }
   if (e.type === 'person' && e.role === 'soldier' && e.rank === 2){ const K = kingdoms.get(e.k); if (K) toast(`${K.name}의 장군 ${josa(e.name,'이가')} 쓰러졌어요`); }
 }
 function hurt(e, d, by){
@@ -547,6 +554,7 @@ function capture(i, k){
 // 나라 old를 나라 k가 통째로 차지해요. 옛 왕은 물러나요.
 function absorb(old, k){
   const A = kingdoms.get(k);
+  A.gold = (A.gold || 0) + ((kingdoms.get(old) || {}).gold || 0);
   for (let j=0;j<N;j++) if (owner[j] === old){ owner[j] = k; bhp[j] = MAXHP[grid[j]]*.4; }
   ents.forEach(e => {
     if (e.type !== 'person' || e.k !== old || e.dead) return;
@@ -657,10 +665,9 @@ function rebel(K, leader, followers, lead){
   const id = K.id, cap = K.capital, capx = cap%W, capy = (cap/W)|0;
   const far = h => Math.hypot(h%W - capx, ((h/W)|0) - capy);
   const houses = bList.filter(b => owner[b] === id && grid[b] === T.HOUSE).sort((a,b) => far(b) - far(a));
-  if (houses.length < 4 || far(houses[0]) < 6) return false;
+  if (houses.length < 3 || far(houses[0]) < 4) return false;
   const seat = houses[0], sx = seat%W, sy = (seat/W)|0;
   const group = houses.filter(h => Math.hypot(h%W - sx, ((h/W)|0) - sy) <= 6);
-  if (group.length < 2) return false;
   const NK = newKingdom(seat);
   grid[seat] = T.CASTLE; owner[seat] = NK.id; bhp[seat] = MAXHP[T.CASTLE]*.7;
   group.forEach(h => { owner[h] = NK.id; });
@@ -693,20 +700,59 @@ function rebel(K, leader, followers, lead){
 function unrestTick(K, houses){
   let u = K.unrest || 0;
   // 나라가 클수록 다스리기 어렵고, 전쟁이 길어지면 민심이 나빠져요. 평화로우면 조금씩 회복돼요
-  if (houses > 10) u += .02 * (houses - 10);
-  if (K.wars.size) u += .3 * K.wars.size;
-  else u -= .35 + (K.faith === 0 ? .2 : 0);
+  if (houses > 8) u += .035 * (houses - 8);
+  if (K.wars.size) u += .45 * K.wars.size;
+  else u -= .25 + (K.faith === 0 ? .2 : 0);
   if (K.faith === 4) u += .08;
   u = Math.max(0, Math.min(100, u));
   K.unrest = u;
-  if (u >= 60 && !K.feud && Math.random() < (u - 60) / 400){
+  if (u >= 60 && !K.feud && Math.random() < (u - 55) / 200){
     const pool = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id);
     const leader = pool.find(e => e.role === 'soldier' && e.rank === 2) || pool.find(e => e.role === 'soldier' && e.rank === 1)
-      || pick(pool.filter(e => e.role === 'soldier').concat([null]));
+      || pick(pool.filter(e => e.role === 'soldier')) || pick(pool.filter(e => e.role === 'villager'));
     if (leader) rebel(K, leader);
   }
 }
 
+// 무역
+function computeSpecialties(){
+  const cnt = new Map();
+  for (let i=0;i<N;i++){
+    const k = terr[i]; if (k < 0) continue;
+    let c = cnt.get(k); if (!c){ c = [0,0,0,0]; cnt.set(k, c); }
+    const t = grid[i];
+    if (t === T.FIELD) c[0] += 3;
+    else if (t === T.TREE || t === T.SAPLING) c[1] += 1;
+    else if (t === T.MOUNT) c[3] += 2;
+    const x = i%W, y = (i/W)|0;
+    if (N4.some(([dx,dy]) => inb(x+dx,y+dy) && grid[idx(x+dx,y+dy)] === T.WATER)) c[2] += 1.5;
+  }
+  for (const K of kingdoms.values()){
+    const c = cnt.get(K.id); if (!c) continue;
+    K.spec = c.indexOf(Math.max(...c));
+  }
+}
+function trade(m, K, TK){
+  const give = GOODS[m.goods ?? 0], get = GOODS[TK.spec ?? 0];
+  const value = 8 + (m.goods !== TK.spec ? 6 : 0);
+  K.gold = (K.gold || 0) + value; TK.gold = (TK.gold || 0) + value;
+  K.unrest = Math.max(0, (K.unrest||0) - 4); TK.unrest = Math.max(0, (TK.unrest||0) - 4);
+  K.trades = K.trades || {}; TK.trades = TK.trades || {};
+  K.trades[TK.id] = TK.trades[K.id] = 3 * DAY_LEN;
+  fx.push({type:'ring', x:m.x, y:m.y, t:0, d:.9, color:'#f2c230', r:2});
+  if (performance.now() - lastCapToast > 1500){ lastCapToast = performance.now(); toast(give === get ? `🛒 ${K.name} 상인 ${josa(m.name,'이가')} ${TK.name}과 ${give.sym}${josa(give.name,'을를')} 서로 사고팔았어요 (두 나라 +${value}💰)` : `🛒 ${K.name} 상인 ${josa(m.name,'이가')} ${TK.name}에 ${give.sym}${josa(give.name,'을를')} 팔고 ${get.sym}${josa(get.name,'을를')} 사 왔어요 (두 나라 +${value}💰)`); }
+  m.returning = true; m.goods = TK.spec ?? 0;
+}
+function drawRoutes(t){
+  ctx.save(); ctx.setLineDash([4, 6]); ctx.lineDashOffset = -t*12; ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(242,194,48,.75)';
+  for (const K of kingdoms.values()){
+    for (const o of Object.keys(K.trades || {})){
+      const O = kingdoms.get(+o); if (!O || O.id < K.id) continue;
+      ctx.beginPath(); ctx.moveTo((K.capital%W+.5)*CS, (((K.capital/W)|0)+.5)*CS); ctx.lineTo((O.capital%W+.5)*CS, (((O.capital/W)|0)+.5)*CS); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
 // 외교: 외교관이 상대 성에 닿으면 회담을 해요
 function diplomacy(v, K, TK){
   v.dead = true;
@@ -755,8 +801,9 @@ function makePeace(A, B){
   toast(`🕊 ${A.name}과 ${B.name}이 평화를 맺었어요${win ? ` (${win.name} 우세)` : ''}`);
 }
 function warChance(A, B, base){
-  if (A.faith == null || B.faith == null) return base;
-  return A.faith === B.faith ? base * .4 : base * 1.8;
+  const trade = A.trades && A.trades[B.id] ? .5 : 1;
+  if (A.faith == null || B.faith == null) return base * trade;
+  return (A.faith === B.faith ? base * .4 : base * 1.8) * trade;
 }
 function warText(A, B){
   if (A.faith != null && B.faith != null && A.faith !== B.faith)
@@ -899,6 +946,14 @@ function personThink(e){
     const foe = nearestFoe(e, 2.5, true);
     const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
     if (foe && opts.length){ moveTo(e, toward(opts, foe.x, foe.y, true)); return; }
+    if (e.role === 'merchant'){
+      const TK = kingdoms.get(e.returning ? e.k : e.mission);
+      if (!TK || (!e.returning && atWar(K.id, TK.id))){ e.dead = true; return; }
+      const tx = TK.capital%W + .5, ty = ((TK.capital/W)|0) + .5;
+      if (Math.hypot(e.x - tx, e.y - ty) <= 2.2){ if (e.returning) e.dead = true; else trade(e, K, TK); return; }
+      if (!stepFlow(e, TK.capital) && opts.length) moveTo(e, toward(opts, tx, ty));
+      return;
+    }
     if (e.role === 'monk'){
       const TK = kingdoms.get(e.mission);
       if (!TK || TK.faith === K.faith || atWar(K.id, TK.id) || K.faith == null){ e.dead = true; return; }
@@ -1064,6 +1119,7 @@ function fireTick(){
 function tick(){
   const dark = darkness();
   flowCache.clear();
+  if (specClock++ % 10 === 0) computeSpecialties();
   for (let i=0;i<N;i++){
     const t = grid[i];
     if (t === T.SAPLING){ if (++ages[i] >= 20){ grid[i] = T.TREE; ages[i] = 0; dirty = true; } else if (ages[i] % 5 === 0) dirty = true; }
@@ -1168,6 +1224,18 @@ function tick(){
         }
       }
     }
+    // 무역: 교역로 기한을 줄이고, 상인을 보내요
+    for (const o of Object.keys(K.trades || {})){ if (--K.trades[o] <= 0 || !kingdoms.has(+o)) delete K.trades[o]; }
+    K.merchantT = (K.merchantT || 0) + 1;
+    if (K.merchantT >= 40 && houses.length >= 4 && !ents.some(e => e.type === 'person' && !e.dead && e.role === 'merchant' && e.k === id)){
+      const mx = K.capital%W, my = (K.capital/W)|0;
+      const dist = o => Math.hypot(o.capital%W - mx, ((o.capital/W)|0) - my);
+      const partner = [...kingdoms.values()].filter(o => o.id !== id && !atWar(id, o.id) && dist(o) < 40)
+        .sort((a,b) => (dist(a) - (a.spec !== K.spec ? 12 : 0)) - (dist(b) - (b.spec !== K.spec ? 12 : 0)))[0];
+      if (partner){
+        const m = makePerson(id, 'merchant', K.capital); m.mission = partner.id; m.goods = K.spec ?? 0; K.merchantT = 0;
+      } else K.merchantT = 25;
+    }
     // 외교관: 전쟁 중이면 평화 회담, 평화로우면 불가침 조약을 맺으러 가요
     K.envoy = (K.envoy || 0) + 1;
     if (K.envoy >= 50 && houses.length >= 3 && !ents.some(e => e.type === 'person' && !e.dead && e.role === 'envoy' && e.k === id)){
@@ -1193,7 +1261,9 @@ function tick(){
         if (performance.now() - lastCapToast > 2500){ lastCapToast = performance.now(); toast(`${K.name}의 ${RANKS[r.rank].name} ${josa(r.name,'이가')} 탈영했어요`); }
       }
     }
-    if (K.draft >= MOOD_DRAFT[mood(K)] && (soldiers.get(id)||0) < 2 + houses.length && people < cap){
+    const rich = (K.gold || 0) >= 10;
+    if (K.draft >= MOOD_DRAFT[mood(K)] - (rich ? 3 : 0) && (soldiers.get(id)||0) < 2 + houses.length && people < cap){
+      if (rich) K.gold -= 3;
       const s = makePerson(id, 'soldier', K.capital); s.guard = Math.random() < .34; K.draft = 0; people++;
     }
     // 계급: 쓰러뜨린 수가 많은 순서로 기사, 가장 용맹한 하나는 장군
@@ -1732,6 +1802,19 @@ function drawPerson(e, now, moving){
   if (e.rank >= 1){ ctx.fillStyle = col; ctx.strokeStyle = e.rank === 2 ? '#e0b12a' : '#e3e7ec'; ctx.lineWidth=.8; ctx.beginPath(); ctx.arc(-3,0,2.4,0,7); ctx.fill(); ctx.stroke(); }
 }
 function drawCleric(e, now, moving){
+  if (e.role === 'merchant'){
+    const kg = kingdoms.get(e.k), col = kg ? kg.color : '#888', G = GOODS[e.goods ?? 0];
+    const step = moving ? Math.sin(now*12+e.phase) : 0;
+    ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(-1,5,4.5,1.4,0,0,7); ctx.fill();
+    ctx.fillStyle = G.color; ctx.beginPath(); ctx.arc(-3.5,-1.5,3.4,0,7); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = .6; ctx.stroke();
+    ctx.fillStyle='#3b4252'; ctx.fillRect(-2,2,1.6,3+step); ctx.fillRect(.5,2,1.6,3-step);
+    ctx.fillStyle = e.hit > 0 ? '#ffffff' : '#7a5a3a'; ctx.fillRect(-2.5,-3,5,5.5);
+    ctx.fillStyle = col; ctx.fillRect(-2.5,1,5,1);
+    ctx.fillStyle='#f2c9a0'; ctx.beginPath(); ctx.arc(0,-5.5,2.5,0,7); ctx.fill();
+    ctx.fillStyle='#e8c56a'; ctx.fillRect(-4,-7.6,8,1.4); ctx.fillRect(-2,-9.4,4,2);
+    return;
+  }
   if (e.role === 'envoy'){
     const kg = kingdoms.get(e.k), col = kg ? kg.color : '#888';
     const step = moving ? Math.sin(now*12+e.phase) : 0;
@@ -1957,7 +2040,8 @@ function showInfo(){
     const rank = title(s);
     const heir = K ? heirs(K.id)[0] : null;
     const R = RELIGIONS[faithOf(s.k)];
-    const extra = s.role === 'envoy' ? (kingdoms.get(s.mission) ? `${kingdoms.get(s.mission).name}에 ${s.purpose === 'peace' ? '평화 회담' : '불가침 조약'}을 하러 가는 중 · 공격받지 않아요` : '')
+    const extra = s.role === 'merchant' ? `${GOODS[s.goods ?? 0].sym}${GOODS[s.goods ?? 0].name}을 싣고 ${s.returning ? '돌아오는 중' : `${kingdoms.get(s.mission)?.name || ''}로 가는 중`}`
+      : s.role === 'envoy' ? (kingdoms.get(s.mission) ? `${kingdoms.get(s.mission).name}에 ${s.purpose === 'peace' ? '평화 회담' : '불가침 조약'}을 하러 가는 중 · 공격받지 않아요` : '')
       : CLERIC_TITLE[s.role] ? (R ? `${R.sym} ${R.name}` : '') + (s.role === 'monk' && kingdoms.get(s.mission) ? ` · ${kingdoms.get(s.mission).name}에 믿음을 전하러 가는 중` : ' · 신전을 지켜요')
       : s.role === 'villager' ? '농사짓고 길을 닦아요'
       : s.role === 'king' ? `${K ? K.name : ''}을 다스려요${s.spouse && byId(s.spouse) ? ` · 배우자 ${byId(s.spouse).name}` : ''}`
@@ -2026,11 +2110,13 @@ function updateStats(){
     const hs = bList.filter(b => owner[b] === k.id && grid[b] === T.HOUSE).length;
     const foes = [...k.wars].map(id => kingdoms.get(id)?.name).filter(Boolean);
     const friends = Object.keys(k.allies || {}).map(id => kingdoms.get(+id)?.name).filter(Boolean);
+    const partners = Object.keys(k.trades || {}).map(id => kingdoms.get(+id)?.name).filter(Boolean);
     return `<div class="king"><span class="dot" style="background:${k.color}"></span><b>${k.name}</b>` +
       `<small>${k.faith != null ? `${RELIGIONS[k.faith].sym} ${RELIGIONS[k.faith].name}` : '믿음 없음'}</small>` +
       `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}` : k.feud ? `<span class="war">왕위 다툼 중: ${byId(k.feud.a)?.name || '?'} 대 ${byId(k.feud.b)?.name || '?'}</span>` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
       `${(() => { const h = heirs(k.id)[0]; return h ? ` · 계승자 ${ROYAL_TITLE[h.role]} ${h.name}` : ''; })()}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
-      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs} · ${['민심 좋음', '<span class="shaky">민심 흔들림 · 징병·이사·집짓기 느려짐</span>', '<span class="war">민심 위태 🔥 · 탈영·반란</span>'][mood(k)]}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}</div>`;
+      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs} · ${['민심 좋음', '<span class="shaky">민심 흔들림 · 징병·이사·집짓기 느려짐</span>', '<span class="war">민심 위태 🔥 · 탈영·반란</span>'][mood(k)]} (${Math.round(k.unrest || 0)})</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}` +
+      `<small>💰 ${Math.floor(k.gold || 0)}${k.spec != null ? ` · 특산 ${GOODS[k.spec].sym}${GOODS[k.spec].name}` : ''}${partners.length ? ` · 🛒 ${partners.join(', ')}` : ''}</small></div>`;
   }).join('');
 }
 
@@ -2092,6 +2178,7 @@ function frame(now){
   ctx.setTransform(cam.z,0,0,cam.z,-cam.x*cam.z + sh,-cam.y*cam.z + sv);
   ctx.drawImage(bg, 0, 0);
   ctx.drawImage(tc, 0, 0);
+  drawRoutes(t);
   const x0 = Math.max(0, Math.floor(cam.x/CS)-1), y0 = Math.max(0, Math.floor(cam.y/CS)-1);
   const x1 = Math.min(W, Math.ceil((cam.x + VW/cam.z)/CS)+1), y1 = Math.min(H, Math.ceil((cam.y + VH/cam.z)/CS)+1);
   ctx.fillStyle = 'rgba(255,255,255,.45)';
