@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
 <style>
-/* 한 세계로 고정: 하늘빛 종이 위에 떠 있는 작은 섬. 머리말, 섬(캔버스), 나라, 붓 상자 순서의 한 화면. */
+/* 한 세계로 고정: 하늘빛 종이 위에 떠 있는 섬들. 머리말, 지도, 살펴보기, 나라, 신의 도구 순서의 한 화면. */
 :root{
   color-scheme:light;
   --sky:#dff1f7;
@@ -19,36 +19,39 @@
   --accent:#2f8f6b;
   --accent-ink:#ffffff;
   --god:#7a4fd0;
+  --gold:#c9961a;
   --display:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%}
+html,body{margin:0;min-height:100%}
 body{
   background:linear-gradient(180deg,#cfeaf4 0%,var(--sky) 40%,#eef7f2 100%);
   color:var(--ink);font-family:var(--body);
   overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
 }
-#app{max-width:760px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:100%}
+#app{max-width:780px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .back{font-size:13px;color:var(--muted);text-decoration:none}
 .name{
   font-family:var(--display);font-size:34px;line-height:1.1;color:var(--ink);
-  border:0;background:transparent;padding:0;width:100%;max-width:12em;outline:none;
-  border-bottom:2px dashed transparent;
+  border:0;background:transparent;padding:0;width:100%;max-width:12em;outline:none;border-bottom:2px dashed transparent;
 }
 .name:focus{border-bottom-color:var(--line)}
 .clock{font-family:var(--display);font-size:18px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:8px}
 .stats{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
 .stats b{font-family:var(--display);font-weight:400;font-size:18px;color:var(--ink);margin-left:3px;font-variant-numeric:tabular-nums}
 
-.stage{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 6px 0 #a9cdd9,0 10px 30px rgba(36,50,58,.15);background:#1d5b8f}
-canvas{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+.stage{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 6px 0 #a9cdd9,0 10px 30px rgba(36,50,58,.15);background:#1f5f94}
+#cv{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+#mini{position:absolute;right:8px;top:8px;width:26%;max-width:160px;height:auto;border:2px solid rgba(255,255,255,.85);border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer;image-rendering:pixelated;touch-action:none}
+#mini[hidden]{display:none}
+.mapbtns{position:absolute;left:8px;bottom:8px;display:flex;gap:6px}
+.mapbtns button{width:34px;height:34px;border:0;border-radius:8px;background:rgba(255,253,246,.92);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .toast{
-  position:absolute;left:50%;top:12px;transform:translate(-50%,-8px);opacity:0;max-width:92%;
+  position:absolute;left:50%;top:12px;transform:translate(-50%,-8px);opacity:0;max-width:70%;
   background:rgba(255,253,246,.95);color:var(--ink);padding:7px 14px;border-radius:999px;
-  font-size:14px;transition:opacity .25s,transform .25s;pointer-events:none;text-align:center;
-  box-shadow:0 2px 8px rgba(0,0,0,.15)
+  font-size:14px;transition:opacity .25s,transform .25s;pointer-events:none;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.15)
 }
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
@@ -64,19 +67,27 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated;touch-acti
 .tools.god .tool{background:#f2eefb}
 .tools.god .tool[aria-pressed="true"]{border-color:var(--god);background:#e7defa}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
-.seg{display:flex;background:#f1f5ef;border-radius:10px;padding:3px}
+.seg{display:flex;background:#f1f5ef;border-radius:10px;padding:3px;flex-wrap:wrap}
 .seg button{border:0;background:transparent;border-radius:8px;padding:6px 10px;font-family:var(--body);font-size:13px;color:var(--ink);cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .btn{border:0;background:#f1f5ef;border-radius:10px;padding:8px 12px;font-family:var(--body);font-size:13px;color:var(--ink);cursor:pointer}
 .btn.main{background:var(--accent);color:var(--accent-ink)}
 .spacer{flex:1}
-.hint{font-size:12px;color:var(--muted);line-height:1.5;margin:0 2px}
-.kings{display:flex;flex-wrap:wrap;gap:6px}
-.king{display:flex;align-items:center;gap:6px;background:#f6f4ee;border-radius:999px;padding:5px 11px 5px 7px;font-size:13px}
-.king .dot{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(0,0,0,.15)}
-.king b{font-family:var(--display);font-weight:400;font-size:15px}
+.hint{font-size:12px;color:var(--muted);line-height:1.55;margin:0 2px}
+
+.info{display:flex;gap:12px;align-items:center;min-height:44px}
+.info .badge{font-family:var(--display);font-size:13px;padding:3px 9px;border-radius:999px;color:#fff;white-space:nowrap}
+.info b{font-family:var(--display);font-weight:400;font-size:19px}
+.info small{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.info .col{display:flex;flex-direction:column;gap:2px;min-width:0}
+
+.kings{display:flex;flex-direction:column;gap:6px}
+.king{display:flex;align-items:center;gap:8px;background:#f6f4ee;border-radius:10px;padding:6px 10px;font-size:13px;flex-wrap:wrap}
+.king .dot{width:14px;height:14px;border-radius:3px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.15);flex:none}
+.king b{font-family:var(--display);font-weight:400;font-size:16px}
 .king small{color:var(--muted);font-variant-numeric:tabular-nums}
 .king .war{color:#c9483a;font-size:12px}
+.king .crown{color:var(--gold)}
 button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
@@ -85,7 +96,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
   <a class="back" href="https://hoohoo17.github.io/craft/">← 게임 목록</a>
   <header>
     <div style="flex:1;min-width:200px">
-      <input class="name" id="name" maxlength="16" aria-label="섬 이름" value="나만의 섬">
+      <input class="name" id="name" maxlength="16" aria-label="세계 이름" value="나만의 섬">
       <div class="stats" id="stats"></div>
     </div>
     <div class="clock"><span id="clock"></span>
@@ -98,8 +109,19 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
   </header>
 
   <div class="stage">
-    <canvas id="cv" aria-label="섬 지도. 끌어서 칠하세요"></canvas>
+    <canvas id="cv" aria-label="세계 지도"></canvas>
+    <canvas id="mini" aria-label="전체 지도. 누르면 그곳으로 가요" hidden></canvas>
+    <div class="mapbtns">
+      <button id="zoomIn" aria-label="크게 보기">＋</button>
+      <button id="zoomOut" aria-label="작게 보기">－</button>
+      <button id="fit" aria-label="전체 보기">🗺</button>
+    </div>
     <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="box">
+    <div class="label">살펴보기 — 🔍 도구로 사람이나 건물을 누르세요</div>
+    <div class="info" id="info"><span class="hint">아직 고른 것이 없어요.</span></div>
   </div>
 
   <div class="box">
@@ -110,12 +132,12 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
   <div class="box">
     <div class="label">신의 힘</div>
     <div class="tools god" id="godTools"></div>
-    <div class="label" style="margin-top:10px">땅 칠하기</div>
+    <div class="label" style="margin-top:10px">땅 칠하기 — 🏯 성을 놓으면 새 나라가 세워져요</div>
     <div class="tools" id="terrainTools"></div>
     <div class="label" style="margin-top:10px">생물 놓기</div>
     <div class="tools" id="lifeTools"></div>
     <div class="row">
-      <span class="hint">붓 크기</span>
+      <span class="hint">붓</span>
       <div class="seg" id="brush">
         <button data-s="1" aria-pressed="true">작게</button>
         <button data-s="2" aria-pressed="false">보통</button>
@@ -124,22 +146,38 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <div class="spacer"></div>
       <button class="btn" id="undo">↶ 되돌리기</button>
       <button class="btn" id="photo">📷 사진</button>
-      <button class="btn main" id="fresh">🏝 새 섬</button>
+    </div>
+    <div class="row">
+      <span class="hint">새 세계</span>
+      <div class="seg" id="sizeSel">
+        <button data-s="0" aria-pressed="true">작은 섬</button>
+        <button data-s="1" aria-pressed="false">큰 섬</button>
+        <button data-s="2" aria-pressed="false">대륙</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">집을 지으면 나라가 세워지고 주민이 이사 와요. 주민은 스스로 집과 밭과 길을 늘리고, 영토가 맞닿은 나라끼리는 전쟁을 벌여 집을 빼앗기도 해요. 번개와 불, 비, 운석으로 세상을 흔들어 보세요. 섬은 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 늙어 숨진 왕의 자리는 새 왕이 이어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
 (() => {
-const W = 40, H = 28, CS = 16, N = W*H;
-const T = {WATER:0, SAND:1, GRASS:2, TREE:3, MOUNT:4, FLOWER:5, ROAD:6, HOUSE:7, SAPLING:8, FIELD:9, FIRE:10, BURNT:11};
+const CS = 16, VW = 640, VH = 448;
+const SIZES = [{w:40, h:28, k:2}, {w:60, h:42, k:4}, {w:80, h:56, k:6}];
+let W = 40, H = 28, N = W*H, size = 0;
+const cam = {x:0, y:0, z:1};
+const T = {WATER:0, SAND:1, GRASS:2, TREE:3, MOUNT:4, FLOWER:5, ROAD:6, HOUSE:7, SAPLING:8, FIELD:9, FIRE:10, BURNT:11, CASTLE:12};
+const isBld = t => t === T.HOUSE || t === T.CASTLE;
+const MAXHP = {[T.HOUSE]:40, [T.CASTLE]:180};
 const FLAMMABLE = {[T.TREE]:.5, [T.GRASS]:.12, [T.FLOWER]:.2, [T.SAPLING]:.3, [T.FIELD]:.3, [T.HOUSE]:.4};
 const GOD_TOOLS = [
+  {id:'look', ico:'🔍', name:'살펴보기'},
   {id:'bolt', ico:'⚡', name:'번개'},
   {id:'fire', ico:'🔥', name:'불'},
   {id:'rain', ico:'🌧', name:'비'},
   {id:'meteor', ico:'☄️', name:'운석'},
+  {id:'bless', ico:'✨', name:'축복'},
 ];
 const TERRAIN_TOOLS = [
   {id:'t'+T.WATER, ico:'🌊', name:'바다'},
@@ -151,6 +189,7 @@ const TERRAIN_TOOLS = [
   {id:'t'+T.ROAD, ico:'🟫', name:'길'},
   {id:'t'+T.FIELD, ico:'🌾', name:'밭'},
   {id:'t'+T.HOUSE, ico:'🏠', name:'집'},
+  {id:'t'+T.CASTLE, ico:'🏯', name:'성'},
 ];
 const LIFE_TOOLS = [
   {id:'rabbit', ico:'🐇', name:'토끼'},
@@ -161,26 +200,27 @@ const LIFE_TOOLS = [
   {id:'erase', ico:'🧺', name:'데려가기'},
 ];
 const SPEED = {rabbit:1.6, sheep:.6, wolf:1.9, person:1.1, fish:.8, bird:3};
-const KCOLORS = ['#e4573d','#3f7fd1','#f0b429','#8b5cc7','#2f9e6e','#e46fa1','#1fa8b0','#a0602d'];
+// 계급: 병사 → 기사 → 장군. 왕은 따로.
+const RANKS = [{name:'병사', hp:1, dmg:1}, {name:'기사', hp:1.5, dmg:1.4}, {name:'장군', hp:2.2, dmg:2}];
+const KCOLORS = ['#e4573d','#3f7fd1','#f0b429','#8b5cc7','#2f9e6e','#e46fa1','#1fa8b0','#a0602d','#5b6bd6','#c2452f'];
 const SYL = ['가','나','라','마','미','소','하','도','루','벨','온','세','리','타','유','진','바','로','아','윤'];
-const DAY_LEN = 90; // 초
-const KEY = 'craft-island-v2';
+const NAME1 = ['도','서','하','지','민','수','태','나','한','보','은','다','가','시','유','라','새','이','준','예','소','우'];
+const NAME2 = ['윤','준','린','호','서','아','오','래','결','람','솔','온','람','우','나','봄','안','희','빈','율','별','찬'];
+const DAY_LEN = 90;
+const KEY = 'craft-island-v3';
 
 const cv = document.getElementById('cv');
-cv.width = W*CS; cv.height = H*CS;
+cv.width = VW; cv.height = VH;
 const ctx = cv.getContext('2d');
-const bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height;
-const bctx = bg.getContext('2d');
-const tc = document.createElement('canvas'); tc.width = cv.width; tc.height = cv.height;
-const tctx = tc.getContext('2d');
+const bg = document.createElement('canvas'), bctx = bg.getContext('2d');
+const tc = document.createElement('canvas'), tctx = tc.getContext('2d');
+const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
 
-let grid = new Uint8Array(N), ages = new Uint16Array(N), owner = new Int16Array(N).fill(-1);
-let terr = new Int16Array(N).fill(-1);
+let grid, ages, owner, bhp, terr;
 let ents = [], fx = [];
-let kingdoms = new Map(), nextKid = 0;
-let houses = [], borders = new Set();
+let kingdoms = new Map(), nextKid = 0, bList = [], borders = new Set(), flowCache = new Map();
 let tod = .3, day = 1, harvest = 0, speedMul = 1;
-let tool = 'bolt', brush = 1;
+let tool = 'look', brush = 1, selected = null;
 let dirty = true, changed = false, terrDirty = true, shake = 0, flash = 0;
 const undoStack = [];
 
@@ -190,46 +230,78 @@ const hash = (x,y,s=0) => { let h = (x*374761393 + y*668265263 + s*1442695041) |
 const rnd = (a,b) => a + Math.random()*(b-a);
 const pick = a => a[Math.floor(Math.random()*a.length)];
 const cx = e => Math.floor(e.x), cy = e => Math.floor(e.y);
+const d2 = (ax,ay,bx,by) => (ax-bx)**2 + (ay-by)**2;
+const N4 = [[1,0],[-1,0],[0,1],[0,-1]];
+
+function alloc(){
+  N = W*H;
+  grid = new Uint8Array(N); ages = new Uint16Array(N); owner = new Int16Array(N).fill(-1);
+  bhp = new Float32Array(N); terr = new Int16Array(N).fill(-1);
+  bg.width = tc.width = W*CS; bg.height = tc.height = H*CS;
+  flowCache = new Map();
+}
 
 /* ---------- 땅 바꾸기 ---------- */
-function setTile(i, t){
-  if (grid[i] === t) return;
-  if (grid[i] === T.HOUSE || t === T.HOUSE) terrDirty = true;
-  if (grid[i] === T.HOUSE) owner[i] = -1;
+function setTile(i, t, k){
+  const was = grid[i];
+  if (was === t && !isBld(t)) return;
   grid[i] = t; ages[i] = 0; dirty = changed = true;
+  if (isBld(t)){ owner[i] = k ?? owner[i]; bhp[i] = MAXHP[t]; }
+  else owner[i] = -1;
+  if (isBld(t) || isBld(was)){ terrDirty = true; flowCache.clear(); }
+}
+
+/* ---------- 이름 ---------- */
+// 받침이 있으면 앞의 조사, 없으면 뒤의 조사: josa('한나','이가') → '한나가'
+function josa(w, pair){
+  const c = w.charCodeAt(w.length-1) - 0xAC00;
+  const has = c >= 0 && c <= 11171 && c % 28 !== 0;
+  return w + (has ? pair[0] : pair[1]);
+}
+function personName(){ return pick(NAME1) + pick(NAME2); }
+function kingdomName(){
+  const used = new Set([...kingdoms.values()].map(k => k.name));
+  let name;
+  for (let k=0;k<40;k++){ name = pick(SYL)+pick(SYL)+'국'; if (!used.has(name)) break; }
+  return name;
 }
 
 /* ---------- 나라 ---------- */
-function newKingdom(){
-  const used = new Set([...kingdoms.values()].map(k => k.name));
-  let name;
-  for (let k=0;k<30;k++){ name = pick(SYL)+pick(SYL)+'국'; if (!used.has(name)) break; }
+function newKingdom(capital){
   const usedC = new Set([...kingdoms.values()].map(k => k.color));
   const color = KCOLORS.find(c => !usedC.has(c)) || pick(KCOLORS);
-  const k = {id: nextKid++, name, color, wars: new Set()};
+  const k = {id: nextKid++, name: kingdomName(), color, wars: new Set(), capital, draft: 0, hadKing: false, born: day};
   kingdoms.set(k.id, k);
   return k;
 }
+function foundKingdom(i, quiet){
+  const K = newKingdom(i);
+  setTile(i, T.CASTLE, K.id);
+  if (!quiet) toast(`🏯 ${K.name}이 세워졌어요`);
+  return K;
+}
 function nearestKingdom(x, y, r){
   let best = -1, bd = 1e9;
-  for (const h of houses){ const d = Math.abs(h.x-x)+Math.abs(h.y-y); if (d <= r && d < bd && h.k >= 0){ bd = d; best = h.k; } }
+  for (const b of bList){ const bx = b%W, by = (b/W)|0, d = Math.abs(bx-x)+Math.abs(by-y); if (d <= r && d < bd && owner[b] >= 0){ bd = d; best = owner[b]; } }
   return best;
 }
 function atWar(a, b){ const k = kingdoms.get(a); return !!(k && k.wars.has(b)); }
 function anyWar(a){ const k = kingdoms.get(a); return !!(k && k.wars.size); }
+
 function computeTerr(){
-  houses = [];
-  for (let i=0;i<N;i++) if (grid[i] === T.HOUSE) houses.push({i, x:i%W, y:Math.floor(i/W), k:owner[i]});
+  bList = [];
+  for (let i=0;i<N;i++) if (isBld(grid[i])) bList.push(i);
+  // 주인 없는 건물은 가까운 나라에 붙거나 빈 집으로 남아요
   terr.fill(-1);
-  const R = 3;
-  for (const h of houses){
-    if (h.k < 0) continue;
-    for (let dy=-R;dy<=R;dy++) for (let dx=-R;dx<=R;dx++){
-      if (Math.abs(dx)+Math.abs(dy) > R+1) continue;
-      const x = h.x+dx, y = h.y+dy;
-      if (!inb(x,y) || grid[idx(x,y)] === T.WATER) continue;
-      const i = idx(x,y), d = Math.abs(dx)+Math.abs(dy);
-      if (terr[i] < 0 || d === 0) terr[i] = h.k;
+  const bd = new Float32Array(N).fill(1e9);
+  for (const b of bList){
+    if (owner[b] < 0 || !kingdoms.has(owner[b])) continue;
+    const bx = b%W, by = (b/W)|0, r = grid[b] === T.CASTLE ? 4 : 3;
+    for (let dy=-r;dy<=r;dy++) for (let dx=-r;dx<=r;dx++){
+      const d = dx*dx+dy*dy; if (d > r*r+1) continue;
+      const x = bx+dx, y = by+dy; if (!inb(x,y)) continue;
+      const i = idx(x,y); if (grid[i] === T.WATER) continue;
+      if (d < bd[i]){ bd[i] = d; terr[i] = owner[b]; }
     }
   }
   borders = new Set();
@@ -241,14 +313,22 @@ function computeTerr(){
       if (b >= 0 && b !== a) borders.add(a < b ? a+'-'+b : b+'-'+a);
     }
   }
-  // 집이 하나도 없는 나라는 사라져요
-  const alive = new Set(houses.map(h => h.k));
-  for (const [id,k] of kingdoms){
-    if (!alive.has(id)){
-      kingdoms.delete(id);
-      for (const o of kingdoms.values()) o.wars.delete(id);
-      toast(`${k.name}이 사라졌어요`);
+  // 성이 없어진 나라는 남은 집으로 새 성을 쌓거나 사라져요
+  for (const [id,K] of [...kingdoms]){
+    if (grid[K.capital] === T.CASTLE && owner[K.capital] === id) continue;
+    const mine = bList.filter(b => owner[b] === id);
+    const castle = mine.find(b => grid[b] === T.CASTLE);
+    if (castle !== undefined){ K.capital = castle; continue; }
+    if (mine.length){
+      const h = pick(mine);
+      grid[h] = T.CASTLE; bhp[h] = MAXHP[T.CASTLE] * .5; K.capital = h; dirty = true; flowCache.clear();
+      toast(`${K.name}이 새 성을 쌓았어요`);
+      continue;
     }
+    kingdoms.delete(id);
+    for (const o of kingdoms.values()) o.wars.delete(id);
+    ents.forEach(e => { if (e.type === 'person' && e.k === id) kill(e); });
+    toast(`${K.name}이 사라졌어요`);
   }
   renderTerr();
   terrDirty = false;
@@ -258,7 +338,7 @@ function renderTerr(){
   for (let y=0;y<H;y++) for (let x=0;x<W;x++){
     const k = terr[idx(x,y)]; if (k < 0) continue;
     const kg = kingdoms.get(k); if (!kg) continue;
-    tctx.fillStyle = kg.color; tctx.globalAlpha = .16; tctx.fillRect(x*CS,y*CS,CS,CS);
+    tctx.fillStyle = kg.color; tctx.globalAlpha = .15; tctx.fillRect(x*CS,y*CS,CS,CS);
     tctx.globalAlpha = .85;
     const px = x*CS, py = y*CS;
     if (!inb(x-1,y) || terr[idx(x-1,y)] !== k) tctx.fillRect(px,py,2,CS);
@@ -269,10 +349,11 @@ function renderTerr(){
   tctx.globalAlpha = 1;
 }
 
-/* ---------- 섬 만들기 ---------- */
+/* ---------- 세계 만들기 ---------- */
 function generate(){
+  W = SIZES[size].w; H = SIZES[size].h; alloc();
   let n = new Float32Array(N).map(() => Math.random());
-  for (let pass=0; pass<4; pass++){
+  for (let pass=0; pass<4+size; pass++){
     const m = new Float32Array(N);
     for (let y=0;y<H;y++) for (let x=0;x<W;x++){
       let s=0,c=0;
@@ -287,32 +368,67 @@ function generate(){
     const nx = (x - W/2 + .5)/(W/2), ny = (y - H/2 + .5)/(H/2);
     const h = ((n[i]-lo)/(hi-lo||1))*.55 + (1-Math.hypot(nx,ny))*.85;
     let t;
-    if (h < .52) t = T.WATER;
-    else if (h < .58) t = T.SAND;
-    else if (h < .82) t = Math.random() < .04 ? T.FLOWER : T.GRASS;
-    else if (h < .97) t = Math.random() < .7 ? T.TREE : T.GRASS;
+    if (h < .5) t = T.WATER;
+    else if (h < .56) t = T.SAND;
+    else if (h < .82) t = Math.random() < .04 ? T.FLOWER : (Math.random() < .08 ? T.TREE : T.GRASS);
+    else if (h < .97) t = Math.random() < .65 ? T.TREE : T.GRASS;
     else t = T.MOUNT;
-    grid[i] = t; ages[i] = 0; owner[i] = -1;
+    grid[i] = t;
   }
-  ents = []; fx = []; kingdoms = new Map(); nextKid = 0;
-  for (let k=0;k<5;k++) spawnRandom('rabbit');
-  for (let k=0;k<3;k++) spawnRandom('sheep');
-  for (let k=0;k<2;k++) spawnRandom('wolf');
-  for (let k=0;k<7;k++) spawnRandom('fish');
-  for (let k=0;k<3;k++) spawnRandom('bird');
+  ents = []; fx = []; kingdoms = new Map(); nextKid = 0; selected = null;
+  const scale = (W*H)/(40*28);
+  for (let k=0;k<5*scale;k++) spawnRandom('rabbit');
+  for (let k=0;k<3*scale;k++) spawnRandom('sheep');
+  for (let k=0;k<2*scale;k++) spawnRandom('wolf');
+  for (let k=0;k<7*scale;k++) spawnRandom('fish');
+  for (let k=0;k<3*scale;k++) spawnRandom('bird');
+  // 처음 나라들
+  computeTerr();
+  const spots = spreadSpots(SIZES[size].k);
+  spots.forEach(([x,y]) => {
+    for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) if (grid[idx(x+dx,y+dy)] !== T.WATER) grid[idx(x+dx,y+dy)] = T.GRASS;
+    const K = foundKingdom(idx(x,y), true);
+    if (grid[idx(x+2,y)] !== T.WATER && grid[idx(x+2,y)] !== T.MOUNT) setTile(idx(x+2,y), T.HOUSE, K.id);
+    if (grid[idx(x-2,y+1)] !== T.WATER && grid[idx(x-2,y+1)] !== T.MOUNT) setTile(idx(x-2,y+1), T.HOUSE, K.id);
+  });
   tod = .3; day = 1; harvest = 0;
   dirty = changed = terrDirty = true;
+  computeTerr();
+  cam.z = 1; fitView();
+}
+function spreadSpots(n){
+  const cand = [];
+  for (let y=3;y<H-3;y++) for (let x=3;x<W-3;x++){
+    let ok = true;
+    for (let dy=-2;dy<=2 && ok;dy++) for (let dx=-2;dx<=2;dx++){ const t = grid[idx(x+dx,y+dy)]; if (t === T.WATER || t === T.MOUNT){ ok = false; break; } }
+    if (ok) cand.push([x,y]);
+  }
+  if (cand.length < n) return cand.slice(0, n);
+  let best = [], bestScore = -1;
+  for (let tries=0; tries<40; tries++){
+    const pts = [pick(cand)];
+    while (pts.length < n){
+      let bp = null, bd = -1;
+      for (let k=0;k<60;k++){ const c = pick(cand); const d = Math.min(...pts.map(q => Math.hypot(q[0]-c[0], q[1]-c[1]))); if (d > bd){ bd = d; bp = c; } }
+      pts.push(bp);
+    }
+    let sc = 1e9; for (let i=0;i<n;i++) for (let j=i+1;j<n;j++) sc = Math.min(sc, Math.hypot(pts[i][0]-pts[j][0], pts[i][1]-pts[j][1]));
+    if (sc > bestScore){ bestScore = sc; best = pts; }
+  }
+  return best;
 }
 
+/* ---------- 생물 ---------- */
 function walkable(type, x, y, e){
   if (!inb(x,y)) return false;
-  const t = grid[idx(x,y)];
+  const i = idx(x,y), t = grid[i];
   if (type === 'bird') return true;
   if (type === 'fish') return t === T.WATER;
   if (t === T.WATER || t === T.MOUNT || t === T.FIRE) return false;
-  if (t === T.HOUSE) return type === 'person' && e && e.home === idx(x,y);
+  if (isBld(t)) return type === 'person' && e && e.home === i;
   return true;
 }
+const walkP = (x,y) => { if (!inb(x,y)) return false; const t = grid[idx(x,y)]; return t !== T.WATER && t !== T.MOUNT && t !== T.FIRE && !isBld(t); };
 function spawnRandom(type){
   for (let k=0;k<200;k++){
     const x = Math.floor(Math.random()*W), y = Math.floor(Math.random()*H);
@@ -321,13 +437,620 @@ function spawnRandom(type){
 }
 function makeEnt(type, x, y, home){
   return {type, x:x+.5, y:y+.5, tx:x+.5, ty:y+.5, wait:Math.random()*2, dir:1,
-          home: home ?? -1, alpha:1, phase:Math.random()*6, age:0, life:rnd(360,720), hunger:0};
+          home: home ?? -1, alpha:1, phase:Math.random()*6, age:0, life:rnd(360,720), hunger:0, think:Math.random()*.3, cd:0};
 }
-function kill(e, color){
+function makePerson(k, role, home){
+  const hx = home%W, hy = (home/W)|0;
+  const spots = [];
+  for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) if ((dx||dy) && walkP(hx+dx,hy+dy)) spots.push([hx+dx,hy+dy]);
+  const [x,y] = spots.length ? pick(spots) : [hx,hy];
+  const e = makeEnt('person', x, y, home);
+  e.k = k; e.role = role; e.rank = 0; e.kills = 0; e.name = personName();
+  e.life = role === 'king' ? rnd(700,1100) : rnd(420,800);
+  setStats(e); e.hp = e.max;
+  if (role === 'villager') e.alpha = 0;
+  ents.push(e);
+  return e;
+}
+function setStats(e){
+  const old = e.max || 0;
+  e.max = e.role === 'villager' ? 10 : e.role === 'king' ? 45 : Math.round(30 * RANKS[e.rank].hp);
+  if (old) e.hp = Math.min(e.max, e.hp + (e.max - old));
+}
+const dmgOf = e => e.role === 'king' ? 6 : e.role === 'soldier' ? 5 * RANKS[e.rank].dmg : 0;
+const title = e => e.type !== 'person' ? '' : e.role === 'king' ? '왕' : e.role === 'villager' ? '주민' : RANKS[e.rank].name;
+// by: 쓰러뜨린 사람(없으면 신의 힘이나 불). natural: 수명이 다해 숨진 경우
+function kill(e, color, by, natural){
   if (e.dead) return;
   e.dead = true;
   fx.push({type:'puff', x:e.x, y:e.y, t:0, d:.6, color: color || 'rgba(230,230,230,'});
+  if (e.type === 'person' && e.role === 'king' && !natural && kingdoms.has(e.k)){
+    // 왕이 쓰러지면 나라가 멸망해요
+    const conqueror = by && by.type === 'person' && kingdoms.has(by.k) && by.k !== e.k ? by.k : -1;
+    fallKingdom(e.k, conqueror, e.name);
+    return;
+  }
+  if (e.type === 'person' && e.role === 'soldier' && e.rank === 2){ const K = kingdoms.get(e.k); if (K) toast(`${K.name}의 장군 ${josa(e.name,'이가')} 쓰러졌어요`); }
 }
+function hurt(e, d, by){
+  if (e.dead) return;
+  e.hp -= d; e.hit = .15;
+  if (e.hp <= 0){ if (by && by.type === 'person') by.kills++; kill(e, 'rgba(210,70,55,', by); }
+}
+function hurtBld(i, d, k){
+  if (!isBld(grid[i]) || owner[i] === k) return;
+  bhp[i] -= d;
+  if (bhp[i] <= 0) capture(i, k);
+}
+let lastCapToast = 0;
+function capture(i, k){
+  const old = owner[i], A = kingdoms.get(k), B = kingdoms.get(old);
+  if (!A) return;
+  fx.push({type:'ring', x:i%W+.5, y:((i/W)|0)+.5, t:0, d:.7, color:A.color, r:2});
+  if (grid[i] === T.CASTLE && B && i === B.capital){
+    absorb(old, k);
+    toast(`🏯 ${A.name}이 ${B.name}의 성을 함락했어요. ${B.name}은 ${A.name}에 흡수됐어요`);
+  } else {
+    owner[i] = k; bhp[i] = MAXHP[grid[i]]*.4;
+    ents.forEach(e => { if (e.type === 'person' && e.home === i) e.k = k; });
+    if (B && performance.now() - lastCapToast > 2500){ lastCapToast = performance.now(); toast(`${A.name}이 ${B.name}의 ${grid[i] === T.CASTLE ? '성을' : '집을'} 빼앗았어요`); }
+  }
+  dirty = changed = terrDirty = true; flowCache.clear();
+}
+
+// 나라 old를 나라 k가 통째로 차지해요. 옛 왕은 물러나요.
+function absorb(old, k){
+  const A = kingdoms.get(k);
+  for (let j=0;j<N;j++) if (owner[j] === old){ owner[j] = k; bhp[j] = MAXHP[grid[j]]*.4; }
+  ents.forEach(e => {
+    if (e.type !== 'person' || e.k !== old || e.dead) return;
+    if (e.role === 'king'){ e.dead = true; fx.push({type:'puff', x:e.x, y:e.y, t:0, d:.6, color:'rgba(230,230,230,'}); }
+    else { e.k = k; if (e.role === 'soldier') e.home = A.capital; }
+  });
+  kingdoms.delete(old);
+  for (const o of kingdoms.values()) o.wars.delete(old);
+  dirty = changed = terrDirty = true; flowCache.clear();
+}
+// 왕이 쓰러져 나라가 멸망해요. 쓰러뜨린 나라가 있으면 그 나라가 차지하고, 없으면 폐허가 돼요.
+function fallKingdom(id, by, kingName){
+  const K = kingdoms.get(id);
+  if (!K) return;
+  if (by >= 0){
+    const A = kingdoms.get(by);
+    absorb(id, by);
+    fx.push({type:'ring', x:K.capital%W+.5, y:((K.capital/W)|0)+.5, t:0, d:.9, color:A.color, r:3});
+    toast(`👑 ${A.name}이 ${K.name}의 왕 ${josa(kingName,'을를')} 쓰러뜨려 나라를 차지했어요`);
+    return;
+  }
+  for (let j=0;j<N;j++) if (owner[j] === id && isBld(grid[j])) setTile(j, T.BURNT);
+  kingdoms.delete(id);
+  for (const o of kingdoms.values()) o.wars.delete(id);
+  ents.forEach(e => { if (e.type === 'person' && e.k === id && !e.dead){ e.dead = true; fx.push({type:'puff', x:e.x, y:e.y, t:0, d:.8, color:'rgba(120,120,120,'}); } });
+  if (selected && selected.k === id) selected = null;
+  terrDirty = true;
+  toast(`👑 ${K.name}의 왕 ${josa(kingName,'이가')} 쓰러져 나라가 멸망했어요`);
+}
+
+/* ---------- 길 찾기 ---------- */
+function bfs(goal){
+  const dist = new Int16Array(N).fill(9999);
+  dist[goal] = 0; const q = [goal]; let h = 0;
+  while (h < q.length){
+    const j = q[h++], x = j%W, y = (j/W)|0;
+    for (const [dx,dy] of N4){
+      const nx = x+dx, ny = y+dy;
+      if (!walkP(nx,ny)) continue;
+      const k = idx(nx,ny);
+      if (dist[k] > dist[j]+1){ dist[k] = dist[j]+1; q.push(k); }
+    }
+  }
+  return dist;
+}
+function flow(goal){ let f = flowCache.get(goal); if (!f){ f = bfs(goal); flowCache.set(goal, f); } return f; }
+function stepFlow(e, goal){
+  const f = flow(goal), x = cx(e), y = cy(e);
+  let best = null, bd = f[idx(x,y)];
+  for (const [dx,dy] of N4){ const nx = x+dx, ny = y+dy; if (!walkP(nx,ny)) continue; const v = f[idx(nx,ny)] + Math.random()*.3; if (v < bd){ bd = v; best = [nx,ny]; } }
+  if (best) moveTo(e, best);
+  return !!best;
+}
+function moveTo(e, [x,y]){ e.tx = x+.5; e.ty = y+.5; if (e.tx !== e.x) e.dir = e.tx > e.x ? 1 : -1; }
+function neighbors(e){
+  const x = cx(e), y = cy(e), reach = e.type === 'bird' ? 6 : 1, out = [];
+  for (let dy=-reach; dy<=reach; dy++) for (let dx=-reach; dx<=reach; dx++){
+    if (!dx && !dy) continue;
+    if (reach === 1 && dx && dy) continue;
+    if (walkable(e.type, x+dx, y+dy, e)) out.push([x+dx, y+dy]);
+  }
+  return out;
+}
+function toward(opts, gx, gy, away){
+  let best = null, bd = 1e9;
+  for (const o of opts){ const d = (away ? -1 : 1) * (Math.abs(o[0]+.5-gx)+Math.abs(o[1]+.5-gy)) + Math.random()*.5; if (d < bd){ bd = d; best = o; } }
+  return best;
+}
+function nearestEnt(e, types, r){
+  let best = null, bd = r*r;
+  for (const o of ents){ if (o.dead || !types.includes(o.type)) continue; const d = d2(o.x,o.y,e.x,e.y); if (d < bd){ bd = d; best = o; } }
+  return best;
+}
+function nearestFoe(e, r, armedOnly){
+  let best = null, bd = r*r;
+  for (const o of ents){
+    if (o.dead || o.type !== 'person' || o.alpha < .3 || !atWar(e.k, o.k)) continue;
+    if (armedOnly && o.role === 'villager') continue;
+    const d = d2(o.x,o.y,e.x,e.y);
+    if (d < bd){ bd = d; best = o; }
+  }
+  return best;
+}
+function nearestEnemyBld(e, r){
+  let best = -1, bd = r*r;
+  for (const b of bList){ if (!atWar(e.k, owner[b])) continue; const d = d2(b%W+.5, ((b/W)|0)+.5, e.x, e.y); if (d < bd){ bd = d; best = b; } }
+  return best;
+}
+function wander(e, center, r){
+  const ccx = center%W, ccy = (center/W)|0, x = cx(e), y = cy(e);
+  const opts = N4.map(([dx,dy]) => [x+dx,y+dy]).filter(([nx,ny]) => walkP(nx,ny) && Math.abs(nx-ccx)+Math.abs(ny-ccy) <= r);
+  if (opts.length) moveTo(e, pick(opts));
+  else { const o = neighbors(e).filter(([nx,ny]) => walkP(nx,ny)); if (o.length) moveTo(e, toward(o, ccx+.5, ccy+.5)); }
+}
+
+/* ---------- 사람의 생각 ---------- */
+function personThink(e){
+  const K = kingdoms.get(e.k), dark = darkness();
+  if (!K) return;
+  if (e.role === 'villager'){
+    const foe = nearestFoe(e, 2.5, true);
+    const opts = neighbors(e);
+    if (!opts.length) return;
+    if (foe){ moveTo(e, toward(opts, foe.x, foe.y, true)); return; }
+    if (dark > .45){ moveTo(e, Math.random() < .85 ? toward(opts, e.home%W+.5, ((e.home/W)|0)+.5) : pick(opts)); return; }
+    const roads = opts.filter(([x,y]) => grid[idx(x,y)] === T.ROAD || grid[idx(x,y)] === T.FIELD);
+    const outside = opts.filter(([x,y]) => !isBld(grid[idx(x,y)]));
+    moveTo(e, roads.length && Math.random() < .7 ? pick(roads) : pick(outside.length ? outside : opts));
+    return;
+  }
+  // 병사와 왕
+  const foe = nearestFoe(e, e.role === 'king' ? 1.8 : 4.5, false);
+  if (foe){
+    if (Math.sqrt(d2(foe.x,foe.y,e.x,e.y)) <= 1){ e.atk = {u:foe}; return; }
+    e.atk = null;
+    const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+    if (opts.length) moveTo(e, toward(opts, foe.x, foe.y));
+    return;
+  }
+  if (e.role === 'soldier'){
+    const b = nearestEnemyBld(e, 1.5);
+    if (b >= 0){ e.atk = {b}; return; }
+  }
+  e.atk = null;
+  if (e.role === 'king'){ if (Math.random() < .3) wander(e, K.capital, 2); return; }
+  // 전쟁 중이면 지키는 병사(셋 중 하나)를 빼고 적의 건물로 진군해요
+  if (anyWar(e.k) && !e.guard){
+    let best = -1, bd = 1e9;
+    for (const b of bList){ if (!atWar(e.k, owner[b])) continue; const d = Math.abs(b%W-e.x) + Math.abs(((b/W)|0)-e.y) - (grid[b] === T.CASTLE ? 4 : 0); if (d < bd){ bd = d; best = b; } }
+    if (best >= 0){ if (!stepFlow(e, best) && Math.random() < .3) wander(e, best, 8); return; }
+  }
+  if (Math.random() < .35) wander(e, K.capital, e.guard ? 3 : 6);
+}
+function animalThink(e){
+  const opts = neighbors(e);
+  if (!opts.length) return;
+  let choice;
+  if (e.type === 'wolf'){
+    const prey = nearestEnt(e, ['rabbit','sheep'], 6);
+    choice = prey ? toward(opts, prey.x, prey.y) : pick(opts);
+  } else if (e.type === 'rabbit' || e.type === 'sheep'){
+    const w = nearestEnt(e, ['wolf'], 3);
+    choice = w ? toward(opts, w.x, w.y, true) : pick(opts);
+  } else choice = pick(opts);
+  moveTo(e, choice);
+}
+function rescue(e){
+  const x = cx(e), y = cy(e);
+  for (let r=1;r<=3;r++) for (let dy=-r;dy<=r;dy++) for (let dx=-r;dx<=r;dx++){
+    if (walkable(e.type,x+dx,y+dy,e)){ e.x=e.tx=x+dx+.5; e.y=e.ty=y+dy+.5; return true; }
+  }
+  return false;
+}
+function updateEnts(dt){
+  const dark = darkness();
+  for (const e of ents){
+    if (e.dead) continue;
+    const x = cx(e), y = cy(e), ci = idx(x,y);
+    e.cd = Math.max(0, e.cd - dt);
+    if (e.hit) e.hit = Math.max(0, e.hit - dt);
+    if (grid[ci] === T.FIRE && e.type !== 'bird'){ kill(e, 'rgba(255,140,60,'); continue; }
+    if (e.type === 'person'){
+      const K = kingdoms.get(e.k);
+      if (!K){ kill(e); continue; }
+      if (!isBld(grid[e.home]) || owner[e.home] !== e.k){
+        if (e.role !== 'villager' && grid[K.capital] === T.CASTLE && owner[K.capital] === e.k) e.home = K.capital;
+        else { kill(e); continue; }
+      }
+      e.age += dt;
+      if (e.age > e.life){ kill(e, null, null, true); if (e.role === 'king') toast(`👑 ${K.name}의 왕 ${josa(e.name,'이가')} 천수를 누리고 눈을 감았어요`); continue; }
+      if (e.role === 'villager'){
+        const target = dark > .45 && ci === e.home ? 0 : (dark > .8 ? 0 : 1);
+        e.alpha += (target - e.alpha) * Math.min(1, dt*2);
+        if (e.alpha < .05 && dark > .45) continue;
+        if (grid[ci] === T.FIELD && ages[ci] >= 30){ ages[ci] = 0; harvest++; dirty = changed = true; }
+      } else e.alpha = Math.min(1, e.alpha + dt*2);
+    } else if (e.type === 'wolf'){
+      e.hunger += dt;
+      if (e.hunger > 90){ kill(e); continue; }
+      for (const o of ents){
+        if (o.dead || (o.type !== 'rabbit' && o.type !== 'sheep')) continue;
+        if (d2(o.x,o.y,e.x,e.y) < .35){ kill(o, 'rgba(220,70,60,'); e.hunger = 0; break; }
+      }
+    }
+    if (!walkable(e.type,x,y,e) && !rescue(e)){ e.dead = true; continue; }
+    const dx = e.tx - e.x, dy = e.ty - e.y, dist = Math.hypot(dx,dy);
+    if (dist > .02){
+      const sp = SPEED[e.type]*dt;
+      if (sp >= dist){ e.x = e.tx; e.y = e.ty; } else { e.x += dx/dist*sp; e.y += dy/dist*sp; }
+      continue;
+    }
+    e.think -= dt;
+    if (e.type === 'person'){
+      if (e.think <= 0){ e.think = .3; personThink(e); }
+      if (e.atk){
+        if (e.atk.u){
+          const t = e.atk.u;
+          if (t.dead || Math.sqrt(d2(t.x,t.y,e.x,e.y)) > 1.3){ e.atk = null; }
+          else { e.dir = t.x >= e.x ? 1 : -1; if (e.cd <= 0){ e.cd = .9; e.swing = .15; hurt(t, dmgOf(e), e); } }
+        } else if (e.atk.b !== undefined){
+          const b = e.atk.b;
+          if (!isBld(grid[b]) || !atWar(e.k, owner[b])) e.atk = null;
+          else { e.dir = (b%W+.5) >= e.x ? 1 : -1; if (e.cd <= 0){ e.cd = .9; e.swing = .15; hurtBld(b, dmgOf(e), e.k); } }
+        }
+      }
+    } else if (e.think <= 0){
+      e.wait -= .3; e.think = .3;
+      if (e.wait <= 0){ animalThink(e); e.wait = e.type === 'bird' ? rnd(0,.4) : e.type === 'wolf' ? rnd(.1,1) : rnd(.4, e.type === 'sheep' ? 4 : 2.2); }
+    }
+  }
+  ents = ents.filter(e => !e.dead);
+  if (selected && selected.dead) selected = null;
+}
+
+/* ---------- 불 ---------- */
+function fireTick(){
+  const spread = [];
+  for (let i=0;i<N;i++){
+    if (grid[i] !== T.FIRE) continue;
+    ages[i]++;
+    const x = i%W, y = (i/W)|0;
+    for (const [dx,dy] of N4){
+      if (!inb(x+dx,y+dy)) continue;
+      const j = idx(x+dx,y+dy), p = FLAMMABLE[grid[j]];
+      if (p && Math.random() < p*.6) spread.push(j);
+    }
+    if (ages[i] >= 6){ grid[i] = T.BURNT; ages[i] = 0; dirty = true; }
+  }
+  spread.forEach(j => { if (grid[j] !== T.FIRE) setTile(j, T.FIRE); });
+}
+
+/* ---------- 세계의 하루 (1초마다) ---------- */
+function tick(){
+  const dark = darkness();
+  flowCache.clear();
+  for (let i=0;i<N;i++){
+    const t = grid[i];
+    if (t === T.SAPLING){ if (++ages[i] >= 20){ grid[i] = T.TREE; ages[i] = 0; dirty = true; } else if (ages[i] % 5 === 0) dirty = true; }
+    else if (t === T.FIELD && ages[i] < 30){ ages[i]++; if (ages[i] % 6 === 0 || ages[i] === 30) dirty = true; }
+    else if (t === T.BURNT){ if (++ages[i] >= 40){ grid[i] = T.GRASS; ages[i] = 0; dirty = true; } else if (ages[i] % 10 === 0) dirty = true; }
+    else if (isBld(t) && bhp[i] < MAXHP[t]) bhp[i] = Math.min(MAXHP[t], bhp[i] + .5);
+  }
+  for (let k=0;k<40*(size+1);k++){
+    const x = Math.floor(Math.random()*W), y = Math.floor(Math.random()*H), t = grid[idx(x,y)];
+    if (t !== T.TREE && t !== T.FLOWER) continue;
+    const [dx,dy] = pick(N4);
+    if (!inb(x+dx,y+dy) || grid[idx(x+dx,y+dy)] !== T.GRASS) continue;
+    if (t === T.TREE && Math.random() < .06) setTile(idx(x+dx,y+dy), T.SAPLING);
+    if (t === T.FLOWER && Math.random() < .04) setTile(idx(x+dx,y+dy), T.FLOWER);
+  }
+  // 성은 전쟁 중인 적에게 활을 쏴요
+  for (const b of bList){
+    if (grid[b] !== T.CASTLE || !anyWar(owner[b])) continue;
+    const me = {x:b%W+.5, y:((b/W)|0)+.5, k:owner[b]};
+    const foe = nearestFoe(me, 3.6, false);
+    if (foe){ fx.push({type:'arrow', x:me.x, y:me.y-.6, x2:foe.x, y2:foe.y-.2, t:0, d:.25}); hurt(foe, 4); }
+  }
+  // 사람 세기
+  const pop = new Map(), soldiers = new Map(), kings = new Map(), atHome = new Map();
+  for (const e of ents){
+    if (e.type !== 'person') continue;
+    if (e.role === 'villager') atHome.set(e.home, (atHome.get(e.home)||0)+1);
+    else if (e.role === 'king') kings.set(e.k, e);
+    else soldiers.set(e.k, (soldiers.get(e.k)||0)+1);
+    pop.set(e.k, (pop.get(e.k)||0)+1);
+  }
+  let people = [...pop.values()].reduce((a,b) => a+b, 0);
+  const cap = 120 + size*120;
+  for (const [id,K] of kingdoms){
+    const mine = bList.filter(b => owner[b] === id);
+    const houses = mine.filter(b => grid[b] === T.HOUSE);
+    // 왕
+    if (!kings.has(id) && grid[K.capital] === T.CASTLE){
+      const king = makePerson(id, 'king', K.capital);
+      if (K.hadKing) toast(`👑 ${K.name}에 새 왕 ${josa(king.name,'이가')} 즉위했어요`);
+      K.hadKing = true; people++;
+    }
+    // 주민 (낮에만 이사 와요)
+    if (dark < .3) for (const h of houses){
+      if (people >= cap) break;
+      if ((atHome.get(h)||0) < 2 && Math.random() < .12){ makePerson(id, 'villager', h); people++; changed = true; }
+    }
+    // 징병
+    K.draft++;
+    if (K.draft >= 10 && (soldiers.get(id)||0) < 2 + houses.length && people < cap){
+      const s = makePerson(id, 'soldier', K.capital); s.guard = Math.random() < .34; K.draft = 0; people++;
+    }
+    // 계급: 쓰러뜨린 수가 많은 순서로 기사, 가장 용맹한 하나는 장군
+    const army = ents.filter(e => e.type === 'person' && e.k === id && e.role === 'soldier').sort((a,b) => b.kills - a.kills);
+    army.forEach((e, n) => {
+      const r = n === 0 && e.kills >= 5 ? 2 : e.kills >= 2 ? 1 : 0;
+      if (r !== e.rank){
+        const up = r > e.rank;
+        e.rank = r; setStats(e);
+        if (up && r === 2) toast(`⭐ ${josa(e.name,'이가')} ${K.name}의 장군이 되었어요`);
+      }
+    });
+    // 나라가 스스로 커져요
+    if (dark < .3){
+      const full = (pop.get(id)||0) >= houses.length*2 + 2;
+      if (full && houses.length < 30 && Math.random() < .25){
+        const h = pick(mine);
+        for (let tries=0; tries<12; tries++){
+          const x = h%W + Math.floor(rnd(-2,3)), y = ((h/W)|0) + Math.floor(rnd(-2,3));
+          if (!inb(x,y)) continue;
+          const i = idx(x,y), t = grid[i];
+          if (t !== T.GRASS && t !== T.SAND && t !== T.FLOWER) continue;
+          if (terr[i] >= 0 && terr[i] !== id) continue;
+          let crowded = false;
+          for (const [dx,dy] of N4) if (inb(x+dx,y+dy) && isBld(grid[idx(x+dx,y+dy)])) crowded = true;
+          if (crowded) continue;
+          setTile(i, T.HOUSE, id); break;
+        }
+      }
+      if (Math.random() < .08){
+        const h = pick(mine), x = h%W + Math.floor(rnd(-2,3)), y = ((h/W)|0) + Math.floor(rnd(-2,3));
+        if (inb(x,y) && grid[idx(x,y)] === T.GRASS && terr[idx(x,y)] === id){
+          let f = 0; for (let i=0;i<N;i++) if (grid[i] === T.FIELD && terr[i] === id) f++;
+          if (f < houses.length + 1) setTile(idx(x,y), T.FIELD);
+        }
+      }
+    }
+  }
+  if (dark < .3) ents.forEach(e => {
+    if (e.type !== 'person' || e.alpha < .5) return;
+    const i = idx(cx(e), cy(e));
+    if (grid[i] === T.GRASS && Math.random() < .004) setTile(i, T.ROAD);
+  });
+  // 전쟁과 평화
+  for (const key of borders){
+    const [a,b] = key.split('-').map(Number);
+    const A = kingdoms.get(a), B = kingdoms.get(b);
+    if (!A || !B || A.wars.has(b)) continue;
+    if (Math.random() < .012){ A.wars.add(b); B.wars.add(a); changed = true; toast(`⚔ ${A.name}과 ${B.name}이 전쟁을 시작했어요`); }
+  }
+  // 영토가 맞닿지 않아도 수도끼리 가까운 이웃은 가끔 전쟁을 벌여요
+  const ks = [...kingdoms.values()];
+  for (let i=0;i<ks.length;i++) for (let j=i+1;j<ks.length;j++){
+    const A = ks[i], B = ks[j];
+    if (A.wars.has(B.id)) continue;
+    const dist = Math.hypot(A.capital%W - B.capital%W, ((A.capital/W)|0) - ((B.capital/W)|0));
+    if (dist < 22 && Math.random() < .004){ A.wars.add(B.id); B.wars.add(A.id); changed = true; toast(`⚔ ${A.name}과 ${B.name}이 전쟁을 시작했어요`); }
+  }
+  for (const A of kingdoms.values()){
+    for (const b of [...A.wars]){
+      if (b < A.id) continue;
+      const B = kingdoms.get(b);
+      if (B && Math.random() < .006){ A.wars.delete(b); B.wars.delete(A.id); changed = true; toast(`🕊 ${A.name}과 ${B.name}이 평화를 맺었어요`); }
+    }
+  }
+  // 동물 번식
+  const animals = ents.filter(e => e.type !== 'person');
+  if (animals.length < 120*(size+1)){
+    ['rabbit','sheep','wolf','fish','bird'].forEach(type => {
+      const same = animals.filter(e => e.type === type && (type !== 'wolf' || e.hunger < 30));
+      const p = {rabbit:.06, sheep:.025, wolf:.012, fish:.04, bird:.015}[type] * (size+1);
+      if (same.length >= 2 && Math.random() < p){
+        const m = pick(same), x = cx(m), y = cy(m);
+        if (walkable(type,x,y)){ ents.push(makeEnt(type,x,y)); changed = true; }
+      }
+    });
+  }
+  ents.forEach(e => {
+    if (e.type !== 'rabbit' && e.type !== 'sheep') return;
+    const i = idx(cx(e), cy(e));
+    if (grid[i] === T.FLOWER && Math.random() < .03) setTile(i, T.GRASS);
+  });
+}
+
+/* ---------- 신의 힘 ---------- */
+function killAround(x, y, r, color){ ents.forEach(e => { if (d2(e.x,e.y,x+.5,y+.5) <= r*r) kill(e, color); }); }
+function bolt(x, y){
+  fx.push({type:'bolt', x:x+.5, y:y+.5, t:0, d:.3, seed:Math.random()*99});
+  flash = .35;
+  const i = idx(x,y);
+  if (FLAMMABLE[grid[i]]) setTile(i, T.FIRE);
+  else if (grid[i] === T.SAND || grid[i] === T.ROAD) setTile(i, T.BURNT);
+  else if (grid[i] === T.CASTLE){ bhp[i] -= 40; if (bhp[i] <= 0) setTile(i, T.BURNT); }
+  killAround(x, y, 1.2, 'rgba(255,240,150,');
+}
+function ignite(x, y){ const i = idx(x,y); if (FLAMMABLE[grid[i]]) setTile(i, T.FIRE); }
+function rain(x, y){
+  fx.push({type:'rain', x:x+.5, y:y+.5, t:0, d:1.4});
+  for (let dy=-3;dy<=3;dy++) for (let dx=-3;dx<=3;dx++){
+    if (dx*dx+dy*dy > 10 || !inb(x+dx,y+dy)) continue;
+    const i = idx(x+dx,y+dy), t = grid[i];
+    if (t === T.FIRE){ grid[i] = T.BURNT; ages[i] = 20; dirty = changed = true; }
+    else if (t === T.BURNT){ if (Math.random() < .5) setTile(i, T.GRASS); }
+    else if (t === T.GRASS){ const r = Math.random(); if (r < .06) setTile(i, T.SAPLING); else if (r < .12) setTile(i, T.FLOWER); }
+    else if (t === T.FIELD){ ages[i] = Math.min(30, ages[i]+10); dirty = true; }
+  }
+}
+function meteor(x, y){
+  fx.push({type:'meteor', x:x+.5, y:y+.5, t:0, d:.7, done(){
+    shake = .5; flash = .5;
+    fx.push({type:'ring', x:x+.5, y:y+.5, t:0, d:.7, color:'#ffb347', r:4});
+    for (let dy=-4;dy<=4;dy++) for (let dx=-4;dx<=4;dx++){
+      if (!inb(x+dx,y+dy)) continue;
+      const d = Math.hypot(dx,dy), i = idx(x+dx,y+dy);
+      if (d <= 1.5) setTile(i, T.WATER);
+      else if (d <= 2.6){ if (grid[i] !== T.WATER) setTile(i, T.BURNT); }
+      else if (d <= 3.6 && FLAMMABLE[grid[i]] && Math.random() < .55) setTile(i, T.FIRE);
+    }
+    killAround(x, y, 3, 'rgba(255,140,60,');
+  }});
+}
+// 축복: 그 자리의 사람을 낫게 하고, 병사는 한 계급 올려요
+function bless(x, y){
+  fx.push({type:'ring', x:x+.5, y:y+.5, t:0, d:.8, color:'#ffe27a', r:2.5});
+  let up = null;
+  ents.forEach(e => {
+    if (d2(e.x,e.y,x+.5,y+.5) > 4) return;
+    if (e.type === 'person'){ e.hp = e.max; if (e.role === 'soldier' && e.kills < 5){ e.kills = e.kills < 2 ? 2 : 5; up = e; } }
+  });
+  if (up) toast(`✨ ${up.name}에게 신의 축복이 내렸어요`);
+}
+
+/* ---------- 칠하기 ---------- */
+function placeHouse(x, y){
+  const i = idx(x,y);
+  if (grid[i] === T.WATER || grid[i] === T.MOUNT) return;
+  const k = nearestKingdom(x, y, 6);
+  if (k < 0){ foundKingdom(i); return; }
+  setTile(i, T.HOUSE, k);
+}
+let lastPower = 0;
+function applyAt(x, y, first){
+  const now = performance.now();
+  if (tool === 'bolt'){ if (first || now - lastPower > 120){ bolt(x,y); lastPower = now; } return; }
+  if (tool === 'meteor'){ if (first) meteor(x,y); return; }
+  if (tool === 'rain'){ if (first || now - lastPower > 250){ rain(x,y); lastPower = now; } return; }
+  if (tool === 'bless'){ if (first || now - lastPower > 300){ bless(x,y); lastPower = now; } return; }
+  const rad = brush-1;
+  const each = fn => { for (let dy=-rad;dy<=rad;dy++) for (let dx=-rad;dx<=rad;dx++){
+    const nx = x+dx, ny = y+dy;
+    if (!inb(nx,ny) || (rad === 2 && Math.abs(dx)+Math.abs(dy) > 3)) continue;
+    fn(nx, ny);
+  } };
+  if (tool === 'fire'){ each(ignite); return; }
+  if (tool.startsWith('t')){
+    const tile = +tool.slice(1);
+    if (tile === T.HOUSE){ if (!isBld(grid[idx(x,y)])) placeHouse(x,y); return; }
+    if (tile === T.CASTLE){
+      const i = idx(x,y);
+      if (isBld(grid[i]) || grid[i] === T.WATER || grid[i] === T.MOUNT) return;
+      if (bList.some(b => Math.abs(b%W - x) + Math.abs(((b/W)|0) - y) < 3)){ toast('다른 건물과 조금 떨어뜨려 놓아요'); return; }
+      foundKingdom(i); return;
+    }
+    each((nx,ny) => setTile(idx(nx,ny), tile));
+  } else if (tool === 'erase'){
+    ents.forEach(e => { if (e.type !== 'person' && Math.abs(cx(e)-x) <= rad && Math.abs(cy(e)-y) <= rad) e.dead = true; });
+    ents = ents.filter(e => !e.dead); changed = true;
+  } else {
+    if (!walkable(tool,x,y)) return;
+    if (ents.filter(e => e.type !== 'person').length >= 160*(size+1)) { toast('세계가 꽉 찼어요'); return; }
+    ents.push(makeEnt(tool,x,y)); changed = true;
+  }
+}
+function inspect(x, y, px, py){
+  let best = null, bd = 1.3*1.3;
+  for (const e of ents){ if (e.alpha < .3) continue; const d = d2(e.x,e.y,px,py); if (d < bd){ bd = d; best = e; } }
+  if (best){ selected = best; showInfo(); return; }
+  const i = idx(x,y);
+  if (isBld(grid[i])){ selected = {bld:i}; showInfo(); return; }
+  if (terr[i] >= 0){ selected = {kingdom:terr[i]}; showInfo(); return; }
+  selected = null; showInfo();
+}
+
+/* ---------- 지도 조작 ---------- */
+function canvasPt(ev){ const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left)/r.width*VW, (ev.clientY - r.top)/r.height*VH]; }
+function worldAt([px,py]){ return [(cam.x + px/cam.z)/CS, (cam.y + py/cam.z)/CS]; }
+function cellAt(p){ const [wx,wy] = worldAt(p); return [Math.max(0,Math.min(W-1,Math.floor(wx))), Math.max(0,Math.min(H-1,Math.floor(wy)))]; }
+function minZoom(){ return Math.min(1, VW/(W*CS), VH/(H*CS)); }
+function zoomAt(z, px, py){
+  z = Math.max(minZoom(), Math.min(3, z));
+  const wx = cam.x + px/cam.z, wy = cam.y + py/cam.z;
+  cam.z = z; cam.x = wx - px/z; cam.y = wy - py/z; clampCam();
+}
+function clampCam(){
+  const vw = VW/cam.z, vh = VH/cam.z, mw = W*CS, mh = H*CS;
+  cam.x = mw <= vw ? (mw-vw)/2 : Math.max(0, Math.min(mw - vw, cam.x));
+  cam.y = mh <= vh ? (mh-vh)/2 : Math.max(0, Math.min(mh - vh, cam.y));
+}
+function centerOn(wx, wy){ cam.x = wx*CS - VW/cam.z/2; cam.y = wy*CS - VH/cam.z/2; clampCam(); }
+function fitView(){ cam.z = minZoom(); centerOn(W/2, H/2); }
+
+const ptrs = new Map();
+let gesture = null; // {mode:'pan'|'paint'|'pinch', ...}
+cv.addEventListener('pointerdown', ev => {
+  ev.preventDefault(); cv.setPointerCapture(ev.pointerId);
+  const p = canvasPt(ev); ptrs.set(ev.pointerId, p);
+  if (ptrs.size === 2){
+    const [a,b] = [...ptrs.values()];
+    gesture = {mode:'pinch', d:Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, z:cam.z, mx:(a[0]+b[0])/2, my:(a[1]+b[1])/2};
+    return;
+  }
+  if (ptrs.size > 2) return;
+  if (tool === 'look') gesture = {mode:'pan', sx:p[0], sy:p[1], lx:p[0], ly:p[1], moved:false};
+  else {
+    pushUndo();
+    const [x,y] = cellAt(p);
+    gesture = {mode:'paint', last:[x,y]};
+    applyAt(x, y, true);
+  }
+});
+cv.addEventListener('pointermove', ev => {
+  if (!ptrs.has(ev.pointerId) || !gesture) return;
+  const p = canvasPt(ev); ptrs.set(ev.pointerId, p);
+  if (gesture.mode === 'pinch' && ptrs.size >= 2){
+    const [a,b] = [...ptrs.values()];
+    const mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2;
+    cam.x -= (mx - gesture.mx)/cam.z; cam.y -= (my - gesture.my)/cam.z; gesture.mx = mx; gesture.my = my;
+    zoomAt(gesture.z * Math.hypot(a[0]-b[0], a[1]-b[1]) / gesture.d, mx, my);
+  } else if (gesture.mode === 'pan'){
+    if (Math.hypot(p[0]-gesture.sx, p[1]-gesture.sy) > 10) gesture.moved = true;
+    if (gesture.moved){ cam.x -= (p[0]-gesture.lx)/cam.z; cam.y -= (p[1]-gesture.ly)/cam.z; clampCam(); }
+    gesture.lx = p[0]; gesture.ly = p[1];
+  } else if (gesture.mode === 'paint'){
+    const [x,y] = cellAt(p), last = gesture.last;
+    if (x === last[0] && y === last[1]) return;
+    const single = !tool.startsWith('t') && tool !== 'erase' && tool !== 'fire' || tool === 't'+T.HOUSE || tool === 't'+T.CASTLE;
+    const steps = Math.max(Math.abs(x-last[0]), Math.abs(y-last[1]));
+    for (let s=1;s<=steps;s++){
+      if (single && s < steps) continue;
+      applyAt(Math.round(last[0] + (x-last[0])*s/steps), Math.round(last[1] + (y-last[1])*s/steps), false);
+    }
+    gesture.last = [x,y];
+  }
+});
+const endPtr = ev => {
+  if (!ptrs.has(ev.pointerId)) return;
+  ptrs.delete(ev.pointerId);
+  if (gesture && gesture.mode === 'pan' && ptrs.size === 0 && !gesture.moved && ev.type === 'pointerup'){
+    const [x,y] = cellAt([gesture.sx, gesture.sy]), [wx,wy] = worldAt([gesture.sx, gesture.sy]);
+    inspect(x, y, wx, wy);
+  }
+  if (ptrs.size === 0) gesture = null;
+  else if (gesture && gesture.mode === 'pinch' && ptrs.size === 1) gesture = null;
+};
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('wheel', ev => { ev.preventDefault(); const p = canvasPt(ev); zoomAt(cam.z * (ev.deltaY < 0 ? 1.15 : 1/1.15), p[0], p[1]); }, {passive:false});
+document.getElementById('zoomIn').onclick = () => zoomAt(cam.z*1.3, VW/2, VH/2);
+document.getElementById('zoomOut').onclick = () => zoomAt(cam.z/1.3, VW/2, VH/2);
+document.getElementById('fit').onclick = fitView;
+mini.addEventListener('pointerdown', ev => {
+  ev.preventDefault(); ev.stopPropagation();
+  const r = mini.getBoundingClientRect();
+  centerOn((ev.clientX - r.left)/r.width*W, (ev.clientY - r.top)/r.height*H);
+});
 
 /* ---------- 지형 그리기 ---------- */
 function isWater(x,y){ return !inb(x,y) || grid[idx(x,y)] === T.WATER; }
@@ -345,6 +1068,7 @@ function drawBurnt(g, px, py, x, y){
 }
 function drawTile(g, x, y){
   const i = idx(x,y), t = grid[i], px = x*CS, py = y*CS;
+  const kg = kingdoms.get(owner[i]), col = kg ? kg.color : '#9a8f80';
   switch (t){
     case T.WATER: {
       let near = false;
@@ -407,30 +1131,35 @@ function drawTile(g, x, y){
       }
       break;
     }
-    case T.HOUSE: {
+    case T.HOUSE:
       drawGround(g,px,py,x,y);
-      const kg = kingdoms.get(owner[i]);
       g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(px+3, py+14, 12, 2);
       g.fillStyle = '#f4e9d2'; g.fillRect(px+3, py+7, 10, 8);
-      g.fillStyle = kg ? kg.color : '#9a8f80';
-      g.beginPath(); g.moveTo(px+1, py+8); g.lineTo(px+8, py+1); g.lineTo(px+15, py+8); g.fill();
+      g.fillStyle = col; g.beginPath(); g.moveTo(px+1, py+8); g.lineTo(px+8, py+1); g.lineTo(px+15, py+8); g.fill();
       g.fillStyle = '#7a5230'; g.fillRect(px+7, py+10, 3, 5);
       g.fillStyle = '#8fc6e8'; g.fillRect(px+4, py+9, 2, 2); g.fillRect(px+11, py+9, 2, 2);
       break;
-    }
+    case T.CASTLE:
+      drawGround(g,px,py,x,y);
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(px, py+14, CS, 2);
+      g.fillStyle = '#9b968c'; g.fillRect(px, py+5, CS, 10);
+      g.fillStyle = '#b5b0a5'; for (let c=0;c<4;c++) g.fillRect(px+c*4, py+3, 3, 3);
+      g.fillStyle = '#5a4a3a'; g.fillRect(px+6, py+9, 4, 6);
+      g.fillStyle = '#4a4a4a'; g.fillRect(px+8, py-6, 1, 10);
+      g.fillStyle = col; g.fillRect(px+9, py-6, 6, 4);
+      break;
     case T.FIRE: case T.BURNT: drawBurnt(g,px,py,x,y); break;
   }
 }
-function renderBg(){
-  for (let y=0;y<H;y++) for (let x=0;x<W;x++) drawTile(bctx,x,y);
-  dirty = false;
-}
+function renderBg(){ for (let y=0;y<H;y++) for (let x=0;x<W;x++) drawTile(bctx,x,y); dirty = false; }
 
 /* ---------- 생물 그리기 ---------- */
 function drawEnt(e, now){
   const px = e.x*CS, py = e.y*CS;
   const moving = Math.abs(e.tx-e.x)+Math.abs(e.ty-e.y) > .02;
-  ctx.save(); ctx.globalAlpha = e.alpha; ctx.translate(px, py); ctx.scale(e.dir,1);
+  ctx.save(); ctx.globalAlpha = e.alpha; ctx.translate(px, py);
+  if (e === selected){ ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(0,5,6,2.4,0,0,7); ctx.stroke(); }
+  ctx.scale(e.dir,1);
   if (e.type === 'rabbit'){
     const hop = moving ? -Math.abs(Math.sin(now*10+e.phase))*3 : 0;
     ctx.fillStyle='rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0,3,4,1.5,0,0,7); ctx.fill();
@@ -458,14 +1187,7 @@ function drawEnt(e, now){
     ctx.fillStyle='#8c929b'; ctx.fillRect(7,-2.5,2,1.5);
     ctx.fillStyle='#ffd23f'; ctx.fillRect(6,-3.2,1,1);
   } else if (e.type === 'person'){
-    const kg = kingdoms.get(owner[e.home]);
-    const step = moving ? Math.sin(now*12+e.phase) : 0;
-    ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,5,3.5,1.3,0,0,7); ctx.fill();
-    ctx.fillStyle='#3b4252'; ctx.fillRect(-2,2,1.6,3+step); ctx.fillRect(.5,2,1.6,3-step);
-    ctx.fillStyle=kg ? kg.color : '#999'; ctx.fillRect(-2.5,-3,5,5.5);
-    ctx.fillStyle='#f2c9a0'; ctx.beginPath(); ctx.arc(0,-5.5,2.6,0,7); ctx.fill();
-    ctx.fillStyle='#3b2a20'; ctx.fillRect(-2.6,-8.3,5.2,1.8);
-    if (kg && kg.wars.size){ ctx.strokeStyle='#d8dde3'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(3,2); ctx.lineTo(3.5,-9); ctx.stroke(); ctx.fillStyle='#d8dde3'; ctx.fillRect(2.5,-10,2,2); }
+    drawPerson(e, now, moving);
   } else if (e.type === 'fish'){
     ctx.globalAlpha = e.alpha*.85;
     const wig = Math.sin(now*8+e.phase)*1.2;
@@ -479,468 +1201,55 @@ function drawEnt(e, now){
     ctx.beginPath(); ctx.moveTo(-5,-f); ctx.lineTo(0,0); ctx.lineTo(5,-f); ctx.stroke();
   }
   ctx.restore();
+  if (e.type === 'person' && e.hp < e.max && e.alpha > .5) bar(px-5, py-14, 10, e.hp/e.max);
+}
+function drawPerson(e, now, moving){
+  const kg = kingdoms.get(e.k), col = kg ? kg.color : '#999';
+  const big = e.role === 'king' || (e.role === 'soldier' && e.rank === 2);
+  if (big) ctx.scale(1.18, 1.18);
+  const step = moving ? Math.sin(now*12+e.phase) : 0;
+  ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,5,3.5,1.3,0,0,7); ctx.fill();
+  // 망토: 장군은 붉은색, 왕은 자주색
+  if (big){ ctx.fillStyle = e.role === 'king' ? '#6b2fa0' : '#b3261e'; ctx.beginPath(); ctx.moveTo(-2.5,-3); ctx.lineTo(-5.5,4); ctx.lineTo(1,4); ctx.lineTo(2.5,-3); ctx.fill(); }
+  ctx.fillStyle='#3b4252'; ctx.fillRect(-2,2,1.6,3+step); ctx.fillRect(.5,2,1.6,3-step);
+  ctx.fillStyle = e.hit > 0 ? '#ffffff' : col; ctx.fillRect(-2.5,-3,5,5.5);
+  ctx.fillStyle='#f2c9a0'; ctx.beginPath(); ctx.arc(0,-5.5,2.6,0,7); ctx.fill();
+  if (e.role === 'villager'){
+    ctx.fillStyle='#3b2a20'; ctx.fillRect(-2.6,-8.3,5.2,1.8);
+    return;
+  }
+  if (e.role === 'king'){
+    ctx.fillStyle = '#f2c230';
+    ctx.fillRect(-2.8,-8.6,5.6,1.6);
+    ctx.fillRect(-2.8,-10.4,1.2,1.8); ctx.fillRect(-.6,-11,1.2,2.4); ctx.fillRect(1.6,-10.4,1.2,1.8);
+    ctx.fillStyle = '#e4573d'; ctx.fillRect(-.4,-8.3,.8,.8);
+    ctx.strokeStyle = '#d9c38a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(3.5,3); ctx.lineTo(3.5,-6); ctx.stroke();
+    ctx.fillStyle = '#f2c230'; ctx.beginPath(); ctx.arc(3.5,-6.5,1.2,0,7); ctx.fill();
+    return;
+  }
+  // 병사·기사·장군: 투구 색과 장식으로 계급을 보여 줘요
+  const helm = e.rank === 2 ? '#e0b12a' : e.rank === 1 ? '#c9ced6' : '#6b717b';
+  ctx.fillStyle = helm; ctx.fillRect(-2.8,-8.6,5.6,2.4); ctx.fillRect(-.6,-10,1.2,1.6);
+  if (e.rank >= 1){ ctx.fillStyle = e.rank === 2 ? '#ffffff' : '#d23a2a'; ctx.fillRect(-1.8,-11.6,1.4,2.2); ctx.fillRect(-.6,-12.2,1.4,2.2); }
+  const sw = e.swing > 0 ? -1.1 : 0;
+  if (e.swing) e.swing = Math.max(0, e.swing - .016);
+  ctx.save(); ctx.translate(3,0); ctx.rotate(-.5 + sw);
+  if (e.rank === 0){ ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,2); ctx.lineTo(0,-9); ctx.stroke(); ctx.fillStyle='#d8dde3'; ctx.fillRect(-.8,-11,1.6,2.4); }
+  else { ctx.strokeStyle='#e3e7ec'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-8); ctx.stroke(); ctx.fillStyle='#7a5230'; ctx.fillRect(-1.5,-.5,3,1); }
+  ctx.restore();
+  if (e.rank >= 1){ ctx.fillStyle = col; ctx.strokeStyle = e.rank === 2 ? '#e0b12a' : '#e3e7ec'; ctx.lineWidth=.8; ctx.beginPath(); ctx.arc(-3,0,2.4,0,7); ctx.fill(); ctx.stroke(); }
+}
+function bar(x, y, w, p){
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x-1, y-1, w+2, 3.5);
+  ctx.fillStyle = p > .5 ? '#5fd35f' : p > .25 ? '#f0c040' : '#e5533d';
+  ctx.fillRect(x, y, w*Math.max(0,p), 1.6);
 }
 
 /* ---------- 시간과 빛 ---------- */
 function darkness(){ const s = Math.sin(2*Math.PI*(tod-.25)); return Math.max(0, Math.min(1, (.2 - s)/.6)); }
 function dusk(){ const s = Math.sin(2*Math.PI*(tod-.25)); return Math.max(0, 1 - Math.abs(s - .05)/.25); }
 
-/* ---------- 움직임 ---------- */
-function neighbors(e){
-  const x = cx(e), y = cy(e), reach = e.type === 'bird' ? 6 : 1, out = [];
-  for (let dy=-reach; dy<=reach; dy++) for (let dx=-reach; dx<=reach; dx++){
-    if (!dx && !dy) continue;
-    if (reach === 1 && dx && dy) continue;
-    if (walkable(e.type, x+dx, y+dy, e)) out.push([x+dx, y+dy]);
-  }
-  return out;
-}
-function toward(opts, gx, gy){
-  let best = null, bd = 1e9;
-  for (const o of opts){ const d = Math.abs(o[0]-gx)+Math.abs(o[1]-gy) + Math.random()*.5; if (d < bd){ bd = d; best = o; } }
-  return best;
-}
-function nearestEnt(e, types, r){
-  let best = null, bd = r*r;
-  for (const o of ents){ if (o.dead || !types.includes(o.type)) continue; const d = (o.x-e.x)**2 + (o.y-e.y)**2; if (d < bd){ bd = d; best = o; } }
-  return best;
-}
-function nearestEnemyHouse(e, k){
-  let best = null, bd = 1e9;
-  for (const h of houses){ if (!atWar(k, h.k)) continue; const d = Math.abs(h.x-e.x)+Math.abs(h.y-e.y); if (d < bd){ bd = d; best = h; } }
-  return best;
-}
-function chooseTarget(e){
-  const opts = neighbors(e);
-  if (!opts.length) return;
-  let choice;
-  if (e.type === 'person'){
-    const k = owner[e.home];
-    if (darkness() > .45){
-      choice = Math.random() < .85 ? toward(opts, e.home%W, Math.floor(e.home/W)) : pick(opts);
-    } else if (anyWar(k) && Math.random() < .7){
-      const foe = nearestEnt(e, ['person'], 5);
-      const h = foe && atWar(k, owner[foe.home]) ? {x:cx(foe), y:cy(foe)} : nearestEnemyHouse(e, k);
-      choice = h ? toward(opts, h.x, h.y) : pick(opts);
-    } else {
-      const roads = opts.filter(([x,y]) => grid[idx(x,y)] === T.ROAD || grid[idx(x,y)] === T.FIELD);
-      const outside = opts.filter(([x,y]) => grid[idx(x,y)] !== T.HOUSE);
-      choice = roads.length && Math.random() < .7 ? pick(roads) : pick(outside.length ? outside : opts);
-    }
-  } else if (e.type === 'wolf'){
-    const prey = nearestEnt(e, ['rabbit','sheep'], 6);
-    choice = prey ? toward(opts, cx(prey), cy(prey)) : pick(opts);
-  } else if (e.type === 'rabbit' || e.type === 'sheep'){
-    const w = nearestEnt(e, ['wolf'], 3);
-    choice = w ? toward(opts, 2*cx(e)-cx(w), 2*cy(e)-cy(w)) : pick(opts);
-  } else choice = pick(opts);
-  e.tx = choice[0]+.5; e.ty = choice[1]+.5;
-  if (e.tx !== e.x) e.dir = e.tx > e.x ? 1 : -1;
-}
-function rescue(e){
-  const x = cx(e), y = cy(e);
-  for (let r=1;r<=3;r++) for (let dy=-r;dy<=r;dy++) for (let dx=-r;dx<=r;dx++){
-    if (walkable(e.type,x+dx,y+dy,e)){ e.x=e.tx=x+dx+.5; e.y=e.ty=y+dy+.5; return true; }
-  }
-  return false;
-}
-function updateEnts(dt){
-  const dark = darkness();
-  for (const e of ents){
-    if (e.dead) continue;
-    const x = cx(e), y = cy(e), ci = idx(x,y);
-    if (grid[ci] === T.FIRE && e.type !== 'bird'){ kill(e, 'rgba(255,140,60,'); continue; }
-    if (!walkable(e.type,x,y,e) && !rescue(e)){ e.dead = true; continue; }
-    if (e.type === 'person'){
-      if (e.home < 0 || grid[e.home] !== T.HOUSE){ kill(e); continue; }
-      e.age += dt; if (e.age > e.life){ kill(e); continue; }
-      const atHome = ci === e.home;
-      const target = dark > .45 && atHome ? 0 : (dark > .8 ? 0 : 1);
-      e.alpha += (target - e.alpha) * Math.min(1, dt*2);
-      if (e.alpha < .05 && dark > .45) continue;
-      if (grid[ci] === T.FIELD && ages[ci] >= 30){ ages[ci] = 0; harvest++; dirty = changed = true; }
-      // 싸움
-      const k = owner[e.home];
-      if (anyWar(k) && e.alpha > .5){
-        for (const o of ents){
-          if (o === e || o.dead || o.type !== 'person' || o.alpha < .5) continue;
-          if (!atWar(k, owner[o.home])) continue;
-          if ((o.x-e.x)**2 + (o.y-e.y)**2 < .8 && Math.random() < dt*1.2){
-            kill(Math.random() < .5 ? e : o, 'rgba(220,70,60,'); break;
-          }
-        }
-        if (e.dead) continue;
-      }
-    } else if (e.type === 'wolf'){
-      e.hunger += dt;
-      if (e.hunger > 90){ kill(e); continue; }
-      for (const o of ents){
-        if (o.dead || (o.type !== 'rabbit' && o.type !== 'sheep')) continue;
-        if ((o.x-e.x)**2 + (o.y-e.y)**2 < .35){ kill(o, 'rgba(220,70,60,'); e.hunger = 0; break; }
-      }
-    }
-    const dx = e.tx - e.x, dy = e.ty - e.y, dist = Math.hypot(dx,dy);
-    if (dist < .02){
-      e.wait -= dt;
-      if (e.wait <= 0){ chooseTarget(e); e.wait = e.type === 'bird' ? rnd(0,.4) : e.type === 'wolf' ? rnd(.1,1) : rnd(.4, e.type === 'sheep' ? 4 : 2.2); }
-    } else {
-      const sp = SPEED[e.type]*dt;
-      if (sp >= dist){ e.x = e.tx; e.y = e.ty; } else { e.x += dx/dist*sp; e.y += dy/dist*sp; }
-    }
-  }
-  ents = ents.filter(e => !e.dead);
-}
-
-/* ---------- 불 (0.4초마다) ---------- */
-function fireTick(){
-  const n4 = [[1,0],[-1,0],[0,1],[0,-1]];
-  const spread = [];
-  for (let i=0;i<N;i++){
-    if (grid[i] !== T.FIRE) continue;
-    ages[i]++;
-    const x = i%W, y = Math.floor(i/W);
-    for (const [dx,dy] of n4){
-      if (!inb(x+dx,y+dy)) continue;
-      const j = idx(x+dx,y+dy), p = FLAMMABLE[grid[j]];
-      if (p && Math.random() < p*.6) spread.push(j);
-    }
-    if (ages[i] >= 6){ grid[i] = T.BURNT; ages[i] = 0; dirty = true; }
-  }
-  spread.forEach(j => { if (grid[j] !== T.FIRE) setTile(j, T.FIRE); });
-}
-
-/* ---------- 섬의 하루 (1초마다) ---------- */
-let firstResident = true;
-function tick(){
-  const dark = darkness();
-  const n4 = [[1,0],[-1,0],[0,1],[0,-1]];
-  for (let i=0;i<N;i++){
-    const t = grid[i];
-    if (t === T.SAPLING){ if (++ages[i] >= 20){ grid[i] = T.TREE; ages[i] = 0; dirty = true; } else if (ages[i] % 5 === 0) dirty = true; }
-    else if (t === T.FIELD && ages[i] < 30){ ages[i]++; if (ages[i] % 6 === 0 || ages[i] === 30) dirty = true; }
-    else if (t === T.BURNT){ if (++ages[i] >= 40){ grid[i] = T.GRASS; ages[i] = 0; dirty = true; } else if (ages[i] % 10 === 0) dirty = true; }
-  }
-  for (let k=0;k<40;k++){
-    const x = Math.floor(Math.random()*W), y = Math.floor(Math.random()*H), t = grid[idx(x,y)];
-    if (t !== T.TREE && t !== T.FLOWER) continue;
-    const [dx,dy] = pick(n4);
-    if (!inb(x+dx,y+dy) || grid[idx(x+dx,y+dy)] !== T.GRASS) continue;
-    if (t === T.TREE && Math.random() < .06) setTile(idx(x+dx,y+dy), T.SAPLING);
-    if (t === T.FLOWER && Math.random() < .04) setTile(idx(x+dx,y+dy), T.FLOWER);
-  }
-  // 주민 이사
-  const counts = new Map(), pop = new Map();
-  let people = 0;
-  ents.forEach(e => { if (e.type === 'person'){ people++; counts.set(e.home,(counts.get(e.home)||0)+1); pop.set(owner[e.home], (pop.get(owner[e.home])||0)+1); } });
-  if (dark < .3){
-    for (const h of houses){
-      if (people >= 150 || h.k < 0) break;
-      if ((counts.get(h.i)||0) < 2 && Math.random() < .12){
-        const p = makeEnt('person', h.x, h.y, h.i); p.alpha = 0;
-        ents.push(p); people++; changed = true;
-        if (firstResident){ firstResident = false; toast('첫 주민이 이사 왔어요'); }
-      }
-    }
-    // 나라가 스스로 커져요: 집, 밭, 길
-    for (const [id,k] of kingdoms){
-      const mine = houses.filter(h => h.k === id);
-      if (!mine.length) continue;
-      const full = (pop.get(id)||0) >= mine.length*2;
-      if (full && mine.length < 30 && Math.random() < .25){
-        const h = pick(mine);
-        for (let tries=0; tries<12; tries++){
-          const x = h.x + Math.floor(rnd(-2,3)), y = h.y + Math.floor(rnd(-2,3));
-          if (!inb(x,y)) continue;
-          const i = idx(x,y), t = grid[i];
-          if (t !== T.GRASS && t !== T.SAND && t !== T.FLOWER) continue;
-          if (terr[i] >= 0 && terr[i] !== id) continue;
-          let crowded = false;
-          for (const [dx,dy] of n4) if (inb(x+dx,y+dy) && grid[idx(x+dx,y+dy)] === T.HOUSE) crowded = true;
-          if (crowded) continue;
-          setTile(i, T.HOUSE); owner[i] = id; terrDirty = true; break;
-        }
-      }
-      if (Math.random() < .08){
-        const h = pick(mine), fields = mine.length;
-        const x = h.x + Math.floor(rnd(-2,3)), y = h.y + Math.floor(rnd(-2,3));
-        if (inb(x,y) && grid[idx(x,y)] === T.GRASS && terr[idx(x,y)] === id){
-          let f = 0; for (let i=0;i<N;i++) if (grid[i] === T.FIELD && terr[i] === id) f++;
-          if (f < fields) setTile(idx(x,y), T.FIELD);
-        }
-      }
-    }
-    // 자주 다니는 풀밭은 길이 돼요
-    ents.forEach(e => {
-      if (e.type !== 'person' || e.alpha < .5) return;
-      const i = idx(cx(e), cy(e));
-      if (grid[i] === T.GRASS && Math.random() < .006) setTile(i, T.ROAD);
-    });
-  }
-  // 전쟁과 평화
-  for (const key of borders){
-    const [a,b] = key.split('-').map(Number);
-    const A = kingdoms.get(a), B = kingdoms.get(b);
-    if (!A || !B) continue;
-    if (!A.wars.has(b) && Math.random() < .012){
-      A.wars.add(b); B.wars.add(a); changed = true; toast(`⚔ ${A.name}과 ${B.name}이 전쟁을 시작했어요`);
-    }
-  }
-  for (const A of kingdoms.values()){
-    for (const b of [...A.wars]){
-      if (b < A.id) continue;
-      const B = kingdoms.get(b);
-      if (B && Math.random() < .008){ A.wars.delete(b); B.wars.delete(A.id); changed = true; toast(`🕊 ${A.name}과 ${B.name}이 평화를 맺었어요`); }
-    }
-  }
-  // 점령: 지키는 사람이 없는 적의 집 옆에 서 있으면 빼앗아요
-  if (dark < .45){
-    for (const e of ents){
-      if (e.type !== 'person' || e.alpha < .5) continue;
-      const k = owner[e.home];
-      if (!anyWar(k)) continue;
-      for (const h of houses){
-        if (!atWar(k, h.k) || Math.abs(h.x+.5-e.x) > 1.3 || Math.abs(h.y+.5-e.y) > 1.3) continue;
-        const guarded = ents.some(o => o.type === 'person' && o.alpha > .5 && owner[o.home] === h.k && (o.x-h.x-.5)**2 + (o.y-h.y-.5)**2 < 6);
-        if (!guarded && Math.random() < .3){
-          const from = kingdoms.get(h.k), to = kingdoms.get(k);
-          owner[h.i] = k; h.k = k; dirty = changed = terrDirty = true;
-          fx.push({type:'ring', x:h.x+.5, y:h.y+.5, t:0, d:.6, color:to.color});
-          toast(`${to.name}이 ${from.name}의 집을 빼앗았어요`);
-        }
-        break;
-      }
-    }
-  }
-  // 동물 번식
-  const animals = ents.filter(e => e.type !== 'person');
-  if (animals.length < 120){
-    ['rabbit','sheep','wolf','fish','bird'].forEach(type => {
-      const same = animals.filter(e => e.type === type && (type !== 'wolf' || e.hunger < 30));
-      const p = {rabbit:.06, sheep:.025, wolf:.012, fish:.04, bird:.015}[type];
-      if (same.length >= 2 && Math.random() < p){
-        const m = pick(same), x = cx(m), y = cy(m);
-        if (walkable(type,x,y)){ ents.push(makeEnt(type,x,y)); changed = true; }
-      }
-    });
-  }
-  ents.forEach(e => {
-    if (e.type !== 'rabbit' && e.type !== 'sheep') return;
-    const i = idx(cx(e), cy(e));
-    if (grid[i] === T.FLOWER && Math.random() < .03) setTile(i, T.GRASS);
-  });
-}
-
-/* ---------- 신의 힘 ---------- */
-function killAround(x, y, r, color){
-  ents.forEach(e => { if ((e.x-x-.5)**2 + (e.y-y-.5)**2 <= r*r) kill(e, color); });
-}
-function bolt(x, y){
-  fx.push({type:'bolt', x:x+.5, y:y+.5, t:0, d:.3, seed:Math.random()*99});
-  flash = .35;
-  const i = idx(x,y);
-  if (FLAMMABLE[grid[i]]) setTile(i, T.FIRE);
-  else if (grid[i] === T.SAND || grid[i] === T.ROAD) setTile(i, T.BURNT);
-  killAround(x, y, 1.2, 'rgba(255,240,150,');
-}
-function ignite(x, y){
-  const i = idx(x,y);
-  if (FLAMMABLE[grid[i]]) setTile(i, T.FIRE);
-}
-function rain(x, y){
-  fx.push({type:'rain', x:x+.5, y:y+.5, t:0, d:1.4});
-  for (let dy=-3;dy<=3;dy++) for (let dx=-3;dx<=3;dx++){
-    if (dx*dx+dy*dy > 10 || !inb(x+dx,y+dy)) continue;
-    const i = idx(x+dx,y+dy), t = grid[i];
-    if (t === T.FIRE){ grid[i] = T.BURNT; ages[i] = 20; dirty = changed = true; }
-    else if (t === T.BURNT){ if (Math.random() < .5) setTile(i, T.GRASS); }
-    else if (t === T.GRASS){ const r = Math.random(); if (r < .06) setTile(i, T.SAPLING); else if (r < .12) setTile(i, T.FLOWER); }
-    else if (t === T.FIELD){ ages[i] = Math.min(30, ages[i]+10); dirty = true; }
-  }
-}
-function meteor(x, y){
-  fx.push({type:'meteor', x:x+.5, y:y+.5, t:0, d:.7, done(){
-    shake = .5; flash = .5;
-    fx.push({type:'ring', x:x+.5, y:y+.5, t:0, d:.7, color:'#ffb347', r:4});
-    for (let dy=-4;dy<=4;dy++) for (let dx=-4;dx<=4;dx++){
-      if (!inb(x+dx,y+dy)) continue;
-      const d = Math.hypot(dx,dy), i = idx(x+dx,y+dy);
-      if (d <= 1.5) setTile(i, T.WATER);
-      else if (d <= 2.6) setTile(i, grid[i] === T.WATER ? T.WATER : T.BURNT);
-      else if (d <= 3.6 && FLAMMABLE[grid[i]] && Math.random() < .55) setTile(i, T.FIRE);
-    }
-    killAround(x, y, 3, 'rgba(255,140,60,');
-  }});
-}
-
-/* ---------- 칠하기 ---------- */
-let painting = false, last = null, lastPower = 0;
-function cellFrom(ev){
-  const r = cv.getBoundingClientRect();
-  return [Math.max(0,Math.min(W-1,Math.floor((ev.clientX - r.left)/r.width*W))), Math.max(0,Math.min(H-1,Math.floor((ev.clientY - r.top)/r.height*H)))];
-}
-function placeHouse(x, y){
-  const i = idx(x,y);
-  if (grid[i] === T.WATER || grid[i] === T.MOUNT) return;
-  setTile(i, T.HOUSE);
-  computeTerr();
-  let k = nearestKingdom(x, y, 6);
-  if (k < 0){ const nk = newKingdom(); k = nk.id; toast(`🏰 ${nk.name}이 세워졌어요`); }
-  owner[i] = k; terrDirty = dirty = true;
-}
-function applyAt(x, y, first){
-  const now = performance.now();
-  if (tool === 'bolt'){ if (first || now - lastPower > 120){ bolt(x,y); lastPower = now; } return; }
-  if (tool === 'meteor'){ if (first) meteor(x,y); return; }
-  if (tool === 'rain'){ if (first || now - lastPower > 250){ rain(x,y); lastPower = now; } return; }
-  const rad = brush-1;
-  const each = fn => { for (let dy=-rad;dy<=rad;dy++) for (let dx=-rad;dx<=rad;dx++){
-    const nx = x+dx, ny = y+dy;
-    if (!inb(nx,ny) || (rad === 2 && Math.abs(dx)+Math.abs(dy) > 3)) continue;
-    fn(nx, ny);
-  } };
-  if (tool === 'fire'){ each(ignite); return; }
-  if (tool.startsWith('t')){
-    const tile = +tool.slice(1);
-    if (tile === T.HOUSE){ if (grid[idx(x,y)] !== T.HOUSE) placeHouse(x,y); return; }
-    each((nx,ny) => setTile(idx(nx,ny), tile));
-  } else if (tool === 'erase'){
-    ents.forEach(e => { if (e.type !== 'person' && Math.abs(cx(e)-x) <= rad && Math.abs(cy(e)-y) <= rad) e.dead = true; });
-    ents = ents.filter(e => !e.dead); changed = true;
-  } else {
-    if (!walkable(tool,x,y)) return;
-    if (ents.filter(e => e.type !== 'person').length >= 160) { toast('섬이 꽉 찼어요'); return; }
-    ents.push(makeEnt(tool,x,y)); changed = true;
-  }
-}
-function snapshot(){
-  return {grid:grid.slice(), ages:ages.slice(), owner:owner.slice(), ents:JSON.stringify(ents), kings:serKings(), nextKid};
-}
-function pushUndo(){ undoStack.push(snapshot()); if (undoStack.length > 30) undoStack.shift(); }
-cv.addEventListener('pointerdown', ev => {
-  ev.preventDefault(); cv.setPointerCapture(ev.pointerId);
-  pushUndo(); painting = true;
-  const [x,y] = cellFrom(ev); last = [x,y]; applyAt(x,y,true);
-});
-cv.addEventListener('pointermove', ev => {
-  if (!painting) return;
-  const [x,y] = cellFrom(ev);
-  if (last && x === last[0] && y === last[1]) return;
-  const single = !tool.startsWith('t') && tool !== 'erase' && tool !== 'fire' || tool === 't'+T.HOUSE;
-  const steps = Math.max(Math.abs(x-last[0]), Math.abs(y-last[1]));
-  for (let s=1;s<=steps;s++){
-    if (single && s < steps) continue;
-    applyAt(Math.round(last[0] + (x-last[0])*s/steps), Math.round(last[1] + (y-last[1])*s/steps), false);
-  }
-  last = [x,y];
-});
-const stop = () => { painting = false; last = null; };
-cv.addEventListener('pointerup', stop);
-cv.addEventListener('pointercancel', stop);
-
-/* ---------- 화면 ---------- */
-function makeTools(el, list){
-  list.forEach(t => {
-    const b = document.createElement('button');
-    b.className = 'tool'; b.dataset.id = t.id; b.setAttribute('aria-pressed', t.id === tool);
-    b.innerHTML = `<i aria-hidden="true">${t.ico}</i>${t.name}`;
-    b.onclick = () => { tool = t.id; document.querySelectorAll('.tool').forEach(x => x.setAttribute('aria-pressed', x.dataset.id === tool)); };
-    el.appendChild(b);
-  });
-}
-makeTools(document.getElementById('godTools'), GOD_TOOLS);
-makeTools(document.getElementById('terrainTools'), TERRAIN_TOOLS);
-makeTools(document.getElementById('lifeTools'), LIFE_TOOLS);
-const segPick = (sel, fn) => document.querySelectorAll(sel+' button').forEach(b => b.onclick = () => {
-  fn(b); document.querySelectorAll(sel+' button').forEach(x => x.setAttribute('aria-pressed', x === b));
-});
-segPick('#brush', b => brush = +b.dataset.s);
-segPick('#speed', b => speedMul = +b.dataset.v);
-document.getElementById('undo').onclick = () => {
-  const u = undoStack.pop(); if (!u){ toast('더 되돌릴 게 없어요'); return; }
-  grid = u.grid; ages = u.ages; owner = u.owner; ents = JSON.parse(u.ents); kingdoms = deKings(u.kings); nextKid = u.nextKid;
-  dirty = changed = terrDirty = true;
-};
-// 확인 창(confirm)은 미리보기·앱 안에서 막힐 수 있어, 버튼을 한 번 더 누르는 방식으로 확인해요
-const freshBtn = document.getElementById('fresh');
-let freshArmed = null;
-freshBtn.onclick = () => {
-  if (!freshArmed){
-    freshBtn.textContent = '정말요? 한 번 더';
-    toast('지금 섬이 사라져요. 새 섬 버튼을 한 번 더 누르세요');
-    freshArmed = setTimeout(() => { freshArmed = null; freshBtn.textContent = '🏝 새 섬'; }, 3000);
-    return;
-  }
-  clearTimeout(freshArmed); freshArmed = null; freshBtn.textContent = '🏝 새 섬';
-  pushUndo(); generate(); computeTerr(); firstResident = true; toast('새 섬이 솟아올랐어요');
-};
-const nameEl = document.getElementById('name');
-document.getElementById('photo').onclick = () => {
-  const a = document.createElement('a');
-  a.download = (nameEl.value.trim() || '나만의 섬') + '.png';
-  a.href = cv.toDataURL('image/png'); a.click();
-};
-nameEl.addEventListener('input', () => { changed = true; document.title = nameEl.value || '나만의 섬'; });
-
-let toastTimer;
-function toast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('on');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
-}
-
-function updateStats(){
-  let trees=0;
-  for (let i=0;i<N;i++) if (grid[i]===T.TREE) trees++;
-  const c = {person:0,rabbit:0,sheep:0,wolf:0,fish:0,bird:0};
-  const pop = new Map();
-  ents.forEach(e => { c[e.type]++; if (e.type === 'person') pop.set(owner[e.home], (pop.get(owner[e.home])||0)+1); });
-  document.getElementById('stats').innerHTML =
-    `<span>주민<b>${c.person}</b></span><span>나라<b>${kingdoms.size}</b></span><span>나무<b>${trees}</b></span>` +
-    `<span>동물<b>${c.rabbit+c.sheep+c.wolf+c.fish+c.bird}</b></span><span>수확<b>${harvest}</b></span>`;
-  const h = Math.floor(tod*24), m = Math.floor((tod*24 - h)*6)*10;
-  const icon = darkness() > .5 ? '🌙' : (dusk() > .4 ? '🌅' : '☀️');
-  document.getElementById('clock').textContent = `${icon} ${day}일째 ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-  const kEl = document.getElementById('kings');
-  if (!kingdoms.size){ kEl.innerHTML = '<span class="hint">아직 나라가 없어요. 땅에 집을 지어 보세요.</span>'; return; }
-  kEl.innerHTML = [...kingdoms.values()].map(k => {
-    const hs = houses.filter(h => h.k === k.id).length;
-    const foes = [...k.wars].map(id => kingdoms.get(id)?.name).filter(Boolean);
-    return `<span class="king"><span class="dot" style="background:${k.color}"></span><b>${k.name}</b>` +
-      `<small>주민 ${pop.get(k.id)||0} · 집 ${hs}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}</span>`;
-  }).join('');
-}
-
-/* ---------- 저장 ---------- */
-function serKings(){ return [...kingdoms.values()].map(k => ({id:k.id, name:k.name, color:k.color, wars:[...k.wars]})); }
-function deKings(a){ return new Map(a.map(k => [k.id, {id:k.id, name:k.name, color:k.color, wars:new Set(k.wars)}])); }
-function save(){
-  try {
-    localStorage.setItem(KEY, JSON.stringify({
-      v:2, name:nameEl.value, grid:Array.from(grid), ages:Array.from(ages), owner:Array.from(owner),
-      kings:serKings(), nextKid, tod, day, harvest,
-      ents: ents.map(e => ({t:e.type, x:+e.x.toFixed(2), y:+e.y.toFixed(2), h:e.home, a:Math.round(e.age), l:Math.round(e.life), u:Math.round(e.hunger)}))
-    }));
-  } catch(_) {}
-}
-function load(){
-  try {
-    const s = JSON.parse(localStorage.getItem(KEY));
-    if (!s || s.v !== 2 || s.grid.length !== N) return false;
-    grid = Uint8Array.from(s.grid); ages = Uint16Array.from(s.ages); owner = Int16Array.from(s.owner);
-    kingdoms = deKings(s.kings); nextKid = s.nextKid;
-    tod = s.tod; day = s.day; harvest = s.harvest || 0;
-    nameEl.value = s.name || '나만의 섬'; document.title = nameEl.value;
-    ents = s.ents.map(o => { const e = makeEnt(o.t, Math.floor(o.x), Math.floor(o.y), o.h); e.x = e.tx = o.x; e.y = e.ty = o.y; e.age = o.a||0; e.life = o.l||e.life; e.hunger = o.u||0; return e; });
-    firstResident = !ents.some(e => e.type === 'person');
-    dirty = terrDirty = true; return true;
-  } catch(_) { return false; }
-}
-if (!load()) generate();
-computeTerr();
-setInterval(() => { if (changed){ save(); changed = false; } }, 3000);
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
-
-/* ---------- 효과 그리기 ---------- */
+/* ---------- 효과 ---------- */
 function drawFx(rdt){
   for (const f of fx){
     f.t += rdt;
@@ -951,10 +1260,16 @@ function drawFx(rdt){
     } else if (f.type === 'ring'){
       ctx.strokeStyle = f.color; ctx.globalAlpha = 1-p; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(px, py, 4 + p*(f.r||1.5)*CS, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+    } else if (f.type === 'arrow'){
+      const ax = px + (f.x2*CS - px)*p, ay = py + (f.y2*CS - py)*p - Math.sin(p*Math.PI)*8;
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(Math.atan2(f.y2*CS - py, f.x2*CS - px));
+      ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(1,0); ctx.stroke();
+      ctx.fillStyle = '#d8dde3'; ctx.fillRect(1,-1,2,2); ctx.restore();
     } else if (f.type === 'bolt'){
       ctx.strokeStyle = `rgba(255,250,200,${1-p})`; ctx.lineWidth = 3; ctx.lineJoin = 'round';
-      ctx.beginPath(); ctx.moveTo(px + (hash(1,0,f.seed)-.5)*40, 0);
-      for (let k=1;k<=6;k++){ const yy = py*k/6; ctx.lineTo(px + (k<6 ? (hash(k,1,f.seed)-.5)*24 : 0), yy); }
+      const top = py - 10*CS;
+      ctx.beginPath(); ctx.moveTo(px + (hash(1,0,f.seed)-.5)*40, top);
+      for (let k=1;k<=6;k++){ const yy = top + (py-top)*k/6; ctx.lineTo(px + (k<6 ? (hash(k,1,f.seed)-.5)*24 : 0), yy); }
       ctx.stroke();
       ctx.fillStyle = `rgba(255,240,150,${(1-p)*.6})`; ctx.beginPath(); ctx.arc(px, py, 10, 0, 7); ctx.fill();
     } else if (f.type === 'meteor'){
@@ -980,8 +1295,190 @@ function drawFx(rdt){
   fx = fx.filter(f => f.t < f.d || f.done);
 }
 
+/* ---------- 전체 지도 ---------- */
+function drawMini(){
+  const M = 3;
+  if (mini.width !== W*M || mini.height !== H*M){ mini.width = W*M; mini.height = H*M; }
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++){
+    const i = idx(x,y), t = grid[i];
+    mctx.fillStyle = t === T.WATER ? '#2a6ea6' : t === T.MOUNT ? '#8d939b' : t === T.TREE ? '#3b8a3f' : (t === T.FIRE ? '#ff7a2f' : t === T.BURNT ? '#4d433b' : '#7cc45a');
+    mctx.fillRect(x*M, y*M, M, M);
+    if (terr[i] >= 0 && kingdoms.has(terr[i])){ mctx.globalAlpha = .55; mctx.fillStyle = kingdoms.get(terr[i]).color; mctx.fillRect(x*M, y*M, M, M); mctx.globalAlpha = 1; }
+  }
+  for (const K of kingdoms.values()){
+    const x = K.capital%W, y = (K.capital/W)|0;
+    mctx.fillStyle = '#ffffff'; mctx.fillRect(x*M-3, y*M-3, 9, 9); mctx.fillStyle = K.color; mctx.fillRect(x*M-1, y*M-1, 5, 5);
+  }
+  mctx.strokeStyle = '#ffffff'; mctx.lineWidth = 2;
+  mctx.strokeRect(cam.x/CS*M, cam.y/CS*M, VW/cam.z/CS*M, VH/cam.z/CS*M);
+}
+
+/* ---------- 화면 ---------- */
+function makeTools(el, list){
+  list.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'tool'; b.dataset.id = t.id; b.setAttribute('aria-pressed', t.id === tool);
+    b.innerHTML = `<i aria-hidden="true">${t.ico}</i>${t.name}`;
+    b.onclick = () => { tool = t.id; document.querySelectorAll('.tool').forEach(x => x.setAttribute('aria-pressed', x.dataset.id === tool)); };
+    el.appendChild(b);
+  });
+}
+makeTools(document.getElementById('godTools'), GOD_TOOLS);
+makeTools(document.getElementById('terrainTools'), TERRAIN_TOOLS);
+makeTools(document.getElementById('lifeTools'), LIFE_TOOLS);
+const segPick = (sel, fn) => document.querySelectorAll(sel+' button').forEach(b => b.onclick = () => {
+  fn(b); document.querySelectorAll(sel+' button').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+segPick('#brush', b => brush = +b.dataset.s);
+segPick('#speed', b => speedMul = +b.dataset.v);
+let pickSize = 0;
+segPick('#sizeSel', b => pickSize = +b.dataset.s);
+
+const serEnts = () => JSON.stringify(ents, (k,v) => k === 'atk' ? undefined : v);
+function serKings(){ return [...kingdoms.values()].map(k => ({...k, wars:[...k.wars]})); }
+function deKings(a){ return new Map(a.map(k => [k.id, {...k, wars:new Set(k.wars)}])); }
+function snapshot(){ return {W, H, size, grid:grid.slice(), ages:ages.slice(), owner:owner.slice(), bhp:bhp.slice(), ents:serEnts(), kings:serKings(), nextKid}; }
+function pushUndo(){ undoStack.push(snapshot()); if (undoStack.length > 20) undoStack.shift(); }
+document.getElementById('undo').onclick = () => {
+  const u = undoStack.pop(); if (!u){ toast('더 되돌릴 게 없어요'); return; }
+  const resize = u.W !== W || u.H !== H;
+  W = u.W; H = u.H; size = u.size;
+  if (resize) alloc();
+  grid = u.grid; ages = u.ages; owner = u.owner; bhp = u.bhp; ents = JSON.parse(u.ents); kingdoms = deKings(u.kings); nextKid = u.nextKid;
+  selected = null; dirty = changed = terrDirty = true; flowCache.clear();
+  if (resize) fitView();
+};
+// 확인 창은 막힐 수 있어, 버튼을 한 번 더 누르는 방식으로 확인해요
+const freshBtn = document.getElementById('fresh');
+let freshArmed = null;
+freshBtn.onclick = () => {
+  if (!freshArmed){
+    freshBtn.textContent = '정말요? 한 번 더';
+    toast('지금 세계가 사라져요. 한 번 더 누르세요');
+    freshArmed = setTimeout(() => { freshArmed = null; freshBtn.textContent = '🏝 새로 만들기'; }, 3000);
+    return;
+  }
+  clearTimeout(freshArmed); freshArmed = null; freshBtn.textContent = '🏝 새로 만들기';
+  pushUndo(); size = pickSize; generate(); mini.hidden = size === 0;
+  toast(['작은 섬이 솟아올랐어요','큰 섬이 솟아올랐어요','대륙이 솟아올랐어요'][size]);
+};
+const nameEl = document.getElementById('name');
+document.getElementById('photo').onclick = () => {
+  // 전체 세계를 한 장으로 찍어요
+  const shot = document.createElement('canvas'); shot.width = W*CS; shot.height = H*CS;
+  const g = shot.getContext('2d'); g.drawImage(bg,0,0); g.drawImage(tc,0,0);
+  const a = document.createElement('a');
+  a.download = (nameEl.value.trim() || '나만의 섬') + '.png';
+  a.href = shot.toDataURL('image/png'); a.click();
+};
+nameEl.addEventListener('input', () => { changed = true; document.title = nameEl.value || '나만의 섬'; });
+
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2800);
+}
+
+function showInfo(){
+  const el = document.getElementById('info');
+  const s = selected;
+  if (!s){ el.innerHTML = '<span class="hint">아직 고른 것이 없어요.</span>'; return; }
+  if (s.type === 'person'){
+    const K = kingdoms.get(s.k), col = K ? K.color : '#888';
+    const rank = title(s);
+    const extra = s.role === 'villager' ? '농사짓고 길을 닦아요' : s.role === 'king' ? `${K ? K.name : ''}을 다스려요` : `쓰러뜨린 적 ${s.kills}`;
+    el.innerHTML = `<span class="badge" style="background:${col}">${rank}</span><div class="col"><b>${s.name}</b>` +
+      `<small>${K ? K.name : ''} · ${extra} · 체력 ${Math.ceil(s.hp)}/${s.max} · ${Math.floor(s.age/DAY_LEN)+1}일째 삶</small></div>`;
+    return;
+  }
+  if (s.type){
+    const names = {rabbit:'토끼', sheep:'양', wolf:'늑대', fish:'물고기', bird:'새'};
+    el.innerHTML = `<span class="badge" style="background:#5d6f78">동물</span><div class="col"><b>${names[s.type]}</b><small>${s.type === 'wolf' ? `배고픔 ${Math.floor(s.hunger)}/90` : '섬을 돌아다녀요'}</small></div>`;
+    return;
+  }
+  if (s.bld !== undefined){
+    const i = s.bld;
+    if (!isBld(grid[i])){ selected = null; showInfo(); return; }
+    const K = kingdoms.get(owner[i]);
+    const isCap = K && K.capital === i;
+    el.innerHTML = `<span class="badge" style="background:${K ? K.color : '#888'}">${grid[i] === T.CASTLE ? (isCap ? '수도 성' : '성') : '집'}</span><div class="col"><b>${K ? K.name : '빈 건물'}</b>` +
+      `<small>체력 ${Math.ceil(bhp[i])}/${MAXHP[grid[i]]}${isCap ? ' · 함락되면 나라가 흡수돼요. 왕이 쓰러져도 멸망해요' : ''}</small></div>`;
+    return;
+  }
+  if (s.kingdom !== undefined){
+    const K = kingdoms.get(s.kingdom);
+    if (!K){ selected = null; showInfo(); return; }
+    el.innerHTML = `<span class="badge" style="background:${K.color}">영토</span><div class="col"><b>${K.name}</b><small>${K.born}일째에 세워졌어요</small></div>`;
+  }
+}
+
+function updateStats(){
+  let trees = 0;
+  for (let i=0;i<N;i++) if (grid[i]===T.TREE) trees++;
+  const c = {person:0, rabbit:0, sheep:0, wolf:0, fish:0, bird:0};
+  const per = new Map();
+  ents.forEach(e => {
+    c[e.type]++;
+    if (e.type !== 'person') return;
+    const p = per.get(e.k) || {pop:0, soldiers:0, king:null, general:null};
+    p.pop++;
+    if (e.role === 'soldier') p.soldiers++;
+    if (e.role === 'king') p.king = e;
+    if (e.role === 'soldier' && e.rank === 2) p.general = e;
+    per.set(e.k, p);
+  });
+  document.getElementById('stats').innerHTML =
+    `<span>사람<b>${c.person}</b></span><span>나라<b>${kingdoms.size}</b></span><span>나무<b>${trees}</b></span>` +
+    `<span>동물<b>${c.rabbit+c.sheep+c.wolf+c.fish+c.bird}</b></span><span>수확<b>${harvest}</b></span>`;
+  const h = Math.floor(tod*24), m = Math.floor((tod*24 - h)*6)*10;
+  const icon = darkness() > .5 ? '🌙' : (dusk() > .4 ? '🌅' : '☀️');
+  document.getElementById('clock').textContent = `${icon} ${day}일째 ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  const kEl = document.getElementById('kings');
+  if (!kingdoms.size){ kEl.innerHTML = '<span class="hint">나라가 없어요. 🏯 성을 놓아 나라를 세워 보세요.</span>'; return; }
+  kEl.innerHTML = [...kingdoms.values()].map(k => {
+    const p = per.get(k.id) || {pop:0, soldiers:0};
+    const hs = bList.filter(b => owner[b] === k.id && grid[b] === T.HOUSE).length;
+    const foes = [...k.wars].map(id => kingdoms.get(id)?.name).filter(Boolean);
+    return `<div class="king"><span class="dot" style="background:${k.color}"></span><b>${k.name}</b>` +
+      `<small><span class="crown">👑</span> ${p.king ? p.king.name : '왕 없음'}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
+      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}</div>`;
+  }).join('');
+}
+
+/* ---------- 저장 ---------- */
+function save(){
+  try {
+    localStorage.setItem(KEY, JSON.stringify({
+      v:3, W, H, size, name:nameEl.value, grid:Array.from(grid), ages:Array.from(ages), owner:Array.from(owner), bhp:Array.from(bhp, v => Math.round(v)),
+      kings:serKings(), nextKid, tod, day, harvest, ents:JSON.parse(serEnts())
+    }));
+  } catch(_) {}
+}
+function load(){
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (!s || s.v !== 3) return false;
+    W = s.W; H = s.H; size = s.size; alloc();
+    if (s.grid.length !== N) return false;
+    grid = Uint8Array.from(s.grid); ages = Uint16Array.from(s.ages); owner = Int16Array.from(s.owner); bhp = Float32Array.from(s.bhp);
+    kingdoms = deKings(s.kings); nextKid = s.nextKid;
+    tod = s.tod; day = s.day; harvest = s.harvest || 0;
+    nameEl.value = s.name || '나만의 섬'; document.title = nameEl.value;
+    ents = s.ents.map(o => ({...o, dead:false, atk:null}));
+    dirty = terrDirty = true; return true;
+  } catch(_) { return false; }
+}
+if (!load()) generate();
+pickSize = size;
+document.querySelectorAll('#sizeSel button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.s === size));
+computeTerr(); fitView();
+mini.hidden = size === 0;
+setInterval(() => { if (changed){ save(); changed = false; } }, 3000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
 /* ---------- 반복 ---------- */
-let prev = performance.now(), acc = 0, facc = 0;
+let prev = performance.now(), acc = 0, facc = 0, uiAcc = 0;
 function frame(now){
   const rdt = Math.max(0, Math.min(.1, (now - prev)/1000)); prev = now;
   const dt = rdt * speedMul;
@@ -989,49 +1486,59 @@ function frame(now){
   tod += dt/DAY_LEN;
   if (tod >= 1) tod -= 1;
   if (before < .3 && tod >= .3){ day++; changed = true; }
-  acc += dt; if (acc >= 1){ acc -= 1; tick(); }
+  acc += dt; while (acc >= 1){ acc -= 1; tick(); }
   facc += dt; while (facc >= .4){ facc -= .4; fireTick(); }
-  updateEnts(dt);
+  const sub = Math.max(1, Math.ceil(speedMul));
+  for (let k=0;k<sub;k++) updateEnts(dt/sub);
   if (terrDirty) computeTerr();
   if (dirty) renderBg();
-  if (Math.floor(now/500) !== Math.floor((now-rdt*1000)/500)) updateStats();
+  uiAcc += rdt; if (uiAcc > .3){ uiAcc = 0; updateStats(); showInfo(); if (!mini.hidden) drawMini(); }
 
   const t = now/1000;
-  ctx.save();
-  if (shake > 0){ shake -= rdt; ctx.translate((Math.random()-.5)*8, (Math.random()-.5)*8); }
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle = '#1f5f94'; ctx.fillRect(0,0,VW,VH);
+  ctx.imageSmoothingEnabled = false;
+  const sh = shake > 0 ? (Math.random()-.5)*8 : 0, sv = shake > 0 ? (Math.random()-.5)*8 : 0;
+  if (shake > 0) shake -= rdt;
+  ctx.setTransform(cam.z,0,0,cam.z,-cam.x*cam.z + sh,-cam.y*cam.z + sv);
   ctx.drawImage(bg, 0, 0);
   ctx.drawImage(tc, 0, 0);
+  const x0 = Math.max(0, Math.floor(cam.x/CS)-1), y0 = Math.max(0, Math.floor(cam.y/CS)-1);
+  const x1 = Math.min(W, Math.ceil((cam.x + VW/cam.z)/CS)+1), y1 = Math.min(H, Math.ceil((cam.y + VH/cam.z)/CS)+1);
   ctx.fillStyle = 'rgba(255,255,255,.45)';
-  for (let k=0;k<18;k++){
+  for (let k=0;k<18*(size+1);k++){
     const x = Math.floor(hash(k, Math.floor(t*1.5), 3)*W), y = Math.floor(hash(k, Math.floor(t*1.5), 4)*H);
     if (grid[idx(x,y)] === T.WATER) ctx.fillRect(x*CS+4+(k%8), y*CS+6+(k%5), 3, 1);
   }
-  // 불꽃
-  for (let i=0;i<N;i++){
-    if (grid[i] !== T.FIRE) continue;
-    const px = (i%W)*CS, py = Math.floor(i/W)*CS;
-    for (let k=0;k<3;k++){
-      const fh = 6 + Math.sin(t*14 + i + k*2)*3 + k;
-      const fxp = px + 3 + k*4;
-      ctx.fillStyle = k === 1 ? '#ffd23f' : '#ff7a2f';
-      ctx.beginPath(); ctx.moveTo(fxp-2.5, py+14); ctx.lineTo(fxp, py+14-fh); ctx.lineTo(fxp+2.5, py+14); ctx.fill();
-    }
-    if (Math.random() < .05) fx.push({type:'puff', x:(i%W)+.5, y:Math.floor(i/W)+.2, t:0, d:.9, color:'rgba(90,90,90,'});
+  for (let y=y0;y<y1;y++) for (let x=x0;x<x1;x++){
+    const i = idx(x,y);
+    if (grid[i] === T.FIRE){
+      const px = x*CS, py = y*CS;
+      for (let k=0;k<3;k++){
+        const fh = 6 + Math.sin(t*14 + i + k*2)*3 + k, fxp = px + 3 + k*4;
+        ctx.fillStyle = k === 1 ? '#ffd23f' : '#ff7a2f';
+        ctx.beginPath(); ctx.moveTo(fxp-2.5, py+14); ctx.lineTo(fxp, py+14-fh); ctx.lineTo(fxp+2.5, py+14); ctx.fill();
+      }
+      if (Math.random() < .05) fx.push({type:'puff', x:x+.5, y:y+.2, t:0, d:.9, color:'rgba(90,90,90,'});
+    } else if (isBld(grid[i]) && bhp[i] < MAXHP[grid[i]]) bar(x*CS+2, y*CS-3, 12, bhp[i]/MAXHP[grid[i]]);
   }
-  const vis = ents.filter(e => e.alpha > .03).sort((a,b) => (a.type==='bird') - (b.type==='bird') || a.y - b.y);
-  vis.forEach(e => drawEnt(e, t));
+  ents.filter(e => e.alpha > .03 && e.x > x0 && e.x < x1 && e.y > y0 && e.y < y1)
+      .sort((a,b) => (a.type==='bird') - (b.type==='bird') || a.y - b.y).forEach(e => drawEnt(e, t));
   drawFx(rdt);
-
+  // 밤과 노을
   const d = darkness(), du = dusk();
-  if (du > 0){ ctx.fillStyle = `rgba(255,140,60,${du*.18})`; ctx.fillRect(0,0,cv.width,cv.height); }
-  if (d > 0){ ctx.fillStyle = `rgba(10,20,60,${d*.58})`; ctx.fillRect(0,0,cv.width,cv.height); }
+  if (du > 0){ ctx.fillStyle = `rgba(255,140,60,${du*.18})`; ctx.fillRect(x0*CS, y0*CS, (x1-x0)*CS, (y1-y0)*CS); }
+  if (d > 0){ ctx.fillStyle = `rgba(10,20,60,${d*.55})`; ctx.fillRect(x0*CS, y0*CS, (x1-x0)*CS, (y1-y0)*CS); }
   if (d > .25){
     const a = Math.min(1,(d-.25)*2);
-    for (let i=0;i<N;i++){
-      const px = (i%W)*CS, py = Math.floor(i/W)*CS;
+    for (let y=y0;y<y1;y++) for (let x=x0;x<x1;x++){
+      const i = idx(x,y), px = x*CS, py = y*CS;
       if (grid[i] === T.HOUSE){
         ctx.fillStyle = `rgba(255,214,110,${a})`; ctx.fillRect(px+4,py+9,2,2); ctx.fillRect(px+11,py+9,2,2);
         ctx.fillStyle = `rgba(255,200,90,${a*.18})`; ctx.beginPath(); ctx.arc(px+8,py+10,9,0,7); ctx.fill();
+      } else if (grid[i] === T.CASTLE){
+        ctx.fillStyle = `rgba(255,200,90,${a*.25})`; ctx.beginPath(); ctx.arc(px+8,py+9,12,0,7); ctx.fill();
+        ctx.fillStyle = `rgba(255,214,110,${a})`; ctx.fillRect(px+2,py+7,2,2); ctx.fillRect(px+12,py+7,2,2);
       } else if (grid[i] === T.FIRE){
         ctx.fillStyle = `rgba(255,140,50,${a*.3})`; ctx.beginPath(); ctx.arc(px+8,py+8,12,0,7); ctx.fill();
       } else if (grid[i] === T.FLOWER){
@@ -1040,8 +1547,8 @@ function frame(now){
       }
     }
   }
-  if (flash > 0){ ctx.fillStyle = `rgba(255,255,240,${flash*.6})`; ctx.fillRect(0,0,cv.width,cv.height); flash -= rdt*2; }
-  ctx.restore();
+  ctx.setTransform(1,0,0,1,0,0);
+  if (flash > 0){ ctx.fillStyle = `rgba(255,255,240,${flash*.6})`; ctx.fillRect(0,0,VW,VH); flash -= rdt*2; }
   requestAnimationFrame(frame);
 }
 updateStats();
