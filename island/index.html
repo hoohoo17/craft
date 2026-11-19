@@ -665,7 +665,7 @@ function rebel(K, leader, followers, lead){
   const id = K.id, cap = K.capital, capx = cap%W, capy = (cap/W)|0;
   const far = h => Math.hypot(h%W - capx, ((h/W)|0) - capy);
   const houses = bList.filter(b => owner[b] === id && grid[b] === T.HOUSE).sort((a,b) => far(b) - far(a));
-  if (houses.length < 3 || far(houses[0]) < 4) return false;
+  if (houses.length < 5 || far(houses[0]) < 4) return false;
   const seat = houses[0], sx = seat%W, sy = (seat/W)|0;
   const group = houses.filter(h => Math.hypot(h%W - sx, ((h/W)|0) - sy) <= 6);
   const NK = newKingdom(seat);
@@ -689,6 +689,7 @@ function rebel(K, leader, followers, lead){
   const mate = leader.spouse ? byId(leader.spouse) : null;
   if (mate && mate.k === id){ mate.k = NK.id; mate.home = seat; if (mate.role === 'crownwife') mate.role = 'queen'; }
   NK.hadKing = true; NK.unrest = 0; NK.faith = K.faith ?? null;
+  K.lastRebel = NK.lastRebel = day*DAY_LEN + tod*DAY_LEN;
   K.unrest = Math.max(0, (K.unrest||0) - 50);
   K.wars.add(NK.id); NK.wars.add(id);
   if (K.allies) delete K.allies[NK.id];
@@ -701,12 +702,12 @@ function unrestTick(K, houses){
   let u = K.unrest || 0;
   // 나라가 클수록 다스리기 어렵고, 전쟁이 길어지면 민심이 나빠져요. 평화로우면 조금씩 회복돼요
   if (houses > 8) u += .035 * (houses - 8);
-  if (K.wars.size) u += .45 * K.wars.size;
+  if (K.wars.size) u += .25 * Math.min(2, K.wars.size);
   else u -= .25 + (K.faith === 0 ? .2 : 0);
   if (K.faith === 4) u += .08;
   u = Math.max(0, Math.min(100, u));
   K.unrest = u;
-  if (u >= 60 && !K.feud && Math.random() < (u - 55) / 200){
+  if (u >= 60 && !K.feud && day*DAY_LEN + tod*DAY_LEN - (K.lastRebel ?? -1e9) > 2*DAY_LEN && Math.random() < (u - 55) / 200){
     const pool = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id);
     const leader = pool.find(e => e.role === 'soldier' && e.rank === 2) || pool.find(e => e.role === 'soldier' && e.rank === 1)
       || pick(pool.filter(e => e.role === 'soldier')) || pick(pool.filter(e => e.role === 'villager'));
@@ -759,7 +760,7 @@ function diplomacy(v, K, TK){
   const sameFaith = K.faith != null && K.faith === TK.faith;
   if (K.wars.has(TK.id)){
     const mine = (K.spoils && K.spoils[TK.id]) || 0, theirs = (TK.spoils && TK.spoils[K.id]) || 0;
-    let p = .4 + (mine < theirs ? .2 : 0) + (sameFaith ? .2 : 0) - (theirs > mine ? .2 : 0);
+    let p = .3 + (mine < theirs ? .2 : 0) + (sameFaith ? .2 : 0) - (theirs > mine ? .2 : 0);
     if (Math.random() < p){
       toast(`📜 ${K.name} 외교관 ${v.name}의 평화 회담이 받아들여졌어요`);
       makePeace(K, TK);
@@ -771,11 +772,11 @@ function diplomacy(v, K, TK){
     return;
   }
   if (allied(K.id, TK.id)) return;
-  if (Math.random() < (sameFaith ? .6 : .3)){
-    const days = 3 * DAY_LEN;
+  if (Math.random() < (sameFaith ? .45 : .2)){
+    const days = 2 * DAY_LEN;
     K.allies[TK.id] = {treaty: days}; TK.allies = TK.allies || {}; TK.allies[K.id] = {treaty: days};
     fx.push({type:'ring', x:v.x, y:v.y, t:0, d:1, color:'#ffffff', r:3});
-    toast(`🤝 ${K.name}과 ${TK.name}이 외교관 ${v.name}의 노력으로 불가침 조약을 맺었어요 (3일)`);
+    toast(`🤝 ${K.name}과 ${TK.name}이 외교관 ${v.name}의 노력으로 불가침 조약을 맺었어요 (2일)`);
   } else toast(`${TK.name}이 ${K.name}의 조약 제안을 거절했어요`);
 }
 // 종교
@@ -801,9 +802,9 @@ function makePeace(A, B){
   toast(`🕊 ${A.name}과 ${B.name}이 평화를 맺었어요${win ? ` (${win.name} 우세)` : ''}`);
 }
 function warChance(A, B, base){
-  const trade = A.trades && A.trades[B.id] ? .5 : 1;
+  const trade = A.trades && A.trades[B.id] ? .75 : 1;
   if (A.faith == null || B.faith == null) return base * trade;
-  return (A.faith === B.faith ? base * .4 : base * 1.8) * trade;
+  return (A.faith === B.faith ? base * .6 : base * 1.8) * trade;
 }
 function warText(A, B){
   if (A.faith != null && B.faith != null && A.faith !== B.faith)
@@ -1243,7 +1244,7 @@ function tick(){
       const dist = o => Math.hypot(o.capital%W - mx, ((o.capital/W)|0) - my);
       const enemies = [...K.wars].map(w => kingdoms.get(w)).filter(Boolean);
       let target = null, purpose = 'pact';
-      if (enemies.length && Math.random() < .7){ target = pick(enemies); purpose = 'peace'; }
+      if (enemies.length && Math.random() < .5){ target = pick(enemies); purpose = 'peace'; }
       else target = [...kingdoms.values()].filter(o => o.id !== id && !allied(id, o.id) && !K.wars.has(o.id) && dist(o) < 35).sort((a,b) => dist(a) - dist(b))[0];
       if (target){
         const v = makePerson(id, 'envoy', K.capital); v.mission = target.id; v.purpose = purpose; K.envoy = 0;
@@ -1311,22 +1312,34 @@ function tick(){
   for (const key of borders){
     const [a,b] = key.split('-').map(Number);
     const A = kingdoms.get(a), B = kingdoms.get(b);
-    if (!A || !B || A.wars.has(b) || allied(a, b)) continue;
-    if (Math.random() < warChance(A, B, .012)){ A.wars.add(b); B.wars.add(a); changed = true; toast(warText(A, B)); }
+    if (!A || !B || A.wars.has(b) || allied(a, b) || A.wars.size >= 2 || B.wars.size >= 2) continue;
+    if (Math.random() < warChance(A, B, .03)){ A.wars.add(b); B.wars.add(a); changed = true; toast(warText(A, B)); }
   }
   // 영토가 맞닿지 않아도 수도끼리 가까운 이웃은 가끔 전쟁을 벌여요
-  const ks = [...kingdoms.values()];
-  for (let i=0;i<ks.length;i++) for (let j=i+1;j<ks.length;j++){
-    const A = ks[i], B = ks[j];
-    if (A.wars.has(B.id) || allied(A.id, B.id)) continue;
-    const dist = Math.hypot(A.capital%W - B.capital%W, ((A.capital/W)|0) - ((B.capital/W)|0));
-    if (dist < 22 && Math.random() < warChance(A, B, .004)){ A.wars.add(B.id); B.wars.add(A.id); changed = true; toast(warText(A, B)); }
+  // (나라 짝마다가 아니라 나라마다 굴려서, 나라가 늘어도 전쟁이 폭발하지 않아요)
+  for (const A of kingdoms.values()){
+    if (A.wars.size >= 2) continue;
+    const ax = A.capital%W, ay = (A.capital/W)|0, dist = B => Math.hypot(B.capital%W - ax, ((B.capital/W)|0) - ay);
+    const B = [...kingdoms.values()].filter(o => o.id !== A.id && !A.wars.has(o.id) && !allied(A.id, o.id) && o.wars.size < 2 && dist(o) < 30)
+      .sort((a,b) => dist(a) - dist(b))[0];
+    if (B && Math.random() < warChance(A, B, .008)){ A.wars.add(B.id); B.wars.add(A.id); changed = true; toast(warText(A, B)); }
+  }
+  // 야심: 군대가 강해진 나라는 약한 이웃을 노려 전쟁을 일으켜요
+  const armies = new Map();
+  ents.forEach(e => { if (e.type === 'person' && !e.dead && e.role === 'soldier') armies.set(e.k, (armies.get(e.k) || 0) + 1); });
+  for (const A of kingdoms.values()){
+    const mine = armies.get(A.id) || 0;
+    if (mine < 8 || A.wars.size >= 2 || Math.random() > .012) continue;
+    const ax = A.capital%W, ay = (A.capital/W)|0, dist = B => Math.hypot(B.capital%W - ax, ((B.capital/W)|0) - ay);
+    const prey = [...kingdoms.values()].filter(B => B.id !== A.id && !A.wars.has(B.id) && !allied(A.id, B.id) && B.wars.size < 2 && (armies.get(B.id) || 0) < mine * .7 && dist(B) < 35)
+      .sort((a,b) => dist(a) - dist(b))[0];
+    if (prey){ A.wars.add(prey.id); prey.wars.add(A.id); changed = true; toast(`⚔ 군대가 강해진 ${A.name}이 약한 ${josa(prey.name,'을를')} 노려 전쟁을 일으켰어요`); }
   }
   for (const A of kingdoms.values()){
     for (const b of [...A.wars]){
       if (b < A.id) continue;
       const B = kingdoms.get(b);
-      if (B && Math.random() < .006) makePeace(A, B);
+      if (B && Math.random() < .004) makePeace(A, B);
     }
   }
   marriages();
