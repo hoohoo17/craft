@@ -158,7 +158,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 늙어 숨진 왕의 자리는 새 왕이 이어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -202,6 +202,7 @@ const LIFE_TOOLS = [
 const SPEED = {rabbit:1.6, sheep:.6, wolf:1.9, person:1.1, fish:.8, bird:3};
 // 계급: 병사 → 기사 → 장군. 왕은 따로.
 const RANKS = [{name:'병사', hp:1, dmg:1}, {name:'기사', hp:1.5, dmg:1.4}, {name:'장군', hp:2.2, dmg:2}];
+const ROYALS = ['queen','dowager','prince','princess'];
 const KCOLORS = ['#e4573d','#3f7fd1','#f0b429','#8b5cc7','#2f9e6e','#e46fa1','#1fa8b0','#a0602d','#5b6bd6','#c2452f'];
 const SYL = ['가','나','라','마','미','소','하','도','루','벨','온','세','리','타','유','진','바','로','아','윤'];
 const NAME1 = ['도','서','하','지','민','수','태','나','한','보','은','다','가','시','유','라','새','이','준','예','소','우'];
@@ -454,11 +455,13 @@ function makePerson(k, role, home){
 }
 function setStats(e){
   const old = e.max || 0;
-  e.max = e.role === 'villager' ? 10 : e.role === 'king' ? 45 : Math.round(30 * RANKS[e.rank].hp);
+  e.max = e.role === 'villager' ? 10 : e.role === 'king' ? 45 : ROYALS.includes(e.role) ? 15 : Math.round(30 * RANKS[e.rank].hp);
   if (old) e.hp = Math.min(e.max, e.hp + (e.max - old));
 }
-const dmgOf = e => e.role === 'king' ? 6 : e.role === 'soldier' ? 5 * RANKS[e.rank].dmg : 0;
-const title = e => e.type !== 'person' ? '' : e.role === 'king' ? '왕' : e.role === 'villager' ? '주민' : RANKS[e.rank].name;
+const dmgOf = e => e.role === 'king' ? 6 : e.role === 'soldier' ? 5 * RANKS[e.rank].dmg : 0;  // 왕실 가족과 주민은 싸우지 않아요
+const ROYAL_TITLE = {queen:'왕비', dowager:'왕대비', prince:'왕자', princess:'공주'};
+const title = e => e.type !== 'person' ? '' : e.role === 'king' ? (e.female ? '여왕' : '왕') : e.role === 'villager' ? '주민' : ROYAL_TITLE[e.role] || RANKS[e.rank].name;
+const isChild = e => (e.role === 'prince' || e.role === 'princess') && e.age < 150;
 // by: 쓰러뜨린 사람(없으면 신의 힘이나 불). natural: 수명이 다해 숨진 경우
 function kill(e, color, by, natural){
   if (e.dead) return;
@@ -470,6 +473,7 @@ function kill(e, color, by, natural){
     fallKingdom(e.k, conqueror, e.name);
     return;
   }
+  if (e.type === 'person' && ROYALS.includes(e.role) && !natural){ const K = kingdoms.get(e.k); if (K && !e.quiet) toast(`${K.name}의 ${ROYAL_TITLE[e.role]} ${josa(e.name,'이가')} 쓰러졌어요`); }
   if (e.type === 'person' && e.role === 'soldier' && e.rank === 2){ const K = kingdoms.get(e.k); if (K) toast(`${K.name}의 장군 ${josa(e.name,'이가')} 쓰러졌어요`); }
 }
 function hurt(e, d, by){
@@ -504,7 +508,7 @@ function absorb(old, k){
   for (let j=0;j<N;j++) if (owner[j] === old){ owner[j] = k; bhp[j] = MAXHP[grid[j]]*.4; }
   ents.forEach(e => {
     if (e.type !== 'person' || e.k !== old || e.dead) return;
-    if (e.role === 'king'){ e.dead = true; fx.push({type:'puff', x:e.x, y:e.y, t:0, d:.6, color:'rgba(230,230,230,'}); }
+    if (e.role === 'king' || ROYALS.includes(e.role)){ e.dead = true; fx.push({type:'puff', x:e.x, y:e.y, t:0, d:.6, color:'rgba(230,230,230,'}); }
     else { e.k = k; if (e.role === 'soldier') e.home = A.capital; }
   });
   kingdoms.delete(old);
@@ -529,6 +533,33 @@ function fallKingdom(id, by, kingName){
   if (selected && selected.k === id) selected = null;
   terrDirty = true;
   toast(`👑 ${K.name}의 왕 ${josa(kingName,'이가')} 쓰러져 나라가 멸망했어요`);
+}
+
+// 왕이 늙어 눈을 감으면: 맏왕자 → 맏공주 → 왕비 → 장군 순서로 왕위를 이어요
+function heirs(id){
+  const fam = ents.filter(e => e.type === 'person' && !e.dead && e.k === id);
+  const byAge = r => fam.filter(e => e.role === r).sort((a,b) => b.age - a.age);
+  return [...byAge('prince'), ...byAge('princess'), ...byAge('queen')];
+}
+function succeed(K, old){
+  const oldTitle = old.female ? '여왕' : '왕';
+  const heir = heirs(K.id)[0];
+  if (heir){
+    const was = ROYAL_TITLE[heir.role];
+    const queen = ents.find(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'queen');
+    if (queen && queen !== heir) queen.role = 'dowager';
+    heir.female = heir.role !== 'prince';
+    heir.role = 'king'; heir.life = Math.max(heir.life, heir.age + rnd(500,800)); setStats(heir); heir.hp = heir.max;
+    toast(`👑 ${K.name}의 ${oldTitle} ${josa(old.name,'이가')} 눈을 감고, ${was} ${josa(heir.name,'이가')} ${heir.female ? '여왕으로' : '왕으로'} 즉위했어요`);
+    return;
+  }
+  const general = ents.find(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'soldier' && e.rank === 2);
+  if (general){
+    general.role = 'king'; general.home = K.capital; setStats(general); general.hp = general.max;
+    toast(`👑 ${K.name}의 ${oldTitle} ${josa(old.name,'이가')} 후계자 없이 눈을 감아, 장군 ${josa(general.name,'이가')} 왕위에 올랐어요`);
+    return;
+  }
+  toast(`👑 ${K.name}의 ${oldTitle} ${josa(old.name,'이가')} 후계자 없이 눈을 감았어요. 백성 가운데 새 왕을 세워요`);
 }
 
 /* ---------- 길 찾기 ---------- */
@@ -611,6 +642,13 @@ function personThink(e){
     moveTo(e, roads.length && Math.random() < .7 ? pick(roads) : pick(outside.length ? outside : opts));
     return;
   }
+  if (ROYALS.includes(e.role)){
+    const foe = nearestFoe(e, 2.5, true);
+    const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+    if (foe && opts.length){ moveTo(e, toward(opts, foe.x, foe.y, true)); return; }
+    if (Math.random() < (isChild(e) ? .6 : .3)) wander(e, K.capital, isChild(e) ? 3 : 2);
+    return;
+  }
   // 병사와 왕
   const foe = nearestFoe(e, e.role === 'king' ? 1.8 : 4.5, false);
   if (foe){
@@ -670,7 +708,7 @@ function updateEnts(dt){
         else { kill(e); continue; }
       }
       e.age += dt;
-      if (e.age > e.life){ kill(e, null, null, true); if (e.role === 'king') toast(`👑 ${K.name}의 왕 ${josa(e.name,'이가')} 천수를 누리고 눈을 감았어요`); continue; }
+      if (e.age > e.life){ kill(e, null, null, true); if (e.role === 'king') succeed(K, e); continue; }
       if (e.role === 'villager'){
         const target = dark > .45 && ci === e.home ? 0 : (dark > .8 ? 0 : 1);
         e.alpha += (target - e.alpha) * Math.min(1, dt*2);
@@ -777,6 +815,31 @@ function tick(){
       const king = makePerson(id, 'king', K.capital);
       if (K.hadKing) toast(`👑 ${K.name}에 새 왕 ${josa(king.name,'이가')} 즉위했어요`);
       K.hadKing = true; people++;
+      kings.set(id, king);
+    }
+    // 왕실: 왕이 남자면 왕비를 맞고, 왕비가 있거나 여왕이면 왕자·공주가 태어나요
+    const monarch = kings.get(id);
+    if (monarch){
+      const fam = ents.filter(e => e.type === 'person' && !e.dead && e.k === id);
+      const queen = fam.find(e => e.role === 'queen');
+      const kids = fam.filter(e => e.role === 'prince' || e.role === 'princess').length;
+      if (!monarch.female && !queen && grid[K.capital] === T.CASTLE){
+        K.wed = (K.wed || 0) + 1;
+        if (K.wed >= (K.hadQueen ? 25 : 1)){
+          const q = makePerson(id, 'queen', K.capital); q.female = true; q.life = rnd(700,1100); q.age = rnd(0,120); K.wed = 0;
+          if (K.hadQueen) toast(`💍 ${K.name}의 왕 ${josa(monarch.name,'이가')} ${josa(q.name,'을를')} 왕비로 맞았어요`);
+          K.hadQueen = true; people++;
+        }
+      }
+      if ((monarch.female || queen) && kids < 3 && grid[K.capital] === T.CASTLE){
+        K.birth = (K.birth || 0) + 1;
+        if (K.birth >= 35 && Math.random() < .25){
+          const boy = Math.random() < .5;
+          const c = makePerson(id, boy ? 'prince' : 'princess', K.capital); c.female = !boy; c.life = rnd(900,1400); setStats(c); c.hp = c.max;
+          K.birth = 0; people++;
+          toast(`👶 ${K.name}에 ${boy ? '왕자' : '공주'} ${josa(c.name,'이가')} 태어났어요`);
+        }
+      }
     }
     // 주민 (낮에만 이사 와요)
     if (dark < .3) for (const h of houses){
@@ -1207,6 +1270,7 @@ function drawPerson(e, now, moving){
   const kg = kingdoms.get(e.k), col = kg ? kg.color : '#999';
   const big = e.role === 'king' || (e.role === 'soldier' && e.rank === 2);
   if (big) ctx.scale(1.18, 1.18);
+  if (ROYALS.includes(e.role) || (e.role === 'king' && e.female)){ drawRoyal(e, col, now, moving); return; }
   const step = moving ? Math.sin(now*12+e.phase) : 0;
   ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,5,3.5,1.3,0,0,7); ctx.fill();
   // 망토: 장군은 붉은색, 왕은 자주색
@@ -1238,6 +1302,46 @@ function drawPerson(e, now, moving){
   else { ctx.strokeStyle='#e3e7ec'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-8); ctx.stroke(); ctx.fillStyle='#7a5230'; ctx.fillRect(-1.5,-.5,3,1); }
   ctx.restore();
   if (e.rank >= 1){ ctx.fillStyle = col; ctx.strokeStyle = e.rank === 2 ? '#e0b12a' : '#e3e7ec'; ctx.lineWidth=.8; ctx.beginPath(); ctx.arc(-3,0,2.4,0,7); ctx.fill(); ctx.stroke(); }
+}
+// 왕비·왕대비·왕자·공주·여왕
+function drawRoyal(e, col, now, moving){
+  if (isChild(e)) ctx.scale(.72 + .28*(e.age/150), .72 + .28*(e.age/150));
+  const step = moving ? Math.sin(now*12+e.phase) : 0;
+  const female = e.female || e.role === 'queen' || e.role === 'dowager' || e.role === 'princess';
+  const isQueenRegnant = e.role === 'king';
+  ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,5,3.8,1.3,0,0,7); ctx.fill();
+  if (isQueenRegnant){ ctx.fillStyle = '#6b2fa0'; ctx.beginPath(); ctx.moveTo(-2.5,-3); ctx.lineTo(-6,5); ctx.lineTo(1,5); ctx.lineTo(2.5,-3); ctx.fill(); }
+  if (female){
+    // 긴 치마
+    const dress = e.role === 'princess' ? '#f39ac0' : e.role === 'dowager' ? '#8a7fa8' : col;
+    ctx.fillStyle = e.hit > 0 ? '#ffffff' : dress;
+    ctx.beginPath(); ctx.moveTo(-2.4,-3); ctx.lineTo(2.4,-3); ctx.lineTo(4,5); ctx.lineTo(-4,5); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-2.4,-.5,4.8,.8);
+  } else {
+    ctx.fillStyle='#3b4252'; ctx.fillRect(-2,2,1.6,3+step); ctx.fillRect(.5,2,1.6,3-step);
+    ctx.fillStyle = e.hit > 0 ? '#ffffff' : col; ctx.fillRect(-2.5,-3,5,5.5);
+    ctx.fillStyle = '#2f62b8'; ctx.beginPath(); ctx.moveTo(-2.5,-3); ctx.lineTo(-4.5,2.5); ctx.lineTo(-1,2.5); ctx.fill();
+  }
+  // 머리와 머리카락
+  const hair = e.role === 'dowager' ? '#d9d9d9' : '#3b2a20';
+  if (female){ ctx.fillStyle = hair; ctx.fillRect(-3,-7.6,6,6); }
+  ctx.fillStyle='#f2c9a0'; ctx.beginPath(); ctx.arc(0,-5.5,2.6,0,7); ctx.fill();
+  ctx.fillStyle = hair; ctx.fillRect(-2.6,-8.3,5.2,1.6);
+  // 관: 여왕은 큰 왕관, 왕비·왕대비는 작은 관, 왕자는 금테, 공주는 반짝이는 작은 관
+  ctx.fillStyle = '#f2c230';
+  if (isQueenRegnant){
+    ctx.fillRect(-2.8,-8.8,5.6,1.6); ctx.fillRect(-2.8,-10.6,1.2,1.8); ctx.fillRect(-.6,-11.2,1.2,2.4); ctx.fillRect(1.6,-10.6,1.2,1.8);
+    ctx.fillStyle = '#e4573d'; ctx.fillRect(-.4,-8.5,.8,.8);
+  } else if (e.role === 'queen' || e.role === 'dowager'){
+    ctx.fillRect(-2.2,-9,4.4,1.1); ctx.fillRect(-.5,-10.2,1,1.4);
+    ctx.fillStyle = '#7fd3ff'; ctx.fillRect(-.4,-9.8,.8,.8);
+  } else if (e.role === 'prince'){
+    ctx.fillRect(-2.6,-8.9,5.2,1);
+    ctx.fillRect(-2.6,-9.9,1,1); ctx.fillRect(1.6,-9.9,1,1);
+  } else {
+    ctx.fillRect(-1.8,-9,3.6,.9); ctx.fillRect(-.4,-9.9,.8,1);
+    if (Math.sin(now*5 + e.phase) > .6){ ctx.fillStyle = '#ffffff'; ctx.fillRect(1.6,-10.4,1,1); }
+  }
 }
 function bar(x, y, w, p){
   ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x-1, y-1, w+2, 3.5);
@@ -1387,7 +1491,11 @@ function showInfo(){
   if (s.type === 'person'){
     const K = kingdoms.get(s.k), col = K ? K.color : '#888';
     const rank = title(s);
-    const extra = s.role === 'villager' ? '농사짓고 길을 닦아요' : s.role === 'king' ? `${K ? K.name : ''}을 다스려요` : `쓰러뜨린 적 ${s.kills}`;
+    const heir = K ? heirs(K.id)[0] : null;
+    const extra = s.role === 'villager' ? '농사짓고 길을 닦아요'
+      : s.role === 'king' ? `${K ? K.name : ''}을 다스려요`
+      : ROYALS.includes(s.role) ? (s === heir ? '왕위 계승 1순위' : s.role === 'dowager' ? '선왕의 왕비' : isChild(s) ? '아직 어려요' : '성 곁에 머물러요')
+      : `쓰러뜨린 적 ${s.kills}`;
     el.innerHTML = `<span class="badge" style="background:${col}">${rank}</span><div class="col"><b>${s.name}</b>` +
       `<small>${K ? K.name : ''} · ${extra} · 체력 ${Math.ceil(s.hp)}/${s.max} · ${Math.floor(s.age/DAY_LEN)+1}일째 삶</small></div>`;
     return;
@@ -1421,11 +1529,12 @@ function updateStats(){
   ents.forEach(e => {
     c[e.type]++;
     if (e.type !== 'person') return;
-    const p = per.get(e.k) || {pop:0, soldiers:0, king:null, general:null};
+    const p = per.get(e.k) || {pop:0, soldiers:0, king:null, general:null, queen:null};
     p.pop++;
     if (e.role === 'soldier') p.soldiers++;
     if (e.role === 'king') p.king = e;
     if (e.role === 'soldier' && e.rank === 2) p.general = e;
+    if (e.role === 'queen') p.queen = e;
     per.set(e.k, p);
   });
   document.getElementById('stats').innerHTML =
@@ -1441,7 +1550,8 @@ function updateStats(){
     const hs = bList.filter(b => owner[b] === k.id && grid[b] === T.HOUSE).length;
     const foes = [...k.wars].map(id => kingdoms.get(id)?.name).filter(Boolean);
     return `<div class="king"><span class="dot" style="background:${k.color}"></span><b>${k.name}</b>` +
-      `<small><span class="crown">👑</span> ${p.king ? p.king.name : '왕 없음'}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
+      `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
+      `${(() => { const h = heirs(k.id)[0]; return h ? ` · 계승자 ${ROYAL_TITLE[h.role]} ${h.name}` : ''; })()}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
       `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}</div>`;
   }).join('');
 }
