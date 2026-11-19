@@ -168,7 +168,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 나라들은 외교관을 보내 평화 회담이나 불가침 조약을 맺기도 해요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -189,7 +189,7 @@ const RELIGIONS = [
   {name:'불의 맹세',   sym:'🔥', color:'#e0532f', desc:'병사가 더 세게 싸우지만 민심이 쉽게 흔들려요'},
 ];
 const faithOf = k => { const K = kingdoms.get(k); return K && K.faith != null ? K.faith : -1; };
-const CLERIC_TITLE = {priest:'사제', monk:'선교사'};
+const CLERIC_TITLE = {priest:'사제', monk:'선교사', envoy:'외교관'};
 const FLAMMABLE = {[T.TREE]:.5, [T.GRASS]:.12, [T.FLOWER]:.2, [T.SAPLING]:.3, [T.FIELD]:.3, [T.HOUSE]:.4};
 const GOD_TOOLS = [
   {id:'look', ico:'🔍', name:'살펴보기'},
@@ -707,6 +707,31 @@ function unrestTick(K, houses){
   }
 }
 
+// 외교: 외교관이 상대 성에 닿으면 회담을 해요
+function diplomacy(v, K, TK){
+  v.dead = true;
+  const sameFaith = K.faith != null && K.faith === TK.faith;
+  if (K.wars.has(TK.id)){
+    const mine = (K.spoils && K.spoils[TK.id]) || 0, theirs = (TK.spoils && TK.spoils[K.id]) || 0;
+    let p = .4 + (mine < theirs ? .2 : 0) + (sameFaith ? .2 : 0) - (theirs > mine ? .2 : 0);
+    if (Math.random() < p){
+      toast(`📜 ${K.name} 외교관 ${v.name}의 평화 회담이 받아들여졌어요`);
+      makePeace(K, TK);
+      fx.push({type:'ring', x:v.x, y:v.y, t:0, d:1, color:'#ffffff', r:3});
+      return;
+    }
+    if (Math.random() < .2){ fx.push({type:'puff', x:v.x, y:v.y, t:0, d:.8, color:'rgba(210,70,55,'}); toast(`${TK.name}이 ${K.name}의 외교관 ${josa(v.name,'을를')} 붙잡아 처형했어요`); }
+    else toast(`${TK.name}이 ${K.name}의 평화 회담을 거절했어요`);
+    return;
+  }
+  if (allied(K.id, TK.id)) return;
+  if (Math.random() < (sameFaith ? .6 : .3)){
+    const days = 3 * DAY_LEN;
+    K.allies[TK.id] = {treaty: days}; TK.allies = TK.allies || {}; TK.allies[K.id] = {treaty: days};
+    fx.push({type:'ring', x:v.x, y:v.y, t:0, d:1, color:'#ffffff', r:3});
+    toast(`🤝 ${K.name}과 ${TK.name}이 외교관 ${v.name}의 노력으로 불가침 조약을 맺었어요 (3일)`);
+  } else toast(`${TK.name}이 ${K.name}의 조약 제안을 거절했어요`);
+}
 // 종교
 function convertTo(K, f){ K.faith = f; K.unrest = Math.min(100, (K.unrest||0) + 10); dirty = changed = true; }
 function faithNote(A, B){
@@ -839,6 +864,7 @@ function nearestFoe(e, r, armedOnly){
   for (const o of ents){
     if (o.dead || o.type !== 'person' || o.alpha < .3 || !hostile(e, o)) continue;
     if (armedOnly && o.role === 'villager') continue;
+    if (o.role === 'envoy') continue;
     const d = d2(o.x,o.y,e.x,e.y);
     if (d < bd){ bd = d; best = o; }
   }
@@ -860,6 +886,15 @@ function wander(e, center, r){
 function personThink(e){
   const K = kingdoms.get(e.k), dark = darkness();
   if (!K) return;
+  if (e.role === 'envoy'){
+    const TK = kingdoms.get(e.mission);
+    if (!TK){ e.dead = true; return; }
+    const tx = TK.capital%W + .5, ty = ((TK.capital/W)|0) + .5;
+    if (Math.hypot(e.x - tx, e.y - ty) <= 2.2){ diplomacy(e, K, TK); return; }
+    const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+    if (!stepFlow(e, TK.capital) && opts.length) moveTo(e, toward(opts, tx, ty));
+    return;
+  }
   if (CLERIC_TITLE[e.role]){
     const foe = nearestFoe(e, 2.5, true);
     const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
@@ -1133,6 +1168,20 @@ function tick(){
         }
       }
     }
+    // 외교관: 전쟁 중이면 평화 회담, 평화로우면 불가침 조약을 맺으러 가요
+    K.envoy = (K.envoy || 0) + 1;
+    if (K.envoy >= 50 && houses.length >= 3 && !ents.some(e => e.type === 'person' && !e.dead && e.role === 'envoy' && e.k === id)){
+      const mx = K.capital%W, my = (K.capital/W)|0;
+      const dist = o => Math.hypot(o.capital%W - mx, ((o.capital/W)|0) - my);
+      const enemies = [...K.wars].map(w => kingdoms.get(w)).filter(Boolean);
+      let target = null, purpose = 'pact';
+      if (enemies.length && Math.random() < .7){ target = pick(enemies); purpose = 'peace'; }
+      else target = [...kingdoms.values()].filter(o => o.id !== id && !allied(id, o.id) && !K.wars.has(o.id) && dist(o) < 35).sort((a,b) => dist(a) - dist(b))[0];
+      if (target){
+        const v = makePerson(id, 'envoy', K.capital); v.mission = target.id; v.purpose = purpose; K.envoy = 0;
+        toast(`📜 ${K.name}이 ${target.name}에 외교관 ${josa(v.name,'을를')} 보냈어요 (${purpose === 'peace' ? '평화 회담' : '불가침 조약'})`);
+      } else K.envoy = 30;
+    }
     // 징병
     K.draft++;
     // 민심이 위태로우면 병사가 탈영해요
@@ -1237,8 +1286,15 @@ function marriages(){
   // 부부 가운데 한 명이 죽으면 동맹이 끊어져요
   for (const K of kingdoms.values()){
     for (const [other, pair] of Object.entries(K.allies || {})){
-      if (byId(pair[0]) && byId(pair[1])) continue;
       const O = kingdoms.get(+other);
+      if (pair && pair.treaty !== undefined){
+        pair.treaty--;
+        if (pair.treaty > 0 && O) continue;
+        delete K.allies[other]; if (O && O.allies) delete O.allies[K.id];
+        if (O && K.id < O.id) toast(`📜 ${K.name}과 ${O.name}의 불가침 조약이 끝났어요`);
+        continue;
+      }
+      if (byId(pair[0]) && byId(pair[1])) continue;
       delete K.allies[other]; if (O && O.allies) delete O.allies[K.id];
       if (O && K.id < O.id) toast(`💔 ${K.name}과 ${O.name}의 동맹이 끊어졌어요`);
     }
@@ -1676,6 +1732,18 @@ function drawPerson(e, now, moving){
   if (e.rank >= 1){ ctx.fillStyle = col; ctx.strokeStyle = e.rank === 2 ? '#e0b12a' : '#e3e7ec'; ctx.lineWidth=.8; ctx.beginPath(); ctx.arc(-3,0,2.4,0,7); ctx.fill(); ctx.stroke(); }
 }
 function drawCleric(e, now, moving){
+  if (e.role === 'envoy'){
+    const kg = kingdoms.get(e.k), col = kg ? kg.color : '#888';
+    const step = moving ? Math.sin(now*12+e.phase) : 0;
+    ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,5,3.5,1.3,0,0,7); ctx.fill();
+    ctx.fillStyle='#2b2f45'; ctx.fillRect(-2,2,1.6,3+step); ctx.fillRect(.5,2,1.6,3-step);
+    ctx.fillStyle = e.hit > 0 ? '#ffffff' : '#2e3f6e'; ctx.fillRect(-2.6,-3,5.2,6);
+    ctx.fillStyle = col; ctx.fillRect(-2.6,-1,5.2,1.2);
+    ctx.fillStyle='#f2c9a0'; ctx.beginPath(); ctx.arc(0,-5.5,2.5,0,7); ctx.fill();
+    ctx.fillStyle='#1f2433'; ctx.fillRect(-3.4,-8,6.8,1.2); ctx.fillRect(-2,-10.2,4,2.4);
+    ctx.fillStyle='#f6eed8'; ctx.fillRect(2.6,-2.2,3.2,2.2); ctx.fillStyle='#c9483a'; ctx.fillRect(3.9,-2.4,.8,2.6);
+    return;
+  }
   const R = RELIGIONS[faithOf(e.k)], fc = R ? R.color : '#9a9a9a';
   ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,5,3.6,1.3,0,0,7); ctx.fill();
   const robe = e.role === 'priest' ? '#f4f1e8' : '#8a6a48';
@@ -1889,7 +1957,8 @@ function showInfo(){
     const rank = title(s);
     const heir = K ? heirs(K.id)[0] : null;
     const R = RELIGIONS[faithOf(s.k)];
-    const extra = CLERIC_TITLE[s.role] ? (R ? `${R.sym} ${R.name}` : '') + (s.role === 'monk' && kingdoms.get(s.mission) ? ` · ${kingdoms.get(s.mission).name}에 믿음을 전하러 가는 중` : ' · 신전을 지켜요')
+    const extra = s.role === 'envoy' ? (kingdoms.get(s.mission) ? `${kingdoms.get(s.mission).name}에 ${s.purpose === 'peace' ? '평화 회담' : '불가침 조약'}을 하러 가는 중 · 공격받지 않아요` : '')
+      : CLERIC_TITLE[s.role] ? (R ? `${R.sym} ${R.name}` : '') + (s.role === 'monk' && kingdoms.get(s.mission) ? ` · ${kingdoms.get(s.mission).name}에 믿음을 전하러 가는 중` : ' · 신전을 지켜요')
       : s.role === 'villager' ? '농사짓고 길을 닦아요'
       : s.role === 'king' ? `${K ? K.name : ''}을 다스려요${s.spouse && byId(s.spouse) ? ` · 배우자 ${byId(s.spouse).name}` : ''}`
       : s.claim ? `왕위를 두고 다투는 중 · 쓰러뜨린 적 ${s.kills}`
