@@ -88,6 +88,7 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 .king small{color:var(--muted);font-variant-numeric:tabular-nums}
 .king .war{color:#c9483a;font-size:12px}
 .king .ally{color:#2f8f6b;font-size:12px}
+.king .shaky{color:#b7791f}
 .faiths{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);padding:2px 2px 4px}
 .faiths b{font-family:var(--display);font-weight:400;font-size:15px;color:var(--ink)}
 .king .crown{color:var(--gold)}
@@ -161,7 +162,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려, 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -308,6 +309,9 @@ function hostile(e, o){
   if (atWar(e.k, o.k)) return true;
   return e.k === o.k && !!e.side && !!o.side && e.side !== o.side;
 }
+// 민심 단계: 0 좋음(0~29), 1 흔들림(30~59), 2 위태(60~)
+const mood = K => (K.unrest||0) < 30 ? 0 : (K.unrest||0) < 60 ? 1 : 2;
+const MOOD_DRAFT = [10, 15, 20], MOOD_MOVE = [1, .5, .25], MOOD_BUILD = [1, .5, 0];
 function atWar(a, b){ const k = kingdoms.get(a); return !!(k && k.wars.has(b)); }
 function anyWar(a){ const k = kingdoms.get(a); return !!(k && k.wars.size); }
 
@@ -1100,7 +1104,7 @@ function tick(){
     // 주민 (낮에만 이사 와요)
     if (dark < .3) for (const h of houses){
       if (people >= cap) break;
-      if ((atHome.get(h)||0) < 2 && Math.random() < .12){ makePerson(id, 'villager', h); people++; changed = true; }
+      if ((atHome.get(h)||0) < 2 && Math.random() < .12 * MOOD_MOVE[mood(K)]){ makePerson(id, 'villager', h); people++; changed = true; }
     }
     // 신전: 집이 6채 넘으면 지어요. 신전마다 사제 하나, 믿음이 있으면 이웃에 선교사를 보내요
     const temples = mine.filter(b => grid[b] === T.TEMPLE);
@@ -1125,7 +1129,16 @@ function tick(){
     }
     // 징병
     K.draft++;
-    if (K.draft >= 10 && (soldiers.get(id)||0) < 2 + houses.length && people < cap){
+    // 민심이 위태로우면 병사가 탈영해요
+    if (mood(K) === 2 && Math.random() < .02){
+      const runaways = ents.filter(e => e.type === 'person' && !e.dead && e.k === id && e.role === 'soldier' && e.rank < 2);
+      if (runaways.length){
+        const r = pick(runaways); r.dead = true;
+        fx.push({type:'puff', x:r.x, y:r.y, t:0, d:.8, color:'rgba(160,160,160,'});
+        if (performance.now() - lastCapToast > 2500){ lastCapToast = performance.now(); toast(`${K.name}의 ${RANKS[r.rank].name} ${josa(r.name,'이가')} 탈영했어요`); }
+      }
+    }
+    if (K.draft >= MOOD_DRAFT[mood(K)] && (soldiers.get(id)||0) < 2 + houses.length && people < cap){
       const s = makePerson(id, 'soldier', K.capital); s.guard = Math.random() < .34; K.draft = 0; people++;
     }
     // 계급: 쓰러뜨린 수가 많은 순서로 기사, 가장 용맹한 하나는 장군
@@ -1141,7 +1154,7 @@ function tick(){
     // 나라가 스스로 커져요
     if (dark < .3){
       const full = (pop.get(id)||0) >= houses.length*2 + 2;
-      if (full && houses.length < 30 && Math.random() < .25){
+      if (full && houses.length < 30 && Math.random() < .25 * MOOD_BUILD[mood(K)]){
         const h = pick(mine);
         for (let tries=0; tries<12; tries++){
           const x = h%W + Math.floor(rnd(-2,3)), y = ((h/W)|0) + Math.floor(rnd(-2,3));
@@ -1936,7 +1949,7 @@ function updateStats(){
       `<small>${k.faith != null ? `${RELIGIONS[k.faith].sym} ${RELIGIONS[k.faith].name}` : '믿음 없음'}</small>` +
       `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}` : k.feud ? `<span class="war">왕위 다툼 중: ${byId(k.feud.a)?.name || '?'} 대 ${byId(k.feud.b)?.name || '?'}</span>` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
       `${(() => { const h = heirs(k.id)[0]; return h ? ` · 계승자 ${ROYAL_TITLE[h.role]} ${h.name}` : ''; })()}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
-      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs} · ${(k.unrest||0) < 30 ? '민심 좋음' : (k.unrest||0) < 60 ? '민심 흔들림' : '<span class="war">민심 위태 🔥</span>'}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}</div>`;
+      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs} · ${['민심 좋음', '<span class="shaky">민심 흔들림 · 징병·이사·집짓기 느려짐</span>', '<span class="war">민심 위태 🔥 · 탈영·반란</span>'][mood(k)]}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}</div>`;
   }).join('');
 }
 
