@@ -44,10 +44,12 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 
 .stage{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 6px 0 #a9cdd9,0 10px 30px rgba(36,50,58,.15);background:#1f5f94}
 #cv{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:crosshair}
-#mini{position:absolute;right:8px;top:8px;width:26%;max-width:160px;height:auto;border:2px solid rgba(255,255,255,.85);border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer;image-rendering:pixelated;touch-action:none}
+.mapbar{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-top:-4px}
+.mapbtns{display:flex;gap:6px;flex-wrap:wrap}
+.mapbtns button{min-width:38px;height:36px;padding:0 10px;border:0;border-radius:9px;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1;cursor:pointer;box-shadow:0 2px 0 #d9e6e2}
+.mapbtns button[aria-pressed="true"]{background:#e3f3ea;box-shadow:inset 0 0 0 2px var(--accent)}
+#mini{width:180px;max-width:46%;height:auto;border-radius:8px;box-shadow:0 2px 0 #a9cdd9;cursor:pointer;image-rendering:pixelated;touch-action:none;background:#1f5f94}
 #mini[hidden]{display:none}
-.mapbtns{position:absolute;left:8px;bottom:8px;display:flex;gap:6px}
-.mapbtns button{width:34px;height:34px;border:0;border-radius:8px;background:rgba(255,253,246,.92);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .toast{
   position:absolute;left:50%;top:12px;transform:translate(-50%,-8px);opacity:0;max-width:70%;
   background:rgba(255,253,246,.95);color:var(--ink);padding:7px 14px;border-radius:999px;
@@ -114,13 +116,17 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
 
   <div class="stage">
     <canvas id="cv" aria-label="세계 지도"></canvas>
-    <canvas id="mini" aria-label="전체 지도. 누르면 그곳으로 가요" hidden></canvas>
+    <div class="toast" id="toast"></div>
+  </div>
+  <!-- 지도 조작은 지도 밖에 두어 나라를 가리지 않아요 -->
+  <div class="mapbar">
     <div class="mapbtns">
       <button id="zoomIn" aria-label="크게 보기">＋</button>
       <button id="zoomOut" aria-label="작게 보기">－</button>
-      <button id="fit" aria-label="전체 보기">🗺</button>
+      <button id="fit" aria-label="전체 보기">🗺 전체</button>
+      <button id="miniToggle" aria-pressed="true">작은 지도</button>
     </div>
-    <div class="toast" id="toast"></div>
+    <canvas id="mini" aria-label="전체 지도. 누르면 그곳으로 가요" hidden></canvas>
   </div>
 
   <div class="box">
@@ -162,7 +168,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -1456,6 +1462,12 @@ cv.addEventListener('wheel', ev => { ev.preventDefault(); const p = canvasPt(ev)
 document.getElementById('zoomIn').onclick = () => zoomAt(cam.z*1.3, VW/2, VH/2);
 document.getElementById('zoomOut').onclick = () => zoomAt(cam.z/1.3, VW/2, VH/2);
 document.getElementById('fit').onclick = fitView;
+// 작은 지도는 켜고 끌 수 있어요 (작은 섬은 한 화면에 다 보여 기본으로 꺼져요)
+let miniOn = true;
+try { miniOn = localStorage.getItem('craft-island-mini') !== '0'; } catch(_) {}
+const miniBtn = document.getElementById('miniToggle');
+function updateMini(){ mini.hidden = !(miniOn && size > 0); miniBtn.setAttribute('aria-pressed', miniOn); miniBtn.hidden = size === 0; }
+miniBtn.onclick = () => { miniOn = !miniOn; try { localStorage.setItem('craft-island-mini', miniOn ? '1' : '0'); } catch(_) {} updateMini(); };
 mini.addEventListener('pointerdown', ev => {
   ev.preventDefault(); ev.stopPropagation();
   const r = mini.getBoundingClientRect();
@@ -1847,7 +1859,7 @@ freshBtn.onclick = () => {
     return;
   }
   clearTimeout(freshArmed); freshArmed = null; freshBtn.textContent = '🏝 새로 만들기';
-  pushUndo(); size = pickSize; generate(); mini.hidden = size === 0;
+  pushUndo(); size = pickSize; generate(); updateMini();
   toast(['작은 섬이 솟아올랐어요','큰 섬이 솟아올랐어요','대륙이 솟아올랐어요'][size]);
 };
 const nameEl = document.getElementById('name');
@@ -1981,7 +1993,7 @@ if (!load()) generate();
 pickSize = size;
 document.querySelectorAll('#sizeSel button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.s === size));
 computeTerr(); fitView();
-mini.hidden = size === 0;
+updateMini();
 setInterval(() => { if (changed){ save(); changed = false; } }, 3000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 
