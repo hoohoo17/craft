@@ -159,7 +159,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -290,6 +290,10 @@ function nearestKingdom(x, y, r){
 const allied = (a, b) => !!(kingdoms.get(a)?.allies?.[b]);
 const byId = id => ents.find(e => e.id === id && !e.dead);
 function breakAlliances(id){ for (const o of kingdoms.values()) if (o.allies) delete o.allies[id]; }
+function hostile(e, o){
+  if (atWar(e.k, o.k)) return true;
+  return e.k === o.k && !!e.side && !!o.side && e.side !== o.side;
+}
 function atWar(a, b){ const k = kingdoms.get(a); return !!(k && k.wars.has(b)); }
 function anyWar(a){ const k = kingdoms.get(a); return !!(k && k.wars.size); }
 
@@ -460,10 +464,10 @@ function makePerson(k, role, home){
 }
 function setStats(e){
   const old = e.max || 0;
-  e.max = e.role === 'villager' ? 10 : e.role === 'king' ? 45 : ROYALS.includes(e.role) ? 15 : Math.round(30 * RANKS[e.rank].hp);
+  e.max = e.role === 'villager' ? 10 : e.role === 'king' ? 45 : e.claim ? 60 : ROYALS.includes(e.role) ? 15 : Math.round(30 * RANKS[e.rank].hp);
   if (old) e.hp = Math.min(e.max, e.hp + (e.max - old));
 }
-const dmgOf = e => e.role === 'king' ? 6 : e.role === 'soldier' ? 5 * RANKS[e.rank].dmg : 0;  // 왕실 가족과 주민은 싸우지 않아요
+const dmgOf = e => e.role === 'king' ? 6 : e.claim ? 5.5 : e.role === 'soldier' ? 5 * RANKS[e.rank].dmg : 0;  // 왕실 가족과 주민은 싸우지 않아요
 const ROYAL_TITLE = {queen:'왕비', dowager:'왕대비', prince:'왕자', princess:'공주', crownwife:'왕자빈', consort:'부마'};
 const title = e => e.type !== 'person' ? '' : e.role === 'king' ? (e.female ? '여왕' : '왕') : e.role === 'villager' ? '주민' : ROYAL_TITLE[e.role] || RANKS[e.rank].name;
 const isChild = e => (e.role === 'prince' || e.role === 'princess') && e.age < 150;
@@ -550,6 +554,8 @@ function heirs(id){
 }
 function succeed(K, old){
   const oldTitle = old.female ? '여왕' : '왕';
+  const princes = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'prince' && e.age >= 150).sort((a,b) => b.age - a.age);
+  if (princes.length >= 2 && Math.random() < .6){ startFeud(K, princes[0], princes[1], old, oldTitle); return; }
   const heir = heirs(K.id)[0];
   if (heir){
     const was = ROYAL_TITLE[heir.role];
@@ -569,6 +575,44 @@ function succeed(K, old){
     return;
   }
   toast(`👑 ${K.name}의 ${oldTitle} ${josa(old.name,'이가')} 후계자 없이 눈을 감았어요. 백성 가운데 새 왕을 세워요`);
+}
+
+// 왕위 다툼: 병사가 두 편으로 갈라 싸우고, 살아남은 왕자가 즉위해요
+function startFeud(K, a, b, old, oldTitle){
+  const queen = ents.find(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'queen');
+  if (queen) queen.role = 'dowager';
+  K.feud = {a:a.id, b:b.id, t:0};
+  a.claim = b.claim = true; a.side = 'a'; b.side = 'b';
+  setStats(a); setStats(b); a.hp = a.max; b.hp = b.max;
+  const army = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id && e.role === 'soldier').sort(() => Math.random() - .5);
+  army.forEach((e, n) => { e.side = n % 2 ? 'b' : 'a'; e.atk = null; });
+  toast(`⚔ ${K.name}의 ${oldTitle} ${josa(old.name,'이가')} 눈을 감자, 왕자 ${josa(a.name,'과와')} ${josa(b.name,'이가')} 왕위를 두고 다퉈요!`);
+}
+function endFeud(K, winner, how){
+  ents.forEach(e => { if (e.type === 'person' && e.k === K.id){ e.side = null; if (e.claim){ e.claim = false; setStats(e); e.hp = Math.min(e.hp, e.max); } e.atk = null; } });
+  K.feud = null;
+  if (!winner){
+    const heir = heirs(K.id)[0];
+    if (heir){ heir.female = heir.role !== 'prince'; heir.role = 'king'; setStats(heir); heir.hp = heir.max; toast(`👑 두 왕자가 모두 쓰러져 ${josa(heir.name,'이가')} ${K.name}의 ${heir.female ? '여왕' : '왕'}이 되었어요`); }
+    else toast(`👑 두 왕자가 모두 쓰러졌어요. ${K.name}은 백성 가운데 새 왕을 세워요`);
+    return;
+  }
+  winner.role = 'king'; winner.female = false; winner.life = Math.max(winner.life, winner.age + rnd(500,800)); setStats(winner); winner.hp = winner.max;
+  const mate = winner.spouse ? byId(winner.spouse) : null;
+  if (mate && mate.role === 'crownwife') mate.role = 'queen';
+  toast(how);
+}
+function feudTick(K){
+  const f = K.feud; if (!f) return;
+  f.t++;
+  const A = byId(f.a), B = byId(f.b);
+  if (!A && !B) return endFeud(K, null);
+  if (!A || !B){ const w = A || B, l = A ? f.bName : f.aName; return endFeud(K, w, `👑 왕자 ${josa(w.name,'이가')} 왕위 다툼에서 이겨 ${K.name}의 왕이 되었어요`); }
+  f.aName = A.name; f.bName = B.name;
+  if (f.t >= 90){
+    const elder = A.age >= B.age ? A : B, younger = elder === A ? B : A;
+    endFeud(K, elder, `👑 다툼이 길어지자 신하들이 맏왕자 ${josa(elder.name,'을를')} 왕으로 세웠어요. ${josa(younger.name,'은는')} 물러났어요`);
+  }
 }
 
 /* ---------- 길 찾기 ---------- */
@@ -617,7 +661,7 @@ function nearestEnt(e, types, r){
 function nearestFoe(e, r, armedOnly){
   let best = null, bd = r*r;
   for (const o of ents){
-    if (o.dead || o.type !== 'person' || o.alpha < .3 || !atWar(e.k, o.k)) continue;
+    if (o.dead || o.type !== 'person' || o.alpha < .3 || !hostile(e, o)) continue;
     if (armedOnly && o.role === 'villager') continue;
     const d = d2(o.x,o.y,e.x,e.y);
     if (d < bd){ bd = d; best = o; }
@@ -651,7 +695,7 @@ function personThink(e){
     moveTo(e, roads.length && Math.random() < .7 ? pick(roads) : pick(outside.length ? outside : opts));
     return;
   }
-  if (ROYALS.includes(e.role)){
+  if (ROYALS.includes(e.role) && !e.claim){
     const foe = nearestFoe(e, 2.5, true);
     const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
     if (foe && opts.length){ moveTo(e, toward(opts, foe.x, foe.y, true)); return; }
@@ -675,6 +719,15 @@ function personThink(e){
   }
   e.atk = null;
   if (e.role === 'king'){ if (Math.random() < .3) wander(e, K.capital, 2); return; }
+  // 왕위 다툼: 상대 편 왕자에게 다가가요
+  if (K.feud && e.side){
+    const rival = byId(e.side === 'a' ? K.feud.b : K.feud.a);
+    if (rival){
+      const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+      if (opts.length) moveTo(e, toward(opts, rival.x, rival.y));
+      return;
+    }
+  }
   // 전쟁 중이면 지키는 병사(셋 중 하나)를 빼고 적의 건물로 진군해요
   if (anyWar(e.k) && !e.guard){
     let best = -1, bd = 1e9;
@@ -821,6 +874,14 @@ function tick(){
   for (const [id,K] of kingdoms){
     const mine = bList.filter(b => owner[b] === id);
     const houses = mine.filter(b => grid[b] === T.HOUSE);
+    // 왕위 다툼
+    if (K.feud){
+      feudTick(K);
+      if (K.feud) continue;
+      // 다툼이 막 끝났으면 새로 즉위한 왕을 알려 줘요 (새 왕을 또 세우지 않게)
+      const crowned = ents.find(e => e.type === 'person' && !e.dead && e.k === id && e.role === 'king');
+      if (crowned) kings.set(id, crowned);
+    }
     // 왕
     if (!kings.has(id) && grid[K.capital] === T.CASTLE){
       const king = makePerson(id, 'king', K.capital);
@@ -1328,7 +1389,8 @@ function drawPerson(e, now, moving){
   const kg = kingdoms.get(e.k), col = kg ? kg.color : '#999';
   const big = e.role === 'king' || (e.role === 'soldier' && e.rank === 2);
   if (big) ctx.scale(1.18, 1.18);
-  if (ROYALS.includes(e.role) || (e.role === 'king' && e.female)){ drawRoyal(e, col, now, moving); return; }
+  if (e.side){ ctx.fillStyle = e.side === 'a' ? '#ffd23f' : '#1d1d1d'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = .6; ctx.beginPath(); ctx.arc(0,-14,1.8,0,7); ctx.fill(); ctx.stroke(); }
+  if (ROYALS.includes(e.role) || (e.role === 'king' && e.female)){ drawRoyal(e, col, now, moving); if (e.claim) drawClaimSword(e); return; }
   const step = moving ? Math.sin(now*12+e.phase) : 0;
   ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,5,3.5,1.3,0,0,7); ctx.fill();
   // 망토: 장군은 붉은색, 왕은 자주색
@@ -1360,6 +1422,14 @@ function drawPerson(e, now, moving){
   else { ctx.strokeStyle='#e3e7ec'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-8); ctx.stroke(); ctx.fillStyle='#7a5230'; ctx.fillRect(-1.5,-.5,3,1); }
   ctx.restore();
   if (e.rank >= 1){ ctx.fillStyle = col; ctx.strokeStyle = e.rank === 2 ? '#e0b12a' : '#e3e7ec'; ctx.lineWidth=.8; ctx.beginPath(); ctx.arc(-3,0,2.4,0,7); ctx.fill(); ctx.stroke(); }
+}
+function drawClaimSword(e){
+  const sw = e.swing > 0 ? -1.1 : 0;
+  if (e.swing) e.swing = Math.max(0, e.swing - .016);
+  ctx.save(); ctx.translate(3,0); ctx.rotate(-.5 + sw);
+  ctx.strokeStyle='#e3e7ec'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-8); ctx.stroke();
+  ctx.fillStyle='#e0b12a'; ctx.fillRect(-1.5,-.5,3,1);
+  ctx.restore();
 }
 // 왕비·왕대비·왕자·공주·여왕
 function drawRoyal(e, col, now, moving){
@@ -1552,6 +1622,7 @@ function showInfo(){
     const heir = K ? heirs(K.id)[0] : null;
     const extra = s.role === 'villager' ? '농사짓고 길을 닦아요'
       : s.role === 'king' ? `${K ? K.name : ''}을 다스려요${s.spouse && byId(s.spouse) ? ` · 배우자 ${byId(s.spouse).name}` : ''}`
+      : s.claim ? `왕위를 두고 다투는 중 · 쓰러뜨린 적 ${s.kills}`
       : ROYALS.includes(s.role) ? [s === heir ? '왕위 계승 1순위' : s.role === 'dowager' ? '선왕의 왕비' : isChild(s) ? '아직 어려요' : '성 곁에 머물러요',
           s.spouse && byId(s.spouse) ? `배우자 ${byId(s.spouse).name}` : (s.spouse ? '사별했어요' : '')].filter(Boolean).join(' · ')
       : `쓰러뜨린 적 ${s.kills}`;
@@ -1610,7 +1681,7 @@ function updateStats(){
     const foes = [...k.wars].map(id => kingdoms.get(id)?.name).filter(Boolean);
     const friends = Object.keys(k.allies || {}).map(id => kingdoms.get(+id)?.name).filter(Boolean);
     return `<div class="king"><span class="dot" style="background:${k.color}"></span><b>${k.name}</b>` +
-      `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
+      `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}` : k.feud ? `<span class="war">왕위 다툼 중: ${byId(k.feud.a)?.name || '?'} 대 ${byId(k.feud.b)?.name || '?'}</span>` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
       `${(() => { const h = heirs(k.id)[0]; return h ? ` · 계승자 ${ROYAL_TITLE[h.role]} ${h.name}` : ''; })()}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
       `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}</div>`;
   }).join('');
