@@ -87,6 +87,7 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 .king b{font-family:var(--display);font-weight:400;font-size:16px}
 .king small{color:var(--muted);font-variant-numeric:tabular-nums}
 .king .war{color:#c9483a;font-size:12px}
+.king .ally{color:#2f8f6b;font-size:12px}
 .king .crown{color:var(--gold)}
 button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
@@ -158,7 +159,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -202,7 +203,7 @@ const LIFE_TOOLS = [
 const SPEED = {rabbit:1.6, sheep:.6, wolf:1.9, person:1.1, fish:.8, bird:3};
 // 계급: 병사 → 기사 → 장군. 왕은 따로.
 const RANKS = [{name:'병사', hp:1, dmg:1}, {name:'기사', hp:1.5, dmg:1.4}, {name:'장군', hp:2.2, dmg:2}];
-const ROYALS = ['queen','dowager','prince','princess'];
+const ROYALS = ['queen','dowager','prince','princess','crownwife','consort'];
 const KCOLORS = ['#e4573d','#3f7fd1','#f0b429','#8b5cc7','#2f9e6e','#e46fa1','#1fa8b0','#a0602d','#5b6bd6','#c2452f'];
 const SYL = ['가','나','라','마','미','소','하','도','루','벨','온','세','리','타','유','진','바','로','아','윤'];
 const NAME1 = ['도','서','하','지','민','수','태','나','한','보','은','다','가','시','유','라','새','이','준','예','소','우'];
@@ -221,7 +222,7 @@ let grid, ages, owner, bhp, terr;
 let ents = [], fx = [];
 let kingdoms = new Map(), nextKid = 0, bList = [], borders = new Set(), flowCache = new Map();
 let tod = .3, day = 1, harvest = 0, speedMul = 1;
-let tool = 'look', brush = 1, selected = null;
+let tool = 'look', brush = 1, selected = null, uid = 1;
 let dirty = true, changed = false, terrDirty = true, shake = 0, flash = 0;
 const undoStack = [];
 
@@ -271,7 +272,7 @@ function kingdomName(){
 function newKingdom(capital){
   const usedC = new Set([...kingdoms.values()].map(k => k.color));
   const color = KCOLORS.find(c => !usedC.has(c)) || pick(KCOLORS);
-  const k = {id: nextKid++, name: kingdomName(), color, wars: new Set(), capital, draft: 0, hadKing: false, born: day};
+  const k = {id: nextKid++, name: kingdomName(), color, wars: new Set(), allies: {}, capital, draft: 0, hadKing: false, born: day};
   kingdoms.set(k.id, k);
   return k;
 }
@@ -286,6 +287,9 @@ function nearestKingdom(x, y, r){
   for (const b of bList){ const bx = b%W, by = (b/W)|0, d = Math.abs(bx-x)+Math.abs(by-y); if (d <= r && d < bd && owner[b] >= 0){ bd = d; best = owner[b]; } }
   return best;
 }
+const allied = (a, b) => !!(kingdoms.get(a)?.allies?.[b]);
+const byId = id => ents.find(e => e.id === id && !e.dead);
+function breakAlliances(id){ for (const o of kingdoms.values()) if (o.allies) delete o.allies[id]; }
 function atWar(a, b){ const k = kingdoms.get(a); return !!(k && k.wars.has(b)); }
 function anyWar(a){ const k = kingdoms.get(a); return !!(k && k.wars.size); }
 
@@ -328,6 +332,7 @@ function computeTerr(){
     }
     kingdoms.delete(id);
     for (const o of kingdoms.values()) o.wars.delete(id);
+    breakAlliances(id);
     ents.forEach(e => { if (e.type === 'person' && e.k === id) kill(e); });
     toast(`${K.name}이 사라졌어요`);
   }
@@ -437,7 +442,7 @@ function spawnRandom(type){
   }
 }
 function makeEnt(type, x, y, home){
-  return {type, x:x+.5, y:y+.5, tx:x+.5, ty:y+.5, wait:Math.random()*2, dir:1,
+  return {id: uid++, type, x:x+.5, y:y+.5, tx:x+.5, ty:y+.5, wait:Math.random()*2, dir:1,
           home: home ?? -1, alpha:1, phase:Math.random()*6, age:0, life:rnd(360,720), hunger:0, think:Math.random()*.3, cd:0};
 }
 function makePerson(k, role, home){
@@ -459,7 +464,7 @@ function setStats(e){
   if (old) e.hp = Math.min(e.max, e.hp + (e.max - old));
 }
 const dmgOf = e => e.role === 'king' ? 6 : e.role === 'soldier' ? 5 * RANKS[e.rank].dmg : 0;  // 왕실 가족과 주민은 싸우지 않아요
-const ROYAL_TITLE = {queen:'왕비', dowager:'왕대비', prince:'왕자', princess:'공주'};
+const ROYAL_TITLE = {queen:'왕비', dowager:'왕대비', prince:'왕자', princess:'공주', crownwife:'왕자빈', consort:'부마'};
 const title = e => e.type !== 'person' ? '' : e.role === 'king' ? (e.female ? '여왕' : '왕') : e.role === 'villager' ? '주민' : ROYAL_TITLE[e.role] || RANKS[e.rank].name;
 const isChild = e => (e.role === 'prince' || e.role === 'princess') && e.age < 150;
 // by: 쓰러뜨린 사람(없으면 신의 힘이나 불). natural: 수명이 다해 숨진 경우
@@ -513,6 +518,7 @@ function absorb(old, k){
   });
   kingdoms.delete(old);
   for (const o of kingdoms.values()) o.wars.delete(old);
+  breakAlliances(old);
   dirty = changed = terrDirty = true; flowCache.clear();
 }
 // 왕이 쓰러져 나라가 멸망해요. 쓰러뜨린 나라가 있으면 그 나라가 차지하고, 없으면 폐허가 돼요.
@@ -529,6 +535,7 @@ function fallKingdom(id, by, kingName){
   for (let j=0;j<N;j++) if (owner[j] === id && isBld(grid[j])) setTile(j, T.BURNT);
   kingdoms.delete(id);
   for (const o of kingdoms.values()) o.wars.delete(id);
+  breakAlliances(id);
   ents.forEach(e => { if (e.type === 'person' && e.k === id && !e.dead){ e.dead = true; fx.push({type:'puff', x:e.x, y:e.y, t:0, d:.8, color:'rgba(120,120,120,'}); } });
   if (selected && selected.k === id) selected = null;
   terrDirty = true;
@@ -550,6 +557,8 @@ function succeed(K, old){
     if (queen && queen !== heir) queen.role = 'dowager';
     heir.female = heir.role !== 'prince';
     heir.role = 'king'; heir.life = Math.max(heir.life, heir.age + rnd(500,800)); setStats(heir); heir.hp = heir.max;
+    const mate = heir.spouse ? byId(heir.spouse) : null;
+    if (mate && !heir.female && mate.role === 'crownwife') mate.role = 'queen';
     toast(`👑 ${K.name}의 ${oldTitle} ${josa(old.name,'이가')} 눈을 감고, ${was} ${josa(heir.name,'이가')} ${heir.female ? '여왕으로' : '왕으로'} 즉위했어요`);
     return;
   }
@@ -646,6 +655,8 @@ function personThink(e){
     const foe = nearestFoe(e, 2.5, true);
     const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
     if (foe && opts.length){ moveTo(e, toward(opts, foe.x, foe.y, true)); return; }
+    const mate = e.spouse ? byId(e.spouse) : null;
+    if (mate && d2(mate.x,mate.y,e.x,e.y) > 4 && opts.length){ moveTo(e, toward(opts, mate.x, mate.y)); return; }
     if (Math.random() < (isChild(e) ? .6 : .3)) wander(e, K.capital, isChild(e) ? 3 : 2);
     return;
   }
@@ -896,14 +907,14 @@ function tick(){
   for (const key of borders){
     const [a,b] = key.split('-').map(Number);
     const A = kingdoms.get(a), B = kingdoms.get(b);
-    if (!A || !B || A.wars.has(b)) continue;
+    if (!A || !B || A.wars.has(b) || allied(a, b)) continue;
     if (Math.random() < .012){ A.wars.add(b); B.wars.add(a); changed = true; toast(`⚔ ${A.name}과 ${B.name}이 전쟁을 시작했어요`); }
   }
   // 영토가 맞닿지 않아도 수도끼리 가까운 이웃은 가끔 전쟁을 벌여요
   const ks = [...kingdoms.values()];
   for (let i=0;i<ks.length;i++) for (let j=i+1;j<ks.length;j++){
     const A = ks[i], B = ks[j];
-    if (A.wars.has(B.id)) continue;
+    if (A.wars.has(B.id) || allied(A.id, B.id)) continue;
     const dist = Math.hypot(A.capital%W - B.capital%W, ((A.capital/W)|0) - ((B.capital/W)|0));
     if (dist < 22 && Math.random() < .004){ A.wars.add(B.id); B.wars.add(A.id); changed = true; toast(`⚔ ${A.name}과 ${B.name}이 전쟁을 시작했어요`); }
   }
@@ -914,6 +925,7 @@ function tick(){
       if (B && Math.random() < .006){ A.wars.delete(b); B.wars.delete(A.id); changed = true; toast(`🕊 ${A.name}과 ${B.name}이 평화를 맺었어요`); }
     }
   }
+  marriages();
   // 동물 번식
   const animals = ents.filter(e => e.type !== 'person');
   if (animals.length < 120*(size+1)){
@@ -931,6 +943,52 @@ function tick(){
     const i = idx(cx(e), cy(e));
     if (grid[i] === T.FLOWER && Math.random() < .03) setTile(i, T.GRASS);
   });
+}
+
+/* ---------- 혼인과 동맹 ---------- */
+const adult = e => e.age >= 150;
+function wed(a, b){ a.spouse = b.id; b.spouse = a.id; }
+function marriages(){
+  // 부부 가운데 한 명이 죽으면 동맹이 끊어져요
+  for (const K of kingdoms.values()){
+    for (const [other, pair] of Object.entries(K.allies || {})){
+      if (byId(pair[0]) && byId(pair[1])) continue;
+      const O = kingdoms.get(+other);
+      delete K.allies[other]; if (O && O.allies) delete O.allies[K.id];
+      if (O && K.id < O.id) toast(`💔 ${K.name}과 ${O.name}의 동맹이 끊어졌어요`);
+    }
+  }
+  if (Math.random() > .3) return;
+  // 사별한 왕자·공주도 다시 혼인할 수 있어요
+  const single = ents.filter(e => e.type === 'person' && !e.dead && !(e.spouse && byId(e.spouse)) && adult(e) && (e.role === 'prince' || e.role === 'princess'));
+  const princes = single.filter(e => e.role === 'prince'), princesses = single.filter(e => e.role === 'princess');
+  for (const pr of princes){
+    // 다른 나라 공주와 혼인하면 두 나라가 동맹을 맺어요
+    const bride = princesses.find(q => q.k !== pr.k && kingdoms.has(q.k));
+    if (bride){
+      const A = kingdoms.get(pr.k), B = kingdoms.get(bride.k);
+      wed(pr, bride);
+      bride.role = 'crownwife'; bride.k = pr.k; bride.home = A.capital; bride.x = bride.tx = pr.x; bride.y = bride.ty = pr.y;
+      A.wars.delete(B.id); B.wars.delete(A.id);
+      A.allies[B.id] = [pr.id, bride.id]; B.allies[A.id] = [pr.id, bride.id];
+      fx.push({type:'ring', x:A.capital%W+.5, y:((A.capital/W)|0)+.5, t:0, d:1.2, color:'#ff8fb8', r:3});
+      toast(`💒 ${A.name} 왕자 ${josa(pr.name,'과와')} ${B.name} 공주 ${josa(bride.name,'이가')} 혼인했어요. 두 나라는 동맹을 맺었어요`);
+      changed = true;
+      return;
+    }
+  }
+  // 짝을 오래 못 찾으면 자기 나라 귀족과 혼인해요
+  for (const one of single){
+    if (one.age < 260 || Math.random() > .2) continue;
+    const K = kingdoms.get(one.k); if (!K) continue;
+    const mate = makePerson(one.k, one.role === 'prince' ? 'crownwife' : 'consort', K.capital);
+    mate.female = one.role === 'prince'; mate.age = one.age - rnd(0,40); mate.life = one.life; mate.x = mate.tx = one.x; mate.y = mate.ty = one.y;
+    wed(one, mate);
+    fx.push({type:'ring', x:one.x, y:one.y, t:0, d:1.2, color:'#ff8fb8', r:2});
+    toast(`💒 ${K.name} ${ROYAL_TITLE[one.role]} ${josa(one.name,'이가')} ${josa(mate.name,'과와')} 혼인했어요`);
+    changed = true;
+    return;
+  }
 }
 
 /* ---------- 신의 힘 ---------- */
@@ -1307,13 +1365,13 @@ function drawPerson(e, now, moving){
 function drawRoyal(e, col, now, moving){
   if (isChild(e)) ctx.scale(.72 + .28*(e.age/150), .72 + .28*(e.age/150));
   const step = moving ? Math.sin(now*12+e.phase) : 0;
-  const female = e.female || e.role === 'queen' || e.role === 'dowager' || e.role === 'princess';
+  const female = e.female || e.role === 'queen' || e.role === 'dowager' || e.role === 'princess' || e.role === 'crownwife';
   const isQueenRegnant = e.role === 'king';
   ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,5,3.8,1.3,0,0,7); ctx.fill();
   if (isQueenRegnant){ ctx.fillStyle = '#6b2fa0'; ctx.beginPath(); ctx.moveTo(-2.5,-3); ctx.lineTo(-6,5); ctx.lineTo(1,5); ctx.lineTo(2.5,-3); ctx.fill(); }
   if (female){
     // 긴 치마
-    const dress = e.role === 'princess' ? '#f39ac0' : e.role === 'dowager' ? '#8a7fa8' : col;
+    const dress = e.role === 'princess' ? '#f39ac0' : e.role === 'dowager' ? '#8a7fa8' : e.role === 'crownwife' ? '#f6d3a8' : col;
     ctx.fillStyle = e.hit > 0 ? '#ffffff' : dress;
     ctx.beginPath(); ctx.moveTo(-2.4,-3); ctx.lineTo(2.4,-3); ctx.lineTo(4,5); ctx.lineTo(-4,5); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-2.4,-.5,4.8,.8);
@@ -1332,10 +1390,10 @@ function drawRoyal(e, col, now, moving){
   if (isQueenRegnant){
     ctx.fillRect(-2.8,-8.8,5.6,1.6); ctx.fillRect(-2.8,-10.6,1.2,1.8); ctx.fillRect(-.6,-11.2,1.2,2.4); ctx.fillRect(1.6,-10.6,1.2,1.8);
     ctx.fillStyle = '#e4573d'; ctx.fillRect(-.4,-8.5,.8,.8);
-  } else if (e.role === 'queen' || e.role === 'dowager'){
+  } else if (e.role === 'queen' || e.role === 'dowager' || e.role === 'crownwife'){
     ctx.fillRect(-2.2,-9,4.4,1.1); ctx.fillRect(-.5,-10.2,1,1.4);
     ctx.fillStyle = '#7fd3ff'; ctx.fillRect(-.4,-9.8,.8,.8);
-  } else if (e.role === 'prince'){
+  } else if (e.role === 'prince' || e.role === 'consort'){
     ctx.fillRect(-2.6,-8.9,5.2,1);
     ctx.fillRect(-2.6,-9.9,1,1); ctx.fillRect(1.6,-9.9,1,1);
   } else {
@@ -1493,8 +1551,9 @@ function showInfo(){
     const rank = title(s);
     const heir = K ? heirs(K.id)[0] : null;
     const extra = s.role === 'villager' ? '농사짓고 길을 닦아요'
-      : s.role === 'king' ? `${K ? K.name : ''}을 다스려요`
-      : ROYALS.includes(s.role) ? (s === heir ? '왕위 계승 1순위' : s.role === 'dowager' ? '선왕의 왕비' : isChild(s) ? '아직 어려요' : '성 곁에 머물러요')
+      : s.role === 'king' ? `${K ? K.name : ''}을 다스려요${s.spouse && byId(s.spouse) ? ` · 배우자 ${byId(s.spouse).name}` : ''}`
+      : ROYALS.includes(s.role) ? [s === heir ? '왕위 계승 1순위' : s.role === 'dowager' ? '선왕의 왕비' : isChild(s) ? '아직 어려요' : '성 곁에 머물러요',
+          s.spouse && byId(s.spouse) ? `배우자 ${byId(s.spouse).name}` : (s.spouse ? '사별했어요' : '')].filter(Boolean).join(' · ')
       : `쓰러뜨린 적 ${s.kills}`;
     el.innerHTML = `<span class="badge" style="background:${col}">${rank}</span><div class="col"><b>${s.name}</b>` +
       `<small>${K ? K.name : ''} · ${extra} · 체력 ${Math.ceil(s.hp)}/${s.max} · ${Math.floor(s.age/DAY_LEN)+1}일째 삶</small></div>`;
@@ -1549,10 +1608,11 @@ function updateStats(){
     const p = per.get(k.id) || {pop:0, soldiers:0};
     const hs = bList.filter(b => owner[b] === k.id && grid[b] === T.HOUSE).length;
     const foes = [...k.wars].map(id => kingdoms.get(id)?.name).filter(Boolean);
+    const friends = Object.keys(k.allies || {}).map(id => kingdoms.get(+id)?.name).filter(Boolean);
     return `<div class="king"><span class="dot" style="background:${k.color}"></span><b>${k.name}</b>` +
       `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
       `${(() => { const h = heirs(k.id)[0]; return h ? ` · 계승자 ${ROYAL_TITLE[h.role]} ${h.name}` : ''; })()}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
-      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}</div>`;
+      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}</div>`;
   }).join('');
 }
 
@@ -1576,6 +1636,7 @@ function load(){
     tod = s.tod; day = s.day; harvest = s.harvest || 0;
     nameEl.value = s.name || '나만의 섬'; document.title = nameEl.value;
     ents = s.ents.map(o => ({...o, dead:false, atk:null}));
+    ents.forEach(e => { if (!e.id) e.id = uid++; uid = Math.max(uid, e.id + 1); });
     dirty = terrDirty = true; return true;
   } catch(_) { return false; }
 }
