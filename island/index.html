@@ -161,7 +161,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려, 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려, 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠로 확대해요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -516,10 +516,18 @@ function capture(i, k){
   fx.push({type:'ring', x:i%W+.5, y:((i/W)|0)+.5, t:0, d:.7, color:A.color, r:2});
   if (grid[i] === T.CASTLE && B && i === B.capital){
     absorb(old, k);
-    toast(`🏯 ${A.name}이 ${B.name}의 성을 함락했어요. ${B.name}은 ${A.name}에 흡수됐어요`);
+    toast(`🏯 ${A.name}이 ${B.name}의 성을 함락했어요. ${B.name}은 ${A.name}에 흡수됐어요.${faithNote(A, B)}`);
   } else {
     owner[i] = k; bhp[i] = MAXHP[grid[i]]*.4;
     if (B) B.unrest = Math.min(100, (B.unrest||0) + 5);
+    if (B){
+      A.spoils = A.spoils || {}; A.spoils[B.id] = (A.spoils[B.id] || 0) + 1;
+      if (A.faith != null && B.faith !== A.faith && A.spoils[B.id] >= 3 && Math.random() < .25){
+        convertTo(B, A.faith);
+        toast(`⚔ 전쟁에서 밀린 ${B.name}의 백성들이 ${A.name}의 ${RELIGIONS[A.faith].sym} ${josa(RELIGIONS[A.faith].name,'을를')} 따르기 시작했어요`);
+        return;
+      }
+    }
     ents.forEach(e => { if (e.type === 'person' && e.home === i) e.k = k; });
     if (B && performance.now() - lastCapToast > 2500){ lastCapToast = performance.now(); toast(`${A.name}이 ${B.name}의 ${grid[i] === T.CASTLE ? '성을' : grid[i] === T.TEMPLE ? '신전을' : '집을'} 빼앗았어요`); }
   }
@@ -548,7 +556,7 @@ function fallKingdom(id, by, kingName){
     const A = kingdoms.get(by);
     absorb(id, by);
     fx.push({type:'ring', x:K.capital%W+.5, y:((K.capital/W)|0)+.5, t:0, d:.9, color:A.color, r:3});
-    toast(`👑 ${A.name}이 ${K.name}의 왕 ${josa(kingName,'을를')} 쓰러뜨려 나라를 차지했어요`);
+    toast(`👑 ${A.name}이 ${K.name}의 왕 ${josa(kingName,'을를')} 쓰러뜨려 나라를 차지했어요.${faithNote(A, K)}`);
     return;
   }
   for (let j=0;j<N;j++) if (owner[j] === id && isBld(grid[j])) setTile(j, T.BURNT);
@@ -663,7 +671,7 @@ function rebel(K, leader, followers, lead){
   leader.life = Math.max(leader.life, leader.age + rnd(400,700)); setStats(leader); leader.hp = leader.max;
   const mate = leader.spouse ? byId(leader.spouse) : null;
   if (mate && mate.k === id){ mate.k = NK.id; mate.home = seat; if (mate.role === 'crownwife') mate.role = 'queen'; }
-  NK.hadKing = true; NK.unrest = 0;
+  NK.hadKing = true; NK.unrest = 0; NK.faith = K.faith ?? null;
   K.unrest = Math.max(0, (K.unrest||0) - 50);
   K.wars.add(NK.id); NK.wars.add(id);
   if (K.allies) delete K.allies[NK.id];
@@ -690,6 +698,27 @@ function unrestTick(K, houses){
 }
 
 // 종교
+function convertTo(K, f){ K.faith = f; K.unrest = Math.min(100, (K.unrest||0) + 10); dirty = changed = true; }
+function faithNote(A, B){
+  if (A.faith == null || A.faith === B.faith) return '';
+  const R = RELIGIONS[A.faith];
+  return ` 정복된 땅에 ${R.sym} ${josa(R.name,'이가')} 퍼졌어요.`;
+}
+// 평화: 전쟁에서 건물을 더 많이 빼앗은 쪽이 이긴 나라예요
+function makePeace(A, B){
+  A.wars.delete(B.id); B.wars.delete(A.id); changed = true;
+  const a = (A.spoils && A.spoils[B.id]) || 0, b = (B.spoils && B.spoils[A.id]) || 0;
+  if (A.spoils) delete A.spoils[B.id];
+  if (B.spoils) delete B.spoils[A.id];
+  const win = a > b ? A : b > a ? B : null, lose = win === A ? B : A;
+  if (win && win.faith != null && lose.faith !== win.faith && Math.random() < .6){
+    convertTo(lose, win.faith);
+    const R = RELIGIONS[win.faith];
+    toast(`🕊 ${A.name}과 ${B.name}이 평화를 맺었어요. 전쟁에서 이긴 ${win.name}의 ${R.sym} ${josa(R.name,'이가')} ${lose.name}에 퍼졌어요`);
+    return;
+  }
+  toast(`🕊 ${A.name}과 ${B.name}이 평화를 맺었어요${win ? ` (${win.name} 우세)` : ''}`);
+}
 function warChance(A, B, base){
   if (A.faith == null || B.faith == null) return base;
   return A.faith === B.faith ? base * .4 : base * 1.8;
@@ -1159,7 +1188,7 @@ function tick(){
     for (const b of [...A.wars]){
       if (b < A.id) continue;
       const B = kingdoms.get(b);
-      if (B && Math.random() < .006){ A.wars.delete(b); B.wars.delete(A.id); changed = true; toast(`🕊 ${A.name}과 ${B.name}이 평화를 맺었어요`); }
+      if (B && Math.random() < .006) makePeace(A, B);
     }
   }
   marriages();
