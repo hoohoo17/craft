@@ -91,6 +91,11 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 .king .war{color:#c9483a;font-size:12px}
 .king .ally{color:#2f8f6b;font-size:12px}
 .king .shaky{color:#b7791f}
+.chron{list-style:none;margin:0;padding:0;max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.45}
+.chron li{display:flex;gap:8px;padding:4px 6px;border-radius:8px;background:#f6f4ee}
+.chron time{flex:none;font-family:var(--display);color:var(--muted);font-variant-numeric:tabular-nums;min-width:3.6em}
+.chron .empty{background:none;color:var(--muted)}
+.king .sick{color:#4f8a2b}
 .faiths{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);padding:2px 2px 4px}
 .faiths b{font-family:var(--display);font-weight:400;font-size:15px;color:var(--ink)}
 .king .crown{color:var(--gold)}
@@ -140,6 +145,11 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
   </div>
 
   <div class="box">
+    <div class="label">연대기 — 이 세계에서 일어난 큰일을 기록해요</div>
+    <ol class="chron" id="chron"></ol>
+  </div>
+
+  <div class="box">
     <div class="label">신의 힘</div>
     <div class="tools god" id="godTools"></div>
     <div class="label" style="margin-top:10px">땅 칠하기 — 🏯 성을 놓으면 새 나라가 세워져요</div>
@@ -168,7 +178,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 나라들은 외교관을 보내 평화 회담이나 불가침 조약을 맺기도 해요. 상인은 특산물을 싣고 이웃 나라와 무역해 금을 벌고(금이 있으면 징병이 빨라져요), 교역로가 이어진 나라끼리는 전쟁이 덜 나요. 전쟁 중엔 상인이 약탈당할 수 있어요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 나라들은 외교관을 보내 평화 회담이나 불가침 조약을 맺기도 해요. 상인은 특산물을 싣고 이웃 나라와 무역해 금을 벌고(금이 있으면 징병이 빨라져요), 교역로가 이어진 나라끼리는 전쟁이 덜 나요. 전쟁 중엔 상인이 약탈당할 수 있어요. 큰 나라엔 가끔 🦠 역병이 돌아 사람 사이로 번지는데, 사제와 신전 곁에선 덜 죽고 ✨ 축복으로 나아요. 큰일은 모두 연대기에 남아요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -201,6 +211,7 @@ const GOD_TOOLS = [
   {id:'meteor', ico:'☄️', name:'운석'},
   {id:'bless', ico:'✨', name:'축복'},
   {id:'reveal', ico:'🕯', name:'계시'},
+  {id:'plague', ico:'🦠', name:'역병'},
 ];
 const TERRAIN_TOOLS = [
   {id:'t'+T.WATER, ico:'🌊', name:'바다'},
@@ -412,6 +423,7 @@ function generate(){
     grid[i] = t;
   }
   ents = []; fx = []; kingdoms = new Map(); nextKid = 0; selected = null;
+  chronicle = []; chronDirty = true;
   const scale = (W*H)/(40*28);
   for (let k=0;k<5*scale;k++) spawnRandom('rabbit');
   for (let k=0;k<3*scale;k++) spawnRandom('sheep');
@@ -1343,6 +1355,7 @@ function tick(){
     }
   }
   marriages();
+  plagueTick();
   // 동물 번식
   const animals = ents.filter(e => e.type !== 'person');
   if (animals.length < 120*(size+1)){
@@ -1360,6 +1373,38 @@ function tick(){
     const i = idx(cx(e), cy(e));
     if (grid[i] === T.FLOWER && Math.random() < .03) setTile(i, T.GRASS);
   });
+}
+
+/* ---------- 역병 ---------- */
+// 앓는 사람(sick: 남은 초)은 곁의 사람에게 옮기고, 일부는 목숨을 잃어요. 나으면 면역이 생겨요
+function infect(e){ if (e.type !== 'person' || e.dead || e.sick || e.immune) return false; e.sick = 30; return true; }
+function plagueTick(){
+  const people = ents.filter(e => e.type === 'person' && !e.dead);
+  const sick = people.filter(e => e.sick);
+  const healers = people.filter(e => e.role === 'priest').concat(bList.filter(b => grid[b] === T.TEMPLE).map(b => ({x:b%W+.5, y:((b/W)|0)+.5})));
+  for (const e of sick){
+    for (const o of people){ if (o !== e && !o.sick && !o.immune && d2(o.x,o.y,e.x,e.y) < 2.2 && Math.random() < .12) infect(o); }
+    const cared = healers.some(h => d2(h.x,h.y,e.x,e.y) < 9);
+    e.sick -= cared ? 2 : 1;
+    if (Math.random() < (cared ? .008 : .02)){
+      const K = kingdoms.get(e.k);
+      kill(e, 'rgba(110,170,70,', null, true);
+      if (e.role === 'king' && K){ toast(`🦠 ${K.name}의 ${e.female ? '여왕' : '왕'} ${josa(e.name,'이가')} 역병으로 숨졌어요`); succeed(K, e); }
+      continue;
+    }
+    if (e.sick <= 0){ e.sick = 0; e.immune = true; }
+  }
+  // 앓는 사람이 많으면 민심이 흔들려요
+  const per = new Map();
+  for (const e of sick) if (!e.dead) per.set(e.k, (per.get(e.k)||0) + 1);
+  for (const [k, n] of per){ const K = kingdoms.get(k); if (K && n >= 5) K.unrest = Math.min(100, (K.unrest||0) + .1); }
+  // 큰 나라에 가끔 저절로 돌아요
+  for (const K of kingdoms.values()){
+    if (per.get(K.id) || Math.random() > .0006) continue;
+    if (bList.filter(b => owner[b] === K.id && grid[b] === T.HOUSE).length < 8) continue;
+    const v = pick(people.filter(e => e.k === K.id && e.role === 'villager' && !e.immune));
+    if (v && infect(v)) toast(`🦠 ${K.name}에 역병이 돌기 시작했어요`);
+  }
 }
 
 /* ---------- 혼인과 동맹 ---------- */
@@ -1458,7 +1503,7 @@ function bless(x, y){
   let up = null;
   ents.forEach(e => {
     if (d2(e.x,e.y,x+.5,y+.5) > 4) return;
-    if (e.type === 'person'){ e.hp = e.max; if (e.role === 'soldier' && e.kills < 5){ e.kills = e.kills < 2 ? 2 : 5; up = e; } }
+    if (e.type === 'person'){ e.hp = e.max; if (e.sick){ e.sick = 0; e.immune = true; } if (e.role === 'soldier' && e.kills < 5){ e.kills = e.kills < 2 ? 2 : 5; up = e; } }
   });
   if (up) toast(`✨ ${up.name}에게 신의 축복이 내렸어요`);
   for (const K of kingdoms.values()){
@@ -1482,6 +1527,16 @@ function applyAt(x, y, first){
   if (tool === 'rain'){ if (first || now - lastPower > 250){ rain(x,y); lastPower = now; } return; }
   if (tool === 'bless'){ if (first || now - lastPower > 300){ bless(x,y); lastPower = now; } return; }
   if (tool === 'reveal'){ if (first) reveal(x,y); return; }
+  if (tool === 'plague'){
+    if (!first) return;
+    let n = 0;
+    ents.forEach(e => { if (d2(e.x,e.y,x+.5,y+.5) <= 6.5 && infect(e)) n++; });
+    fx.push({type:'ring', x:x+.5, y:y+.5, t:0, d:.9, color:'#7fbf4a', r:2.5});
+    const k = terr[idx(x,y)];
+    if (n) toast(`🦠 ${k >= 0 && kingdoms.has(k) ? kingdoms.get(k).name + '에 ' : ''}신이 역병을 내렸어요 (${n}명)`);
+    else toast('주변에 옮을 사람이 없어요');
+    return;
+  }
   const rad = brush-1;
   const each = fn => { for (let dy=-rad;dy<=rad;dy++) for (let dx=-rad;dx<=rad;dx++){
     const nx = x+dx, ny = y+dy;
@@ -1774,6 +1829,10 @@ function drawEnt(e, now){
   }
   ctx.restore();
   if (e.type === 'person' && e.hp < e.max && e.alpha > .5) bar(px-5, py-14, 10, e.hp/e.max);
+  if (e.sick && e.alpha > .3){
+    ctx.fillStyle = 'rgba(120,190,70,.85)';
+    for (let k=0;k<3;k++){ const a = now*2 + k*2.1 + e.phase; ctx.beginPath(); ctx.arc(px + Math.sin(a)*3, py - 12 - ((now*6 + k*4) % 8), 1.1, 0, 7); ctx.fill(); }
+  }
 }
 function drawPerson(e, now, moving){
   const kg = kingdoms.get(e.k), col = kg ? kg.color : '#999';
@@ -2038,7 +2097,26 @@ document.getElementById('photo').onclick = () => {
 nameEl.addEventListener('input', () => { changed = true; document.title = nameEl.value || '나만의 섬'; });
 
 let toastTimer;
+// 큰일은 연대기에 남겨요 (태어남, 무역, 파견처럼 자잘한 소식은 빼요)
+let chronicle = [], chronDirty = true;
+const CHRON_SKIP = /태어났|🛒|보냈어요|거절|돌려보냈|더 되돌릴|꽉 찼|누르면|떨어뜨려|영토 안에|솟아올랐|사라져요\. 한 번 더|탈영/;
+function record(msg){
+  if (CHRON_SKIP.test(msg)) return;
+  const h = Math.floor(tod*24);
+  chronicle.unshift({d: day, h, m: msg});
+  if (chronicle.length > 80) chronicle.length = 80;
+  chronDirty = true;
+}
+function renderChronicle(){
+  if (!chronDirty) return;
+  chronDirty = false;
+  const el = document.getElementById('chron');
+  el.innerHTML = chronicle.length
+    ? chronicle.map(c => `<li><time>${c.d}일 ${String(c.h).padStart(2,'0')}시</time><span>${c.m.replace(/</g,'&lt;')}</span></li>`).join('')
+    : '<li class="empty">아직 기록된 일이 없어요.</li>';
+}
 function toast(msg){
+  record(msg);
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('on');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2800);
@@ -2062,7 +2140,7 @@ function showInfo(){
       : ROYALS.includes(s.role) ? [s === heir ? '왕위 계승 1순위' : s.role === 'dowager' ? '선왕의 왕비' : isChild(s) ? '아직 어려요' : '성 곁에 머물러요',
           s.spouse && byId(s.spouse) ? `배우자 ${byId(s.spouse).name}` : (s.spouse ? '사별했어요' : '')].filter(Boolean).join(' · ')
       : `쓰러뜨린 적 ${s.kills}`;
-    el.innerHTML = `<span class="badge" style="background:${col}">${rank}</span><div class="col"><b>${s.name}</b>` +
+    el.innerHTML = `<span class="badge" style="background:${col}">${rank}</span><div class="col"><b>${s.name}${s.sick ? ' 🦠' : s.immune ? ' 🛡' : ''}</b>` +
       `<small>${K ? K.name : ''} · ${extra} · 체력 ${Math.ceil(s.hp)}/${s.max} · ${Math.floor(s.age/DAY_LEN)+1}일째 삶</small></div>`;
     return;
   }
@@ -2102,7 +2180,8 @@ function updateStats(){
   ents.forEach(e => {
     c[e.type]++;
     if (e.type !== 'person') return;
-    const p = per.get(e.k) || {pop:0, soldiers:0, king:null, general:null, queen:null};
+    const p = per.get(e.k) || {pop:0, soldiers:0, king:null, general:null, queen:null, sick:0};
+    if (e.sick) p.sick++;
     p.pop++;
     if (e.role === 'soldier') p.soldiers++;
     if (e.role === 'king') p.king = e;
@@ -2128,7 +2207,7 @@ function updateStats(){
       `<small>${k.faith != null ? `${RELIGIONS[k.faith].sym} ${RELIGIONS[k.faith].name}` : '믿음 없음'}</small>` +
       `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}` : k.feud ? `<span class="war">왕위 다툼 중: ${byId(k.feud.a)?.name || '?'} 대 ${byId(k.feud.b)?.name || '?'}</span>` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
       `${(() => { const h = heirs(k.id)[0]; return h ? ` · 계승자 ${ROYAL_TITLE[h.role]} ${h.name}` : ''; })()}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}</small>` +
-      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs} · ${['민심 좋음', '<span class="shaky">민심 흔들림 · 징병·이사·집짓기 느려짐</span>', '<span class="war">민심 위태 🔥 · 탈영·반란</span>'][mood(k)]} (${Math.round(k.unrest || 0)})</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}` +
+      `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}${p.sick ? ` · <span class="sick">🦠 앓는 사람 ${p.sick}</span>` : ''} · ${['민심 좋음', '<span class="shaky">민심 흔들림 · 징병·이사·집짓기 느려짐</span>', '<span class="war">민심 위태 🔥 · 탈영·반란</span>'][mood(k)]} (${Math.round(k.unrest || 0)})</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}` +
       `<small>💰 ${Math.floor(k.gold || 0)}${k.spec != null ? ` · 특산 ${GOODS[k.spec].sym}${GOODS[k.spec].name}` : ''}${partners.length ? ` · 🛒 ${partners.join(', ')}` : ''}</small></div>`;
   }).join('');
 }
@@ -2138,7 +2217,7 @@ function save(){
   try {
     localStorage.setItem(KEY, JSON.stringify({
       v:3, W, H, size, name:nameEl.value, grid:Array.from(grid), ages:Array.from(ages), owner:Array.from(owner), bhp:Array.from(bhp, v => Math.round(v)),
-      kings:serKings(), nextKid, tod, day, harvest, ents:JSON.parse(serEnts())
+      kings:serKings(), nextKid, tod, day, harvest, chronicle, ents:JSON.parse(serEnts())
     }));
   } catch(_) {}
 }
@@ -2150,7 +2229,7 @@ function load(){
     if (s.grid.length !== N) return false;
     grid = Uint8Array.from(s.grid); ages = Uint16Array.from(s.ages); owner = Int16Array.from(s.owner); bhp = Float32Array.from(s.bhp);
     kingdoms = deKings(s.kings); nextKid = s.nextKid;
-    tod = s.tod; day = s.day; harvest = s.harvest || 0;
+    tod = s.tod; day = s.day; harvest = s.harvest || 0; chronicle = s.chronicle || []; chronDirty = true;
     nameEl.value = s.name || '나만의 섬'; document.title = nameEl.value;
     ents = s.ents.map(o => ({...o, dead:false, atk:null}));
     ents.forEach(e => { if (!e.id) e.id = uid++; uid = Math.max(uid, e.id + 1); });
@@ -2180,7 +2259,7 @@ function frame(now){
   for (let k=0;k<sub;k++) updateEnts(dt/sub);
   if (terrDirty) computeTerr();
   if (dirty) renderBg();
-  uiAcc += rdt; if (uiAcc > .3){ uiAcc = 0; updateStats(); showInfo(); if (!mini.hidden) drawMini(); }
+  uiAcc += rdt; if (uiAcc > .3){ uiAcc = 0; updateStats(); showInfo(); renderChronicle(); if (!mini.hidden) drawMini(); }
 
   const t = now/1000;
   ctx.setTransform(1,0,0,1,0,0);
