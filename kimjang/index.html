@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>김장 담그기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#3A1F1A; --bg-deep:#231210;
+  --cream:#FFFDF5; --gold:#FFD84D; --gold-deep:#F0B90B;
+  --ink:#101010; --red:#D93A2B; --red-deep:#9E2116;
+  --green:#8CCB6A; --green-deep:#4E9440; --leaf:#E9F5D0;
+  --disp:'Black Han Sans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:radial-gradient(circle at 50% -10%, #6B3A2E 0%, var(--bg) 55%, var(--bg-deep) 100%);
+  font-family:var(--body);color:var(--cream);
+  -webkit-font-smoothing:antialiased;touch-action:manipulation;user-select:none;-webkit-user-select:none;
+  display:flex;align-items:center;justify-content:center;height:100vh}
+
+#wrap{width:100%;max-width:480px;padding:16px;text-align:center}
+
+.mark{font-family:var(--disp);font-size:clamp(34px,10vw,52px);line-height:1.15;
+  color:var(--cream);text-shadow:4px 4px 0 var(--red),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink);
+  margin:0 0 8px}
+.tag{font-size:clamp(13px,3.6vw,16px);opacity:.85;line-height:1.7;margin-bottom:14px}
+
+.btn{all:unset;cursor:pointer;display:inline-block;
+  font-family:var(--disp);font-size:clamp(18px,5vw,24px);letter-spacing:.06em;
+  color:var(--ink);background:var(--gold);padding:14px 38px;border-radius:999px;
+  border:3px solid var(--ink);box-shadow:0 7px 0 var(--gold-deep),0 7px 0 3px var(--ink);
+  transition:transform .1s,box-shadow .1s;-webkit-tap-highlight-color:transparent}
+.btn:active,.btn.down{transform:translateY(7px);box-shadow:0 0 0 var(--gold-deep),0 0 0 3px var(--ink)}
+.btn.small{font-size:16px;padding:11px 26px;background:var(--cream);box-shadow:0 6px 0 #DCD6C4,0 6px 0 3px var(--ink)}
+.btn.small:active{box-shadow:0 0 0 #DCD6C4,0 0 0 3px var(--ink)}
+.row{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;justify-content:center}
+
+#hud{display:none;justify-content:space-between;align-items:center;font-family:var(--disp);
+  font-size:15px;margin-bottom:8px;padding:0 4px}
+#hud.on{display:flex}
+#hud .r{opacity:.8;font-size:13px}
+.steps{display:flex;gap:4px;justify-content:center;margin-bottom:10px}
+.steps i{width:38px;height:6px;border-radius:3px;background:rgba(255,255,255,.18)}
+.steps i.done{background:var(--gold)}
+.steps i.now{background:var(--red)}
+
+.stageTitle{font-family:var(--disp);font-size:clamp(24px,7vw,34px);margin:2px 0 4px;
+  text-shadow:3px 3px 0 var(--red-deep),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.help{font-size:14px;opacity:.85;line-height:1.6;min-height:1.6em;margin-bottom:10px}
+
+#stage{min-height:300px}
+@media (max-height:700px){.stageTitle{font-size:24px}.help{margin-bottom:6px}.row{margin-top:12px}.cabbage{font-size:80px}#tub{height:220px}}
+
+/* 게이지 */
+.track{position:relative;height:52px;border-radius:26px;background:#1A0C0A;border:3px solid var(--ink);overflow:hidden;margin:10px 0 18px}
+.track .zone{position:absolute;top:0;bottom:0;background:linear-gradient(var(--green),var(--green-deep));box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.track .zone .core{position:absolute;top:0;bottom:0;left:30%;right:30%;background:rgba(255,255,255,.3)}
+.track .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#FFFFFF,#D8E6F0);opacity:.85}
+.track .marker{position:absolute;top:-4px;bottom:-4px;width:10px;margin-left:-5px;background:var(--cream);border-radius:5px;box-shadow:0 0 10px rgba(255,255,255,.8),0 0 0 2px var(--ink)}
+.labels{display:flex;justify-content:space-between;font-size:12px;opacity:.7;margin-top:-12px;margin-bottom:8px;padding:0 6px}
+
+/* 배추 */
+.cabbage{font-size:110px;line-height:1;margin:6px 0;transition:transform .4s,filter .4s;filter:drop-shadow(0 6px 6px rgba(0,0,0,.4))}
+.pieces{display:flex;gap:10px;justify-content:center;font-size:40px;margin:4px 0 6px}
+.pieces span{transition:transform .3s,filter .3s}
+.pieces span.wait{opacity:.35}
+.pieces span.salted{transform:scale(.85) rotate(-8deg);filter:saturate(.6) brightness(1.1)}
+
+/* 씻기 */
+#tub{position:relative;height:260px;border-radius:24px;border:3px solid var(--ink);
+  background:radial-gradient(circle at 50% 40%, #7FC4E8 0%, #3D8DB8 70%, #2A6A8E 100%);overflow:hidden;margin:6px 0 10px}
+#tub .cab{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:150px;opacity:.95;pointer-events:none}
+#tub .dirt{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #9C7348, #5E3E1E);border:2px solid var(--ink);cursor:pointer;
+  animation:dIn .2s ease-out}
+#tub .dirt.bug{background:none;border:none;font-size:34px;line-height:44px;text-align:center}
+#tub .pop{position:absolute;pointer-events:none;font-size:28px;margin:-16px 0 0 -16px;animation:bub .5s ease-out forwards}
+@keyframes dIn{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes bub{to{transform:translateY(-30px) scale(1.4);opacity:0}}
+.timer{height:10px;border-radius:5px;background:rgba(255,255,255,.15);overflow:hidden;margin-bottom:6px}
+.timer b{display:block;height:100%;background:var(--gold);width:100%}
+
+/* 양념 */
+.recipe{background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:12px 10px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 8px;position:relative}
+.recipe .it{font-size:14px;line-height:1.3}
+.recipe .it .e{font-size:24px;display:block}
+.recipe .it b{font-family:var(--disp);font-size:18px;color:var(--red)}
+.recipe.hide .it b{color:transparent;text-shadow:0 0 0 transparent}
+.recipe.hide::after{content:'?';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-size:60px;color:var(--red);background:var(--cream);border-radius:13px}
+.bowl{position:relative;width:140px;height:56px;margin:2px auto 8px;border-radius:0 0 70px 70px;
+  background:linear-gradient(#C8A57A,#8E6B45);border:3px solid var(--ink);overflow:hidden}
+.bowl .sauce{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(#E8553F,#A82414);transition:height .2s}
+.ings{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ing{all:unset;cursor:pointer;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.25);border-radius:14px;
+  padding:5px 4px;font-size:13px;line-height:1.25;-webkit-tap-highlight-color:transparent}
+.ing:active{background:rgba(255,216,77,.3)}
+.ing .e{font-size:24px;display:block}
+.ing b{font-family:var(--disp);font-size:16px;color:var(--gold)}
+
+/* 소 넣기 */
+.leaves{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px auto 8px;max-width:320px}
+.leaves i{height:54px;border-radius:50% 50% 45% 45% / 70% 70% 30% 30%;background:linear-gradient(var(--green) 0%, var(--leaf) 70%);
+  border:2px solid var(--ink);transition:background .3s,transform .3s}
+.leaves i.now{transform:scale(1.12);box-shadow:0 0 0 3px var(--gold)}
+.leaves i.perfect{background:linear-gradient(#C3341F 0%, #E8553F 60%, #F4A08A 100%)}
+.leaves i.good{background:linear-gradient(#D4583F 0%, #ED9480 60%, var(--leaf) 100%)}
+.leaves i.miss{background:linear-gradient(var(--green) 0%, var(--leaf) 60%);opacity:.45}
+
+#toast{position:fixed;left:0;right:0;margin:0 auto;width:max-content;max-width:92vw;padding:6px 20px;border-radius:999px;background:rgba(20,8,6,.88);border:2px solid var(--ink);top:17%;pointer-events:none;z-index:5;font-family:var(--disp);font-size:clamp(22px,7vw,32px);
+  color:var(--gold);text-shadow:2px 2px 0 var(--ink);opacity:0}
+#toast.pop{animation:pop .7s ease-out}
+@keyframes pop{0%{opacity:0;transform:scale(.6)}25%{opacity:1;transform:scale(1.15)}75%{opacity:1}100%{opacity:0;transform:scale(1)}}
+
+.big{font-family:var(--disp);font-size:clamp(30px,9vw,46px);margin:0 0 4px;
+  text-shadow:3px 3px 0 var(--red),-2px 0 0 var(--ink),2px 0 0 var(--ink),0 -2px 0 var(--ink),0 2px 0 var(--ink)}
+.num{font-family:var(--disp);font-size:clamp(48px,15vw,80px);line-height:1;margin:4px 0}
+.line{font-size:14px;opacity:.9;margin-top:4px;line-height:1.6}
+.best{margin-top:8px;font-size:12px;opacity:.65}
+.score4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0 4px}
+.score4 div{background:rgba(255,255,255,.08);border-radius:12px;padding:8px 2px;font-size:12px}
+.score4 b{display:block;font-family:var(--disp);font-size:20px;color:var(--gold)}
+.fridge{margin:12px auto 0;max-width:320px;background:#E8ECEF;color:var(--ink);border:3px solid var(--ink);border-radius:14px;padding:8px}
+.fridge .t{font-family:var(--disp);font-size:14px;margin-bottom:4px}
+.fridge .shelf{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;min-height:30px;font-size:24px}
+.fridge .shelf span{position:relative}
+.fridge .shelf span.top::after{content:'⭐';position:absolute;right:-4px;top:-6px;font-size:12px}
+.fridge .empty{font-size:12px;opacity:.6;line-height:30px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud"><span id="stageName">1단계</span><span class="r" id="scoreTxt">점수 0</span></div>
+  <div class="steps" id="steps" style="display:none"><i></i><i></i><i></i><i></i></div>
+  <div id="stage"></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const stageEl = $('stage'), hud = $('hud'), stepsEl = $('steps'), toast = $('toast');
+const scoreTxt = $('scoreTxt'), stageName = $('stageName');
+
+const STAGES = ['배추 절이기','배추 씻기','양념 만들기','소 넣기'];
+let scores = [0,0,0,0], stageIdx = 0, saltBias = 0;
+let raf = null, timers = [];
+let best = 0, jars = [];
+try{ best = parseInt(localStorage.getItem('kimjang_best'),10) || 0; }catch(e){}
+try{ jars = JSON.parse(localStorage.getItem('kimjang_jars') || '[]'); if (!Array.isArray(jars)) jars = []; }catch(e){ jars = []; }
+
+let AC = null;
+function beep(freq, dur, type, vol){
+  try{
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .12, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + (dur || .12));
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + (dur || .12));
+  }catch(e){}
+}
+const good = () => beep(880,.12,'triangle',.13);
+const ok = () => beep(620,.1,'triangle',.11);
+const bad = () => beep(200,.16,'sawtooth',.08);
+
+function showToast(text, color){
+  toast.textContent = text;
+  toast.style.color = color || 'var(--gold)';
+  toast.classList.remove('pop'); void toast.offsetWidth; toast.classList.add('pop');
+}
+function later(fn, ms){ const t = setTimeout(fn, ms); timers.push(t); return t; }
+function clearAll(){
+  if (raf) cancelAnimationFrame(raf); raf = null;
+  timers.forEach(clearTimeout); timers = [];
+}
+const total = () => scores.reduce((a,b)=>a+b,0);
+
+function setHud(){
+  hud.classList.add('on'); stepsEl.style.display = 'flex';
+  stageName.textContent = (stageIdx+1) + '단계 · ' + STAGES[stageIdx];
+  scoreTxt.textContent = '점수 ' + total();
+  [...stepsEl.children].forEach((el,i)=>{ el.className = i < stageIdx ? 'done' : i === stageIdx ? 'now' : ''; });
+}
+
+function intro(title, help, onGo){
+  setHud();
+  stageEl.innerHTML = `
+    <div class="stageTitle">${title}</div>
+    <div class="help">${help}</div>
+    <div class="row"><button class="btn" id="go">좋아요!</button></div>`;
+  $('go').onclick = () => { ok(); onGo(); };
+}
+
+function nextStage(){
+  clearAll();
+  stageIdx++;
+  scoreTxt.textContent = '점수 ' + total();
+  if (stageIdx >= 4) { later(showResult, 500); return; }
+  later([stage1, stage2, stage3, stage4][stageIdx], 700);
+}
+
+/* ---------- 1단계: 배추 절이기 ---------- */
+function stage1(){
+  intro('🧂 배추 절이기',
+    '[소금 뿌리기]를 꾹 누르고 있으면 소금이 쌓여요.<br>초록 칸에서 손을 떼요. 너무 많으면 짜고, 적으면 싱거워요.',
+    play1);
+}
+function play1(){
+  let piece = 0, sum = 0, fill = 0, holding = false, done = false, zs = 0, zw = 0, speed = 0;
+  stageEl.innerHTML = `
+    <div class="stageTitle">🧂 배추 절이기</div>
+    <div class="help" id="h1">배추 ${piece+1}/3쪽</div>
+    <div class="pieces" id="pcs"><span>🥬</span><span class="wait">🥬</span><span class="wait">🥬</span></div>
+    <div class="track"><div class="zone" id="z"><div class="core"></div></div><div class="fill" id="f"></div><div class="marker" id="m"></div></div>
+    <div class="labels"><span>싱거워요</span><span>짜요</span></div>
+    <div class="row"><button class="btn" id="salt">소금 뿌리기</button></div>`;
+  const z = $('z'), f = $('f'), m = $('m'), btn = $('salt'), h1 = $('h1'), pcs = $('pcs');
+  function setup(){
+    zw = Math.max(14, 22 - piece*3);
+    zs = 40 + Math.random()*(88 - zw - 40);
+    z.style.left = zs+'%'; z.style.width = zw+'%';
+    speed = 0.55 + piece*0.15;
+    fill = 0; done = false; draw();
+    h1.textContent = '배추 ' + (piece+1) + '/3쪽';
+  }
+  function draw(){ f.style.width = fill+'%'; m.style.left = fill+'%'; }
+  let lastBeep = 0;
+  function loop(t){
+    if (holding && !done){
+      fill = Math.min(100, fill + speed);
+      draw();
+      if (t - lastBeep > 90){ beep(1400 + Math.random()*400, .03, 'square', .025); lastBeep = t; }
+      if (fill >= 100) release();
+    }
+    raf = requestAnimationFrame(loop);
+  }
+  function press(e){ if (e) e.preventDefault(); if (done) return; holding = true; btn.classList.add('down'); }
+  function release(e){
+    if (e) e.preventDefault();
+    if (!holding || done) return;
+    holding = false; done = true; btn.classList.remove('down');
+    const c = zs + zw/2, d = Math.abs(fill - c);
+    const core = zw*0.2, half = zw/2;
+    let pts;
+    if (d <= core){ pts = 8; showToast('딱 좋아요! +8'); good(); }
+    else if (d <= half){ pts = 6; showToast('좋아요! +6','#C9F0B0'); ok(); }
+    else { pts = Math.max(0, Math.round(6 - (d-half)/3)); showToast(fill > c ? '앗, 짜요! +'+pts : '앗, 싱거워요! +'+pts, '#FF9AAE'); bad(); }
+    saltBias += (fill - c);
+    sum += pts;
+    pcs.children[piece].className = 'salted';
+    piece++;
+    if (piece >= 3){
+      scores[0] = Math.min(25, sum + (sum === 24 ? 1 : 0));
+      later(nextStage, 900);
+    } else {
+      pcs.children[piece].className = '';
+      later(setup, 800);
+    }
+  }
+  btn.addEventListener('pointerdown', press);
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointerleave', release);
+  btn.addEventListener('pointercancel', release);
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  keyHold = { down: press, up: release };
+  setup();
+  raf = requestAnimationFrame(loop);
+}
+let keyHold = null;
+addEventListener('keydown', e => { if (e.code === 'Space' && keyHold && !e.repeat){ e.preventDefault(); keyHold.down(); } });
+addEventListener('keyup', e => { if (e.code === 'Space' && keyHold){ e.preventDefault(); keyHold.up(); } });
+
+/* ---------- 2단계: 배추 씻기 ---------- */
+function stage2(){
+  keyHold = null;
+  intro('💧 배추 씻기',
+    '절인 배추에 흙과 벌레가 붙었어요.<br>나타나는 걸 빨리 톡톡 눌러서 씻어내요!',
+    play2);
+}
+function play2(){
+  const DUR = 10000;
+  stageEl.innerHTML = `
+    <div class="stageTitle">💧 배추 씻기</div>
+    <div class="timer"><b id="tb"></b></div>
+    <div id="tub"><div class="cab">🥬</div></div>
+    <div class="help" id="h2">씻은 것 0</div>`;
+  const tub = $('tub'), tb = $('tb'), h2 = $('h2');
+  let spawned = 0, cleaned = 0, t0 = performance.now(), ended = false;
+  function spawn(){
+    if (ended) return;
+    const live = tub.querySelectorAll('.dirt').length;
+    if (live < 4){
+      const d = document.createElement('div');
+      const isBug = Math.random() < .25;
+      d.className = 'dirt' + (isBug ? ' bug' : '');
+      if (isBug) d.textContent = '🐛';
+      d.style.left = (12 + Math.random()*76) + '%';
+      d.style.top = (14 + Math.random()*72) + '%';
+      spawned++;
+      const life = later(() => { d.remove(); }, Math.max(900, 1800 - spawned*25));
+      d.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        if (ended) return;
+        clearTimeout(life);
+        cleaned++;
+        h2.textContent = '씻은 것 ' + cleaned;
+        beep(500 + Math.random()*500, .08, 'sine', .12);
+        const p = document.createElement('div');
+        p.className = 'pop'; p.textContent = '🫧';
+        p.style.left = d.style.left; p.style.top = d.style.top;
+        tub.appendChild(p); later(() => p.remove(), 500);
+        d.remove();
+      });
+      tub.appendChild(d);
+    }
+    later(spawn, Math.max(320, 620 - spawned*12));
+  }
+  function tick(t){
+    const left = Math.max(0, 1 - (t - t0)/DUR);
+    tb.style.width = (left*100) + '%';
+    if (left <= 0){ finish(); return; }
+    raf = requestAnimationFrame(tick);
+  }
+  function finish(){
+    ended = true;
+    tub.querySelectorAll('.dirt').forEach(d => d.remove());
+    const rate = spawned ? cleaned/spawned : 0;
+    scores[1] = Math.round(rate*25);
+    if (rate >= .9){ showToast('반짝반짝! +' + scores[1]); good(); }
+    else if (rate >= .6){ showToast('깨끗해요! +' + scores[1], '#C9F0B0'); ok(); }
+    else { showToast('흙이 좀 남았어요 +' + scores[1], '#FF9AAE'); bad(); }
+    later(nextStage, 1000);
+  }
+  later(spawn, 300);
+  raf = requestAnimationFrame(tick);
+}
+
+/* ---------- 3단계: 양념 만들기 ---------- */
+const INGS = [
+  {e:'🌶️', n:'고춧가루'}, {e:'🧄', n:'마늘'}, {e:'🫚', n:'생강'},
+  {e:'🦐', n:'새우젓'}, {e:'🥕', n:'무채'}, {e:'🌿', n:'쪽파'}
+];
+function stage3(){
+  intro('🌶️ 양념 만들기',
+    '할머니 비법 레시피를 5초 동안 보여줄게요.<br>잘 외워서 똑같이 넣어요!',
+    play3);
+}
+function play3(){
+  const want = INGS.map((_,i) => i === 0 ? 3 + Math.floor(Math.random()*3) : 1 + Math.floor(Math.random()*4));
+  const have = INGS.map(() => 0);
+  stageEl.innerHTML = `
+    <div class="stageTitle">🌶️ 양념 만들기</div>
+    <div class="help" id="h3">외워요! <b id="cd">5</b></div>
+    <div class="recipe" id="rc">${INGS.map((g,i)=>`<div class="it"><span class="e">${g.e}</span>${g.n}<br><b>${want[i]}숟가락</b></div>`).join('')}</div>
+    <div class="bowl"><div class="sauce" id="sc"></div></div>
+    <div class="ings" id="ig" style="opacity:.35;pointer-events:none">${INGS.map((g,i)=>`<button class="ing" data-i="${i}"><span class="e">${g.e}</span>${g.n} <b id="hv${i}">0</b></button>`).join('')}</div>
+    <div class="row"><button class="btn small" id="reset">다시 섞기</button><button class="btn" id="done">다 넣었어요</button></div>`;
+  const rc = $('rc'), ig = $('ig'), sc = $('sc'), cd = $('cd'), h3 = $('h3');
+  const doneBtn = $('done'), resetBtn = $('reset');
+  doneBtn.style.visibility = resetBtn.style.visibility = 'hidden';
+  let n = 5;
+  function count(){
+    n--;
+    if (n > 0){ cd.textContent = n; beep(500,.06,'sine',.06); later(count, 1000); }
+    else {
+      rc.classList.add('hide');
+      h3.textContent = '기억나는 대로 넣어요';
+      ig.style.opacity = 1; ig.style.pointerEvents = 'auto';
+      doneBtn.style.visibility = resetBtn.style.visibility = 'visible';
+      beep(760,.1,'triangle',.1);
+    }
+  }
+  later(count, 1000);
+  function redraw(){
+    const s = have.reduce((a,b)=>a+b,0);
+    sc.style.height = Math.min(100, s*5) + '%';
+    have.forEach((v,i) => { $('hv'+i).textContent = v; });
+  }
+  ig.addEventListener('click', e => {
+    const b = e.target.closest('.ing'); if (!b) return;
+    const i = +b.dataset.i;
+    if (have[i] >= 9) return;
+    have[i]++; beep(300 + i*80, .06, 'sine', .1); redraw();
+  });
+  resetBtn.onclick = () => { have.fill(0); redraw(); beep(220,.1,'sine',.08); };
+  doneBtn.onclick = () => {
+    ig.style.pointerEvents = 'none'; doneBtn.disabled = resetBtn.disabled = true;
+    const diff = want.reduce((a,w,i)=>a + Math.abs(w - have[i]), 0);
+    scores[2] = Math.max(0, 25 - diff*3);
+    rc.classList.remove('hide');
+    [...rc.children].forEach((el,i) => {
+      if (have[i] !== want[i]) el.querySelector('b').innerHTML = `${want[i]}숟가락<br><small style="color:#666">넣은 것 ${have[i]}</small>`;
+    });
+    if (diff === 0){ showToast('비법 그대로! +25'); good(); }
+    else if (diff <= 3){ showToast('거의 맞았어요! +' + scores[2], '#C9F0B0'); ok(); }
+    else { showToast('맛이 좀 달라요 +' + scores[2], '#FF9AAE'); bad(); }
+    later(nextStage, 2200);
+  };
+}
+
+/* ---------- 4단계: 소 넣기 ---------- */
+function stage4(){
+  intro('🥬 소 넣기',
+    '배춧잎 사이사이에 양념을 발라요.<br>막대가 초록 칸에 있을 때 [바르기!]를 눌러요.',
+    play4);
+}
+function play4(){
+  const N = 8;
+  let i = 0, pts = 0, miss = 0, pos = 0, dir = 1, speed = 1, zs = 0, zw = 0, live = false;
+  stageEl.innerHTML = `
+    <div class="stageTitle">🥬 소 넣기</div>
+    <div class="help" id="h4">배춧잎 1/${N}</div>
+    <div class="leaves" id="lv">${'<i></i>'.repeat(N)}</div>
+    <div class="track"><div class="zone" id="z"><div class="core"></div></div><div class="marker" id="m"></div></div>
+    <div class="row"><button class="btn" id="tap">바르기!</button></div>`;
+  const lv = $('lv'), z = $('z'), m = $('m'), h4 = $('h4'), btn = $('tap');
+  function setup(){
+    zw = Math.max(18, 34 - i*2);
+    zs = 4 + Math.random()*(96 - zw - 4);
+    z.style.left = zs+'%'; z.style.width = zw+'%';
+    speed = 0.9 + i*0.09;
+    pos = Math.random() < .5 ? 0 : 100; dir = pos === 0 ? 1 : -1;
+    lv.children[i].classList.add('now');
+    h4.textContent = '배춧잎 ' + (i+1) + '/' + N;
+    live = true;
+  }
+  function loop(){
+    if (live){
+      pos += dir*speed;
+      if (pos >= 100){ pos = 100; dir = -1; }
+      if (pos <= 0){ pos = 0; dir = 1; }
+      m.style.left = pos + '%';
+    }
+    raf = requestAnimationFrame(loop);
+  }
+  function tap(){
+    if (!live) return;
+    live = false;
+    const leaf = lv.children[i];
+    leaf.classList.remove('now');
+    const c0 = zs + zw*.3, c1 = zs + zw*.7;
+    if (pos >= c0 && pos <= c1){ pts += 3; leaf.classList.add('perfect'); showToast('골고루! +3'); good(); }
+    else if (pos >= zs && pos <= zs+zw){ pts += 2; leaf.classList.add('good'); showToast('좋아요! +2','#C9F0B0'); ok(); }
+    else { miss++; leaf.classList.add('miss'); showToast('양념이 안 묻었어요','#FF9AAE'); bad(); }
+    i++;
+    scoreTxt.textContent = '점수 ' + (total() + pts);
+    if (i >= N){
+      scores[3] = Math.min(25, pts + (miss === 0 ? 1 : 0));
+      keyTap = null;
+      later(nextStage, 800);
+    } else later(setup, 350);
+  }
+  btn.addEventListener('click', tap);
+  keyTap = tap;
+  setup();
+  raf = requestAnimationFrame(loop);
+}
+let keyTap = null;
+addEventListener('keydown', e => { if (e.code === 'Space' && keyTap){ e.preventDefault(); keyTap(); } });
+
+/* ---------- 결과 ---------- */
+function fridgeHTML(highlightLast){
+  if (!jars.length) return `<div class="fridge"><div class="t">🧊 김치냉장고</div><div class="empty">아직 비어 있어요</div></div>`;
+  const top = Math.max(...jars);
+  return `<div class="fridge"><div class="t">🧊 김치냉장고 · ${jars.length}통</div>
+    <div class="shelf">${jars.map((s,k)=>`<span class="${s===top?'top':''}" title="${s}점" ${highlightLast && k===jars.length-1 ? 'style="animation:pop 1s"' : ''}>🫙</span>`).join('')}</div></div>`;
+}
+function showResult(){
+  clearAll(); keyHold = keyTap = null;
+  stepsEl.style.display = 'none'; hud.classList.remove('on');
+  const s = total();
+  const isBest = s > best;
+  if (isBest){ best = s; try{ localStorage.setItem('kimjang_best', best); }catch(e){} }
+  jars.push(s); if (jars.length > 24) jars = jars.slice(-24);
+  try{ localStorage.setItem('kimjang_jars', JSON.stringify(jars)); }catch(e){}
+  const rank = s >= 90 ? '김장 명인! 동네에서 줄 서서 먹는 김치' :
+               s >= 75 ? '할머니가 엄지 척! 👍' :
+               s >= 55 ? '먹을 만해요. 익으면 더 맛있을 거야' :
+                         '음… 라면이랑 먹으면 괜찮아요';
+  const avg = saltBias / 3;
+  const salt = avg > 6 ? '조금 짠 편이에요 🧂' : avg < -6 ? '조금 싱거운 편이에요 💧' : '간이 딱 맞아요 ✨';
+  stageEl.innerHTML = `
+    <div class="big">${isBest ? '신기록!' : '김장 끝!'}</div>
+    <div style="font-size:64px;line-height:1;margin:6px 0">🫙</div>
+    <div class="num">${s}</div>
+    <div class="line">${rank}</div>
+    <div class="line">${salt}</div>
+    <div class="score4">${STAGES.map((n,k)=>`<div>${n}<b>${scores[k]}</b></div>`).join('')}</div>
+    ${fridgeHTML(true)}
+    <div class="best">최고 점수 ${best}점</div>
+    <div class="row">
+      <button class="btn" id="again">한 통 더!</button>
+      <button class="btn small" id="home">처음으로</button>
+    </div>`;
+  $('again').onclick = () => { ok(); startGame(); };
+  $('home').onclick = () => { ok(); showTitle(); };
+}
+
+function startGame(){
+  clearAll();
+  scores = [0,0,0,0]; stageIdx = 0; saltBias = 0;
+  stage1();
+}
+
+function showTitle(){
+  clearAll(); keyHold = keyTap = null;
+  hud.classList.remove('on'); stepsEl.style.display = 'none';
+  stageEl.innerHTML = `
+    <div class="mark">🥬<br>김장 담그기</div>
+    <div class="tag">배추를 절이고, 씻고, 양념을 만들어<br>소를 넣으면 김치 한 통 완성!</div>
+    <div class="row"><button class="btn" id="start">시작하기</button></div>
+    ${best ? `<div class="best">최고 점수 ${best}점</div>` : ''}
+    ${fridgeHTML(false)}`;
+  $('start').onclick = () => { ok(); startGame(); };
+}
+
+showTitle();
+</script>
+<script src="../rest.js?v=9"></script>
+</body>
+</html>
