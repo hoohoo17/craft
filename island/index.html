@@ -51,11 +51,12 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 #mini{width:180px;max-width:46%;height:auto;border-radius:8px;box-shadow:0 2px 0 #a9cdd9;cursor:pointer;image-rendering:pixelated;touch-action:none;background:#1f5f94}
 #mini[hidden]{display:none}
 .toast{
-  position:absolute;left:50%;top:12px;transform:translate(-50%,-8px);opacity:0;max-width:70%;
-  background:rgba(255,253,246,.95);color:var(--ink);padding:7px 14px;border-radius:999px;
-  font-size:14px;transition:opacity .25s,transform .25s;pointer-events:none;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.15)
+  height:calc(2 * 1.45em + 14px);padding:7px 12px;border-radius:10px;
+  background:var(--paper);color:var(--muted);font-size:14px;line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  box-shadow:0 2px 0 #d9e6e2;transition:background .4s,color .4s
 }
-.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.on{background:#fff4cc;color:var(--ink)}
 
 .box{background:var(--paper);border-radius:14px;padding:10px;box-shadow:0 3px 0 #d9e6e2}
 .label{font-size:12px;color:var(--muted);margin:0 2px 6px}
@@ -119,9 +120,10 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
     </div>
   </header>
 
+  <!-- 소식 줄: 지도를 가리지 않게 지도 위에 따로 둬요 -->
+  <div class="toast" id="toast" aria-live="polite">세계의 소식이 여기에 떠요.</div>
   <div class="stage">
     <canvas id="cv" aria-label="세계 지도"></canvas>
-    <div class="toast" id="toast"></div>
   </div>
   <!-- 지도 조작은 지도 밖에 두어 나라를 가리지 않아요 -->
   <div class="mapbar">
