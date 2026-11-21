@@ -120,6 +120,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
         <button data-v="0" aria-pressed="false" aria-label="멈춤">⏸</button>
         <button data-v="1" aria-pressed="true">1배</button>
         <button data-v="3" aria-pressed="false">3배</button>
+        <button data-v="5" aria-pressed="false">5배</button>
       </div>
     </div>
   </header>
@@ -136,13 +137,22 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button id="zoomOut" aria-label="작게 보기">－</button>
       <button id="fit" aria-label="전체 보기">🗺 전체</button>
       <button id="miniToggle" aria-pressed="true">작은 지도</button>
+      <div class="seg" id="mapSel" aria-label="영토 색">
+        <button data-m="k" aria-pressed="true">나라</button>
+        <button data-m="faith" aria-pressed="false">믿음</button>
+        <button data-m="mood" aria-pressed="false">민심</button>
+      </div>
+      <span class="hint" id="mapLegend"></span>
     </div>
     <canvas id="mini" aria-label="전체 지도. 누르면 그곳으로 가요" hidden></canvas>
   </div>
 
   <div class="box">
     <div class="label">살펴보기 — 🔍 도구로 사람이나 건물을 누르세요</div>
-    <div class="info" id="info"><span class="hint">아직 고른 것이 없어요.</span></div>
+    <div class="row" style="margin-top:0;flex-wrap:nowrap">
+      <div class="info" id="info" style="flex:1;min-width:0"><span class="hint">아직 고른 것이 없어요.</span></div>
+      <button class="btn" id="followBtn" hidden>👁 따라가기</button>
+    </div>
   </div>
 
   <div class="box">
@@ -158,6 +168,13 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
 
   <div class="box">
     <div class="label">연대기 — 이 세계에서 일어난 큰일을 기록해요</div>
+    <div class="seg" id="chronSel" style="margin-bottom:6px">
+      <button data-f="all" aria-pressed="true">전체</button>
+      <button data-f="war" aria-pressed="false">전쟁</button>
+      <button data-f="royal" aria-pressed="false">왕실</button>
+      <button data-f="faith" aria-pressed="false">종교</button>
+      <button data-f="disaster" aria-pressed="false">재해</button>
+    </div>
     <ol class="chron" id="chron"></ol>
   </div>
 
@@ -189,8 +206,19 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <div class="spacer"></div>
       <button class="btn main" id="fresh">🏝 새로 만들기</button>
     </div>
+    <div class="row">
+      <span class="hint">저장 칸</span>
+      <div class="seg" id="slotSel">
+        <button data-s="1" aria-pressed="true">1</button>
+        <button data-s="2" aria-pressed="false">2</button>
+        <button data-s="3" aria-pressed="false">3</button>
+      </div>
+      <button class="btn" id="slotSave">💾 저장</button>
+      <button class="btn" id="slotLoad">📂 불러오기</button>
+      <span class="hint" id="slotInfo"></span>
+    </div>
   </div>
-  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 나라들은 외교관을 보내 평화 회담이나 불가침 조약을 맺기도 해요. 상인은 특산물을 싣고 이웃 나라와 무역해 금을 벌고(금이 있으면 징병이 빨라져요), 교역로가 이어진 나라끼리는 전쟁이 덜 나요. 전쟁 중엔 상인이 약탈당할 수 있어요. 큰 나라엔 가끔 🦠 역병이 돌아 사람 사이로 번지는데, 사제와 신전 곁에선 덜 죽고 ✨ 축복으로 나아요. 큰일은 모두 연대기에 남아요. 적을 10명 쓰러뜨린 병사는 별호를 얻은 🌟 영웅이 되고, 바닷가 나라는 ⛵ 고깃배로 금을 벌어요. 🌋 화산과 🌏 지진으로 세상을 뒤흔들 수도 있어요. 가끔 🐉 용이 내려와 마을에 불을 뿜고, 💎 유물이 나타나기도 해요. 평화로운 나라는 🎉 축제를 열고, 전쟁 중인 나라는 🗡 자객을 보내요. 여름엔 가뭄, 가을엔 풍년이 들기도 하고, 🌑 일식으로 세상을 어둠에 잠기게 할 수 있어요. 왕마다 호전적·온화한·욕심 많은·경건한·현명한 성격이 있어 나라의 행동이 달라지고, 가끔 ⛈ 폭풍이 몰아치며, 전쟁이 시작되면 두 나라의 대표 용사가 ⚔ 결투를 벌이기도 해요. 철의 시대에 부유해진 나라는 🗼 불가사의를 세워요. 계절은 이틀마다 바뀌어 겨울엔 밭과 나무가 멈추고, 나라는 금을 모아 나무에서 돌, 철의 시대로 발전해요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
+  <p class="hint">당신은 이 세계의 신이에요. 나라들은 성을 중심으로 스스로 집과 밭을 늘리고, 영토가 맞닿으면 전쟁을 벌여요. 성은 병사를 징병하고, 적을 쓰러뜨린 병사는 기사로, 가장 용맹한 기사는 장군이 돼요. 성이 함락되거나 왕이 적에게 쓰러지면 그 나라는 이긴 나라에 흡수되고, 신의 힘으로 왕이 쓰러지면 나라가 폐허가 돼요. 왕은 왕비를 맞고 왕자와 공주를 두며, 늙어 숨지면 맏왕자가 왕위를 이어요(왕자가 없으면 공주, 그다음 왕비). 어른 왕자가 둘 이상이면 병사가 두 편으로 갈라 왕위 다툼을 벌이기도 해요. 나라가 커지거나 전쟁이 길어지면 민심이 흔들려요. 흔들리면 징병·이사·집짓기가 느려지고, 위태로우면 병사가 탈영하고 수도에서 먼 마을이 반란을 일으켜 새 나라를 세워요. 성 근처에 ✨ 축복을 내리면 민심이 가라앉아요. 큰 나라는 신전을 짓고 믿음을 열어 이웃에 선교사를 보내요. 믿음이 다르면 성전이 잦고, 전쟁에서 이긴 나라는 진 나라에 믿음을 퍼뜨려요. 나라들은 외교관을 보내 평화 회담이나 불가침 조약을 맺기도 해요. 상인은 특산물을 싣고 이웃 나라와 무역해 금을 벌고(금이 있으면 징병이 빨라져요), 교역로가 이어진 나라끼리는 전쟁이 덜 나요. 전쟁 중엔 상인이 약탈당할 수 있어요. 큰 나라엔 가끔 🦠 역병이 돌아 사람 사이로 번지는데, 사제와 신전 곁에선 덜 죽고 ✨ 축복으로 나아요. 큰일은 모두 연대기에 남아요. 적을 10명 쓰러뜨린 병사는 별호를 얻은 🌟 영웅이 되고, 바닷가 나라는 ⛵ 고깃배로 금을 벌어요. 🌋 화산과 🌏 지진으로 세상을 뒤흔들 수도 있어요. 가끔 🐉 용이 내려와 마을에 불을 뿜고, 💎 유물이 나타나기도 해요. 평화로운 나라는 🎉 축제를 열고, 전쟁 중인 나라는 🗡 자객을 보내요. 여름엔 가뭄, 가을엔 풍년이 들기도 하고, 🌑 일식으로 세상을 어둠에 잠기게 할 수 있어요. 왕마다 호전적·온화한·욕심 많은·경건한·현명한 성격이 있어 나라의 행동이 달라지고, 가끔 ⛈ 폭풍이 몰아치며, 전쟁이 시작되면 두 나라의 대표 용사가 ⚔ 결투를 벌이기도 해요. 철의 시대에 부유해진 나라는 🗼 불가사의를 세워요. 학자들은 물레방아·나침반·투석기·인쇄술을 발명하고, 숲엔 🐻 곰이 살며, 왕과 영웅이 잠든 자리엔 🪦 기념비가 서요. 드물게 ☄ 혜성이 나타나 불길한 기운을 퍼뜨리고, 🌊 해일로 바닷가를 쓸어 버릴 수도 있어요. 지도 아래에서 영토를 믿음·민심 색으로 바꿔 보고, 🔍로 고른 대상을 👁 따라가며, 💾 저장 칸 세 곳에 세계를 보관할 수 있어요. 계절은 이틀마다 바뀌어 겨울엔 밭과 나무가 멈추고, 나라는 금을 모아 나무에서 돌, 철의 시대로 발전해요. 🕯 계시로 나라의 믿음을 바꿀 수 있어요. 어른이 된 왕자와 공주는 혼인하는데, 다른 나라 왕실과 혼인하면 두 나라가 동맹을 맺어요. 🔍 살펴보기를 고른 채 지도를 끌면 움직이고, 두 손가락이나 휠, 지도 아래 ＋/－ 버튼으로 확대하고, 🗺 전체로 세계를 한눈에 봐요. 세계는 이 기기에 저절로 저장돼요.</p>
 </div>
 
 <script>
@@ -237,6 +265,7 @@ const GOD_TOOLS = [
   {id:'dragon', ico:'🐉', name:'용'},
   {id:'eclipse', ico:'🌑', name:'일식'},
   {id:'storm', ico:'⛈', name:'폭풍'},
+  {id:'tsunami', ico:'🌊', name:'해일'},
 ];
 const TERRAIN_TOOLS = [
   {id:'t'+T.WATER, ico:'🌊', name:'바다'},
@@ -256,11 +285,12 @@ const LIFE_TOOLS = [
   {id:'rabbit', ico:'🐇', name:'토끼'},
   {id:'sheep', ico:'🐑', name:'양'},
   {id:'wolf', ico:'🐺', name:'늑대'},
+  {id:'bear', ico:'🐻', name:'곰'},
   {id:'fish', ico:'🐟', name:'물고기'},
   {id:'bird', ico:'🕊', name:'새'},
   {id:'erase', ico:'🧺', name:'데려가기'},
 ];
-const SPEED = {rabbit:1.6, sheep:.6, wolf:1.9, person:1.1, fish:.8, bird:3, boat:.9, dragon:1.8};
+const SPEED = {bear:1.0, rabbit:1.6, sheep:.6, wolf:1.9, person:1.1, fish:.8, bird:3, boat:.9, dragon:1.8};
 // 왕의 성격: 왕이 바뀌면 나라의 성향도 바뀌어요
 const TRAITS = {
   war:   {name:'호전적',     sym:'⚔', desc:'전쟁을 자주 일으켜요'},
@@ -269,6 +299,14 @@ const TRAITS = {
   pious: {name:'경건한',     sym:'🙏', desc:'신전을 일찍 짓고 선교사를 자주 보내요'},
   wise:  {name:'현명한',     sym:'📜', desc:'민심이 빨리 안정돼요'},
 };
+// 🎓 발명: 나라마다 학자들이 하나씩 발명해요
+const TECHS = {
+  mill:     {name:'물레방아', sym:'⚙', desc:'밭이 1.3배 빨리 익어요'},
+  compass:  {name:'나침반',   sym:'🧭', desc:'고깃배가 금을 두 배로 벌어요'},
+  catapult: {name:'투석기',   sym:'🪨', desc:'병사가 건물을 1.6배 세게 부숴요'},
+  printing: {name:'인쇄술',   sym:'📖', desc:'민심이 빨리 안정돼요'},
+};
+const hasTech = (k, t) => { const K = kingdoms.get(k); return !!(K && K.techs && K.techs.includes(t)); };
 const traitOf = K => K && K.trait ? K.trait : null;
 const EPITHETS = ['용맹한', '불굴의', '바람 같은', '붉은 칼날', '천 번 싸운', '무쇠 방패', '번개 창', '새벽의', '늑대 사냥꾼', '흔들림 없는'];
 // 계급: 병사 → 기사 → 장군. 왕은 따로.
@@ -293,7 +331,8 @@ let ents = [], fx = [];
 let kingdoms = new Map(), nextKid = 0, bList = [], borders = new Set(), flowCache = new Map();
 let tod = .3, day = 1, harvest = 0, speedMul = 1;
 let tool = 'look', brush = 1, selected = null, uid = 1, specClock = 0;
-let treasures = [], weather = null, eclipseT = 0, stormT = 0, stormSunk = 0;   // 유물, 이번 계절의 날씨(가뭄/풍년), 일식 남은 초
+let treasures = [], weather = null, eclipseT = 0, stormT = 0, stormSunk = 0;
+let follow = false, mapMode = 'k', chronFilter = 'all', monuments = [], cometT = 0;   // 유물, 이번 계절의 날씨(가뭄/풍년), 일식 남은 초
 let dirty = true, changed = false, terrDirty = true, shake = 0, flash = 0;
 const undoStack = [];
 
@@ -419,12 +458,24 @@ function computeTerr(){
   renderTerr();
   terrDirty = false;
 }
+// 🧭 영토를 나라 색, 믿음 색, 민심(좋음·흔들림·위태)으로 칠해요
+function mapColor(kg){
+  if (mapMode === 'faith') return kg.faith != null ? RELIGIONS[kg.faith].color : '#9a9a9a';
+  if (mapMode === 'mood') return ['#3aa35b', '#e0a21b', '#d0452f'][mood(kg)];
+  return kg.color;
+}
+document.querySelectorAll('#mapSel button').forEach(b => b.onclick = () => {
+  mapMode = b.dataset.m; terrDirty = true;
+  document.querySelectorAll('#mapSel button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  document.getElementById('mapLegend').textContent = mapMode === 'faith' ? RELIGIONS.map(r => r.sym + r.name).join(' · ') + ' · 회색=믿음 없음'
+    : mapMode === 'mood' ? '초록=민심 좋음 · 노랑=흔들림 · 빨강=위태' : '';
+});
 function renderTerr(){
   tctx.clearRect(0,0,tc.width,tc.height);
   for (let y=0;y<H;y++) for (let x=0;x<W;x++){
     const k = terr[idx(x,y)]; if (k < 0) continue;
     const kg = kingdoms.get(k); if (!kg) continue;
-    tctx.fillStyle = kg.color; tctx.globalAlpha = .15; tctx.fillRect(x*CS,y*CS,CS,CS);
+    tctx.fillStyle = mapColor(kg); tctx.globalAlpha = mapMode === 'k' ? .15 : .35; tctx.fillRect(x*CS,y*CS,CS,CS);
     tctx.globalAlpha = .85;
     const px = x*CS, py = y*CS;
     if (!inb(x-1,y) || terr[idx(x-1,y)] !== k) tctx.fillRect(px,py,2,CS);
@@ -463,11 +514,12 @@ function generate(){
   }
   ents = []; fx = []; kingdoms = new Map(); nextKid = 0; selected = null;
   chronicle = []; chronDirty = true; histT = 0; chartDirty = true;
-  treasures = []; weather = null; eclipseT = 0; stormT = 0;
+  treasures = []; weather = null; eclipseT = 0; stormT = 0; monuments = []; cometT = 0; follow = false;
   const scale = (W*H)/(40*28);
   for (let k=0;k<5*scale;k++) spawnRandom('rabbit');
   for (let k=0;k<3*scale;k++) spawnRandom('sheep');
   for (let k=0;k<2*scale;k++) spawnRandom('wolf');
+  for (let k=0;k<scale;k++) spawnRandom('bear');
   for (let k=0;k<7*scale;k++) spawnRandom('fish');
   for (let k=0;k<3*scale;k++) spawnRandom('bird');
   // 처음 나라들
@@ -525,7 +577,8 @@ function spawnRandom(type){
 }
 function makeEnt(type, x, y, home){
   return {id: uid++, type, x:x+.5, y:y+.5, tx:x+.5, ty:y+.5, wait:Math.random()*2, dir:1,
-          home: home ?? -1, alpha:1, phase:Math.random()*6, age:0, life:rnd(360,720), hunger:0, think:Math.random()*.3, cd:0};
+          home: home ?? -1, alpha:1, phase:Math.random()*6, age:0, life:rnd(360,720), hunger:0, think:Math.random()*.3, cd:0,
+          ...(type === 'bear' ? {hp:60, max:60} : {})};
 }
 function makePerson(k, role, home){
   const hx = home%W, hy = (home/W)|0;
@@ -572,6 +625,10 @@ function kill(e, color, by, natural){
     if (by && by.type === 'person' && kingdoms.has(by.k)){ by.kills += 5; toast(`🐉 ${kingdoms.get(by.k).name}의 ${title(by)} ${josa(by.name,'이가')} 용을 쓰러뜨렸어요!`); }
     else toast('🐉 용이 쓰러졌어요');
   }
+  if (e.type === 'bear' && by && by.type === 'person' && kingdoms.has(by.k)){
+    const K = kingdoms.get(by.k); K.gold = (K.gold || 0) + 5;
+    if (performance.now() - lastCapToast > 2500){ lastCapToast = performance.now(); toast(`🐻 ${K.name}의 ${title(by)} ${josa(by.name,'이가')} 곰을 사냥했어요 (+5💰)`); }
+  }
   if (e.type === 'person' && e.duel){
     const op = byId(e.duel), L = kingdoms.get(e.k), Wk = op && kingdoms.get(op.k);
     if (op){
@@ -581,6 +638,7 @@ function kill(e, color, by, natural){
       toast(`⚔ 결투: ${Wk ? Wk.name + '의 ' : ''}${josa(op.name,'이가')} ${L ? L.name + '의 ' : ''}${josa(e.name,'을를')} 꺾었어요. ${Wk ? Wk.name + ' 병사들의 사기가 올랐어요' : ''}`);
     }
   }
+  if (e.type === 'person' && (e.role === 'king' || e.hero)) addMonument(e);
   if (e.type === 'person' && e.hero){ const K = kingdoms.get(e.k); toast(`🌟 ${K ? K.name + '의 ' : ''}전설 '${e.hero} ${e.name}'${pj(e.name,'이가')} 쓰러졌어요${by && by.type === 'person' ? ` (${by.name}의 손에)` : ''}`); }
   if (e.type === 'person' && e.role === 'soldier' && e.rank === 2 && !e.hero){ const K = kingdoms.get(e.k); if (K) toast(`${K.name}의 장군 ${josa(e.name,'이가')} 쓰러졌어요`); }
 }
@@ -623,6 +681,7 @@ function capture(i, k){
 function absorb(old, k){
   const A = kingdoms.get(k);
   A.gold = (A.gold || 0) + ((kingdoms.get(old) || {}).gold || 0);
+  A.techs = [...new Set([...(A.techs || []), ...((kingdoms.get(old) || {}).techs || [])])];   // 흡수한 나라의 발명도 얻어요
   for (let j=0;j<N;j++) if (owner[j] === old){ owner[j] = k; bhp[j] = MAXHP[grid[j]]*.4; }
   ents.forEach(e => {
     if (e.type !== 'person' || e.k !== old || e.dead) return;
@@ -756,7 +815,7 @@ function rebel(K, leader, followers, lead){
   leader.life = Math.max(leader.life, leader.age + rnd(400,700)); setStats(leader); leader.hp = leader.max;
   const mate = leader.spouse ? byId(leader.spouse) : null;
   if (mate && mate.k === id){ mate.k = NK.id; mate.home = seat; if (mate.role === 'crownwife') mate.role = 'queen'; }
-  NK.hadKing = true; NK.unrest = 0; NK.faith = K.faith ?? null; NK.era = K.era || 0;
+  NK.hadKing = true; NK.unrest = 0; NK.faith = K.faith ?? null; NK.era = K.era || 0; NK.techs = [...(K.techs || [])];
   K.lastRebel = NK.lastRebel = day*DAY_LEN + tod*DAY_LEN;
   K.unrest = Math.max(0, (K.unrest||0) - 50);
   K.wars.add(NK.id); NK.wars.add(id);
@@ -773,6 +832,7 @@ function unrestTick(K, houses){
   if (K.wars.size) u += .25 * Math.min(2, K.wars.size);
   else u -= .25 + (K.faith === 0 ? .2 : 0);
   if (K.trait === 'wise') u -= .15;
+  if (hasTech(K.id, 'printing')) u -= .1;
   if (K.faith === 4) u += .08;
   u = Math.max(0, Math.min(100, u));
   K.unrest = u;
@@ -983,7 +1043,7 @@ function nearestFoe(e, r, armedOnly){
   let best = null, bd = r*r;
   for (const o of ents){
     if (o.dead) continue;
-    if (o.type !== 'dragon' && (o.type !== 'person' || o.alpha < .3 || !hostile(e, o))) continue;   // 용은 누구에게나 적이에요
+    if (o.type !== 'dragon' && o.type !== 'bear' && (o.type !== 'person' || o.alpha < .3 || !hostile(e, o))) continue;   // 용은 누구에게나 적이에요
     if (armedOnly && o.role === 'villager') continue;
     if (o.role === 'envoy') continue;
     if (o.role === 'assassin' && d2(o.x,o.y,e.x,e.y) > 4) continue;
@@ -1123,8 +1183,8 @@ function animalThink(e){
     moveTo(e, Math.hypot(e.x - hx, e.y - hy) > 8 ? toward(opts, hx, hy) : pick(opts));
     return;
   }
-  if (e.type === 'wolf'){
-    const prey = nearestEnt(e, ['rabbit','sheep'], 6);
+  if (e.type === 'wolf' || e.type === 'bear'){
+    const prey = nearestEnt(e, ['rabbit','sheep'], e.type === 'bear' ? 4 : 6);
     choice = prey ? toward(opts, prey.x, prey.y) : pick(opts);
   } else if (e.type === 'rabbit' || e.type === 'sheep'){
     const w = nearestEnt(e, ['wolf'], 3);
@@ -1167,6 +1227,18 @@ function updateEnts(dt){
       if (e.age > 90){ e.dead = true; fx.push({type:'ring', x:e.x, y:e.y, t:0, d:1, color:'#8fd18f', r:3}); toast('🐉 용이 하늘 높이 날아가 버렸어요'); continue; }
     } else if (e.type === 'boat'){
       if (!kingdoms.has(e.k)){ kill(e, 'rgba(120,160,200,'); continue; }
+    } else if (e.type === 'bear'){
+      e.hunger += dt;
+      if (e.hunger > 160){ kill(e); continue; }
+      if (e.cd <= 0){
+        // 곰은 가까이 있는 토끼·양을 먹고, 가끔 사람도 덮쳐요 (왕실은 성 안에 있어 안전해요)
+        const prey = ents.find(o => !o.dead && (o.type === 'rabbit' || o.type === 'sheep') && d2(o.x,o.y,e.x,e.y) < .5);
+        if (prey){ kill(prey, 'rgba(220,70,60,'); e.hunger = 0; e.cd = 2; }
+        else {
+          const man = ents.find(o => !o.dead && o.type === 'person' && o.alpha > .5 && o.role !== 'king' && !ROYALS.includes(o.role) && d2(o.x,o.y,e.x,e.y) < .8);
+          if (man){ hurt(man, 6); e.cd = 1.5; e.dir = man.x >= e.x ? 1 : -1; }
+        }
+      }
     } else if (e.type === 'wolf'){
       e.hunger += dt;
       if (e.hunger > 90){ kill(e); continue; }
@@ -1193,7 +1265,7 @@ function updateEnts(dt){
         } else if (e.atk.b !== undefined){
           const b = e.atk.b;
           if (!isBld(grid[b]) || !atWar(e.k, owner[b])) e.atk = null;
-          else { e.dir = (b%W+.5) >= e.x ? 1 : -1; if (e.cd <= 0){ e.cd = .9; e.swing = .15; hurtBld(b, dmgOf(e), e.k); } }
+          else { e.dir = (b%W+.5) >= e.x ? 1 : -1; if (e.cd <= 0){ e.cd = .9; e.swing = .15; hurtBld(b, dmgOf(e) * (hasTech(e.k, 'catapult') ? 1.6 : 1), e.k); } }
         }
       }
     } else if (e.type === 'dragon'){
@@ -1230,11 +1302,15 @@ function tick(){
   const season = seasonOf(day);
   flowCache.clear();
   if (specClock % 10 === 5) sampleHistory();
+  if (mapMode !== 'k' && specClock % 2 === 0) terrDirty = true;   // 믿음·민심 지도는 자주 바뀌어요
   if (specClock++ % 10 === 0) computeSpecialties();
   for (let i=0;i<N;i++){
     const t = grid[i];
     if (t === T.SAPLING){ if (++ages[i] >= 20){ grid[i] = T.TREE; ages[i] = 0; dirty = true; } else if (ages[i] % 5 === 0) dirty = true; }
-    else if (t === T.FIELD && ages[i] < 30 && season !== 3 && weather !== 'drought'){ ages[i] = Math.min(30, ages[i] + (terr[i] >= 0 && faithOf(terr[i]) === 2 ? 2 : 1) * (season === 2 ? 2 : 1) * (weather === 'bumper' ? 1.5 : 1)); if (ages[i] % 6 === 0 || ages[i] === 30) dirty = true; }
+    else if (t === T.FIELD && ages[i] < 30 && season !== 3 && weather !== 'drought'){
+      // 배율이 소수(풍년 1.5, 물레방아 1.3)여도 평균이 맞도록 확률로 반올림해요
+      const grow = (terr[i] >= 0 && faithOf(terr[i]) === 2 ? 2 : 1) * (season === 2 ? 2 : 1) * (weather === 'bumper' ? 1.5 : 1) * (terr[i] >= 0 && hasTech(terr[i], 'mill') ? 1.3 : 1);
+      ages[i] = Math.min(30, ages[i] + Math.floor(grow + Math.random())); if (ages[i] % 6 === 0 || ages[i] === 30) dirty = true; }
     else if (t === T.BURNT){ if (++ages[i] >= 40){ grid[i] = T.GRASS; ages[i] = 0; dirty = true; } else if (ages[i] % 10 === 0) dirty = true; }
     else if (isBld(t) && bhp[i] < MAXHP[t]) bhp[i] = Math.min(MAXHP[t], bhp[i] + .5);
   }
@@ -1340,7 +1416,7 @@ function tick(){
     }
     // 배: 바다에 닿은 나라는 고깃배를 띄워 금을 벌어요
     const boats = ents.filter(e => e.type === 'boat' && !e.dead && e.k === id);
-    boats.forEach(() => { K.gold = (K.gold || 0) + (K.spec === 2 ? .3 : .15); });
+    boats.forEach(() => { K.gold = (K.gold || 0) + (K.spec === 2 ? .3 : .15) * (hasTech(id, 'compass') ? 2 : 1); });
     if (boats.length < Math.min(4, 1 + Math.floor(houses.length / 5)) && Math.random() < .05){
       const cx0 = K.capital%W, cy0 = (K.capital/W)|0;
       let best = -1, bd = 1e9;
@@ -1601,8 +1677,52 @@ function quake(x, y){
   toast(`🌏 지진이 일어나 건물 ${fell}채가 무너지고 ${hurtN}명이 다쳤어요`);
 }
 
+/* ---------- 🪦 기념비 ---------- */
+function addMonument(e){
+  const K = kingdoms.get(e.k);
+  const bx = K ? K.capital%W : cx(e), by = K ? (K.capital/W)|0 : cy(e);
+  for (let tries=0; tries<30; tries++){
+    const x = bx + Math.floor(rnd(-3, 4)), y = by + Math.floor(rnd(-3, 4));
+    if (!walkP(x,y) || monuments.some(m => m.x === x && m.y === y)) continue;
+    monuments.push({x, y, name: `${e.hero ? e.hero + ' ' : ''}${e.name}`, who: title(e), kname: K ? K.name : '', died: day, lived: Math.floor(e.age / DAY_LEN) + 1});
+    if (monuments.length > 40) monuments.shift();
+    changed = true;
+    return;
+  }
+}
+function drawMonuments(){
+  for (const m of monuments){
+    const px = m.x*CS, py = m.y*CS;
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(px+4, py+13, 9, 2);
+    ctx.fillStyle = '#a7a39a'; ctx.fillRect(px+5, py+6, 6, 8);
+    ctx.beginPath(); ctx.arc(px+8, py+6, 3, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#7d7a72'; ctx.fillRect(px+6.5, py+7, 3, .8); ctx.fillRect(px+6.5, py+9, 3, .8);
+  }
+}
+
 /* ---------- 유물 · 축제 · 자객 ---------- */
 function eventsTick(){
+  // 🎓 발명: 나라가 크고 시대가 높을수록 빨리 발명해요
+  for (const K of kingdoms.values()){
+    const missing = Object.keys(TECHS).filter(t => !(K.techs || []).includes(t));
+    if (!missing.length) continue;
+    const hs = bList.filter(b => owner[b] === K.id && grid[b] === T.HOUSE).length;
+    if (Math.random() < .0025 * (1 + hs / 10) * (1 + (K.era || 0))){
+      const t = pick(missing); K.techs = [...(K.techs || []), t];
+      toast(`🎓 ${K.name}의 학자들이 ${TECHS[t].sym} ${josa(TECHS[t].name,'을를')} 발명했어요. ${TECHS[t].desc}`);
+    }
+  }
+  // ☄ 혜성: 드문 불길한 징조
+  if (cometT <= 0 && day >= 3 && Math.random() < .0004){
+    cometT = 8;
+    for (const K of kingdoms.values()) K.unrest = Math.min(100, (K.unrest || 0) + 10);
+    toast('☄ 하늘에 혜성이 나타났어요. 사람들이 불길한 징조라 수군거려요');
+    const ks = [...kingdoms.values()];
+    if (ks.length >= 2 && Math.random() < .35){
+      const A = pick(ks), B = pick(ks.filter(o => o !== A && !A.wars.has(o.id) && !allied(A.id, o.id)));
+      if (B){ A.wars.add(B.id); B.wars.add(A.id); setTimeout(() => toast(`⚔ 혜성을 하늘의 뜻이라 여긴 ${josa(A.name,'이가')} ${B.name}에게 전쟁을 선포했어요`), 2900); }
+    }
+  }
   // 💎 유물: 가끔 땅에 나타나고, 먼저 닿은 사람의 나라가 금을 얻어요
   if (treasures.length < 2 && Math.random() < .004){
     for (let k=0;k<40;k++){
@@ -1746,6 +1866,39 @@ function dragonThink(e){
   });
 }
 
+/* ---------- 🌊 해일 ---------- */
+// 누른 곳에서 9칸 안, 바다에서 2칸 안쪽까지 큰 물결이 덮쳐요 (왕은 성 안에서 살아남아요)
+function tsunami(x, y){
+  const R = 9, hitK = new Set(), coast = [];
+  for (let dy=-R;dy<=R;dy++) for (let dx=-R;dx<=R;dx++){
+    const nx = x+dx, ny = y+dy;
+    if (!inb(nx,ny) || dx*dx+dy*dy > R*R) continue;
+    const i = idx(nx,ny); if (grid[i] === T.WATER || grid[i] === T.MOUNT) continue;
+    let near = false;
+    for (let ey=-2;ey<=2 && !near;ey++) for (let ex=-2;ex<=2;ex++) if (inb(nx+ex,ny+ey) && grid[idx(nx+ex,ny+ey)] === T.WATER){ near = true; break; }
+    if (near) coast.push(i);
+  }
+  if (!coast.length){ toast('해일은 바닷가를 눌러야 일어나요'); return; }
+  let lost = 0;
+  for (const i of coast){
+    if (owner[i] >= 0) hitK.add(owner[i]);
+    if (isBld(grid[i])){ if (grid[i] === T.CASTLE){ bhp[i] = Math.max(10, bhp[i] - 90); } else { setTile(i, T.SAND); lost++; } }
+    else if (grid[i] !== T.SAND) setTile(i, T.SAND);
+  }
+  const cset = new Set(coast);
+  ents.forEach(o => {
+    if (o.dead) return;
+    const ci = idx(cx(o), cy(o));
+    if (o.type === 'boat' && Math.hypot(o.x - x, o.y - y) <= R){ kill(o, 'rgba(120,160,200,'); return; }
+    if (!cset.has(ci) || o.type === 'bird' || o.type === 'dragon' || o.type === 'fish') return;
+    if (o.type === 'person' && o.role === 'king'){ o.hp = Math.max(1, o.hp - 20); return; }
+    kill(o, 'rgba(120,170,220,');
+  });
+  for (const k of hitK){ const K = kingdoms.get(k); if (K) K.unrest = Math.min(100, (K.unrest||0) + 10); }
+  shake = 1; fx.push({type:'ring', x:x+.5, y:y+.5, t:0, d:1.4, color:'#5aa9d8', r:R});
+  toast(`🌊 해일이 바닷가를 덮쳐 건물 ${lost}채가 쓸려 갔어요`);
+}
+
 /* ---------- 혼인과 동맹 ---------- */
 const adult = e => e.age >= 150;
 function wed(a, b){ a.spouse = b.id; b.spouse = a.id; }
@@ -1867,6 +2020,7 @@ function applyAt(x, y, first){
   if (tool === 'bless'){ if (first || now - lastPower > 300){ bless(x,y); lastPower = now; } return; }
   if (tool === 'reveal'){ if (first) reveal(x,y); return; }
   if (tool === 'volcano'){ if (first) volcano(x,y); return; }
+  if (tool === 'tsunami'){ if (first) tsunami(x, y); return; }
   if (tool === 'storm'){ if (first){ if (stormT > 0) toast('이미 폭풍이 몰아치고 있어요'); else startStorm(); } return; }
   if (tool === 'eclipse'){
     if (first){ if (eclipseT > 0) toast('이미 일식이 일어나고 있어요'); else { eclipseT = 20; toast('🌑 해가 가려져 세상이 어둠에 잠겼어요. 사람들이 두려워해요'); } }
@@ -1923,6 +2077,8 @@ function applyAt(x, y, first){
   }
 }
 function inspect(x, y, px, py){
+  const mon = monuments.find(m => m.x === x && m.y === y);
+  if (mon){ selected = {monument: mon}; follow = false; showInfo(); return; }
   let best = null, bd = 1.3*1.3;
   for (const e of ents){ if (e.alpha < .3) continue; const d = d2(e.x,e.y,px,py); if (d < bd){ bd = d; best = e; } }
   if (best){ selected = best; showInfo(); return; }
@@ -1979,7 +2135,7 @@ cv.addEventListener('pointermove', ev => {
     zoomAt(gesture.z * Math.hypot(a[0]-b[0], a[1]-b[1]) / gesture.d, mx, my);
   } else if (gesture.mode === 'pan'){
     if (Math.hypot(p[0]-gesture.sx, p[1]-gesture.sy) > 10) gesture.moved = true;
-    if (gesture.moved){ cam.x -= (p[0]-gesture.lx)/cam.z; cam.y -= (p[1]-gesture.ly)/cam.z; clampCam(); }
+    if (gesture.moved){ follow = false; cam.x -= (p[0]-gesture.lx)/cam.z; cam.y -= (p[1]-gesture.ly)/cam.z; clampCam(); }
     gesture.lx = p[0]; gesture.ly = p[1];
   } else if (gesture.mode === 'paint'){
     const [x,y] = cellAt(p), last = gesture.last;
@@ -2183,6 +2339,16 @@ function drawEnt(e, now){
     ctx.fillStyle='#f7f5ef';
     [[-3,-1],[0,-2],[3,-1],[-1,1],[2,1]].forEach(([a,b]) => { ctx.beginPath(); ctx.arc(a,b,3,0,7); ctx.fill(); });
     ctx.fillStyle='#3a3a3a'; ctx.beginPath(); ctx.ellipse(6,-1,2,2.5,0,0,7); ctx.fill();
+  } else if (e.type === 'bear'){
+    const step = moving ? Math.sin(now*9+e.phase) : 0;
+    ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0,5,7,2,0,0,7); ctx.fill();
+    ctx.fillStyle = e.hit > 0 ? '#ffffff' : '#6b4527';
+    ctx.fillRect(-5,1,2.4,4+step); ctx.fillRect(2.5,1,2.4,4-step);
+    ctx.beginPath(); ctx.ellipse(0,-1,7,4.2,0,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(6.5,-3.5,3.2,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(5.2,-6.4,1.2,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(8,-6.2,1.2,0,7); ctx.fill();
+    ctx.fillStyle='#c9a57a'; ctx.beginPath(); ctx.ellipse(8.6,-2.8,1.6,1.2,0,0,7); ctx.fill();
+    ctx.fillStyle='#1d1d1d'; ctx.fillRect(9.4,-3.3,1,1); ctx.fillRect(6.8,-4.6,.9,.9);
   } else if (e.type === 'wolf'){
     const step = moving ? Math.sin(now*14+e.phase) : 0;
     ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,4,6,1.6,0,0,7); ctx.fill();
@@ -2672,10 +2838,17 @@ function renderChronicle(){
   if (!chronDirty) return;
   chronDirty = false;
   const el = document.getElementById('chron');
-  el.innerHTML = chronicle.length
-    ? chronicle.map(c => `<li><time>${c.d}일 ${String(c.h).padStart(2,'0')}시</time><span>${c.m.replace(/</g,'&lt;')}</span></li>`).join('')
+  const CHRON_RE = {war:/⚔|🏯|함락|빼앗|반란|결투|자객|암살|흡수|멸망|평화|조약/, royal:/👑|💍|💒|💔|왕자|공주|즉위|왕비|🌟/, faith:/✨|🙏|🕯|신전|믿음|성전|선교/, disaster:/🌋|🌏|🦠|⛈|🐉|🌑|가뭄|☄|🌊|폭풍|역병/};
+  const list = chronFilter === 'all' ? chronicle : chronicle.filter(c => CHRON_RE[chronFilter].test(c.m));
+  el.innerHTML = list.length
+    ? list.map(c => `<li><time>${c.d}일 ${String(c.h).padStart(2,'0')}시</time><span>${c.m.replace(/</g,'&lt;')}</span></li>`).join('')
     : '<li class="empty">아직 기록된 일이 없어요.</li>';
 }
+document.querySelectorAll('#chronSel button').forEach(b => b.onclick = () => {
+  chronFilter = b.dataset.f; chronDirty = true;
+  document.querySelectorAll('#chronSel button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  renderChronicle();
+});
 function toast(msg){
   record(msg);
   const t = document.getElementById('toast');
@@ -2683,8 +2856,23 @@ function toast(msg){
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2800);
 }
 
+// 따라가기 버튼은 살펴보기 칸 밖에 고정해 둬요 (칸은 자주 다시 그려져서 안에 두면 클릭이 씹혀요)
+const followBtn = document.getElementById('followBtn');
+followBtn.onclick = () => { follow = !follow; if (follow) cam.z = Math.max(cam.z, 1.5); showInfo(); };
 function showInfo(){
   const el = document.getElementById('info');
+  showInfoBody(el);
+  const movable = !!(selected && selected.x != null && !selected.dead);
+  followBtn.hidden = !movable;
+  followBtn.textContent = follow ? '👁 따라가는 중 (끄기)' : '👁 따라가기';
+  followBtn.setAttribute('aria-pressed', follow);
+}
+function showInfoBody(el){
+  if (selected && selected.monument){
+    const m = selected.monument;
+    el.innerHTML = `<span class="badge" style="background:#7d7a72">🪦 기념비</span><div class="col"><b>${m.name}</b><small>${m.kname} ${m.who} · ${m.died}일째에 잠들었어요 · ${m.lived}일을 살았어요</small></div>`;
+    return;
+  }
   const s = selected;
   if (!s){ el.innerHTML = '<span class="hint">아직 고른 것이 없어요.</span>'; return; }
   if (s.type === 'person'){
@@ -2707,7 +2895,8 @@ function showInfo(){
     return;
   }
   if (s.type){
-    const names = {rabbit:'토끼', sheep:'양', wolf:'늑대', fish:'물고기', bird:'새', boat:'고깃배'};
+    const names = {rabbit:'토끼', sheep:'양', wolf:'늑대', bear:'곰', fish:'물고기', bird:'새', boat:'고깃배'};
+    if (s.type === 'bear'){ el.innerHTML = `<span class="badge" style="background:#6b4527">동물</span><div class="col"><b>곰</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 배고픔 ${Math.floor(s.hunger)}/160 · 토끼·양을 먹고 가끔 사람을 덮쳐요</small></div>`; return; }
     if (s.type === 'dragon'){ el.innerHTML = `<span class="badge" style="background:#2f7d4f">용</span><div class="col"><b>용</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 마을을 찾아 불을 뿜어요 · ${Math.max(0, Math.ceil(90 - s.age))}초 뒤 날아가요</small></div>`; return; }
     if (s.type === 'boat'){ const K = kingdoms.get(s.k); el.innerHTML = `<span class="badge" style="background:${K ? K.color : '#5d6f78'}">배</span><div class="col"><b>${K ? K.name : ''} 고깃배</b><small>앞바다에서 고기를 잡아 금을 벌어요${K && K.spec === 2 ? ' (물고기 특산이라 두 배)' : ''}</small></div>`; return; }
     el.innerHTML = `<span class="badge" style="background:#5d6f78">동물</span><div class="col"><b>${names[s.type]}</b><small>${s.type === 'wolf' ? `배고픔 ${Math.floor(s.hunger)}/90` : '섬을 돌아다녀요'}</small></div>`;
@@ -2770,7 +2959,7 @@ function updateStats(){
     const friends = Object.keys(k.allies || {}).map(id => kingdoms.get(+id)?.name).filter(Boolean);
     const partners = Object.keys(k.trades || {}).map(id => kingdoms.get(+id)?.name).filter(Boolean);
     return `<div class="king"><span class="dot" style="background:${k.color}"></span><b>${k.name}</b>` +
-      `<small>${ERAS[k.era || 0].sym} ${ERAS[k.era || 0].name}${k.wonder ? ` · 🗼 ${k.wonder}` : ''}${k.fest > 0 ? ' · 🎉 축제 중' : ''} · ${k.faith != null ? `${RELIGIONS[k.faith].sym} ${RELIGIONS[k.faith].name}` : '믿음 없음'}</small>` +
+      `<small>${(k.techs || []).length ? (k.techs || []).map(t => TECHS[t].sym).join('') + ' · ' : ''}${ERAS[k.era || 0].sym} ${ERAS[k.era || 0].name}${k.wonder ? ` · 🗼 ${k.wonder}` : ''}${k.fest > 0 ? ' · 🎉 축제 중' : ''} · ${k.faith != null ? `${RELIGIONS[k.faith].sym} ${RELIGIONS[k.faith].name}` : '믿음 없음'}</small>` +
       `<small><span class="crown">👑</span> ${p.king ? `${title(p.king)} ${p.king.name}${p.king.trait ? ` (${TRAITS[p.king.trait].sym} ${TRAITS[p.king.trait].name})` : ''}` : k.feud ? `<span class="war">왕위 다툼 중: ${byId(k.feud.a)?.name || '?'} 대 ${byId(k.feud.b)?.name || '?'}</span>` : '왕 없음'}${p.queen ? ` · 💍 왕비 ${p.queen.name}` : ''}` +
       `${(() => { const h = heirs(k.id)[0]; return h ? ` · 계승자 ${ROYAL_TITLE[h.role]} ${h.name}` : ''; })()}${p.general ? ` · ⭐ 장군 ${p.general.name}` : ''}${p.heroes ? ` · 🌟 ${p.heroes.join(', ')}` : ''}</small>` +
       `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}${p.sick ? ` · <span class="sick">🦠 앓는 사람 ${p.sick}</span>` : ''} · ${['민심 좋음', '<span class="shaky">민심 흔들림 · 징병·이사·집짓기 느려짐</span>', '<span class="war">민심 위태 🔥 · 탈영·반란</span>'][mood(k)]} (${Math.round(k.unrest || 0)})</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}` +
@@ -2779,17 +2968,18 @@ function updateStats(){
 }
 
 /* ---------- 저장 ---------- */
-function save(){
-  try {
-    localStorage.setItem(KEY, JSON.stringify({
-      v:3, W, H, size, name:nameEl.value, grid:Array.from(grid), ages:Array.from(ages), owner:Array.from(owner), bhp:Array.from(bhp, v => Math.round(v)),
-      kings:serKings(), nextKid, tod, day, harvest, chronicle, histT, ents:JSON.parse(serEnts())
-    }));
-  } catch(_) {}
+function worldData(){
+  return {
+    v:3, W, H, size, name:nameEl.value, grid:Array.from(grid), ages:Array.from(ages), owner:Array.from(owner), bhp:Array.from(bhp, v => Math.round(v)),
+    kings:serKings(), nextKid, tod, day, harvest, chronicle, histT, monuments, ents:JSON.parse(serEnts())
+  };
 }
-function load(){
+function save(key){
+  try { localStorage.setItem(key || KEY, JSON.stringify(worldData())); return true; } catch(_) { return false; }
+}
+function load(key){
   try {
-    const s = JSON.parse(localStorage.getItem(KEY));
+    const s = JSON.parse(localStorage.getItem(key || KEY));
     if (!s || s.v !== 3) return false;
     W = s.W; H = s.H; size = s.size; alloc();
     if (s.grid.length !== N) return false;
@@ -2799,9 +2989,27 @@ function load(){
     nameEl.value = s.name || '나만의 섬'; document.title = nameEl.value;
     ents = s.ents.map(o => ({...o, dead:false, atk:null}));
     ents.forEach(e => { if (!e.id) e.id = uid++; uid = Math.max(uid, e.id + 1); });
+    monuments = s.monuments || []; treasures = []; volcanoes = []; weather = null; eclipseT = 0; stormT = 0; cometT = 0; selected = null; follow = false;
     dirty = terrDirty = true; return true;
   } catch(_) { return false; }
 }
+// 💾 저장 칸 1~3
+let slot = 1;
+const slotKey = n => KEY + '-slot' + n;
+function slotSummary(n){
+  try { const s = JSON.parse(localStorage.getItem(slotKey(n))); if (!s) return '비어 있어요'; return `${s.name || '세계'} · ${s.day}일째 · 나라 ${(s.kings || []).length}`; } catch(_) { return '읽을 수 없어요'; }
+}
+function showSlot(){ document.getElementById('slotInfo').textContent = `${slot}번 칸: ${slotSummary(slot)}`; }
+document.querySelectorAll('#slotSel button').forEach(b => b.onclick = () => {
+  slot = +b.dataset.s; document.querySelectorAll('#slotSel button').forEach(x => x.setAttribute('aria-pressed', x === b)); showSlot();
+});
+document.getElementById('slotSave').onclick = () => { toast(save(slotKey(slot)) ? `💾 ${slot}번 칸에 저장했어요 (${day}일째)` : '저장할 수 없어요. 이 브라우저가 저장을 막고 있어요'); showSlot(); };
+document.getElementById('slotLoad').onclick = () => {
+  if (!localStorage.getItem(slotKey(slot))){ toast(`${slot}번 칸이 비어 있어요`); return; }
+  pushUndo();
+  if (load(slotKey(slot))){ computeTerr(); fitView(); updateMini(); chartDirty = chronDirty = true; pickSize = size; toast(`📂 ${slot}번 칸의 세계를 불러왔어요`); }
+  else toast('불러올 수 없어요');
+};
 if (!load()) generate();
 pickSize = size;
 document.querySelectorAll('#sizeSel button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.s === size));
@@ -2845,10 +3053,13 @@ function frame(now){
   ctx.imageSmoothingEnabled = false;
   const sh = shake > 0 ? (Math.random()-.5)*8 : 0, sv = shake > 0 ? (Math.random()-.5)*8 : 0;
   if (shake > 0) shake -= rdt;
+  if (follow && selected && selected.x != null && !selected.dead) centerOn(selected.x, selected.y);
+  else if (follow && (!selected || selected.dead)) follow = false;
   ctx.setTransform(cam.z,0,0,cam.z,-cam.x*cam.z + sh,-cam.y*cam.z + sv);
   ctx.drawImage(bg, 0, 0);
   ctx.drawImage(tc, 0, 0);
   drawSeasonGround(t);
+  drawMonuments();
   drawRoutes(t);
   const x0 = Math.max(0, Math.floor(cam.x/CS)-1), y0 = Math.max(0, Math.floor(cam.y/CS)-1);
   const x1 = Math.min(W, Math.ceil((cam.x + VW/cam.z)/CS)+1), y1 = Math.min(H, Math.ceil((cam.y + VH/cam.z)/CS)+1);
@@ -2904,6 +3115,14 @@ function frame(now){
     }
   }
   ctx.setTransform(1,0,0,1,0,0);
+  if (cometT > 0){
+    cometT = Math.max(0, cometT - rdt);
+    const pr = 1 - cometT / 8, hx = VW * (1.1 - pr*1.3), hy = VH * (.08 + pr*.25);
+    const grad = ctx.createLinearGradient(hx, hy, hx + 140, hy - 40);
+    grad.addColorStop(0, 'rgba(255,255,255,.95)'); grad.addColorStop(.3, 'rgba(160,220,255,.6)'); grad.addColorStop(1, 'rgba(160,220,255,0)');
+    ctx.strokeStyle = grad; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + 140, hy - 40); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(hx, hy, 4, 0, 7); ctx.fill();
+  }
   if (flash > 0){ ctx.fillStyle = `rgba(255,255,240,${flash*.6})`; ctx.fillRect(0,0,VW,VH); flash -= rdt*2; }
   requestAnimationFrame(frame);
 }
