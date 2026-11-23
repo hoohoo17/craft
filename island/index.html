@@ -365,7 +365,7 @@ const LIFE_TOOLS = [
   {id:'bird', ico:'🕊', name:'새'},
   {id:'erase', ico:'🧺', name:'데려가기'},
 ];
-const SPEED = {serpent:1.1, pirate:1.0, whale:.5, bear:1.0, rabbit:1.6, sheep:.6, wolf:1.9, person:1.1, fish:.8, bird:3, boat:.9, dragon:1.8};
+const SPEED = {serpent:1.1, pirate:1.0, whale:.5, bear:1.0, rabbit:1.6, sheep:.6, wolf:1.9, person:1.1, fish:.8, bird:3, boat:.9, dragon:1.8, ship:1.3};
 // 왕의 성격: 왕이 바뀌면 나라의 성향도 바뀌어요
 const TRAITS = {
   war:   {name:'호전적',     sym:'⚔', desc:'전쟁을 자주 일으켜요'},
@@ -711,7 +711,7 @@ function walkable(type, x, y, e){
   if (!inb(x,y)) return false;
   const i = idx(x,y), t = grid[i];
   if (type === 'bird' || type === 'dragon') return true;
-  if (type === 'fish' || type === 'boat' || type === 'pirate' || type === 'serpent') return t === T.WATER;
+  if (type === 'fish' || type === 'boat' || type === 'pirate' || type === 'serpent' || type === 'ship') return t === T.WATER;
   if (type === 'whale'){   // 고래는 땅에서 2칸 넘게 떨어진 먼바다에만 살아요
     if (t !== T.WATER) return false;
     for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) if (inb(x+dx,y+dy) && grid[idx(x+dx,y+dy)] !== T.WATER) return false;
@@ -779,6 +779,11 @@ function kill(e, color, by, natural){
     const A = kingdoms.get(by.k), B = kingdoms.get(e.k), G = GOODS[e.goods ?? 0];
     A.gold = (A.gold || 0) + 6;
     toast(`⚔ ${A.name} 병사들이 ${B.name} 상인 ${e.name}의 ${G.sym}${josa(G.name,'을를')} 빼앗았어요 (+6💰)`);
+  }
+  if (e.type === 'ship' && e.cargo && e.cargo.length){
+    const K = kingdoms.get(e.k);
+    if (K) toast(`🌊 ${K.name} 군선이 가라앉아 병사 ${e.cargo.length}명이 바다에 빠졌어요`);
+    e.cargo = [];
   }
   if (e.type === 'dragon'){
     fx.push({type:'ring', x:e.x, y:e.y, t:0, d:1.2, color:'#ffd23f', r:4});
@@ -1258,6 +1263,155 @@ function stepFlow(e, goal){
   return !!best;
 }
 function moveTo(e, [x,y]){ e.tx = x+.5; e.ty = y+.5; if (e.tx !== e.x) e.dir = e.tx > e.x ? 1 : -1; }
+
+/* ---------- ⛵ 군선: 걸어서 갈 수 없는 적에게 병사를 바다로 실어 날라요 ---------- */
+let waterCache = new Map();
+const isW = (x,y) => inb(x,y) && grid[idx(x,y)] === T.WATER;
+function waterFlow(goal){
+  let dist = waterCache.get(goal);
+  if (dist) return dist;
+  dist = new Int16Array(N).fill(9999); dist[goal] = 0; const q = [goal];
+  for (let h=0; h<q.length; h++){
+    const j = q[h], x = j%W, y = (j/W)|0;
+    for (const [dx,dy] of DIR8){
+      const nx = x+dx, ny = y+dy;
+      if (!isW(nx,ny) || (dx && dy && (!isW(x+dx,y) || !isW(x,y+dy)))) continue;   // 땅 모서리를 가로지르지 않아요
+      const k = idx(nx,ny);
+      if (dist[k] > dist[j]+1){ dist[k] = dist[j]+1; q.push(k); }
+    }
+  }
+  waterCache.set(goal, dist);
+  return dist;
+}
+// 성 바로 옆의 걸을 수 있는 칸
+function landNear(i){
+  const x = i%W, y = (i/W)|0;
+  for (let r=1;r<=2;r++) for (let dy=-r;dy<=r;dy++) for (let dx=-r;dx<=r;dx++) if (walkP(x+dx,y+dy)) return idx(x+dx,y+dy);
+  return -1;
+}
+// 나라 쪽 나루(hw 물, hl 뭍)와 적 쪽 나루(aw, al)를 정해요
+function homePort(K, homeF){
+  const c0x = K.capital%W, c0y = (K.capital/W)|0;
+  let hw = -1, hl = -1, bd = 1e9;
+  for (let i=0;i<N;i++){
+    if (grid[i] !== T.WATER) continue;
+    const x = i%W, y = (i/W)|0;
+    for (const [dx,dy] of N4){
+      if (!walkP(x+dx,y+dy)) continue;
+      const L = idx(x+dx,y+dy);
+      if (homeF[L] >= 9999) continue;
+      const d = homeF[L] + Math.abs(x-c0x)*.2 + Math.abs(y-c0y)*.2;
+      if (d < bd){ bd = d; hw = i; hl = L; }
+    }
+  }
+  return hw < 0 ? null : {hw, hl};
+}
+function awayPort(hw, tgt){
+  const wf = waterFlow(hw), tf = flow(tgt);
+  let aw = -1, al = -1, bd = 1e9;
+  for (let i=0;i<N;i++){
+    if (wf[i] >= 9999) continue;
+    const x = i%W, y = (i/W)|0;
+    for (const [dx,dy] of N4){
+      if (!walkP(x+dx,y+dy)) continue;
+      const L = idx(x+dx,y+dy);
+      if (tf[L] >= 9999) continue;
+      const d = wf[i] + tf[L] * 1.5;
+      if (d < bd){ bd = d; aw = i; al = L; }
+    }
+  }
+  return aw < 0 ? null : {aw, al};
+}
+function warTarget(K, id){
+  let tgt = -1, bd = 1e9;
+  const c0x = K.capital%W, c0y = (K.capital/W)|0;
+  for (const b of bList){ if (!atWar(id, owner[b])) continue; const d = Math.abs(b%W-c0x) + Math.abs(((b/W)|0)-c0y) - (grid[b] === T.CASTLE ? 4 : 0); if (d < bd){ bd = d; tgt = b; } }
+  return tgt;
+}
+function shipUnload(sh){
+  if (!sh.cargo || !sh.cargo.length) return 0;
+  const L = sh.at === 'away' ? sh.al : sh.hl;
+  let spots = [];
+  const lx = L%W, ly = (L/W)|0;
+  for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) if (walkP(lx+dx,ly+dy)) spots.push([lx+dx,ly+dy]);
+  if (!spots.length){   // 나루가 막혔으면 배 둘레 아무 뭍에나 내려요
+    for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) if (walkP(cx(sh)+dx,cy(sh)+dy)) spots.push([cx(sh)+dx,cy(sh)+dy]);
+  }
+  if (!spots.length) return 0;
+  const n = sh.cargo.length;
+  sh.cargo.forEach(p => { const [x,y] = pick(spots); p.x = p.tx = x+.5; p.y = p.ty = y+.5; p.atk = null; p.ferry = null; p.think = .3; ents.push(p); });
+  sh.cargo = [];
+  return n;
+}
+function shipArrive(sh){
+  sh.at = sh.going; sh.going = null; sh.dest = -1; sh.waitT = 0; sh.sailT = 0;
+  const K = kingdoms.get(sh.k);
+  const n = shipUnload(sh);
+  if (n && K){
+    const foe = sh.foe != null ? kingdoms.get(sh.foe) : null;
+    if (sh.at === 'away' && foe) toast(`⚔ ${K.name} 병사 ${n}명이 바다를 건너 ${foe.name} 해안에 올랐어요`);
+    else if (sh.at === 'home') toast(`⛵ ${K.name} 군선이 병사 ${n}명을 싣고 고향으로 돌아왔어요`);
+  }
+}
+function navalTick(K, id){
+  const hasShip = ents.some(e => e.type === 'ship' && !e.dead && e.k === id);
+  if (!hasShip && (!K.wars.size || (K.gold || 0) < 15 || Math.random() > .15)) return;   // 배가 없으면 가끔만 바닷길이 필요한지 살펴요
+  const cap0 = landNear(K.capital);
+  if (cap0 < 0) return;
+  const homeF = flow(cap0);
+  const tgt = warTarget(K, id);
+  const needSea = tgt >= 0 && flow(tgt)[cap0] >= 9999;
+  let sh = ents.find(e => e.type === 'ship' && !e.dead && e.k === id);
+  if (!sh){
+    if (!needSea) return;
+    const hp = homePort(K, homeF); if (!hp) return;
+    const ap = awayPort(hp.hw, tgt); if (!ap) return;
+    sh = makeEnt('ship', hp.hw%W, (hp.hw/W)|0, hp.hw);
+    Object.assign(sh, hp, ap, {k:id, at:'home', going:null, dest:-1, cargo:[], waitT:0, sailT:0, foe:owner[tgt]});
+    ents.push(sh); K.gold -= 15;
+    const foe = kingdoms.get(owner[tgt]);
+    toast(`⛵ ${josa(K.name,'이가')} 군선을 띄웠어요. 바다 건너 ${foe ? foe.name : '적'} 땅으로 병사를 보내요`);
+    return;
+  }
+  // 나루가 흙에 묻히거나 막히면 다시 정해요
+  if (grid[sh.hw] !== T.WATER || !walkP(sh.hl%W, (sh.hl/W)|0) || homeF[sh.hl] >= 9999){ const hp = homePort(K, homeF); if (hp) Object.assign(sh, hp); }
+  if (needSea && sh.at === 'home'){ const ap = awayPort(sh.hw, tgt); if (ap){ Object.assign(sh, ap); sh.foe = owner[tgt]; } }
+  const awayF = flow(sh.al), tf = tgt >= 0 ? flow(tgt) : null;
+  // 어느 병사가 배를 타야 할지 정해요
+  const want = {home:0, away:0};
+  for (const e of ents){
+    if (e.type !== 'person' || e.dead || e.k !== id || e.role !== 'soldier') continue;
+    e.ferry = null;
+    if (e.side || e.duel) continue;
+    const i = idx(cx(e), cy(e));
+    if (homeF[i] < 9999){
+      if (needSea && !e.guard){ e.ferry = sh.hl; want.home++; }
+    } else if (awayF[i] < 9999 && !(tf && tf[i] < 9999)){ e.ferry = sh.al; want.away++; }
+  }
+  if (sh.going) return;   // 항해 중
+  // 나루에 닿은 병사를 태워요
+  const portW = sh.at === 'away' ? sh.aw : sh.hw, portL = sh.at === 'away' ? sh.al : sh.hl;
+  const plx = portL%W + .5, ply = ((portL/W)|0) + .5;
+  if (d2(sh.x, sh.y, portW%W + .5, ((portW/W)|0) + .5) < 6.5){
+    const riders = ents.filter(e => e.type === 'person' && !e.dead && e.k === id && e.ferry === portL && d2(e.x,e.y,plx,ply) < 2.6).slice(0, 12 - sh.cargo.length);
+    if (riders.length){
+      const set = new Set(riders);
+      riders.forEach(e => { e.ferry = null; e.atk = null; sh.cargo.push(e); if (selected === e) selected = sh; });
+      ents = ents.filter(e => !set.has(e));
+      want[sh.at] -= riders.length;
+    }
+  }
+  sh.waitT++;
+  const other = sh.at === 'home' ? 'away' : 'home';
+  // 싸움이 끝나 할 일이 없는 군선은 한동안 쉬다가 거둬들여요
+  if (sh.at === 'home' && !needSea && !want.away && !sh.cargo.length && sh.waitT > 90){ sh.dead = true; return; }
+  const go = sh.cargo.length >= 12 || (sh.cargo.length >= 3 && sh.waitT >= 12 && !want[sh.at]) || (sh.cargo.length && sh.waitT >= 30)
+          || (!sh.cargo.length && want[other] > 0 && sh.waitT >= 4);
+  if (go){
+    sh.going = other; sh.dest = other === 'away' ? sh.aw : sh.hw; sh.at = null; sh.sailT = 0;
+    if (other === 'away' && sh.cargo.length){ const foe = kingdoms.get(sh.foe); toast(`⛵ ${K.name} 군선이 병사 ${sh.cargo.length}명을 싣고 ${foe ? foe.name : '적'} 쪽으로 떠났어요`); }
+  }
+}
 function neighbors(e){
   const x = cx(e), y = cy(e), reach = e.type === 'bird' ? 6 : 1, out = [];
   for (let dy=-reach; dy<=reach; dy++) for (let dx=-reach; dx<=reach; dx++){
@@ -1431,6 +1585,12 @@ function personThink(e){
   }
   e.atk = null;
   if (e.role === 'king'){ if (Math.random() < .3) wander(e, K.capital, 2); return; }
+  // ⛵ 배를 타야 하는 병사는 나루로 가요
+  if (e.role === 'soldier' && e.ferry != null){
+    const px = e.ferry%W + .5, py = ((e.ferry/W)|0) + .5;
+    if (d2(e.x,e.y,px,py) > 1 && !stepFlow(e, e.ferry)) wander(e, e.ferry, 2);
+    return;
+  }
   // 왕위 다툼: 상대 편 왕자에게 다가가요
   if (K.feud && e.side){
     const rival = byId(e.side === 'a' ? K.feud.b : K.feud.a);
@@ -1455,7 +1615,7 @@ function animalThink(e){
   // 배는 자기 나라 앞바다(띄운 곳에서 8칸 안)를 오가요
   // 🐍 바다 괴물: 배를 쫓아가요
   if (e.type === 'serpent'){
-    const prey = ents.filter(o => (o.type === 'boat' || o.type === 'pirate') && !o.dead).sort((a,b) => d2(a.x,a.y,e.x,e.y) - d2(b.x,b.y,e.x,e.y))[0];
+    const prey = ents.filter(o => (o.type === 'boat' || o.type === 'pirate' || o.type === 'ship') && !o.dead).sort((a,b) => d2(a.x,a.y,e.x,e.y) - d2(b.x,b.y,e.x,e.y))[0];
     moveTo(e, prey && d2(prey.x,prey.y,e.x,e.y) < 200 ? toward(opts, prey.x, prey.y) : pick(opts));
     return;
   }
@@ -1470,6 +1630,27 @@ function animalThink(e){
     // 🕊 철새는 한쪽으로 날아가다 지도 밖으로 나가요
     if (e.x < 1.5 || e.x > W - 1.5){ e.dead = true; return; }
     e.tx = e.x + e.migrate * 5; e.ty = e.y + rnd(-1, 1); e.dir = e.migrate;
+    return;
+  }
+  if (e.type === 'ship'){
+    if (e.going){
+      e.sailT = (e.sailT || 0) + .3;
+      const x = cx(e), y = cy(e);
+      if (idx(x,y) === e.dest){ shipArrive(e); return; }
+      const f = waterFlow(e.dest);
+      let best = null, bd = f[idx(x,y)];
+      for (const [dx,dy] of DIR8){
+        const nx = x+dx, ny = y+dy;
+        if (!isW(nx,ny) || (dx && dy && (!isW(x+dx,y) || !isW(x,y+dy)))) continue;
+        const v = f[idx(nx,ny)]; if (v < bd){ bd = v; best = [nx,ny]; }
+      }
+      if (best) moveTo(e, best);
+      else if (e.sailT > 40){ e.at = e.going; e.going = null; e.dest = -1; shipUnload(e); }   // 바닷길이 막히면 가까운 뭍에 내려요
+      return;
+    }
+    const p = e.at === 'away' ? e.aw : e.hw, px = p%W + .5, py = ((p/W)|0) + .5;
+    const near = opts.filter(([x,y]) => d2(x+.5,y+.5,px,py) <= 2.5);
+    moveTo(e, Math.hypot(e.x - px, e.y - py) > 1.6 ? toward(opts, px, py) : near.length && Math.random() < .3 ? pick(near) : [cx(e), cy(e)]);
     return;
   }
   if (e.type === 'boat'){
@@ -1553,7 +1734,7 @@ function updateEnts(dt){
           if (performance.now() - lastCapToast > 2500){ lastCapToast = performance.now(); toast(`🏴‍☠ 해적이 ${K.name} 바닷가를 약탈했어요 (-${amt}💰)`); }
         }
       }
-    } else if (e.type === 'boat'){
+    } else if (e.type === 'boat' || e.type === 'ship'){
       if (!kingdoms.has(e.k)){ kill(e, 'rgba(120,160,200,'); continue; }
     } else if (e.type === 'bear'){
       e.hunger += dt;
@@ -1575,7 +1756,7 @@ function updateEnts(dt){
         if (d2(o.x,o.y,e.x,e.y) < .35){ kill(o, 'rgba(220,70,60,'); e.hunger = 0; break; }
       }
     }
-    if (!walkable(e.type,x,y,e) && !rescue(e)){ e.dead = true; continue; }
+    if (!walkable(e.type,x,y,e) && !rescue(e)){ if (e.type === 'ship'){ e.at = 'home'; shipUnload(e); } e.dead = true; continue; }
     const dx = e.tx - e.x, dy = e.ty - e.y, dist = Math.hypot(dx,dy);
     if (dist > .02){
       const wading = grid[idx(cx(e), cy(e))] === T.RIVER && e.type !== 'bird' && e.type !== 'dragon';
@@ -1601,7 +1782,7 @@ function updateEnts(dt){
       if (e.think <= 0){ e.think = .4; dragonThink(e); }
     } else if (e.think <= 0){
       e.wait -= .3; e.think = .3;
-      if (e.wait <= 0){ animalThink(e); e.wait = e.type === 'bird' ? rnd(0,.4) : e.type === 'wolf' ? rnd(.1,1) : rnd(.4, e.type === 'sheep' ? 4 : 2.2); }
+      if (e.wait <= 0){ animalThink(e); e.wait = e.type === 'ship' ? 0 : e.type === 'bird' ? rnd(0,.4) : e.type === 'wolf' ? rnd(.1,1) : rnd(.4, e.type === 'sheep' ? 4 : 2.2); }
     }
   }
   ents = ents.filter(e => !e.dead);
@@ -1633,7 +1814,7 @@ function tick(){
   const mountainCount = new Map();
   for (let i=0;i<N;i++) if (grid[i] === T.MOUNT && terr[i] >= 0) mountainCount.set(terr[i], (mountainCount.get(terr[i]) || 0) + 1);
   const season = seasonOf(day);
-  flowCache.clear();
+  flowCache.clear(); waterCache.clear();
   if (specClock % 10 === 5) sampleHistory();
   if (mapMode !== 'k' && specClock % 2 === 0) terrDirty = true;   // 믿음·민심 지도는 자주 바뀌어요
   if (specClock++ % 10 === 0) computeSpecialties();
@@ -1767,6 +1948,7 @@ function tick(){
         if (!boats.length) toast(`⛵ ${josa(K.name,'이가')} 첫 고깃배를 띄웠어요`);
       }
     }
+    navalTick(K, id);
     // 불가사의: 철의 시대에 금 150을 모으면 세워요. 가진 나라는 민심이 안정되고 금이 들어와요
     const wonders = mine.filter(b => grid[b] === T.WONDER);
     K.wonder = wonders.length ? wonderName(wonders[0]) : null;
@@ -3198,6 +3380,20 @@ function drawEnt(e, now){
     ctx.fillStyle = '#5a3a1e'; ctx.fillRect(-.5,-9,1,9);
     ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(.5,-9); ctx.lineTo(5.5,-2); ctx.lineTo(.5,-2); ctx.fill();
     ctx.fillStyle = '#f4efe2'; ctx.beginPath(); ctx.moveTo(-.5,-8); ctx.lineTo(-4.5,-2); ctx.lineTo(-.5,-2); ctx.fill();
+  } else if (e.type === 'ship'){
+    // ⛵ 군선: 고깃배보다 크고 돛이 둘이에요. 실은 병사의 투구가 갑판 위로 보여요
+    const kg = kingdoms.get(e.k), col = kg ? kg.color : '#ddd';
+    ctx.translate(0, Math.sin(now*2.4 + e.phase)*.7);
+    if (e.going) { ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(-12*e.dir - (e.dir > 0 ? 4 : 0), 4.5, 4, 1); }
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-10, 5, 20, 1);
+    ctx.fillStyle = '#5e3b1f'; ctx.beginPath(); ctx.moveTo(-10,0); ctx.lineTo(10,0); ctx.lineTo(7,5); ctx.lineTo(-7,5); ctx.fill();
+    ctx.fillStyle = col; ctx.fillRect(-9, .5, 18, 1.3);
+    const n = Math.min(5, (e.cargo || []).length);
+    for (let k=0;k<n;k++){ ctx.fillStyle = '#8d96a0'; ctx.beginPath(); ctx.arc(-6 + k*3, -.6, 1.3, Math.PI, 0); ctx.fill(); }
+    ctx.fillStyle = '#4a2e17'; ctx.fillRect(-4.5,-12,1,12); ctx.fillRect(3.5,-10,1,10);
+    ctx.fillStyle = '#f4efe2'; ctx.fillRect(-8,-11,7,7); ctx.fillRect(1,-9,6,6);
+    ctx.fillStyle = col; ctx.fillRect(-8,-8,7,1.6); ctx.fillRect(1,-6.5,6,1.4);
+    ctx.beginPath(); ctx.moveTo(-3.5,-12); ctx.lineTo(.5,-11); ctx.lineTo(-3.5,-10); ctx.fill();
   } else if (e.type === 'serpent'){
     const w = now*3 + e.phase;
     ctx.fillStyle = e.hit > 0 ? '#ffffff' : '#2f6e5a';
@@ -3885,6 +4081,7 @@ function showInfoBody(el){
     const names = {whale:'고래', rabbit:'토끼', sheep:'양', wolf:'늑대', bear:'곰', fish:'물고기', bird:'새', boat:'고깃배'};
     if (s.type === 'bear'){ el.innerHTML = `<span class="badge" style="background:#6b4527">동물</span><div class="col"><b>곰</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 배고픔 ${Math.floor(s.hunger)}/160 · 토끼·양을 먹고 가끔 사람을 덮쳐요</small></div>`; return; }
     if (s.type === 'dragon'){ el.innerHTML = `<span class="badge" style="background:#2f7d4f">용</span><div class="col"><b>용</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 마을을 찾아 불을 뿜어요 · ${Math.max(0, Math.ceil(90 - s.age))}초 뒤 날아가요</small></div>`; return; }
+    if (s.type === 'ship'){ const K = kingdoms.get(s.k), F = kingdoms.get(s.foe); el.innerHTML = `<span class="badge" style="background:${K ? K.color : '#5d6f78'}">군선</span><div class="col"><b>${K ? K.name : ''} 군선</b><small>병사 ${(s.cargo || []).length}명 태움 · ${s.going === 'away' ? `${F ? F.name : '적'} 쪽으로 가는 중` : s.going === 'home' ? '고향으로 가는 중' : s.at === 'away' ? '적 해안 나루에서 기다려요' : '고향 나루에서 병사를 기다려요'}</small></div>`; return; }
     if (s.type === 'boat'){ const K = kingdoms.get(s.k); el.innerHTML = `<span class="badge" style="background:${K ? K.color : '#5d6f78'}">배</span><div class="col"><b>${K ? K.name : ''} 고깃배</b><small>앞바다에서 고기를 잡아 금을 벌어요${K && K.spec === 2 ? ' (물고기 특산이라 두 배)' : ''}</small></div>`; return; }
     el.innerHTML = `<span class="badge" style="background:#5d6f78">동물</span><div class="col"><b>${names[s.type]}</b><small>${s.type === 'wolf' ? `배고픔 ${Math.floor(s.hunger)}/90` : '섬을 돌아다녀요'}</small></div>`;
     return;
