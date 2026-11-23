@@ -717,11 +717,12 @@ function walkable(type, x, y, e){
     for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) if (inb(x+dx,y+dy) && grid[idx(x+dx,y+dy)] !== T.WATER) return false;
     return true;
   }
-  if (t === T.WATER || t === T.MOUNT || t === T.FIRE) return false;
+  if (t === T.WATER || t === T.FIRE) return false;
+  if (t === T.MOUNT) return type === 'person';   // ⛰ 사람만 산을 넘어요 (느리게)
   if (isBld(t)) return type === 'person' && e && e.home === i;
   return true;
 }
-const walkP = (x,y) => { if (!inb(x,y)) return false; const t = grid[idx(x,y)]; return t !== T.WATER && t !== T.MOUNT && t !== T.FIRE && !isBld(t); };
+const walkP = (x,y) => { if (!inb(x,y)) return false; const t = grid[idx(x,y)]; return t !== T.WATER && t !== T.FIRE && !isBld(t); };
 function spawnRandom(type){
   for (let k=0;k<200;k++){
     const x = Math.floor(Math.random()*W), y = Math.floor(Math.random()*H);
@@ -1248,8 +1249,8 @@ function bfs(goal){
     for (const [dx,dy] of DIR8){
       const nx = x+dx, ny = y+dy;
       if (!walkP(nx,ny)) continue;
-      const k = idx(nx,ny);
-      if (dist[k] > dist[j]+1){ dist[k] = dist[j]+1; q.push(k); }
+      const k = idx(nx,ny), c = grid[k] === T.MOUNT ? 3 : 1;   // 산길은 세 칸만큼 멀게 쳐서, 돌아갈 길이 짧으면 돌아가요
+      if (dist[k] > dist[j]+c){ dist[k] = dist[j]+c; q.push(k); }
     }
   }
   return dist;
@@ -1759,8 +1760,8 @@ function updateEnts(dt){
     if (!walkable(e.type,x,y,e) && !rescue(e)){ if (e.type === 'ship'){ e.at = 'home'; shipUnload(e); } e.dead = true; continue; }
     const dx = e.tx - e.x, dy = e.ty - e.y, dist = Math.hypot(dx,dy);
     if (dist > .02){
-      const wading = grid[idx(cx(e), cy(e))] === T.RIVER && e.type !== 'bird' && e.type !== 'dragon';
-      const sp = SPEED[e.type] * dt * (e.cav ? 1.7 : 1) * (wading ? .55 : 1);   // 기병은 빠르고, 강물 속에선 느려요
+      const here = grid[idx(cx(e), cy(e))], wading = here === T.RIVER && e.type !== 'bird' && e.type !== 'dragon';
+      const sp = SPEED[e.type] * dt * (e.cav ? 1.7 : 1) * (wading ? .55 : 1) * (here === T.MOUNT && e.type === 'person' ? .4 : 1);   // 산을 오를 땐 느려요   // 기병은 빠르고, 강물 속에선 느려요
       if (sp >= dist){ e.x = e.tx; e.y = e.ty; } else { e.x += dx/dist*sp; e.y += dy/dist*sp; }
       continue;
     }
@@ -2292,7 +2293,7 @@ function addMonument(e, who){
   const bx = K ? K.capital%W : cx(e), by = K ? (K.capital/W)|0 : cy(e);
   for (let tries=0; tries<30; tries++){
     const x = bx + Math.floor(rnd(-3, 4)), y = by + Math.floor(rnd(-3, 4));
-    if (!walkP(x,y) || monuments.some(m => m.x === x && m.y === y)) continue;
+    if (!walkP(x,y) || grid[idx(x,y)] === T.MOUNT || monuments.some(m => m.x === x && m.y === y)) continue;
     monuments.push({x, y, name: `${e.hero ? e.hero + ' ' : ''}${e.name}`, who: who || title(e), kname: K ? K.name : '', died: day, lived: Math.floor(e.age / DAY_LEN) + 1});
     if (monuments.length > 40) monuments.shift();
     changed = true;
