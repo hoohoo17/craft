@@ -428,6 +428,8 @@ const pick = a => a[Math.floor(Math.random()*a.length)];
 const cx = e => Math.floor(e.x), cy = e => Math.floor(e.y);
 const d2 = (ax,ay,bx,by) => (ax-bx)**2 + (ay-by)**2;
 const N4 = [[1,0],[-1,0],[0,1],[0,-1]];
+// 사람은 대각선으로도 움직여서, 모서리끼리 맞닿은 건물 사이 틈으로 빠져나갈 수 있어요
+const DIR8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
 function alloc(){
   N = W*H;
@@ -1226,7 +1228,7 @@ function buildSpot(id, center, r){
     if (t !== T.GRASS && t !== T.SAND && t !== T.FLOWER && t !== T.ROAD) continue;
     if (terr[i] !== id) continue;
     let crowded = false;
-    for (const [dx,dy] of N4) if (inb(x+dx,y+dy) && isBld(grid[idx(x+dx,y+dy)])) crowded = true;
+    for (const [dx,dy] of DIR8) if (inb(x+dx,y+dy) && isBld(grid[idx(x+dx,y+dy)])) crowded = true;   // 대각선까지 비워 골목을 남겨요
     if (!crowded) return i;
   }
   return -1;
@@ -1238,7 +1240,7 @@ function bfs(goal){
   dist[goal] = 0; const q = [goal]; let h = 0;
   while (h < q.length){
     const j = q[h++], x = j%W, y = (j/W)|0;
-    for (const [dx,dy] of N4){
+    for (const [dx,dy] of DIR8){
       const nx = x+dx, ny = y+dy;
       if (!walkP(nx,ny)) continue;
       const k = idx(nx,ny);
@@ -1251,7 +1253,7 @@ function flow(goal){ let f = flowCache.get(goal); if (!f){ f = bfs(goal); flowCa
 function stepFlow(e, goal){
   const f = flow(goal), x = cx(e), y = cy(e);
   let best = null, bd = f[idx(x,y)];
-  for (const [dx,dy] of N4){ const nx = x+dx, ny = y+dy; if (!walkP(nx,ny)) continue; const v = f[idx(nx,ny)] + Math.random()*.3; if (v < bd){ bd = v; best = [nx,ny]; } }
+  for (const [dx,dy] of DIR8){ const nx = x+dx, ny = y+dy; if (!walkP(nx,ny)) continue; const v = f[idx(nx,ny)] + Math.random()*.3; if (v < bd){ bd = v; best = [nx,ny]; } }
   if (best) moveTo(e, best);
   return !!best;
 }
@@ -1260,7 +1262,7 @@ function neighbors(e){
   const x = cx(e), y = cy(e), reach = e.type === 'bird' ? 6 : 1, out = [];
   for (let dy=-reach; dy<=reach; dy++) for (let dx=-reach; dx<=reach; dx++){
     if (!dx && !dy) continue;
-    if (reach === 1 && dx && dy) continue;
+    if (reach === 1 && dx && dy && e.type !== 'person') continue;   // 사람만 대각선으로 움직여요
     if (walkable(e.type, x+dx, y+dy, e)) out.push([x+dx, y+dy]);
   }
   return out;
@@ -1314,7 +1316,7 @@ function nearestEnemyBld(e, r){
 }
 function wander(e, center, r){
   const ccx = center%W, ccy = (center/W)|0, x = cx(e), y = cy(e);
-  const opts = N4.map(([dx,dy]) => [x+dx,y+dy]).filter(([nx,ny]) => walkP(nx,ny) && Math.abs(nx-ccx)+Math.abs(ny-ccy) <= r);
+  const opts = DIR8.map(([dx,dy]) => [x+dx,y+dy]).filter(([nx,ny]) => walkP(nx,ny) && Math.abs(nx-ccx)+Math.abs(ny-ccy) <= r);
   if (opts.length) moveTo(e, pick(opts));
   else { const o = neighbors(e).filter(([nx,ny]) => walkP(nx,ny)); if (o.length) moveTo(e, toward(o, ccx+.5, ccy+.5)); }
 }
@@ -1339,7 +1341,7 @@ function personThink(e){
       e.role = 'villager'; setStats(e);
       return;
     }
-    const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+    const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
     if (!stepFlow(e, tp) && opts.length) moveTo(e, toward(opts, tx, ty));
     return;
   }
@@ -1347,7 +1349,7 @@ function personThink(e){
   if ((e.role === 'villager' || e.role === 'soldier') && treasures.length && !e.atk){
     const tr = treasures.find(tr => d2(tr.x, tr.y, e.x, e.y) < 36);
     if (tr && Math.random() < .6){
-      const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+      const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
       if (opts.length){ moveTo(e, toward(opts, tr.x, tr.y)); return; }
     }
   }
@@ -1356,13 +1358,13 @@ function personThink(e){
     if (!TK){ e.dead = true; return; }
     const tx = TK.capital%W + .5, ty = ((TK.capital/W)|0) + .5;
     if (Math.hypot(e.x - tx, e.y - ty) <= 2.2){ diplomacy(e, K, TK); return; }
-    const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+    const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
     if (!stepFlow(e, TK.capital) && opts.length) moveTo(e, toward(opts, tx, ty));
     return;
   }
   if (CLERIC_TITLE[e.role]){
     const foe = nearestFoe(e, 2.5, true);
-    const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+    const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
     if (foe && opts.length){ moveTo(e, toward(opts, foe.x, foe.y, true)); return; }
     if (e.role === 'merchant'){
       const TK = kingdoms.get(e.returning ? e.k : e.mission);
@@ -1396,7 +1398,7 @@ function personThink(e){
   }
   if (ROYALS.includes(e.role) && !e.claim){
     const foe = nearestFoe(e, 2.5, true);
-    const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+    const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
     if (foe && opts.length){ moveTo(e, toward(opts, foe.x, foe.y, true)); return; }
     const mate = e.spouse ? byId(e.spouse) : null;
     if (mate && d2(mate.x,mate.y,e.x,e.y) > 4 && opts.length){ moveTo(e, toward(opts, mate.x, mate.y)); return; }
@@ -1411,7 +1413,7 @@ function personThink(e){
     if (e.duelT > 45){ e.duel = op.duel = null; e.duelT = op.duelT = 0; toast(`⚔ 승부가 나지 않아 ${e.name}과 ${op.name}의 결투가 무승부로 끝났어요`); return; }
     if (Math.hypot(op.x - e.x, op.y - e.y) <= 1){ e.atk = {u:op}; return; }
     e.atk = null;
-    if (!stepFlow(e, idx(cx(op), cy(op)))){ const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y)); if (opts.length) moveTo(e, toward(opts, op.x, op.y)); }
+    if (!stepFlow(e, idx(cx(op), cy(op)))){ const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y)); if (opts.length) moveTo(e, toward(opts, op.x, op.y)); }
     return;
   }
   // 병사와 왕
@@ -1419,7 +1421,7 @@ function personThink(e){
   if (foe){
     if (Math.sqrt(d2(foe.x,foe.y,e.x,e.y)) <= (e.archer ? 3 : 1)){ e.atk = {u:foe}; return; }   // 궁수는 3칸 밖에서 쏴요
     e.atk = null;
-    const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+    const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
     if (opts.length) moveTo(e, toward(opts, foe.x, foe.y));
     return;
   }
@@ -1433,7 +1435,7 @@ function personThink(e){
   if (K.feud && e.side){
     const rival = byId(e.side === 'a' ? K.feud.b : K.feud.a);
     if (rival){
-      const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+      const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
       if (opts.length) moveTo(e, toward(opts, rival.x, rival.y));
       return;
     }
@@ -1940,7 +1942,7 @@ function tick(){
           if (t !== T.GRASS && t !== T.SAND && t !== T.FLOWER) continue;
           if (terr[i] >= 0 && terr[i] !== id) continue;
           let crowded = false;
-          for (const [dx,dy] of N4) if (inb(x+dx,y+dy) && isBld(grid[idx(x+dx,y+dy)])) crowded = true;
+          for (const [dx,dy] of DIR8) if (inb(x+dx,y+dy) && isBld(grid[idx(x+dx,y+dy)])) crowded = true;   // 대각선까지 비워 골목을 남겨요
           if (crowded) continue;
           setTile(i, T.HOUSE, id); break;
         }
@@ -2449,7 +2451,7 @@ function spyThink(e, K){
     else { toast(`🕵 ${goal.name}이 ${K.name}의 첩자 ${josa(e.name,'을를')} 붙잡았어요`); e.dead = true; }
     return;
   }
-  const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+  const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
   if (!stepFlow(e, goal.capital) && opts.length) moveTo(e, toward(opts, tx, ty));
 }
 // 자객: 적의 성까지 숨어 가서 왕 곁에 닿으면 암살을 시도해요
@@ -2466,7 +2468,7 @@ function assassinThink(e, K){
     e.dead = true;
     return;
   }
-  const opts = N4.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
+  const opts = DIR8.map(([dx,dy]) => [cx(e)+dx, cy(e)+dy]).filter(([x,y]) => walkP(x,y));
   if (dist > 5){ if (!stepFlow(e, E.capital) && opts.length) moveTo(e, toward(opts, king.x, king.y)); }
   else if (opts.length) moveTo(e, toward(opts, king.x, king.y));
 }
