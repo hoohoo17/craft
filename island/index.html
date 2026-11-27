@@ -30,7 +30,7 @@ body{
   color:var(--ink);font-family:var(--body);
   overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
 }
-#app{max-width:780px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+#app{max-width:1180px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .back{font-size:13px;color:var(--muted);text-decoration:none}
 .name{
@@ -42,8 +42,18 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 .stats{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
 .stats b{font-family:var(--display);font-weight:400;font-size:18px;color:var(--ink);margin-left:3px;font-variant-numeric:tabular-nums}
 
-.stage{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 6px 0 #a9cdd9,0 10px 30px rgba(36,50,58,.15);background:#1f5f94}
+.stage{position:relative;display:flex;justify-content:center;border-radius:14px;overflow:hidden;box-shadow:0 6px 0 #a9cdd9,0 10px 30px rgba(36,50,58,.15);background:#1f5f94}
 #cv{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+/* ⛶ 크게 보기: 소식 줄·지도·지도 버튼만 남기고 화면을 꽉 채워요 */
+body.big{overflow:hidden}
+body.big #app{position:fixed;inset:0;max-width:none;margin:0;padding:8px;gap:6px;z-index:30;background:linear-gradient(180deg,#cfeaf4 0%,var(--sky) 100%)}
+body.big #app > :not(.toast):not(.stage):not(.mapbar){display:none}
+body.big .stage{flex:1;min-height:0;align-items:center;border-radius:10px}
+body.big .mapbar{margin-top:0;flex-wrap:nowrap}
+body.big .mapbtns{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+body.big .mapbtns > *{flex:none}
+body.big #mini, body.big #mapLegend{display:none}
+body.big .toast{height:auto;-webkit-line-clamp:1;padding:5px 10px}
 .mapbar{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-top:-4px}
 .mapbtns{display:flex;gap:6px;flex-wrap:wrap}
 .mapbtns button{min-width:38px;height:36px;padding:0 10px;border:0;border-radius:9px;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1;cursor:pointer;box-shadow:0 2px 0 #d9e6e2}
@@ -166,6 +176,7 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
       <button id="zoomIn" aria-label="크게 보기">＋</button>
       <button id="zoomOut" aria-label="작게 보기">－</button>
       <button id="fit" aria-label="전체 보기">🗺 전체</button>
+      <button id="bigBtn" aria-pressed="false">⛶ 크게 보기</button>
       <button id="miniToggle" aria-pressed="true">작은 지도</button>
       <div class="seg" id="mapSel" aria-label="영토 색">
         <button data-m="k" aria-pressed="true">나라</button>
@@ -289,7 +300,8 @@ button:focus-visible,.name:focus-visible{outline:2px solid var(--accent);outline
 
 <script>
 (() => {
-const CS = 16, VW = 640, VH = 448;
+const CS = 16;
+let VW = 640, VH = 448;   // ⛶ 크게 보기에선 화면 비율에 맞춰 바뀌어요
 const SIZES = [{w:40, h:28, k:2}, {w:60, h:42, k:4}, {w:80, h:56, k:6}];
 let W = 40, H = 28, N = W*H, size = 0;
 const cam = {x:0, y:0, z:1};
@@ -457,6 +469,7 @@ function setTile(i, t, k){
   if (isBld(t)){ owner[i] = k ?? owner[i]; bhp[i] = MAXHP[t]; }
   else owner[i] = -1;
   if (isBld(t) || isBld(was)){ terrDirty = true; flowCache.clear(); }
+  if (t === T.WATER || was === T.WATER) waterCache.clear();
 }
 
 /* ---------- 이름 ---------- */
@@ -2144,7 +2157,8 @@ function tick(){
   const mountainCount = new Map();
   for (let i=0;i<N;i++) if (grid[i] === T.MOUNT && terr[i] >= 0) mountainCount.set(terr[i], (mountainCount.get(terr[i]) || 0) + 1);
   const season = seasonOf(day);
-  flowCache.clear(); waterCache.clear();
+  if (specClock % 3 === 0) flowCache.clear();   // 불·나무가 바뀌어도 이웃 칸을 다시 살피니 3초쯤은 그대로 써도 돼요
+  if (specClock % 10 === 0) waterCache.clear();
   if (specClock % 10 === 5) sampleHistory();
   if (mapMode !== 'k' && specClock % 2 === 0) terrDirty = true;   // 믿음·민심 지도는 자주 바뀌어요
   if (specClock++ % 10 === 0) computeSpecialties();
@@ -4831,9 +4845,10 @@ function updateStats(){
     if (e.role === 'queen') p.queen = e;
     per.set(e.k, p);
   });
-  document.getElementById('stats').innerHTML =
+  const stEl = document.getElementById('stats'), stH =
     `<span>사람<b>${c.person}</b></span><span>나라<b>${kingdoms.size}</b></span><span>나무<b>${trees}</b></span>` +
     `<span>동물<b>${c.rabbit+c.sheep+c.wolf+c.fish+c.bird}</b></span><span>수확<b>${harvest}</b></span>`;
+  if (stEl._h !== stH){ stEl.innerHTML = stH; stEl._h = stH; }
   const h = Math.floor(tod*24), m = Math.floor((tod*24 - h)*6)*10;
   const icon = darkness() > .5 ? '🌙' : (dusk() > .4 ? '🌅' : '☀️');
   const se = SEASONS[seasonOf(day)];
@@ -4842,7 +4857,7 @@ function updateStats(){
   if (!kingdoms.size){ kEl.innerHTML = '<span class="hint">나라가 없어요. 🏯 성을 놓아 나라를 세워 보세요.</span>'; return; }
   renderRanks(per);
   renderWarLog();
-  kEl.innerHTML = faithSummary() + [...kingdoms.values()].map(k => {
+  const kh = faithSummary() + [...kingdoms.values()].map(k => {
     const p = per.get(k.id) || {pop:0, soldiers:0};
     const hs = bList.filter(b => owner[b] === k.id && grid[b] === T.HOUSE).length;
     const foes = [...k.wars].map(id => kingdoms.get(id)?.name).filter(Boolean);
@@ -4855,6 +4870,7 @@ function updateStats(){
       `<small>사람 ${p.pop} · 병사 ${p.soldiers} · 집 ${hs}${p.sick ? ` · <span class="sick">🦠 앓는 사람 ${p.sick}</span>` : ''} · ${['민심 좋음', '<span class="shaky">민심 흔들림 · 징병·이사·집짓기 느려짐</span>', '<span class="war">민심 위태 🔥 · 탈영·반란</span>'][mood(k)]} (${Math.round(k.unrest || 0)})</small>${foes.length ? `<span class="war">⚔ ${foes.join(', ')}</span>` : ''}${friends.length ? `<span class="ally">🤝 ${friends.join(', ')}</span>` : ''}` +
       `<small>💰 ${Math.floor(k.gold || 0)}${k.spec != null ? ` · 특산 ${GOODS[k.spec].sym}${GOODS[k.spec].name}` : ''}${partners.length ? ` · 🛒 ${partners.join(', ')}` : ''}</small></div>`;
   }).join('');
+  if (kEl._h !== kh){ kEl.innerHTML = kh; kEl._h = kh; }
 }
 
 /* ---------- 저장 ---------- */
@@ -4908,8 +4924,39 @@ updateMini();
 setInterval(() => { if (changed){ save(); changed = false; } }, 3000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 
+/* ---------- ⛶ 지도 크기: 화면 너비와 높이에 맞춰 최대한 크게 ---------- */
+const stageEl = cv.parentElement, bigBtn = document.getElementById('bigBtn');
+function sizeCanvas(){
+  const big = document.body.classList.contains('big');
+  // 크게 보기에선 지도 비율을 화면 비율에 맞춰 빈틈없이 채우고, 평소엔 640:448 비율을 지켜요
+  let nw = 640, nh = 448;
+  if (big){
+    cv.style.width = '1px'; cv.style.height = '1px';   // 무대 크기를 재기 전에 지도가 자리를 차지하지 않게 해요
+    const sw = stageEl.clientWidth, sh = stageEl.clientHeight, a = sw / Math.max(1, sh);
+    if (a >= 640/448){ nh = 448; nw = Math.min(1100, Math.round(448 * a)); } else { nw = 640; nh = Math.min(1100, Math.round(640 / a)); }
+  }
+  if (nw !== VW || nh !== VH){
+    const ccx = cam.x + VW/cam.z/2, ccy = cam.y + VH/cam.z/2;   // 보던 곳의 가운데를 지켜요
+    VW = nw; VH = nh; cv.width = VW; cv.height = VH;
+    cam.z = Math.max(cam.z, minZoom()); cam.x = ccx - VW/cam.z/2; cam.y = ccy - VH/cam.z/2; clampCam();
+  }
+  const aw = stageEl.clientWidth || VW;
+  const ah = big ? stageEl.clientHeight : Math.max(260, window.innerHeight - 150);   // 평소엔 소식 줄·버튼이 함께 보일 만큼 남겨요
+  const w = Math.max(200, Math.min(aw, ah * VW / VH));
+  cv.style.width = w + 'px'; cv.style.height = (w * VH / VW) + 'px';
+}
+function setBig(on){
+  document.body.classList.toggle('big', on);
+  bigBtn.setAttribute('aria-pressed', on); bigBtn.textContent = on ? '⛶ 작게 보기' : '⛶ 크게 보기';
+  sizeCanvas();
+}
+bigBtn.onclick = () => setBig(!document.body.classList.contains('big'));
+window.addEventListener('resize', sizeCanvas);
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && document.body.classList.contains('big')) setBig(false); });
+sizeCanvas();
+
 /* ---------- 반복 ---------- */
-let prev = performance.now(), acc = 0, facc = 0, uiAcc = 0;
+let prev = performance.now(), acc = 0, facc = 0, uiAcc = 0, uiSlow = 0;
 function frame(now){
   const rdt = Math.max(0, Math.min(.1, (now - prev)/1000)); prev = now;
   const dt = rdt * speedMul;
@@ -4940,7 +4987,7 @@ function frame(now){
   for (let k=0;k<sub;k++) updateEnts(dt/sub);
   if (terrDirty) computeTerr();
   if (dirty) renderBg(); else if (dirtyTiles.size) renderBgPartial();
-  uiAcc += rdt; if (uiAcc > .3){ uiAcc = 0; updateStats(); showInfo(); renderChronicle(); drawChart(); if (!mini.hidden) drawMini(); }
+  uiAcc += rdt; if (uiAcc > .3){ uiAcc = 0; showInfo(); renderChronicle(); drawChart(); if (++uiSlow >= 3){ uiSlow = 0; updateStats(); if (!mini.hidden) drawMini(); } }
 
   const t = now/1000;
   ctx.setTransform(1,0,0,1,0,0);
@@ -4993,6 +5040,7 @@ function frame(now){
     const x = Math.floor(hash(k, Math.floor(t*1.5), 3)*W), y = Math.floor(hash(k, Math.floor(t*1.5), 4)*H);
     if (grid[idx(x,y)] === T.WATER) ctx.fillRect(x*CS+4+(k%8), y*CS+6+(k%5), 3, 1);
   }
+  const darkNow = darkness();
   for (let y=y0;y<y1;y++) for (let x=x0;x<x1;x++){
     const i = idx(x,y);
     if (grid[i] === T.FIRE){
@@ -5003,7 +5051,7 @@ function frame(now){
         ctx.beginPath(); ctx.moveTo(fxp-2.5, py+14); ctx.lineTo(fxp, py+14-fh); ctx.lineTo(fxp+2.5, py+14); ctx.fill();
       }
       if (Math.random() < .05) fx.push({type:'puff', x:x+.5, y:y+.2, t:0, d:.9, color:'rgba(90,90,90,'});
-    } else if (grid[i] === T.HOUSE && darkness() < .3 && Math.random() < .004){
+    } else if (grid[i] === T.HOUSE && darkNow < .3 && Math.random() < .004){
       fx.push({type:'puff', x:x+.75, y:y+.05, t:0, d:1.6, color:'rgba(200,200,200,'});
     } else if (isBld(grid[i]) && bhp[i] < MAXHP[grid[i]]) bar(x*CS+2, y*CS-3, 12, bhp[i]/MAXHP[grid[i]]);
   }
