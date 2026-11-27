@@ -1621,7 +1621,7 @@ function colonize(e){
 function fleetTick(K, id, houses){
   const has = type => ents.some(e => e.type === type && !e.dead && e.k === id);
   K.exploreCd = Math.max(0, (K.exploreCd || 0) - 1);
-  const wantTrader = K.port && (K.era || 0) >= 1 && (K.gold || 0) >= 20 && !has('trader') && Math.random() < .04;
+  const wantTrader = !(K.blockT > 0) && K.port && (K.era || 0) >= 1 && (K.gold || 0) >= 20 && !has('trader') && Math.random() < .04;
   const wantWhaler = K.port && (K.gold || 0) >= 15 && !has('whaler') && Math.random() < .03 && ents.some(e => e.type === 'whale' && !e.dead);
   const wantWar = K.port && (K.era || 0) >= 2 && K.wars.size && (K.gold || 0) >= 40 && !has('warship') && Math.random() < .04;
   const wantExplore = (K.era || 0) >= 1 && houses.length >= 6 && (K.gold || 0) >= 30 && !K.exploreCd && !has('explorer') && Math.random() < .01;
@@ -1753,13 +1753,15 @@ function vesselThink(e, opts){
   }
   if (e.type === 'warship'){
     // 적의 배·해적선·바다 괴물을 쫓고, 없으면 적의 바닷가 건물로 가서 부숴요
+    const sea = waterFlow(e.home);   // 같은 바다로 갈 수 있는 곳만 노려요
     let tgt = null, td = 900;
     for (const o of ents){
       if (o.dead || o === e) continue;
       if (!(o.type === 'pirate' || o.type === 'serpent' || (VESSELS.has(o.type) && atWar(e.k, o.k)))) continue;
+      if (sea[idx(cx(o), cy(o))] >= 9999) continue;
       const d = d2(o.x,o.y,e.x,e.y); if (d < td){ td = d; tgt = o; }
     }
-    if (tgt){ if (td > 6) sailStep(e, idx(cx(tgt), cy(tgt))); return; }
+    if (tgt){ e.task = td > 6 ? 'chase' : 'fight'; e.peaceT = 0; if (td > 6) sailStep(e, idx(cx(tgt), cy(tgt))); return; }
     if (K.wars.size){
       if (e.siegeW == null || grid[e.siegeW] !== T.WATER || Math.random() < .05){
         e.siegeW = -1; let bd = 1e9;
@@ -1773,9 +1775,38 @@ function vesselThink(e, opts){
           }
         }
       }
-      if (e.siegeW >= 0){ sailStep(e, e.siegeW); e.idle = 0; return; }
+      if (e.siegeW >= 0){ e.task = 'bombard'; e.peaceT = 0; sailStep(e, e.siegeW); return; }
+      // 부술 바닷가 건물이 없으면 적의 앞바다로 가서 바닷길을 막아요
+      if (e.blockW == null || grid[e.blockW] !== T.WATER || Math.random() < .03){
+        e.blockW = -1; e.blockK = null; let bd = 1e9;
+        for (const f of K.wars){
+          const F = kingdoms.get(f); if (!F) continue;
+          const w = coastNear(F, F.capital%W, (F.capital/W)|0, sea);
+          if (w >= 0 && sea[w] < bd){ bd = sea[w]; e.blockW = w; e.blockK = f; }
+        }
+      }
+      if (e.blockW >= 0){
+        e.task = 'blockade'; e.peaceT = 0;
+        if (sailStep(e, e.blockW) || d2(e.x,e.y,e.blockW%W+.5,((e.blockW/W)|0)+.5) < 9){
+          const F = kingdoms.get(e.blockK);
+          if (F){ if (!(F.blockT > 0)) toast(`⚓ ${K.name} 전함이 ${F.name} 앞바다를 막았어요. ${F.name}의 고깃배와 상선이 벌이를 못 해요`); F.blockT = 3; }
+          const near = opts.filter(([x,y]) => d2(x+.5,y+.5,e.blockW%W+.5,((e.blockW/W)|0)+.5) <= 6);
+          if (near.length && Math.random() < .5) moveTo(e, pick(near));   // 막는 동안에도 앞바다를 오가요
+        }
+        return;
+      }
     }
-    if (sailStep(e, e.home)){ e.idle = (e.idle || 0) + .3; if (e.idle > 120) e.dead = true; }
+    // 평화로우면 항구 앞바다를 순찰하다가, 1분쯤 지나면 항구로 들어가 해산해요
+    e.peaceT = (e.peaceT || 0) + .3;
+    if (e.peaceT < 60){
+      e.task = 'patrol';
+      const hx = e.home%W + .5, hy = ((e.home/W)|0) + .5;
+      const near = opts.filter(([x,y]) => d2(x+.5,y+.5,hx,hy) <= 36);
+      moveTo(e, Math.hypot(e.x - hx, e.y - hy) > 6 ? toward(opts, hx, hy) : near.length ? pick(near) : pick(opts));
+      return;
+    }
+    e.task = 'return';
+    if (sailStep(e, e.home)){ fx.push({type:'puff', x:e.x, y:e.y, t:0, d:.8, color:'rgba(200,200,200,'}); e.dead = true; }
   }
 }
 
@@ -2319,7 +2350,8 @@ function tick(){
     const catchRate = .2 + .8 * K.fish / 100;
     if (K.fish < 40 && !K.fishLow){ K.fishLow = true; if (boats.length) toast(`🐟 ${K.name} 앞바다에 고기를 너무 많이 잡아 물고기가 줄었어요`); }
     else if (K.fish > 70 && K.fishLow){ K.fishLow = false; if (boats.length) toast(`🐟 ${K.name} 앞바다에 물고기가 다시 늘었어요`); }
-    boats.forEach(() => { K.gold = (K.gold || 0) + (K.spec === 2 ? .3 : .15) * (hasTech(id, 'compass') ? 2 : 1) * ((K.lights || []).length ? 1.5 : 1) * catchRate * prices[2] * (K.port ? 1.3 : 1); });
+    K.blockT = Math.max(0, (K.blockT || 0) - 1);
+    if (!(K.blockT > 0)) boats.forEach(() => { K.gold = (K.gold || 0) + (K.spec === 2 ? .3 : .15) * (hasTech(id, 'compass') ? 2 : 1) * ((K.lights || []).length ? 1.5 : 1) * catchRate * prices[2] * (K.port ? 1.3 : 1); });
     if (boats.length < Math.min(K.port ? 6 : 4, 1 + Math.floor(houses.length / 5)) && !K.fishLow && Math.random() < .05){
       const cx0 = K.capital%W, cy0 = (K.capital/W)|0;
       let best = -1, bd = 1e9;
@@ -4890,7 +4922,7 @@ function showInfoBody(el){
     if (s.type === 'serpent'){ el.innerHTML = `<span class="badge" style="background:#2f6e5a">바다 괴물</span><div class="col"><b>바다 괴물</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 배를 삼키고 바닷가 사람을 덮쳐요 · ${Math.max(0, Math.ceil(70 - s.age))}초 뒤 사라져요</small></div>`; return; }
     if (s.type === 'pirate'){ el.innerHTML = `<span class="badge" style="background:#16161a">해적선</span><div class="col"><b>해적선</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 빼앗은 금 ${s.loot}💰 · 성·망루·궁수가 쏠 수 있어요</small></div>`; return; }
     const names = {whale:'고래', rabbit:'토끼', sheep:'양', wolf:'늑대', bear:'곰', fish:'물고기', bird:'새', boat:'고깃배'};
-    if (FLEET.has(s.type)){ const K = kingdoms.get(s.k), P = kingdoms.get(s.partner); el.innerHTML = `<span class="badge" style="background:${K ? K.color : '#5d6f78'}">${VNAME[s.type]}</span><div class="col"><b>${K ? K.name : ''} ${VNAME[s.type]}</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · ${s.type === 'trader' ? (s.leg === 'out' ? `${GOODS[s.goods ?? 0].sym}${GOODS[s.goods ?? 0].name}을 싣고 ${P ? P.name : ''}로 가는 중` : '무역을 마치고 돌아가는 중') : s.type === 'warship' ? '적의 배를 쫓고 바닷가 건물을 부숴요' : s.type === 'explorer' ? '사람이 살지 않는 먼 섬을 찾아가는 중 · 닿으면 식민지를 세워요' : s.type === 'fireship' ? '적의 배로 돌진해 불태워요' : s.type === 'relief' ? (s.leg === 'out' ? `${P ? P.name : ''}에 곡식을 나르는 중` : '구호를 마치고 돌아가는 중') : s.type === 'barge' ? '왕실의 뱃놀이 · 떠 있는 동안 민심이 가라앉아요' : s.type === 'mission' ? `${P ? P.name : ''}에 믿음을 전하러 가는 중` : (s.done ? '고래를 싣고 돌아가는 중' : '고래를 쫓는 중')}</small></div>`; return; }
+    if (FLEET.has(s.type)){ const K = kingdoms.get(s.k), P = kingdoms.get(s.partner); el.innerHTML = `<span class="badge" style="background:${K ? K.color : '#5d6f78'}">${VNAME[s.type]}</span><div class="col"><b>${K ? K.name : ''} ${VNAME[s.type]}</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · ${s.type === 'trader' ? (s.leg === 'out' ? `${GOODS[s.goods ?? 0].sym}${GOODS[s.goods ?? 0].name}을 싣고 ${P ? P.name : ''}로 가는 중` : '무역을 마치고 돌아가는 중') : s.type === 'warship' ? ({chase:'적의 배를 쫓는 중', fight:'적의 배와 싸우는 중', bombard:'적의 바닷가 건물을 부수는 중', blockade:`${kingdoms.get(s.blockK)?.name || '적'} 앞바다를 막는 중`, patrol:'평화로워 항구 앞바다를 순찰하는 중', return:'순찰을 마치고 항구로 돌아가는 중'})[s.task] || '적의 배를 쫓고 바닷가 건물을 부숴요' : s.type === 'explorer' ? '사람이 살지 않는 먼 섬을 찾아가는 중 · 닿으면 식민지를 세워요' : s.type === 'fireship' ? '적의 배로 돌진해 불태워요' : s.type === 'relief' ? (s.leg === 'out' ? `${P ? P.name : ''}에 곡식을 나르는 중` : '구호를 마치고 돌아가는 중') : s.type === 'barge' ? '왕실의 뱃놀이 · 떠 있는 동안 민심이 가라앉아요' : s.type === 'mission' ? `${P ? P.name : ''}에 믿음을 전하러 가는 중` : (s.done ? '고래를 싣고 돌아가는 중' : '고래를 쫓는 중')}</small></div>`; return; }
     if (s.type === 'bear'){ el.innerHTML = `<span class="badge" style="background:#6b4527">동물</span><div class="col"><b>곰</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 배고픔 ${Math.floor(s.hunger)}/160 · 토끼·양을 먹고 가끔 사람을 덮쳐요</small></div>`; return; }
     if (s.type === 'dragon'){ el.innerHTML = `<span class="badge" style="background:#2f7d4f">용</span><div class="col"><b>용</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 마을을 찾아 불을 뿜어요 · ${Math.max(0, Math.ceil(90 - s.age))}초 뒤 날아가요</small></div>`; return; }
     if (s.type === 'siege'){ const K = kingdoms.get(s.k); el.innerHTML = `<span class="badge" style="background:${K ? K.color : '#5d6f78'}">공성탑</span><div class="col"><b>${K ? K.name : ''} 공성탑</b><small>체력 ${Math.ceil(s.hp)}/${s.max} · 적 건물을 크게 부숴요 · 곁의 적 병사에게 부서져요</small></div>`; return; }
