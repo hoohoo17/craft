@@ -1096,15 +1096,25 @@ function feudTick(K){
 }
 
 // 반란: 수도에서 먼 마을이 떨어져 나가 새 나라를 세우고, 원래 나라와 전쟁을 벌여요
-function rebel(K, leader, followers, lead){
+function rebel(K, leader, followers, lead, forceSeat){
   const id = K.id, cap = K.capital, capx = cap%W, capy = (cap/W)|0;
   const far = h => Math.hypot(h%W - capx, ((h/W)|0) - capy);
   const houses = bList.filter(b => owner[b] === id && grid[b] === T.HOUSE).sort((a,b) => far(b) - far(a));
-  if (houses.length < 5 || far(houses[0]) < 4) return false;
-  const seat = houses[0], sx = seat%W, sy = (seat/W)|0;
-  const group = houses.filter(h => Math.hypot(h%W - sx, ((h/W)|0) - sy) <= 6);
+  let seat, group;
+  if (forceSeat != null){
+    // ✂ 신이 쪼갤 땐 조건 없이, 누른 자리를 새 수도로 삼고 새 수도에 더 가까운 집들을 데려가요
+    seat = forceSeat;
+    const sx0 = seat%W, sy0 = (seat/W)|0;
+    group = houses.filter(h => h !== seat && Math.hypot(h%W - sx0, ((h/W)|0) - sy0) < far(h));
+  } else {
+    if (houses.length < 5 || far(houses[0]) < 4) return false;
+    seat = houses[0];
+    const sx0 = seat%W, sy0 = (seat/W)|0;
+    group = houses.filter(h => Math.hypot(h%W - sx0, ((h/W)|0) - sy0) <= 6);
+  }
+  const sx = seat%W, sy = (seat/W)|0;
   const NK = newKingdom(seat);
-  grid[seat] = T.CASTLE; owner[seat] = NK.id; bhp[seat] = MAXHP[T.CASTLE]*.7;
+  setTile(seat, T.CASTLE, NK.id); bhp[seat] = MAXHP[T.CASTLE]*.7;
   group.forEach(h => { owner[h] = NK.id; });
   const gset = new Set(group);
   ents.forEach(e => {
@@ -3635,9 +3645,30 @@ function sendHero(x, y){
 function splitKingdom(x, y){
   const K = kingdomAt(x, y);
   if (!K){ toast('나라 땅을 누르면 그 나라를 둘로 쪼개요'); return; }
-  const pool = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id);
-  const leader = pool.filter(e => e.role === 'soldier').sort((a,b) => b.kills - a.kills)[0] || pick(pool.filter(e => e.role === 'villager'));
-  if (!leader || !rebel(K, leader, null, `✂ 신의 뜻으로 ${K.name}이 둘로 갈라져, ${title(leader)} ${josa(leader.name,'이가')}`)) toast(`${K.name}은 너무 작아 쪼갤 수 없어요 (집 5채 이상, 수도에서 먼 마을이 있어야 해요)`);
+  // 새 수도 자리: 누른 곳이 그 나라 집이면 그 집, 아니면 누른 곳에서 가장 가까운 집, 집이 없으면 누른 땅
+  const capx = K.capital%W, capy = (K.capital/W)|0;
+  const tapped = idx(x, y);
+  const okLand = i => { const t = grid[i]; return (t === T.GRASS || t === T.SAND || t === T.FLOWER || t === T.ROAD || t === T.BURNT || t === T.TREE) && !walled(i); };
+  let seat = -1;
+  if (grid[tapped] === T.HOUSE && owner[tapped] === K.id) seat = tapped;
+  if (seat < 0){
+    let bd = 1e9;
+    for (const b of bList) if (owner[b] === K.id && grid[b] === T.HOUSE){ const d = Math.hypot(b%W - x, ((b/W)|0) - y); if (d < bd){ bd = d; seat = b; } }
+  }
+  if (seat < 0 || Math.max(Math.abs(seat%W - capx), Math.abs(((seat/W)|0) - capy)) < 2){
+    // 집이 없거나 수도에 너무 붙어 있으면, 수도에서 두 칸 넘게 떨어진 빈 땅 가운데 누른 곳에 가장 가까운 곳
+    let bd = 1e9; seat = -1;
+    for (let yy=0; yy<H; yy++) for (let xx=0; xx<W; xx++){
+      const i = idx(xx, yy);
+      if (terr[i] !== K.id || !okLand(i) || Math.max(Math.abs(xx - capx), Math.abs(yy - capy)) < 3) continue;
+      const d = Math.hypot(xx - x, yy - y); if (d < bd){ bd = d; seat = i; }
+    }
+  }
+  if (seat < 0){ toast(`${K.name}의 땅이 너무 좁아 새 수도를 세울 자리가 없어요`); return; }
+  const pool = ents.filter(e => e.type === 'person' && !e.dead && e.k === K.id && e.role !== 'king' && !ROYALS.includes(e.role));
+  let leader = pool.filter(e => e.role === 'soldier').sort((a,b) => b.kills - a.kills)[0] || pick(pool.filter(e => e.role === 'villager')) || pick(pool);
+  if (!leader) leader = makePerson(K.id, 'villager', K.capital);   // 사람이 없으면 신이 새 왕이 될 사람을 내려 보내요
+  rebel(K, leader, null, `✂ 신의 뜻으로 ${K.name}이 둘로 갈라져, ${title(leader)} ${josa(leader.name,'이가')}`, seat);
 }
 
 /* ---------- 🌊 해일 ---------- */
